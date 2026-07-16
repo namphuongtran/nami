@@ -1,0 +1,8 @@
+Nami
+Copyright 2026 Nam Phuong Tran and Nami contributors
+
+This product is built on OpenIddict (https://github.com/openiddict/openiddict-core),
+licensed under the Apache License, Version 2.0.
+
+Third-party attributions for distributed dependencies will be listed in
+docs/DEPENDENCY-LICENSES.md as they are introduced.

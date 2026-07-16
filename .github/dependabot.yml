@@ -1,0 +1,8 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  # nuget ecosystem: add when the first .csproj lands (M1), otherwise Dependabot logs failed runs
+
