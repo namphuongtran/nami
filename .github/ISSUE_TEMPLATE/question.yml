@@ -1,0 +1,10 @@
+name: Question
+description: Ask a question about using or understanding Nami
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true

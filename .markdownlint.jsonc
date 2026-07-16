@@ -1,0 +1,8 @@
+{
+  // Prose lines are not code: no hard length limit
+  "MD013": false,
+  // Issue/PR templates legitimately start below an H1
+  "MD041": false,
+  // Compact GitHub-style table separators (|---|) are fine
+  "MD060": false
+}
