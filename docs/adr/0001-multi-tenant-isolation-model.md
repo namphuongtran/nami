@@ -2,7 +2,7 @@
 status: "accepted"
 date: 2026-06-28
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
-consulted: evidence review of Duende IdentityServer, Azure Architecture Center, AWS SaaS guidance, Auth0 Organizations, ABP Framework (see More Information)
+consulted: evidence review of commercial identity servers, Azure Architecture Center, AWS SaaS guidance, Auth0 Organizations, ABP Framework (see More Information)
 informed: all contributors, via this repository
 ---
 
@@ -42,7 +42,7 @@ The decision fixes five sub-decisions:
 * **Membership is global**: a mapping of user to tenant to roles is the single source of truth for "which tenants does this user belong to". Adding a user to a tenant creates a membership row, never a duplicate user.
 * **Tenant registry (control plane) is global**: a `Tenants` table holds `{ TenantId, Parent, IsolationMode (Pool | Silo), ConnectionString, KeyScope }`. This is the switch that routes each tenant to its store.
 * **Tenant-scoped data** (OpenIddict Applications, Authorizations, Tokens, plus detailed roles/claims) lives where `IsolationMode` says: Pool tenants share one database, discriminated by a mandatory `TenantId` column with a mandatory EF Core global query filter; Silo tenants get a dedicated database (no discriminator column needed).
-* **The scope catalog is global, not per-tenant**: scopes are defined by the product's APIs and shared by all tenants. Scopes carry no `TenantId`, scope names are globally unique, and the catalog is seeded once. Per-tenant differences are expressed as scope allowlists on the client grant, never by forking the catalog. (Consistent with Duende ApiScope, Auth0, ABP host-global scopes, and RFC 8707; validated empirically, see Confirmation.)
+* **The scope catalog is global, not per-tenant**: scopes are defined by the product's APIs and shared by all tenants. Scopes carry no `TenantId`, scope names are globally unique, and the catalog is seeded once. Per-tenant differences are expressed as scope allowlists on the client grant, never by forking the catalog. (Consistent with Auth0, ABP host-global scopes, mainstream commercial IdPs, and RFC 8707; validated empirically, see Confirmation.)
 * This layering is realized as **four DbContexts**: `OpenIddictDbContext` (tenant-scoped: pool filter or silo connection), `IdentityDbContext` (global), `DataProtectionDbContext` (global), `ControlPlaneDbContext` (global: tenants, memberships, delegated admin, audit log, server-side sessions). This topology is fixed; changing it requires a superseding ADR.
 
 ### B. Tenant switching without re-login
@@ -112,14 +112,14 @@ One database; every tenant-scoped row carries `TenantId`; EF global query filter
 Pool by default, silo on demand, selected per tenant via the control-plane registry; global identity and membership above both.
 
 * Good, because each tenant pays only for the isolation level it needs, and the mode is a per-tenant switch rather than an architectural fork.
-* Good, because it matches the surveyed industry consensus: AWS treats pool as default and silo for hard isolation; Azure recommends single identity plus membership; Auth0 Organizations implements exactly the one-user-many-orgs-single-tenant-token model; Duende (which has no native multi-tenancy) acknowledges both patterns as valid; ABP keeps OpenIddict stores host-global.
+* Good, because it matches the surveyed industry consensus: AWS treats pool as default and silo for hard isolation; Azure recommends single identity plus membership; Auth0 Organizations implements exactly the one-user-many-orgs-single-tenant-token model; the leading commercial identity server (which has no native multi-tenancy) acknowledges both patterns as valid; ABP keeps OpenIddict stores host-global.
 * Neutral, because it inherits the pooled mode's filter risk for pooled tenants, with the mitigations listed in Consequences.
 * Bad, because both modes must be implemented, routed, and tested (two code paths in provisioning, migration, keys, and revocation).
 
 ## More Information
 
 * Original decision: 2026-06-28 (v2, revised from a v1 database-per-tenant decision after the evidence review below). Imported into this repository and translated in 2026-07; content is preserved, internal references generalized.
-* Evidence reviewed at decision time: Duende IdentityServer multi-tenancy discussion (Support #835: "a great many subtly different requirements", native hooks for a `tenant` claim and re-auth validation); Azure Architecture Center guidance on identity vs data multi-tenancy decisions; AWS SaaS isolation guidance (pool default, silo for hard isolation, shared identity within silo definitions); Auth0 Organizations model; ABP Framework's host-global OpenIddict stores; OpenIddict maintainer warning on claim-based tenant resolution (openiddict-core #1699).
+* Evidence reviewed at decision time: a commercial identity server's multi-tenancy discussion ("a great many subtly different requirements", with vendor hooks for a `tenant` claim and re-auth validation); Azure Architecture Center guidance on identity vs data multi-tenancy decisions; AWS SaaS isolation guidance (pool default, silo for hard isolation, shared identity within silo definitions); Auth0 Organizations model; ABP Framework's host-global OpenIddict stores; OpenIddict maintainer warning on claim-based tenant resolution (openiddict-core #1699).
 * Related decisions: ADR-0005 (encryption and credential lifecycle), ADR-0006 (DR and keyring), ADR-0007 (key compromise), ADR-0010 (tenant hierarchy: no automatic parent-child role inheritance; explicit membership plus scoped, time-bound delegated admin), ADR-0018 (DbContext pooling with mutable tenant), ADR-0033 (key-scope isolation model).
 * Open follow-up (does not block implementation): the classification criteria for which tenants qualify for Silo (for example DPA or residency requirements) are ratified with security/data-protection stakeholders during tenant onboarding.
 * Background jobs (for example token pruning) run outside a request and must iterate tenants and set the tenant context explicitly; this is a known constraint carried into the implementation docs.

@@ -2,7 +2,7 @@
 status: "accepted"
 date: 2026-06-28
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
-consulted: gap analysis against Duende IdentityServer's AddServerSideSessions and OpenIddict's session capabilities
+consulted: gap analysis against commercial identity servers' server-side session support and OpenIddict's session capabilities
 informed: all contributors, via this repository
 ---
 
@@ -10,14 +10,14 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-An early draft classified the server-side session store as "optional". Review showed it is a security keystone: it is the precondition for (a) an admin killing a session, (b) "log out everywhere", (c) inactivity timeout and absolute session lifetime, and (d) back-channel logout. OpenIddict has no server-side session concept (only the ASP.NET Core authentication cookie), while Duende IdentityServer ships one out of the box. Without it, a compromised or abandoned session cannot be revoked immediately; the only remedy is waiting for tokens to expire. Should Nami treat server-side sessions as optional or as core?
+An early draft classified the server-side session store as "optional". Review showed it is a security keystone: it is the precondition for (a) an admin killing a session, (b) "log out everywhere", (c) inactivity timeout and absolute session lifetime, and (d) back-channel logout. OpenIddict has no server-side session concept (only the ASP.NET Core authentication cookie), while comparable commercial identity servers ship one out of the box. Without it, a compromised or abandoned session cannot be revoked immediately; the only remedy is waiting for tokens to expire. Should Nami treat server-side sessions as optional or as core?
 
 ## Decision Drivers
 
 * Immediate, centralized session revocation is non-negotiable for an identity provider handling sensitive data.
 * Inactivity and absolute session lifetimes must be enforceable server-side, not just in the cookie.
 * Back-channel logout needs a server-side session registry to know which clients to notify.
-* Duende parity: this is a headline feature consumers expect from a production identity server.
+* Production-grade expectation: this is a headline feature consumers expect from a production identity server.
 * Multi-node deployments need a durable store, not in-memory state.
 
 ## Considered Options
@@ -60,7 +60,7 @@ The ASP.NET Core authentication cookie is the only session state; the server kee
 * Good, because it is zero additional infrastructure and zero added latency.
 * Bad, because centralized revocation is impossible: no admin kill, no logout-everywhere, no server-enforced lifetimes; the only mitigation is short token TTLs.
 * Bad, because back-channel logout has no session registry to work from.
-* Bad, because it fails Duende parity and the production bar for sensitive data.
+* Bad, because it fails the production bar that commercial-grade identity servers set for sensitive data.
 
 ### Server-side session store (`ITicketStore` over EF Core) (chosen)
 

@@ -49,7 +49,7 @@ Nami is a batteries-included OAuth 2.0 / OpenID Connect authorization server: a 
 | M2 | Usable login: user management, MFA, login/consent UI, `docker compose up` quickstart |
 | M3 | Production hardening: no-restart key rotation, observability, security review |
 | M4 | Admin API + admin app, advanced flows (DPoP, mutual TLS, PAR, device, token exchange) |
-| M5 | Conformance: OpenID certification, migration guide from Duende IdentityServer |
+| M5 | Conformance: OpenID certification, migration guide from commercial identity servers |
 
 ## Contributing
 

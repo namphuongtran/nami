@@ -10,7 +10,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-Nami's routine key rotation is graceful expiry only: a new certificate with a further-out `NotAfter` gradually supersedes the old one. When a signing or encryption key is **compromised**, graceful expiry is far too slow — an attacker can sign forged tokens until the old key expires on its own. Nami needs a **break-glass** path that pulls a dirty key out of the JWKS almost immediately. No product, including Duende, ships a turnkey break-glass procedure, so this is bespoke on any platform. Blast radius depends on the scope of the leaked key, so the runbook must first determine that scope before it purges or revokes anything.
+Nami's routine key rotation is graceful expiry only: a new certificate with a further-out `NotAfter` gradually supersedes the old one. When a signing or encryption key is **compromised**, graceful expiry is far too slow — an attacker can sign forged tokens until the old key expires on its own. Nami needs a **break-glass** path that pulls a dirty key out of the JWKS almost immediately. No mainstream product ships a turnkey break-glass procedure, so this is bespoke on any platform. Blast radius depends on the scope of the leaked key, so the runbook must first determine that scope before it purges or revokes anything.
 
 ## Decision Drivers
 
@@ -71,7 +71,7 @@ An automated, scoped procedure that ejects a dirty key from the JWKS under an SL
 ## More Information
 
 * Original decision: 2026-06-28. The SLO (out of the JWKS in under 5 minutes), the dual-control trigger for mass-revoke/purge (proposer ≠ approver), and the quarterly-plus-post-change drill cadence are accepted; the authorized-personnel list and the detailed multi-node reload/cache-evict automation await Security/Ops ratification.
-* No product, including Duende, ships turnkey break-glass, so this runbook is bespoke regardless of platform.
+* No mainstream product ships turnkey break-glass, so this runbook is bespoke regardless of platform.
 * Blast-radius scoping under the tiered model (ADR-0001): a Pool-group key affects all Pool tenants, a Silo key affects only that tenant, and the global Data Protection keyring is a system-wide incident.
 * Related decisions: ADR-0001 (tiered blast radius), ADR-0003 (session purge), ADR-0005 (encryption-credential lifecycle), ADR-0006 (key store and DR), ADR-0008 (audit), ADR-0009 (dual-control), ADR-0011 (no-restart reload mechanism).
 * Imported into this repository and translated in 2026-07; content preserved, internal references generalized. Corrected the source's attribution of the no-restart reload mechanism from ADR-06 to ADR-0011, which is that mechanism's actual home (ADR-0011 in turn lists this runbook as reusing it).

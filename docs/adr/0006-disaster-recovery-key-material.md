@@ -2,7 +2,7 @@
 status: "accepted"
 date: 2026-06-28
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
-consulted: DPO and Ops (the formal RTO/RPO targets and DR runbook await their ratification during operation); comparison with Duende's `ISigningKeyStore`
+consulted: DPO and Ops (the formal RTO/RPO targets and DR runbook await their ratification during operation); comparison with commercial identity servers' signing-key store abstractions
 informed: all contributors, via this repository
 ---
 
@@ -32,7 +32,7 @@ Chosen option: "Actively designed, provider-agnostic disaster recovery", but **n
 Fixed parameters of the decision:
 
 * **The application never calls a cloud SDK directly.** It defines ports and plugs an adapter per deployment: `ISigningCredentialSource` / `IEncryptionCredentialSource` (load certs/keys into OpenIddict's multi-certificate rotation), `ISecretResolver` (resolve external-IdP client secrets, connection strings), and an `IDataProtectionKeyStore` configuration (persist the keyring portably).
-* **The default adapter is DB-backed**: a `SigningKeys` table encrypted at rest via Data Protection, mirroring Duende's `ISigningKeyStore` → `Keys` table. This is the cloud-neutral baseline that runs on-premises, because not every deployment uses a cloud.
+* **The default adapter is DB-backed**: a `SigningKeys` table encrypted at rest via Data Protection, following the common signing-key-store pattern (a keys table behind a store abstraction), independently designed here. This is the cloud-neutral baseline that runs on-premises, because not every deployment uses a cloud.
 * **Cloud adapters are optional** (HashiCorp Vault, Azure Key Vault, AWS KMS + Secrets Manager, GCP KMS + Secret Manager) for those wanting HSM-backed or managed rotation. Every adapter must meet mandatory capabilities: versioning, soft-delete/recovery-window, purge-protection, encrypt-at-rest, and access auditing. The DB adapter meets these via a status-column soft-delete, Data Protection encryption, and the audit log.
 * **Root of trust at rest**: keys in the database are encrypted by the Data Protection keyring; the keyring is protected by a certificate/DPAPI on-premises, or a cloud KEK when a cloud is present.
 * **Multi-tenant storage**: the Pool key-set lives in the global `SigningKeys` table (control plane); each Silo tenant keeps its key-set in its own database (hard isolation).
