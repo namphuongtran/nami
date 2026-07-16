@@ -16,4 +16,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0005](0005-encryption-credential-lifecycle.md) | Track the encryption credential's lifecycle separately from the signing credential | accepted |
 | [0006](0006-disaster-recovery-key-material.md) | Make key-material storage and disaster recovery provider-agnostic | accepted |
 | [0007](0007-key-compromise-break-glass-runbook.md) | Eject a compromised key from the JWKS within five minutes with a break-glass runbook | accepted |
-| 0008-0035 | _importing from the design corpus..._ | |
+| [0008](0008-audit-subsystem.md) | Make the audit subsystem first-class, tamper-evident, and delivery-guaranteed | accepted |
+| 0009-0035 | _importing from the design corpus..._ | |
