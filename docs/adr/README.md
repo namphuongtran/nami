@@ -9,4 +9,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | ADR | Title | Status |
 |---|---|---|
 | [0000](0000-use-markdown-architectural-decision-records.md) | Use Markdown Architectural Decision Records (MADR) with the full template | accepted |
-| 0001-0035 | _importing from the design corpus..._ | |
+| [0001](0001-multi-tenant-isolation-model.md) | Tiered multi-tenant isolation: global identity, pooled tenant data by default, silo on demand | accepted |
+| 0002-0035 | _importing from the design corpus..._ | |
