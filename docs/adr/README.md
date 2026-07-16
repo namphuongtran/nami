@@ -12,4 +12,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0001](0001-multi-tenant-isolation-model.md) | Tiered multi-tenant isolation: global identity, pooled tenant data by default, silo on demand | accepted |
 | [0002](0002-federation-external-idp-integration.md) | Integrate external identity providers through ASP.NET Core Identity external login | accepted |
 | [0003](0003-server-side-sessions-are-core.md) | Server-side session store is a core feature, not an option | accepted |
-| 0004-0035 | _importing from the design corpus..._ | |
+| [0004](0004-refresh-token-posture.md) | Keep OpenIddict's native refresh-token mechanics rather than rebuilding them | accepted |
+| 0005-0035 | _importing from the design corpus..._ | |
