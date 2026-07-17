@@ -18,4 +18,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0007](0007-key-compromise-break-glass-runbook.md) | Eject a compromised key from the JWKS within five minutes with a break-glass runbook | accepted |
 | [0008](0008-audit-subsystem.md) | Make the audit subsystem first-class, tamper-evident, and delivery-guaranteed | accepted |
 | [0009](0009-secret-store-access-and-rollover.md) | Access the secret store with least-privilege workload identity and rotate client credentials via private_key_jwt | accepted |
-| 0010-0035 | _importing from the design corpus..._ | |
+| [0010](0010-tenant-hierarchy-delegated-admin.md) | Administer child tenants through explicit, scoped delegated-admin grants, not inherited seniority | accepted |
+| 0011-0035 | _importing from the design corpus..._ | |
