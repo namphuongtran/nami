@@ -16,11 +16,9 @@ subsystem behaves, gotchas, and research. This is not where decisions live
 | --- | --- |
 | `docs/adr/` | A settled decision with consequences (MADR). |
 | `docs/kb/notes/` | A lesson, a how-something-works, or a gotcha that is not a decision. |
-| `docs/kb/research/` | A deep investigation, usually preceding an ADR, linking to it. |
-| `memory/` (local) | Personal cross-session facts, short. |
+| `docs/kb/research/` | A deep investigation, usually preceding an ADR and linking to that ADR. |
 
-One-line rule: decision → ADR; knowledge to reference → KB; fact to remember
-between sessions → memory.
+One-line rule: decision → ADR; knowledge to reference → KB.
 
 ## Writing a note
 
@@ -36,9 +34,11 @@ related: [[some-note]], [[0021-openiddict-version-adaptation]]
 ```
 
 - One note, one topic. Split it when it grows to cover two.
+- Do not add an H1 heading; the frontmatter `title` is the note's title.
 - Link notes and ADRs with `[[slug]]` (the ADR slug is its filename without
   the extension).
-- Keep it lint-clean: `npx markdownlint-cli2 "**/*.md"` must report 0 errors.
+- Keep it lint-clean: `npx --yes markdownlint-cli2@0.23.0 "**/*.md"` must
+  report 0 errors (the pinned version matches CI).
 
 ## Raw capture
 
