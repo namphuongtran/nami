@@ -28,4 +28,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0017](0017-tenant-provisioning-and-silo-migration.md) | Orchestrate the tenant lifecycle with build-artifact migrations, per-tenant version gating, and expand/contract | accepted |
 | [0018](0018-dbcontext-pooling-for-pool-mode.md) | Pool the Pool-mode OpenIddict DbContext with a per-request mutable TenantId, with a non-pooled fallback | accepted |
 | [0019](0019-single-logout-strategy.md) | Achieve single logout with an interim back-channel logout on the session store, and drop front-channel | accepted |
-| 0020-0035 | _importing from the design corpus..._ | |
+| [0020](0020-admin-architecture.md) | Split admin into a REST API and an MVC Razor BFF app, enforce dual-control server-side, and reject app-only tokens | accepted |
+| 0021-0035 | _importing from the design corpus..._ | |
