@@ -46,3 +46,4 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0035](0035-self-service-client-registration.md) | Offer self-service client registration through the authenticated Admin API (DCR-inspired), not the standard DCR endpoint | accepted |
 | [0036](0036-database-key-strategy-uuidv7.md) | Use UUIDv7 as the clustered primary key for every entity, with one deliberate bigint exception | accepted |
 | [0037](0037-database-engine-postgresql.md) | Use PostgreSQL as the sole database engine | accepted |
+| [0038](0038-email-notification-subsystem.md) | Build email delivery as a first-class, cloud-agnostic subsystem with a transactional outbox | accepted |
