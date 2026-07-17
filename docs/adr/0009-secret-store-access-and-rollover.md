@@ -41,7 +41,7 @@ Fixed parameters of the decision:
 * **Every store access is audited** into the audit sink (ADR-0008).
 * The store has soft-delete/recovery-window plus purge-protection (or the equivalent) per ADR-0006: native in cloud; in DB mode a status-column soft-delete plus backup plus dual-control hard delete.
 
-**B. Client-secret rollover (zero-downtime)**
+**B. Client-secret rollover** (zero-downtime)
 
 * **Standard: `private_key_jwt` client assertions** for service/M2M clients — asymmetric-key authentication. OpenIddict allows registering multiple keys at once, enabling zero-downtime rotation (add the new key, let clients migrate, remove the old one). No shared secret; each client manages its own private key.
 * **Fallback (symmetric secret)**: only when a client cannot manage its own keys. Support multiple parallel secrets (a side-table `ApplicationSecrets` with expiry) so they overlap during rollover; mask in the admin API; store only the hash.
