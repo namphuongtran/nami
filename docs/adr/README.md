@@ -32,4 +32,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0021](0021-openiddict-version-adaptation.md) | Adapt to OpenIddict version upgrades with seam isolation, per-bump contract-regression tests, and a migration playbook | accepted |
 | [0022](0022-logging-and-observability-stack.md) | Use native ILogger plus OpenTelemetry (OTLP) for logging and observability, and drop Serilog | accepted |
 | [0023](0023-iac-tool-opentofu.md) | Use OpenTofu as the default infrastructure-as-code tool instead of Terraform | accepted |
-| 0024-0035 | _importing from the design corpus..._ | |
+| [0024](0024-architecture-style.md) | Adopt a hexagonal shell (dependency rule plus ports/adapters) with vertical slices inside, for both IdP-core and Admin | accepted |
+| 0025-0035 | _importing from the design corpus..._ | |
