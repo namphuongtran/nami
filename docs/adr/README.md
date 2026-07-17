@@ -35,4 +35,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0024](0024-architecture-style.md) | Adopt a hexagonal shell (dependency rule plus ports/adapters) with vertical slices inside, for both IdP-core and Admin | accepted |
 | [0025](0025-local-development-and-first-run.md) | Run locally with docker-compose dependencies, multi-stage Dockerfiles, Testcontainers integration tests, and a defined first-run order | accepted |
 | [0026](0026-dependency-license-policy.md) | Restrict dependencies to permissive OSS licenses, enforced by a CI license-scan gate | accepted |
-| 0027-0035 | _importing from the design corpus..._ | |
+| [0027](0027-packaging-and-distribution.md) | Distribute Nami as a hybrid NuGet meta-package plus a reference host image and template, released under Apache-2.0 | accepted |
+| 0028-0035 | _importing from the design corpus..._ | |
