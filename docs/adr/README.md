@@ -25,4 +25,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0014](0014-advanced-protocol-scope.md) | Build both mTLS and DPoP sender-constrained tokens, and deliberately de-scope FAPI-specific protocols | accepted |
 | [0015](0015-admin-break-glass-and-first-admin-bootstrap.md) | Provide an OIDC-independent admin break-glass path and a one-time first-admin bootstrap | accepted |
 | [0016](0016-right-to-erasure.md) | Reconcile GDPR right-to-erasure with the immutable audit chain using chain-over-commitments | accepted |
-| 0017-0035 | _importing from the design corpus..._ | |
+| [0017](0017-tenant-provisioning-and-silo-migration.md) | Orchestrate the tenant lifecycle with build-artifact migrations, per-tenant version gating, and expand/contract | accepted |
+| 0018-0035 | _importing from the design corpus..._ | |
