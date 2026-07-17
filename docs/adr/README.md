@@ -45,3 +45,4 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0034](0034-dynamic-external-idp.md) | Open dynamic per-tenant external IdP federation as a v2 self-service, OIDC-only feature via a dynamic scheme provider | accepted |
 | [0035](0035-self-service-client-registration.md) | Offer self-service client registration through the authenticated Admin API (DCR-inspired), not the standard DCR endpoint | accepted |
 | [0036](0036-database-key-strategy-uuidv7.md) | Use UUIDv7 as the clustered primary key for every entity, with one deliberate bigint exception | accepted |
+| [0037](0037-database-engine-postgresql.md) | Use PostgreSQL as the sole database engine | accepted |
