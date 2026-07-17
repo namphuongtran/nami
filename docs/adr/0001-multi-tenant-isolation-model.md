@@ -53,7 +53,7 @@ The decision fixes five sub-decisions:
 
 ### C. Tenant resolution by host or path, never by claim
 
-Tenant is resolved from the subdomain/host or path (for example `moditech.id.example.com`), not from a claim that would require a database query, avoiding the token-endpoint chicken-and-egg problem. Human authentication runs against the global identity store first, before any tenant database is touched.
+Tenant is resolved from the subdomain/host or path (for example `acme.id.example.com`), not from a claim that would require a database query, avoiding the token-endpoint chicken-and-egg problem. Human authentication runs against the global identity store first, before any tenant database is touched.
 
 ### D. Per-tenant key sets
 
