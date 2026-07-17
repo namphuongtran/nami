@@ -49,3 +49,4 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0038](0038-email-notification-subsystem.md) | Build email delivery as a first-class, cloud-agnostic subsystem with a transactional outbox | accepted |
 | [0039](0039-revocation-propagation-and-cache-coherence.md) | Achieve cross-node revocation freshness per-path, with no backplane for the per-request entity cache | accepted |
 | [0040](0040-resiliency-and-overload-protection.md) | Standardize a resiliency and overload-protection posture (one outbound handler; rate-limiting vs load-shedding; Redis as accelerator) | accepted |
+| [0041](0041-nfr-targets-and-slo-release-gate.md) | Adopt self-load-tested NFR targets and make the SLO a formal release gate, with burn-rate alerting and an external synthetic canary | accepted |
