@@ -29,4 +29,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0018](0018-dbcontext-pooling-for-pool-mode.md) | Pool the Pool-mode OpenIddict DbContext with a per-request mutable TenantId, with a non-pooled fallback | accepted |
 | [0019](0019-single-logout-strategy.md) | Achieve single logout with an interim back-channel logout on the session store, and drop front-channel | accepted |
 | [0020](0020-admin-architecture.md) | Split admin into a REST API and an MVC Razor BFF app, enforce dual-control server-side, and reject app-only tokens | accepted |
-| 0021-0035 | _importing from the design corpus..._ | |
+| [0021](0021-openiddict-version-adaptation.md) | Adapt to OpenIddict version upgrades with seam isolation, per-bump contract-regression tests, and a migration playbook | accepted |
+| 0022-0035 | _importing from the design corpus..._ | |
