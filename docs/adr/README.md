@@ -22,4 +22,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0011](0011-no-restart-key-rotation.md) | Rotate signing and encryption keys without restarting, via a custom OpenIddict options monitor | accepted |
 | [0012](0012-key-bootstrap-and-dr-sequence.md) | Bootstrap keys by auto-seeding at cold start, root the keyring in an X.509 certificate, and restore both key stores together | accepted |
 | [0013](0013-mfa-assurance-and-step-up.md) | Make MFA the producer of acr/amr/auth_time and enforce step-up assurance | accepted |
-| 0014-0035 | _importing from the design corpus..._ | |
+| [0014](0014-advanced-protocol-scope.md) | Build both mTLS and DPoP sender-constrained tokens, and deliberately de-scope FAPI-specific protocols | accepted |
+| 0015-0035 | _importing from the design corpus..._ | |
