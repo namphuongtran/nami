@@ -42,4 +42,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0031](0031-twelve-factor-baseline.md) | Adopt the 12-factor (and 15-factor) methodology as the operational baseline, closing four soft spots as enforced invariants | accepted |
 | [0032](0032-usage-visibility-and-licensing-posture.md) | Gain usage visibility through free registration and opt-in telemetry, with an open-core-ready seam, keeping the core Apache-2.0 | accepted |
 | [0033](0033-key-scope-isolation-model.md) | Align key-scope isolation to the tenant tier with one keyset per deployment and a scope-aware key store | accepted |
-| 0034-0035 | _importing from the design corpus..._ | |
+| [0034](0034-dynamic-external-idp.md) | Open dynamic per-tenant external IdP federation as a v2 self-service, OIDC-only feature via a dynamic scheme provider | accepted |
+| 0035 | _importing from the design corpus..._ | |
