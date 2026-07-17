@@ -8,6 +8,13 @@ Thanks for your interest! Nami is early-stage and being built in public, which m
 - Security vulnerabilities go through [SECURITY.md](SECURITY.md), never public issues.
 - Significant design changes start with a discussion or an ADR proposal, not a surprise PR. The ADRs in `docs/adr/` (import in progress) are the project's decision record; changing a decided behavior means revisiting its ADR.
 
+## Knowledge base
+
+The [knowledge base](docs/kb/) records lessons, how-things-work notes, and
+research that are worth keeping but are not decisions. Write a decision as an
+[ADR](docs/adr/); write durable knowledge as a KB note. See
+[docs/kb/README.md](docs/kb/README.md) for the boundary and the note format.
+
 ## Developer Certificate of Origin (DCO)
 
 We use the [DCO](https://developercertificate.org/) instead of a CLA. Sign off every commit:
