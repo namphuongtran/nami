@@ -37,4 +37,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0026](0026-dependency-license-policy.md) | Restrict dependencies to permissive OSS licenses, enforced by a CI license-scan gate | accepted |
 | [0027](0027-packaging-and-distribution.md) | Distribute Nami as a hybrid NuGet meta-package plus a reference host image and template, released under Apache-2.0 | accepted |
 | [0028](0028-user-management.md) | Build user management on ASP.NET Core Identity with native passkeys and a lifecycle layer, packaged as Nami.Identity.Users | accepted |
-| 0029-0035 | _importing from the design corpus..._ | |
+| [0029](0029-bff.md) | Build a Nami.Identity.Bff package by composing OSS-permissive pieces rather than adopting a commercial BFF | accepted |
+| 0030-0035 | _importing from the design corpus..._ | |
