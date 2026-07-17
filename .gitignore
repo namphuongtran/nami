@@ -427,3 +427,10 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Ephemeral working artifacts (local-only, short-lived; never published)
+# superpowers/ holds brainstorming specs + implementation plans while a piece
+# of work is in flight. KB .scratch/ holds raw per-session capture.
+# Clean either with:  git clean -Xfd docs/superpowers docs/kb/.scratch
+docs/superpowers/
+docs/kb/.scratch/
