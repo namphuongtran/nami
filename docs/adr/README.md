@@ -21,4 +21,5 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0010](0010-tenant-hierarchy-delegated-admin.md) | Administer child tenants through explicit, scoped delegated-admin grants, not inherited seniority | accepted |
 | [0011](0011-no-restart-key-rotation.md) | Rotate signing and encryption keys without restarting, via a custom OpenIddict options monitor | accepted |
 | [0012](0012-key-bootstrap-and-dr-sequence.md) | Bootstrap keys by auto-seeding at cold start, root the keyring in an X.509 certificate, and restore both key stores together | accepted |
-| 0013-0035 | _importing from the design corpus..._ | |
+| [0013](0013-mfa-assurance-and-step-up.md) | Make MFA the producer of acr/amr/auth_time and enforce step-up assurance | accepted |
+| 0014-0035 | _importing from the design corpus..._ | |
