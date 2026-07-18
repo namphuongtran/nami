@@ -8,6 +8,9 @@
 # associative arrays, no GNU-only `xargs -r`. Assumes tracked markdown paths
 # have no spaces/newlines (true in this repo), so `git ls-files` output is
 # word-split intentionally; see the plan for the `-z` fallback if that changes.
+# ADR-file existence/enumeration (Checks 2-3) uses on-disk globs, not git
+# ls-files: identical to CI's tracked-only checkout, and locally it also
+# surfaces an untracked ADR before it is committed.
 set -uo pipefail
 
 cd "$(git rev-parse --show-toplevel)"

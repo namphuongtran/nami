@@ -27,3 +27,6 @@ The hook runs `check-adrs.sh`. In addition, if you create a local, git-ignored
 ignored), the hook blocks a commit that introduces any of those terms in staged
 markdown. That file lives under the git-ignored `scripts/.local/` directory and
 is never committed, so nothing sensitive is published.
+
+Terms are matched case-insensitively as whole words; use plain names and avoid
+regular-expression metacharacters.
