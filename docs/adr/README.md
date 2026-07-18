@@ -80,3 +80,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0067](0067-ai-assisted-development-governance.md) | Adopt an AI-assisted development policy: human-accountable, disclosed, license- and security-hygienic | accepted |
 | [0068](0068-continuous-access-evaluation-shared-signals.md) | Support continuous access evaluation via the OpenID Shared Signals Framework (Nami as transmitter) | proposed |
 | [0069](0069-verifiable-credentials-openid4vc.md) | Support issuing Verifiable Credentials via OpenID4VC (Nami as issuer) | proposed |
+| [0070](0070-local-development-tls.md) | Serve HTTPS in local development with a locally-trusted cert behind a terminating reverse proxy | accepted |
