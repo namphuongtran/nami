@@ -107,8 +107,11 @@ globs. Preserve that portability if you edit it. The local hook
   the changelog is generated from these.
 - Branch for changes; commit or push only when asked. This project's convention is
   **one ADR per commit** when importing/authoring ADRs.
-- Naming conventions: assemblies under `Nami.Identity.*`; config keys `Nami:X`
-  (env `Nami__X`), env alias `NAMI_X`.
+- Naming and coding conventions: **ADR-0065 is the authority** (Microsoft naming +
+  C# conventions adopted by reference, enforced via `.editorconfig` + analyzers,
+  with the Nami tailoring). Quick reference: assemblies under `Nami.Identity.*`;
+  config keys `Nami:X` (env `Nami__X`), env alias `NAMI_X`. The machine-enforceable
+  rules live in `.editorconfig` (the C# ruleset lands with the first code at M1).
 
 ## Ephemeral working areas (git-ignored, local-only)
 
