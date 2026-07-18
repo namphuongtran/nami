@@ -61,3 +61,4 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0050](0050-per-client-cors-policy.md) | Provide per-client CORS through a custom policy provider, not static global CORS | accepted |
 | [0051](0051-release-supply-chain-integrity.md) | Sign and attest release artifacts with keyless provenance for a verifiable supply chain | accepted |
 | [0052](0052-ergonomic-config-layer.md) | Build an ergonomic, fail-closed configuration layer for declaring clients and scopes | accepted |
+| [0053](0053-data-subject-rights-suite.md) | Build the data-subject-rights suite, consent receipts, and breach hooks as reusable mechanisms | accepted |
