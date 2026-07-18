@@ -47,7 +47,7 @@ Chosen option: "The hybrid", released under Apache-2.0, because the same core th
 ### Confirmation
 
 * OpenIddict and commercial identity servers both ship via NuGet package splits; a .NET framework module and an app-host stack are the hybrid precedents (packages plus a template/host); and the "put the IdP in a separate app" guidance supports a reference host. The public-API analyzers are the Microsoft-recommended way to hold API stability, and the Apache-2.0 patent grant is standard for security OSS.
-* Approach settled 2026-07-07: the reference-host distribution (image/compose/Helm/template), the supply-chain measures (signing, SBOM, SLSA, scanning), the bootstrap-admin, and the declarative config import/export are the decided approach; only build-time sub-details remain (final environment-variable names, the import format JSON versus YAML, and the template option set), which are not open decisions.
+* Approach settled 2026-07-07: the reference-host distribution (image/compose/Helm/template), the supply-chain measures (signing, SBOM, SLSA, scanning; detailed in ADR-0051), the bootstrap-admin, and the declarative config import/export are the decided approach; only build-time sub-details remain (final environment-variable names, the import format JSON versus YAML, and the template option set), which are not open decisions.
 
 ## Pros and Cons of the Options
 
