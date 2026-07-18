@@ -35,6 +35,7 @@ Fixed parameters of the decision:
 * **The default adapter is DB-backed**: a `SigningKeys` table encrypted at rest via Data Protection, following the common signing-key-store pattern (a keys table behind a store abstraction), independently designed here. This is the cloud-neutral baseline that runs on-premises, because not every deployment uses a cloud.
 * **Cloud adapters are optional** (HashiCorp Vault, Azure Key Vault, AWS KMS + Secrets Manager, GCP KMS + Secret Manager) for those wanting HSM-backed or managed rotation. Every adapter must meet mandatory capabilities: versioning, soft-delete/recovery-window, purge-protection, encrypt-at-rest, and access auditing. The DB adapter meets these via a status-column soft-delete, Data Protection encryption, and the audit log.
 * **Root of trust at rest**: keys in the database are encrypted by the Data Protection keyring; the keyring is protected by a certificate/DPAPI on-premises, or a cloud KEK when a cloud is present.
+* **Signing default = envelope encryption, not sign-in-HSM.** By default the private key is wrapped at rest by a KEK (the Data Protection keyring on-premises, or a cloud KMS key), unwrapped into memory, and used to sign locally, because OpenIddict signs in-process and cannot delegate signing to an HSM natively. Sign-in-HSM (the key never leaves the HSM) is an optional adapter via a custom signature provider, accepting its latency/throughput cost for the smaller blast radius.
 * **Multi-tenant storage**: the Pool key-set lives in the global `SigningKeys` table (control plane); each Silo tenant keeps its key-set in its own database (hard isolation).
 
 Disaster-recovery requirements (provider-agnostic):
@@ -43,6 +44,7 @@ Disaster-recovery requirements (provider-agnostic):
 * **Persist the Data Protection keyring** to a durable, portable store, encrypted at rest, with a **fixed `SetApplicationName`** (it must restore verbatim; changing the name loses the old keys).
 * Bind the RTO under 15 minutes and RPO under 5 minutes targets to **each store** (keyring, certificates, operational database, session store).
 * Run a **DR restore drill quarterly and after every key-infrastructure change**, producing evidence that tokens and cookies issued before the restore still validate after it.
+* **Monitor RPO continuously**, not only at the quarterly drill: alert on write-ahead-log archiving lag, last-successful-backup age, and replication lag against each store's bound RPO, so a backup that has silently stopped is caught before a disaster rather than during one.
 * Document the **blast radius** by token format.
 * Key provisioning and deletion are **irreversible and require dual-control** (ADR-0009) plus DPO/Security sign-off.
 
