@@ -68,3 +68,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0055](0055-saml-ws-federation-support.md) | Support SAML 2.0 and WS-Federation through a demand-driven federation extension | proposed |
 | [0056](0056-fapi-2-conformance.md) | Support FAPI 2.0 high-assurance profiles through a demand-driven extension | proposed |
 | [0057](0057-windows-negotiate-authentication.md) | Support Windows integrated authentication (Negotiate/Kerberos) through a demand-driven extension | proposed |
+| [0058](0058-guiding-architectural-principles.md) | Adopt Separation of Concerns and pragmatic SOLID as binding architectural principles | accepted |
