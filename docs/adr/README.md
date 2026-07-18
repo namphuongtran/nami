@@ -73,3 +73,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0060](0060-testing-strategy.md) | Consolidate the testing strategy and adopt behavior-first tests as living documentation | accepted |
 | [0061](0061-technology-stack-of-record.md) | Record the committed technology stack and its cross-cutting selection rules | accepted |
 | [0062](0062-owasp-asvs-security-baseline.md) | Adopt OWASP ASVS as the security-verification baseline | accepted |
+| [0063](0063-observability-backend-and-dev-visualization.md) | Keep the observability backend operator-chosen and run a self-hosted Grafana stack for local development | accepted |
