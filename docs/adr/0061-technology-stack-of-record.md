@@ -59,7 +59,7 @@ Every technology in the table below was chosen under these rules, and a future c
 | Authorization engine | DB-first `ICheckAccess`, swappable to ReBAC | 0047 |
 | Email | First-class subsystem with a transactional outbox | 0038 |
 | Configuration | Ergonomic, fail-closed config layer | 0052 |
-| Observability | OpenTelemetry / OTLP with `Microsoft.Extensions.Logging` (Serilog dropped) | 0022, 0041 |
+| Observability | OpenTelemetry / OTLP with `Microsoft.Extensions.Logging` (Serilog dropped); backend operator-chosen, Grafana stack for dev | 0022, 0041, 0063 |
 | Architecture | Hexagonal shell plus vertical slices, ArchUnitNET | 0024, 0058, 0059 |
 | Infrastructure as code | OpenTofu | 0023 |
 | Local dev and test | docker-compose plus Testcontainers, Playwright, xUnit | 0025, 0060 |
@@ -67,7 +67,7 @@ Every technology in the table below was chosen under these rules, and a future c
 | Supply chain | Keyless signing and provenance attestation | 0051 |
 | Dependency policy | Permissive OSS only, CI license-scan | 0026 |
 | Key management | No-restart rotation, provider-agnostic DR, per-scope keyset | 0005, 0006, 0011, 0012, 0033 |
-| Security posture | Hardening-invariant startup check, abuse defense, CVE disclosure | 0043, 0042, 0045 |
+| Security posture | Hardening-invariant startup check, abuse defense, CVE disclosure; OWASP ASVS baseline | 0043, 0042, 0045, 0062 |
 | Governance | ADR-driven, DCO, dual-control releases | 0046 |
 
 ### Maintenance rule (binding)
