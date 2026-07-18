@@ -29,7 +29,7 @@ implementation plan, not here.
 | # | Design | Status | Realizes (primary ADRs) |
 |---|---|---|---|
 | [01](01-foundations.md) | Foundations and solution structure | reviewed | 0024, 0027, 0052, 0065 |
-| 02 | Data tier and multi-tenancy | planned | 0001, 0018, 0036, 0037, 0049 |
+| [02](02-data.md) | Data tier and multi-tenancy | reviewed | 0001, 0018, 0036, 0037, 0049 |
 | 03 | Audit subsystem | planned | 0008, 0022 |
 | 04 | Core protocol server | planned | 0004, 0005, 0014, 0048, 0049 |
 | 05 | Authorization and delegated admin | planned | 0010, 0047, 0013 |
