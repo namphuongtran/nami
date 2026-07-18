@@ -70,3 +70,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0057](0057-windows-negotiate-authentication.md) | Support Windows integrated authentication (Negotiate/Kerberos) through a demand-driven extension | proposed |
 | [0058](0058-guiding-architectural-principles.md) | Adopt Separation of Concerns and pragmatic SOLID as binding architectural principles | accepted |
 | [0059](0059-value-objects-and-aggregate-boundaries.md) | Model value objects as complex types and gate aggregates on a transactional invariant | accepted |
+| [0060](0060-testing-strategy.md) | Consolidate the testing strategy and adopt behavior-first tests as living documentation | accepted |
