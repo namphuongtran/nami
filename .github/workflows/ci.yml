@@ -20,4 +20,12 @@ jobs:
         with:
           globs: "**/*.md"
 
+  adr-guardrail:
+    name: ADR/docs guardrail
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ADR/docs hygiene checks
+        run: bash scripts/check-adrs.sh
+
   # .NET build/test/license-scan gates are added when the solution lands (M1).
