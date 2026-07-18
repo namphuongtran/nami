@@ -67,3 +67,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0054](0054-cross-border-transfer-and-data-residency.md) | Make data residency and cross-border personal-data transfer first-class, jurisdiction-profiled controls | accepted |
 | [0055](0055-saml-ws-federation-support.md) | Support SAML 2.0 and WS-Federation through a demand-driven federation extension | proposed |
 | [0056](0056-fapi-2-conformance.md) | Support FAPI 2.0 high-assurance profiles through a demand-driven extension | proposed |
+| [0057](0057-windows-negotiate-authentication.md) | Support Windows integrated authentication (Negotiate/Kerberos) through a demand-driven extension | proposed |
