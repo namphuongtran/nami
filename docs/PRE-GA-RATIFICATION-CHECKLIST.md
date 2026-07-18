@@ -25,6 +25,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 - ☐ Accepted risk: Pool-shared keyset (pool-group blast radius) — [ADR-0033](adr/0033-key-scope-isolation-model.md)
 - ☐ Authorization SLO / timeout (with Ops) — [ADR-0047](adr/0047-authorization-decision-engine.md)
 - ☐ Trusted-proxy IP list for mTLS (with Ops) — [ADR-0014](adr/0014-advanced-protocol-scope.md)
+- ☐ OWASP ASVS 5.0 Level 2 self-assessment coverage complete (L3 for key/token/dual-control/tenant-isolation), API Security Top 10 mapped — [ADR-0062](adr/0062-owasp-asvs-security-baseline.md)
 
 ## Ops
 
