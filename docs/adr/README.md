@@ -57,3 +57,4 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0046](0046-governance-and-contribution-model.md) | Adopt an ADR-driven, DCO-based OSS governance and contribution model with dual-control releases | accepted |
 | [0047](0047-authorization-decision-engine.md) | Compute authorization with a DB-first engine behind a consistency-carrying ICheckAccess port, swappable to ReBAC | accepted |
 | [0048](0048-introspection-revocation-endpoint-isolation.md) | Isolate the introspection and revocation endpoints with client authentication and native audience confinement | accepted |
+| [0049](0049-resource-server-per-tenant-validation.md) | Isolate tenants at the resource server by issuer and tenant binding, because a shared keyset means the signature is not an isolation boundary | accepted |
