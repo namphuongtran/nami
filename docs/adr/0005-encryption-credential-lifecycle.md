@@ -35,6 +35,8 @@ Fixed parameters of the decision:
 * **`DisableAccessTokenEncryption()` is enabled**: the access token is a plain signed JWT. Resource APIs validate it with `JwtBearer` + JWKS and `ValidTypes = ["at+jwt"]`. This mandates a **minimal access token** (only `sub`, `scopes`, and `tenant`) for GDPR claim minimization, because a plain JWT is readable by anyone holding it.
 * **Refresh tokens, authorization codes, and device codes remain JWE** (this cannot be disabled), so the encryption credential is still required and is **never** retired on the access-token TTL.
 * **Key-set scope by tier**: Pool tenants share the pool-group key-set; Silo tenants have their own signing and encryption key-sets; lifecycle and retention apply per key-set (ADR-0001, ADR-0033). The plain access-token JWT carries the `tenant` claim and a per-tenant `iss`.
+* **Signing-algorithm baseline = RS256**, with ES256 selectable by configuration through the signing credential source; this choice is orthogonal to the signing/encryption lifecycle separation above.
+* **Claim minimization extends to the id_token**: the `memberships` claim is size-capped (roughly 10 entries) with a `memberships_truncated` flag and a self-service endpoint for the full list, so a user in many tenants does not bloat the token; the assurance claims `acr`/`amr`/`auth_time` are produced by ADR-0013.
 
 ### Consequences
 

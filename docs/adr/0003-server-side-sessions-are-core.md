@@ -38,6 +38,7 @@ Fixed parameters of the decision:
 * `sid` lifecycle: stable across passive refresh; **rotated on step-up or re-authentication**.
 * **Strict timeouts** (sensitive-data posture): inactivity (sliding) 1 hour, absolute 8 hours; past the absolute limit, re-authentication is required.
 * Authorization and refresh requests are denied when the session is revoked.
+* **Concurrent-session cap**: a per-user `MaxConcurrentSessions` limit (default around 5, overridable per tenant), enforced on login by counting the user's live sessions by `SubjectId` and evicting the oldest when the cap is exceeded.
 
 ### Consequences
 
