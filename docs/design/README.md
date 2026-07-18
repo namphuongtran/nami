@@ -17,8 +17,9 @@ remains the authority: a design doc realizes decisions, it does not make them.
 > section is where those are flagged.
 
 Each doc follows one template: purpose and scope, the decisions it realizes,
-component and interface design (including key libraries and their licenses), data
-model, runtime flows, edge cases and failure modes, security considerations,
+component and interface design (including key libraries and their licenses, and a
+brief patterns-applied callout per ADR-0066), data model, runtime flows, edge cases
+and failure modes, security considerations,
 testing strategy, open and build-time items, and references. Design docs describe
 the durable shape and rationale; the mechanical build recipe (exact scaffolding
 commands, `.gitignore`, package version pins, CI file contents) lives in the
@@ -30,7 +31,7 @@ implementation plan, not here.
 |---|---|---|---|
 | [01](01-foundations.md) | Foundations and solution structure | reviewed | 0024, 0027, 0052, 0065 |
 | [02](02-data.md) | Data tier and multi-tenancy | reviewed | 0001, 0018, 0036, 0037, 0049 |
-| 03 | Audit subsystem | planned | 0008, 0022 |
+| [03](03-audit.md) | Audit subsystem | reviewed | 0008, 0022 |
 | 04 | Core protocol server | planned | 0004, 0005, 0014, 0048, 0049 |
 | 05 | Authorization and delegated admin | planned | 0010, 0047, 0013 |
 | 06 | User management and authentication | planned | 0028, 0013, 0003, 0002 |

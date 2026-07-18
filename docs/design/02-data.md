@@ -128,6 +128,17 @@ creation (ADR-0037, ADR-0017).
 The Finbuckle + OpenIddict + EF Core version triple is a pinned composition seam;
 the exact pins live in `Directory.Packages.props` (the implementation plan).
 
+### Patterns applied
+
+Named per ADR-0066 (a vocabulary, applied where it clarifies intent):
+
+* **Closure Table** over an adjacency list for the tenant hierarchy (read-heavy
+  authz in one seek).
+* **Strategy** for tenant resolution (host/path) and Pool-versus-Silo store routing
+  (Finbuckle).
+* **Repository** via the EF and OpenIddict stores, always behind managers, never a
+  `DbContext` touched directly.
+
 ## Data model
 
 This design is the **schema single source of truth**. Every persistent table's
@@ -481,4 +492,4 @@ the dedicated connection for Silo tenants.
 
 ---
 
-[← Prev: Foundations](01-foundations.md) · [Index](README.md) · Next: Audit subsystem (03, planned)
+[← Prev: Foundations](01-foundations.md) · [Index](README.md) · Next: [Audit subsystem →](03-audit.md)

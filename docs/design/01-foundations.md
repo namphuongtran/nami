@@ -158,6 +158,16 @@ FusionCache and Polly for resiliency, Playwright for UI tests, MailKit for email
 each named with its license in its own doc. Exact version pins live in
 `Directory.Packages.props` (the implementation plan), not here.
 
+### Patterns applied
+
+Named per ADR-0066 (a vocabulary, applied where it clarifies intent):
+
+* **Ports and Adapters (hexagonal / DIP)** for the cloud-agnostic seams in
+  `Abstractions` with per-provider adapters (ADR-0024/0006).
+* **Fluent Builder** for `AddNamiIdentity()` composition.
+* **Mapper** for the config layer (`ClientDefinition`/`ScopeDefinition` to
+  OpenIddict descriptors), fail-closed by construction.
+
 ## Data model
 
 Phase 01 only creates the four DbContexts with the correct scope; the schema and
