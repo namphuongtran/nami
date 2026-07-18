@@ -78,3 +78,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0065](0065-coding-and-naming-conventions.md) | Adopt the Microsoft naming and C# coding conventions as an enforced baseline, tailored to Nami | accepted |
 | [0066](0066-design-patterns-vocabulary-and-pragmatic-use.md) | Adopt design patterns as a shared vocabulary applied pragmatically, not preemptively | accepted |
 | [0067](0067-ai-assisted-development-governance.md) | Adopt an AI-assisted development policy: human-accountable, disclosed, license- and security-hygienic | accepted |
+| [0068](0068-continuous-access-evaluation-shared-signals.md) | Support continuous access evaluation via the OpenID Shared Signals Framework (Nami as transmitter) | proposed |
