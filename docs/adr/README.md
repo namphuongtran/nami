@@ -53,3 +53,4 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0042](0042-abuse-and-bot-defense.md) | Add a layered anti-automation and abuse-defense posture beyond IP rate-limiting and account lockout | accepted |
 | [0043](0043-security-hardening-invariants-startup-check.md) | Enforce security hardening invariants with a fail-fast startup self-check | accepted |
 | [0044](0044-public-api-stability-and-semver.md) | Treat the public API as a versioned seam governed by an analyzer-gated SemVer and deprecation policy | accepted |
+| [0045](0045-security-disclosure-and-cve-policy.md) | Handle security vulnerabilities through private coordinated disclosure with CVE issuance | accepted |
