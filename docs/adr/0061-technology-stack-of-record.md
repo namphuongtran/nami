@@ -69,7 +69,7 @@ Every technology in the table below was chosen under these rules, and a future c
 | Dependency policy | Permissive OSS only, CI license-scan | 0026 |
 | Key management | No-restart rotation, provider-agnostic DR, per-scope keyset | 0005, 0006, 0011, 0012, 0033 |
 | Security posture | Hardening-invariant startup check, abuse defense, CVE disclosure; OWASP ASVS baseline | 0043, 0042, 0045, 0062 |
-| Governance | ADR-driven, DCO, dual-control releases | 0046 |
+| Governance | ADR-driven, DCO, dual-control releases; AI-assisted-development policy | 0046, 0067 |
 
 ### Maintenance rule (binding)
 

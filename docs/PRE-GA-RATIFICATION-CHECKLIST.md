@@ -44,6 +44,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 
 - ☐ Security disclosure window plus `security@` contact plus PGP key — [ADR-0045](adr/0045-security-disclosure-and-cve-policy.md)
 - ☐ DCO versus CLA; self-govern versus software-foundation membership — [ADR-0046](adr/0046-governance-and-contribution-model.md)
+- ☐ AI-contribution IP/DCO approach confirmed for the distribution model (with the IP-lawyer review) — [ADR-0067](adr/0067-ai-assisted-development-governance.md)
 - ☐ **One IP-lawyer review of the public docs before public launch** (standing recommendation)
 
 ---
