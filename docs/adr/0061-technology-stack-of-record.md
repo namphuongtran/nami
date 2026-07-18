@@ -63,6 +63,7 @@ Every technology in the table below was chosen under these rules, and a future c
 | Architecture | Hexagonal shell plus vertical slices, ArchUnitNET | 0024, 0058, 0059 |
 | Infrastructure as code | OpenTofu | 0023 |
 | Local dev and test | docker-compose plus Testcontainers, Playwright, xUnit | 0025, 0060 |
+| Code style and conventions | `.editorconfig` plus .NET analyzers and `dotnet format` | 0065 |
 | Packaging and distribution | NuGet meta-package plus reference host image and template | 0027, 0044 |
 | Supply chain | Keyless signing and provenance attestation | 0051 |
 | Dependency policy | Permissive OSS only, CI license-scan | 0026 |
