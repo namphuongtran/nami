@@ -70,7 +70,7 @@ Silo tenants get their own signing/encryption key set (full isolation). Pool ten
 * Good, because the majority of tenants ride the cheap pooled path, while sensitive tenants get hard isolation without forcing every tenant to pay for a dedicated database.
 * Good, because one user identity spans tenants, giving single sign-on and instant tenant switching, which fits businesses that acquire or restructure organizations.
 * Bad, because the code must support two routing modes (pool filter vs silo connection) and both must be tested everywhere.
-* Bad, because pooled mode makes the global query filter a load-bearing security control: a single forgotten filter is a cross-tenant leak. Mitigated by mandatory negative tests, a tracking-time enforcement guard, and row-level security as a database-level backstop.
+* Bad, because pooled mode makes the global query filter a load-bearing security control: a single forgotten filter is a cross-tenant leak. Mitigated by mandatory negative tests, a tracking-time enforcement guard, and row-level security as a database-level backstop (the `FORCE` row-level-security policy under a de-privileged, non-`BYPASSRLS` database role is recorded in ADR-0037; a privileged connection would silently disable this second layer).
 
 ### Confirmation
 
