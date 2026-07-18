@@ -65,3 +65,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0052](0052-ergonomic-config-layer.md) | Build an ergonomic, fail-closed configuration layer for declaring clients and scopes | accepted |
 | [0053](0053-data-subject-rights-suite.md) | Build the data-subject-rights suite, consent receipts, and breach hooks as reusable mechanisms | accepted |
 | [0054](0054-cross-border-transfer-and-data-residency.md) | Make data residency and cross-border personal-data transfer first-class, jurisdiction-profiled controls | accepted |
+| [0055](0055-saml-ws-federation-support.md) | Support SAML 2.0 and WS-Federation through a demand-driven federation extension | proposed |
