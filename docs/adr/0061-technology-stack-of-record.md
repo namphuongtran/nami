@@ -60,7 +60,7 @@ Every technology in the table below was chosen under these rules, and a future c
 | Email | First-class subsystem with a transactional outbox | 0038 |
 | Configuration | Ergonomic, fail-closed config layer | 0052 |
 | Observability | OpenTelemetry / OTLP with `Microsoft.Extensions.Logging` (Serilog dropped); backend operator-chosen, Grafana stack for dev | 0022, 0041, 0063 |
-| Architecture | Hexagonal shell plus vertical slices, ArchUnitNET | 0024, 0058, 0059 |
+| Architecture | Hexagonal shell plus vertical slices, ArchUnitNET | 0024, 0058, 0059, 0066 |
 | Infrastructure as code | OpenTofu | 0023 |
 | Local dev and test | docker-compose plus Testcontainers, Playwright, xUnit | 0025, 0060 |
 | Code style and conventions | `.editorconfig` plus .NET analyzers and `dotnet format` | 0065 |
