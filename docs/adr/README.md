@@ -75,3 +75,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0062](0062-owasp-asvs-security-baseline.md) | Adopt OWASP ASVS as the security-verification baseline | accepted |
 | [0063](0063-observability-backend-and-dev-visualization.md) | Keep the observability backend operator-chosen and run a self-hosted Grafana stack for local development | accepted |
 | [0064](0064-mcp-authorization-server-support.md) | Support Nami as the OAuth authorization server for MCP servers | proposed |
+| [0065](0065-coding-and-naming-conventions.md) | Adopt the Microsoft naming and C# coding conventions as an enforced baseline, tailored to Nami | accepted |
