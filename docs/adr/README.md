@@ -55,3 +55,4 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0044](0044-public-api-stability-and-semver.md) | Treat the public API as a versioned seam governed by an analyzer-gated SemVer and deprecation policy | accepted |
 | [0045](0045-security-disclosure-and-cve-policy.md) | Handle security vulnerabilities through private coordinated disclosure with CVE issuance | accepted |
 | [0046](0046-governance-and-contribution-model.md) | Adopt an ADR-driven, DCO-based OSS governance and contribution model with dual-control releases | accepted |
+| [0047](0047-authorization-decision-engine.md) | Compute authorization with a DB-first engine behind a consistency-carrying ICheckAccess port, swappable to ReBAC | accepted |
