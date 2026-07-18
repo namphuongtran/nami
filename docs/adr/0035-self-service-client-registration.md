@@ -46,7 +46,7 @@ Impact on v1 is additive and non-breaking: the `Application` is already per-tena
 
 * Source-verified: OpenIddict auto-hashes the client secret on `CreateAsync`, so the plaintext is shown once and never stored and the secret store is not used.
 * `IOpenIddictApplicationManager` is available in 7.5.0, so the Admin-API CRUD needs no 8.0 feature.
-* v2.1-build follow-ups: Security ratifies the guardrail thresholds (the `redirect_uri` policy, the self-service-allowed `grant_types`, the per-tenant scope entitlement, and the client cap); and the standard `/connect/register` (RFC 7591/7592) on OpenIddict 8.0 would be a follow-up ADR if it is ever needed.
+* v2.1-build follow-ups: Security ratifies the guardrail thresholds (the `redirect_uri` policy, the self-service-allowed `grant_types`, the per-tenant scope entitlement, and the client cap); and the standard `/connect/register` (RFC 7591/7592) on OpenIddict 8.0 would be a follow-up ADR if it is ever needed (ADR-0064, proposed, is one demand driver, since some MCP clients expect the standard DCR endpoint).
 
 ## Pros and Cons of the Options
 
