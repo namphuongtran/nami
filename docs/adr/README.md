@@ -71,3 +71,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0058](0058-guiding-architectural-principles.md) | Adopt Separation of Concerns and pragmatic SOLID as binding architectural principles | accepted |
 | [0059](0059-value-objects-and-aggregate-boundaries.md) | Model value objects as complex types and gate aggregates on a transactional invariant | accepted |
 | [0060](0060-testing-strategy.md) | Consolidate the testing strategy and adopt behavior-first tests as living documentation | accepted |
+| [0061](0061-technology-stack-of-record.md) | Record the committed technology stack and its cross-cutting selection rules | accepted |
