@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-18
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: the testing decisions already scattered across ADR-0025 (Testcontainers, end-to-end, CI), ADR-0024 (architecture tests), ADR-0021 and ADR-0030 (contract-regression per bump), ADR-0041 (the load-test SLO gate and canary), and the CONTRIBUTING test-first rule

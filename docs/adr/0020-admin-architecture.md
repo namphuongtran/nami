@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-02
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: industry survey of admin architectures (API + UI separation) and a documented multi-admin-approval API-bypass gap as a cautionary example; verification V04

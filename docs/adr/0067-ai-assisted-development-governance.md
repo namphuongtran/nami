@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-18
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and maintainer
 consulted: OSS generative-AI contribution practice (Apache `Generated-By`, OpenInfra `Assisted-By`/`Generated-By`, the Linux kernel accountability stance), verified 2026-07-18; the governance and hygiene ADRs (0046, 0026, 0062, 0060, 0045) and SECURITY.md

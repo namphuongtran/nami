@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-18
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: the existing structural ADRs (ADR-0020, ADR-0024, ADR-0021, ADR-0047) and the DDD / SOLID literature

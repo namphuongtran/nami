@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: Ops; Microsoft observability-with-OTLP guidance and the OpenTelemetry .NET logs documentation

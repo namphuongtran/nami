@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-06-28
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: DPO and Ops (the formal RTO/RPO targets and DR runbook await their ratification during operation); comparison with commercial identity servers' signing-key store abstractions

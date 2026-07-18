@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-18
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: verified EF Core 8-10 documentation on complex types versus owned entity types (Microsoft Learn and the EF Core what's-new pages, checked 2026-07-18); the existing tactical-DDD decisions (ADR-0020, ADR-0036, ADR-0058)

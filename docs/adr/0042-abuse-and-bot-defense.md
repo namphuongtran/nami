@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-13
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: OWASP credential-stuffing / anti-automation guidance; ASP.NET Core rate-limiting middleware; RFC 8628 (device flow) and RFC 9126 (PAR)

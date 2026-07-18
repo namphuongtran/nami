@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: ASP.NET Core 10 resilience / rate-limiting middleware and Polly `AddStandardResilienceHandler` docs; evidence in doc 11

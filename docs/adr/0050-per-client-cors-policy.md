@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-06-29
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: OpenIddict CORS support (issue #28, no per-client origins, verified 2026-06-29); the ASP.NET Core `ICorsPolicyProvider` contract

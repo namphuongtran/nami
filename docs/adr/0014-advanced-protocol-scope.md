@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-06-29
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: byte-level verification of the OpenIddict 7.5.0 source tag (sender-constrained token support); RFC 8705, 9449, 9126, 9101, 8693, 9396

@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-18
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: the Microsoft .NET Framework Design Guidelines (naming) and the C# coding-conventions and identifier-names guidance (verified 2026-07-18); the scattered naming decisions in ADR-0024, ADR-0027, ADR-0032, ADR-0044

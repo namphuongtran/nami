@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-18
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: ADR-0022 (OTLP emission scope), ADR-0025 (the dev inner loop), ADR-0026 (permissive-only dependency policy), ADR-0061 (framework-native-first); observability-tool licenses verified 2026-07-18

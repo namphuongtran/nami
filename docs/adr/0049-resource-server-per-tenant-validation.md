@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-09
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: the OpenIddict.Validation and JwtBearer TokenValidationParameters layer; Finbuckle per-tenant options; the A-7 resource-server-validation spike (V27); evidence R19

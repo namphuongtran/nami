@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-06-28
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: verification of the OpenIddict 7.5.0 source and a running spike (see Confirmation); integration tests are required before this seam is relied on

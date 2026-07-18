@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: primary-source research (2026-07-04) on ASP.NET Core Identity in .NET 10, including its built-in passkeys/WebAuthn

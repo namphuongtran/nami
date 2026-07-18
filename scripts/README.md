@@ -6,7 +6,8 @@ Neutral ADR/docs hygiene checks, run in CI (`.github/workflows/ci.yml`) and loca
 
 - template placeholders — the curly-brace `Product` / `Company` / `domain` tokens — must not appear in tracked markdown;
 - every `ADR-NNNN` reference in `docs/adr/` resolves to a `docs/adr/NNNN-*.md` file;
-- the ADR index in `docs/adr/README.md` matches the files, and each ADR's frontmatter `status:` matches its index row.
+- the ADR index in `docs/adr/README.md` matches the files, and each ADR's frontmatter `status:` matches its index row;
+- every ADR marked `stack-record: true` in its frontmatter appears in the ADR-0061 stack-of-record table, and every ADR cited in that table carries the marker (bidirectional).
 
 Run locally:
 

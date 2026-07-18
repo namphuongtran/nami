@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-03
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: PostgreSQL 18 / Npgsql 10 / EF Core 10 capabilities and benchmarks (evidence V15)

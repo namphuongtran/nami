@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: OpenIddict application-descriptor and permission constants (deny-by-default, source-verified V07); a search confirming no community facade library exists for OpenIddict

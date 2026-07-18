@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: Microsoft.CodeAnalysis.PublicApiAnalyzers; Semantic Versioning 2.0; OpenIddict's own major-version migration precedent

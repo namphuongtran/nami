@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-06-28
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: evidence review of commercial identity servers, Azure Architecture Center, AWS SaaS guidance, Auth0 Organizations, ABP Framework (see More Information)

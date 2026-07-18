@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-07
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and maintainer
 consulted: Contributor Covenant; the Developer Certificate of Origin (DCO); Conventional Commits and Keep a Changelog; .NET Foundation governance models

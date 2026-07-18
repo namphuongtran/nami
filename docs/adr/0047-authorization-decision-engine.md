@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: OpenFGA / SpiceDB (Zanzibar) consistency models; RFC 8693 (actor claim); the source-verification files

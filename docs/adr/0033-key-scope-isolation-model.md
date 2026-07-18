@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-05
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: Security (ratifying the accepted-risk Pool-shared keyset before GA); source-verified key-isolation research (the OpenIddict options pipeline and per-tenant tenanted-options prior art)

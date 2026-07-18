@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: packaging precedents (OpenIddict's package split, .NET framework module and app-host stacks) and the bootstrap/config-import parity of mainstream OSS identity servers

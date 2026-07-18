@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-07
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: sigstore/cosign keyless signing; SLSA build provenance; CycloneDX; container vulnerability scanning (Trivy/Grype)

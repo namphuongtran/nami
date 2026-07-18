@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-06-28
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: Ops (the rootCert provisioning/rotation ceremony and the per-environment cloud protector adapter await Ops ratification); verification against ASP.NET Core Data Protection (.NET 10) behavior

@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: ASP.NET Core Identity 10 email-sender contract; MailKit / SendGrid / AWS SES v2 / Azure Communication Services provider docs; evidence R12

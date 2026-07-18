@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: Ops; the .NET support policy and release cadence (verified 2026-07-04 at Microsoft's sources)

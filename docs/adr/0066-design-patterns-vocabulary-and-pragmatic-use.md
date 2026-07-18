@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-18
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: the Gang of Four design-pattern catalog (refactoring.guru as the readable reference); the principles and patterns already recorded in ADR-0058, ADR-0024, and the pattern-applying ADRs (0006/0009, 0047, 0050, 0034, 0018, 0008, 0038, 0020, 0011, 0052)

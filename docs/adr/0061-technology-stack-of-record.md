@@ -75,6 +75,8 @@ Every technology in the table below was chosen under these rules, and a future c
 
 When a new technology decision is accepted, add a row here in the same change that adds the ADR; when a choice is superseded, update the row to point at the superseding ADR. This table is an index, never the authority: if it disagrees with an owning ADR, the owning ADR wins and the table is the bug.
 
+This rule is machine-enforced. An ADR that belongs in this table carries `stack-record: true` in its frontmatter, and the docs guardrail (`scripts/check-adrs.sh`) checks set-equality between the marked ADRs and this table, so a forgotten row or a forgotten marker fails the build. Proposed ADRs are not stack entries and carry no marker.
+
 ### Consequences
 
 * Good, because the whole stack is visible in one place with a link to the decision behind each part, which helps onboarding, evaluation, and consistency.

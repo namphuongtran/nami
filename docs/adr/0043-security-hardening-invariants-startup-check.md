@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-05
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: OpenIddict 7.5.0 server-options surface (source-verified); RFC 9700 (OAuth 2.0 Security BCP); OWASP ASVS V3 (session management)

@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: OpenIddict 7.5.0 source (entity-cache model, verified 2026-06-29); Microsoft.IdentityModel ConfigurationManager (interval floor, verified 2026-07-04); FusionCache / Redis; evidence R15

@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-01
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: EF Core advanced-performance guidance (.NET 10), the Finbuckle maintainer note on pooling (#375), spike A-4 and verification V08

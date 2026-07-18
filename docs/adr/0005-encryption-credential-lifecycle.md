@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-06-28
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: the key rotation and retention design, and the tiered key-scope isolation model (ADR-0033)

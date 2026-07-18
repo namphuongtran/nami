@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
 consulted: OpenIddict 7.5.0 introspection behavior (`ValidateAuthorizedParty`, verified V14); RFC 7662 (introspection); RFC 7009 (revocation); RFC 9449 (DPoP)

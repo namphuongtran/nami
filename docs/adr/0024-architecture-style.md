@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: primary-source review (2026-07-04) of how mainstream identity servers and the OpenIddict samples structure their code, Microsoft web-architecture guidance, and the 2025-2026 vertical-slice-versus-Clean literature

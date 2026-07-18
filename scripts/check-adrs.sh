@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ADR / docs guardrail (neutral, public). Run by CI and available locally.
-# Checks: template placeholders, ADR cross-reference integrity, ADR index/status.
+# Checks: template placeholders, ADR cross-reference integrity, ADR index/status,
+# and ADR-0061 stack-of-record table membership.
 # Contains no competitor/real-name logic; that is a local, git-ignored concern
 # (see scripts/README.md).
 #
@@ -56,6 +57,20 @@ while IFS= read -r row; do
   num=$(sed -E 's/^\| \[([0-9]{4})\].*/\1/' <<< "$row")
   ls docs/adr/${num}-*.md >/dev/null 2>&1 || add "index row ADR ${num} in ${readme} has no matching file"
 done < <(grep -E '^\| \[[0-9]{4}\]\(' "$readme")
+
+# --- Check 4: ADR-0061 stack-of-record table membership (bidirectional) ---
+# Every ADR marked `stack-record: true` must appear in the ADR-0061 table, and
+# every ADR number in that table must carry the marker. This enforces ADR-0061's
+# maintenance rule so the stack table and the ADRs it indexes cannot drift apart.
+stackfile=$(ls docs/adr/0061-*.md 2>/dev/null)
+marked=$(for f in $(grep -lE '^stack-record:[[:space:]]*true' docs/adr/[0-9][0-9][0-9][0-9]-*.md 2>/dev/null); do basename "$f" | cut -c1-4; done | sort -u)
+tabled=$(grep -E '^\| .* \| .* \| [0-9]' "$stackfile" 2>/dev/null | sed -E 's/.*\| ([0-9, ]+) \|$/\1/' | tr ',' '\n' | tr -d ' ' | grep -E '^[0-9]{4}$' | sort -u)
+for n in $marked; do
+  echo "$tabled" | grep -qx "$n" || add "ADR ${n} is marked 'stack-record: true' but is missing from the ADR-0061 stack table"
+done
+for n in $tabled; do
+  echo "$marked" | grep -qx "$n" || add "ADR ${n} is in the ADR-0061 stack table but is missing the 'stack-record: true' frontmatter marker"
+done
 
 # --- Report ---
 if [ "${#problems[@]}" -gt 0 ]; then

@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-18
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: OWASP ASVS 5.0.0 (released 2025-05-30) and the OWASP API Security Top 10 (2023 edition), verified 2026-07-18; the existing security ADRs (ADR-0028, ADR-0042, ADR-0043, ADR-0047, ADR-0009, ADR-0014) and the testing strategy (ADR-0060)

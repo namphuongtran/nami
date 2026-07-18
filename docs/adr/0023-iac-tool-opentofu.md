@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: Ops; the Terraform BSL relicensing and the OpenTofu (MPL-2.0, Linux Foundation) fork

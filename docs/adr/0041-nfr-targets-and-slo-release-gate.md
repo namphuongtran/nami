@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-05
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: Product/Ops (the numeric SLO table and error-budget policy are theirs to ratify); the Google SRE multi-window burn-rate method; evidence in doc 11 / doc 22
