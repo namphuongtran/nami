@@ -51,3 +51,4 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 | [0040](0040-resiliency-and-overload-protection.md) | Standardize a resiliency and overload-protection posture (one outbound handler; rate-limiting vs load-shedding; Redis as accelerator) | accepted |
 | [0041](0041-nfr-targets-and-slo-release-gate.md) | Adopt self-load-tested NFR targets and make the SLO a formal release gate, with burn-rate alerting and an external synthetic canary | accepted |
 | [0042](0042-abuse-and-bot-defense.md) | Add a layered anti-automation and abuse-defense posture beyond IP rate-limiting and account lockout | accepted |
+| [0043](0043-security-hardening-invariants-startup-check.md) | Enforce security hardening invariants with a fail-fast startup self-check | accepted |
