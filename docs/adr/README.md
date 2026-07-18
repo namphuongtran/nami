@@ -79,3 +79,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0066](0066-design-patterns-vocabulary-and-pragmatic-use.md) | Adopt design patterns as a shared vocabulary applied pragmatically, not preemptively | accepted |
 | [0067](0067-ai-assisted-development-governance.md) | Adopt an AI-assisted development policy: human-accountable, disclosed, license- and security-hygienic | accepted |
 | [0068](0068-continuous-access-evaluation-shared-signals.md) | Support continuous access evaluation via the OpenID Shared Signals Framework (Nami as transmitter) | proposed |
+| [0069](0069-verifiable-credentials-openid4vc.md) | Support issuing Verifiable Credentials via OpenID4VC (Nami as issuer) | proposed |
