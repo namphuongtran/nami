@@ -38,10 +38,10 @@ Scope note: v1 uses a **static, host-level set of external IdPs** configured at 
 * Bad, because some conveniences of the OpenIddict client stack's prebuilt provider catalog are given up.
 * This decision unlocks its dependent security decisions, which are binding implementation requirements (they ship with this ADR rather than as separate ADRs):
   * Claims from external IdPs pass an **allow-list**; sensitive claims (roles, groups, `email_verified`) are always taken from the local record, never trusted from the external token.
-  * The account-linking key is **(provider, subject)**; an unverified email is never a linking key (anti-takeover).
+  * The account-linking key is **(provider, subject)**; an unverified email is never a linking key (anti-takeover). Auto-linking happens only when the email is verified on both the external and local sides; otherwise the user signs in locally and links deliberately.
   * Provider client secrets live in the secret store, never in plaintext configuration.
-  * Authority/discovery URLs are validated against SSRF: https only, allow-listed hosts, private and metadata IP ranges blocked.
-  * Each provider gets a unique callback path, and the authorization response issuer is verified (RFC 9207).
+  * Authority/discovery URLs are validated against SSRF (https only, allow-listed hosts) at configuration time, and every runtime backchannel call (discovery, JWKS, token, userinfo) passes through a fail-closed egress handler that resolves the host to an IP before connecting and rejects loopback, private (RFC 1918/ULA), link-local, and cloud-metadata addresses, non-HTTPS, and cross-host redirects.
+  * Each provider gets a unique callback path, and the authorization response issuer is verified (RFC 9207), with the correlation state bound to the initiating provider scheme, to defend against IdP mix-up.
 
 ### Confirmation
 
