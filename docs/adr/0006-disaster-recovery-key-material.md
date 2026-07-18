@@ -81,5 +81,6 @@ Ports plus per-cloud adapters, a DB-backed default, soft-delete/purge-protection
 
 * Original decision: 2026-06-28. The cloud-agnostic direction is accepted; the formal RTO/RPO targets, the DR runbook, and the per-adapter capability matrix (versioning, soft-delete, purge-protection, audit) await Ops/DPO ratification during operation.
 * Disaster recovery must cover three key groups per the ADR-0001 tiered model: the global Data Protection keyring, the Pool-group key-set, and each Silo tenant's own key-set. The earlier v1 assumption of a per-tenant key for every tenant is dropped — only Silo tenants have their own key-set.
+* Deferred to a post-v1 wave (proposed, no ADR yet): a FIPS 140-3-validated crypto mode (an OS/HSM-tier configuration over this key and crypto stack); revisit for a US-government or otherwise regulated deployment.
 * Related decisions: ADR-0001 (tiered key-set scope), ADR-0005 (encryption credential lifecycle), ADR-0007 (key-compromise runbook), ADR-0009 (key vault access and dual-control).
 * Imported into this repository and translated in 2026-07; content preserved, internal references generalized.

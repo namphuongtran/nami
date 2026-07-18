@@ -74,5 +74,6 @@ The common online default: Serilog structured logs bridged to OTLP via a Serilog
 * Original decision: 2026-07-04.
 * This is the diagnostic-logging lane. The audit lane stays on `ISecurityEventSink` (ADR-0008) and is never routed through this pipeline; the two lanes are joined only by a correlation/trace id.
 * **Scope boundary:** this ADR fixes the observability *stack* (how signals are emitted and exported). The quantitative NFR targets, the SLO-as-release-gate, the error-budget freeze policy, and the burn-rate alerting built on the metrics this pipeline emits are a separate decision, recorded in ADR-0041. (An earlier corpus note that NFR/SLO should stay a document banner rather than an ADR is superseded by ADR-0041.)
+* Deferred to a post-v1 wave (proposed, no ADR yet): a diagnostics data dump for support, built on this telemetry and the event catalogue; revisit when the support burden warrants it.
 * Related decisions: ADR-0006/0009 (cloud-agnostic ports; OTLP is vendor-neutral), ADR-0008 (the separate audit lane), and ADR-0041 (the NFR targets and SLO release gate built on this pipeline's signals).
 * Imported into this repository and translated in 2026-07; content preserved, internal references generalized. Library and product citations (Serilog, OpenTelemetry, and the Microsoft telemetry packages) are retained as neutral technical references.

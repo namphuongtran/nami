@@ -77,6 +77,7 @@ Tickets persisted in PostgreSQL keyed by `sid`; the cookie holds a handle; revoc
 * Original decision: 2026-06-28, updated later to note that back-channel logout is built directly on this session store as an interim implementation rather than waiting for native support in a future OpenIddict version (see ADR-0019 and ADR-0021 for the seam and upgrade strategy).
 * Interim posture until back-channel logout is fully built: "revoke all authorizations + clear session + short access-token TTL".
 * Back-channel logout implementation notes carried with this decision: the IdP emits `logout_token` (`typ=logout+jwt`); fan-out is decoupled (background worker, retries, idempotent `jti`, dead-letter queue) and never blocks interactive logout; `backchannel_logout_uri` is validated against SSRF.
+* Deferred to a post-v1 wave (proposed, no ADR yet): an end-user session/device management UI (view active logins, sign out everywhere) built over this session store; revisit when end-user self-service is prioritized.
 * Related decisions: ADR-0001 (global identity), ADR-0006 (DR), ADR-0019 (single logout strategy), ADR-0021 (OpenIddict version adaptation).
 * Open follow-up (does not block implementation): exact validation interval (1 or 2 minutes) and the kill-propagation SLO number.
 * Imported into this repository and translated in 2026-07; content preserved, internal references generalized.
