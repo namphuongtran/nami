@@ -252,6 +252,7 @@ both together (09).
 | KeyScope | text | | pool-group or own (ADR-0033) |
 | Enabled | boolean | | not-yet-live at provisioning vs suspension of a live tenant |
 | SchemaVersion | text | | migration traffic-gate |
+| RequireInviteApproval | boolean | | per-tenant invite-approval gate (06) |
 
 `TenantClosure`:
 
@@ -415,6 +416,28 @@ Background jobs (prune, closure-verify) run without an ambient tenant, so they
 iterate tenants explicitly: a child DI scope sets the Finbuckle ambient tenant and
 `set_config('app.current_tenant', tid)` per iteration for Pool tenants, and uses
 the dedicated connection for Silo tenants.
+
+### Background-job tenant iteration
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Q as Quartz single runner
+  participant Reg as Tenants registry
+  participant Scope as Child DI scope
+  participant PG as PostgreSQL, FORCE RLS
+  Q->>Reg: read the tenant list
+  loop each Pool tenant
+    Q->>Scope: open a child scope, set the Finbuckle ambient tenant
+    Scope->>PG: SET LOCAL app.current_tenant in the transaction
+    Scope->>PG: PruneAsync, bulk ExecuteDelete honors filter and RLS
+  end
+  loop each Silo tenant
+    Q->>Scope: open a child scope on the tenant connection
+    Scope->>PG: PruneAsync on the dedicated database
+  end
+  Q->>PG: closure-verify once on the control plane, no ambient tenant
+```
 
 ## Edge cases and failure modes
 

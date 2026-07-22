@@ -171,6 +171,34 @@ Security/DPO ratification item.
 
 ## Runtime flows
 
+### Initiator classification (anti-confused-deputy)
+
+Which principal the capability check authorizes, resolved before the check so a
+delegation token whose `sub` is the target is never mistaken for the actor.
+
+```mermaid
+flowchart TD
+  start[Incoming admin request]:::n
+  q1{cross-tenant?<br/>token tenant vs TenantTarget}:::d
+  same[initiator = sub]:::n
+  q2{Entra-OBO token?<br/>RFC 7523, no act}:::d
+  entra[resolve initiator from oid or sub]:::n
+  q3{act present?}:::d
+  act[initiator = innermost act.sub]:::n
+  reject[403, self-issued cross-tenant missing act]:::r
+  chk[grant check on the initiator]:::n
+  start --> q1
+  q1 -->|no| same --> chk
+  q1 -->|yes| q2
+  q2 -->|yes| entra --> chk
+  q2 -->|no| q3
+  q3 -->|yes| act --> chk
+  q3 -->|no| reject
+  classDef n fill:#85bbf0,stroke:#5d82a8,color:#000000
+  classDef d fill:#fff4e6,stroke:#c69a66,color:#000000
+  classDef r fill:#f4b6b6,stroke:#a05252,color:#000000
+```
+
 ### Delegated capability check
 
 ```mermaid
@@ -291,4 +319,4 @@ production gate:
 
 ---
 
-[← Prev: Core protocol server](04-core-protocol.md) · [Index](README.md) · Next: User management and authentication (06, planned)
+[← Prev: Core protocol server](04-core-protocol.md) · [Index](README.md) · Next: [User management and authentication →](06-user-management.md)
