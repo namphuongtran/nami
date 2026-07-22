@@ -442,4 +442,4 @@ is the high-level version of the issuance flow above.
 
 ---
 
-[← Prev: Audit subsystem](03-audit.md) · [Index](README.md) · Next: Authorization and delegated admin (05, planned)
+[← Prev: Audit subsystem](03-audit.md) · [Index](README.md) · Next: [Authorization and delegated admin →](05-authorization.md)
