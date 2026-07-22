@@ -63,7 +63,9 @@ graph TB
 
 ### Ports (in `Nami.Identity.Abstractions`)
 
-Two ports split by responsibility (ISP), both hash-chained and delivery-guaranteed:
+OpenIddict ships no native security-event or audit sink, so this is a first-class
+build rather than a mapping onto `ILogger`. Two ports split by responsibility (ISP),
+both hash-chained and delivery-guaranteed:
 
 * **`IAuditSink`** records business audit (client provisioned, consent granted,
   role assigned, key rotated). `AppendAsync(AuditEvent) -> AuditChainEntry` returns
@@ -84,17 +86,20 @@ order-anchored position so every issue-token branch passes through), from
 The typed catalog covers success **and** the negative paths: `login_success`,
 `login_failure`, `lockout`, `token_issued`, `token_revoked`, `consent_grant`,
 `consent_revoke`, `refresh_reuse_detected`, `admin_config_change`, `key_rotation`,
-`force_logout`, `key_purge`, `erasure`, `client_auth_failure`, and
+`force_logout`, `mass_revoke`, `key_purge`, `erasure`, `degraded_mode_enabled`,
+`break_glass`, `client_auth_failure`, and
 `unhandled_exception`.
 
 ### Hash-chain
 
-Each record carries `RecordHash`, an HMAC/SHA-256 computed over the previous
-record's `RecordHash` and a canonical TEXT serialization of the payload; the
-genesis `PrevHash` is 32 zero bytes. The canonical form is hashed separately
+Each record carries `RecordHash`, an HMAC/SHA-256 over a canonical TEXT
+serialization of the payload followed by the previous record's hash, that is
+`HMAC/SHA-256(canonical(fields) || PrevHash)`, with the genesis `PrevHash` a
+32-byte zero; the concatenation order matches the schema definition in
+[02-data](02-data.md) so the writer and verifier agree byte-for-byte. The canonical form is hashed separately
 because `jsonb` does not preserve input bytes. The HMAC key is resolved through
 `ISecretResolver` (ADR-0009) so the application, not a table editor, holds it.
-Storage is append-only: INSERT grant only, with `REVOKE UPDATE/DELETE/TRUNCATE`;
+Storage is append-only: INSERT grant only, with `REVOKE UPDATE/DELETE/TRUNCATE` plus a block trigger;
 because a superuser can still tamper with storage, the hash-chain plus an external
 WORM anchor is what actually provides tamper-evidence, not the grants alone.
 
@@ -115,11 +120,13 @@ kept minimal and everything I/O-heavy runs in the background:
   attempt cap) and a **dead-letter** state that raises a security event and pages, so
   a transient sink outage never loses an event and never creates a blind spot.
   Fire-and-forget is forbidden.
-* **No duplicated data.** The outbox row **references the `AuditLog` entry by
-  `EntryId`** rather than copying the payload, so the event is stored once; and each
-  forwarded entry carries an idempotency key (its `EntryId`/chain position) so the
-  destination dedupes and an at-least-once retry produces no duplicate record at the
-  WORM/SIEM (at-least-once plus an idempotent target is effectively-once).
+* **No duplicated delivery.** Each forwarded entry carries an idempotency key, so an
+  at-least-once retry produces no duplicate record at the destination (an idempotent
+  target makes delivery effectively-once), matching the shared outbox chassis (07),
+  which dedupes on a unique idempotency key. The `AuditLog` row is the single durable
+  record and the outbox is a transient forwarding queue keyed to the entry; whether
+  that row copies the payload (as the shared chassis does) or references the
+  `AuditLog` `EntryId` is an audit-specific build choice, not asserted here.
 * **Correct tenant.** The tenant is captured **at emission** (the request's resolved
   tenant, or the target tenant of an admin action) and stored as `TargetTenantId`.
   The audit store is global and tenant-tagged, so the background forwarder reads
@@ -177,7 +184,7 @@ sequenceDiagram
   participant AL as AuditLog
   H->>Tx: begin, perform the action
   H->>AL: append critical event, chained to PrevHash
-  Note over AL: RecordHash is keyed HMAC over PrevHash and the canonical payload
+  Note over AL: RecordHash is keyed HMAC over the canonical payload then PrevHash
   H->>Tx: commit action and audit together
   alt audit append fails
     Tx-->>H: rollback, action fails closed
@@ -193,10 +200,10 @@ sequenceDiagram
   participant DB as AuditLog and outbox
   participant R as Outbox forwarder
   participant W as WORM / SIEM
-  A->>DB: append event, enqueue outbox row referencing EntryId, one transaction
+  A->>DB: append event, enqueue outbox row keyed to the entry, one transaction
   A->>DB: commit
   R->>DB: claim pending row, SKIP LOCKED
-  R->>W: forward by reference, at-least-once with idempotency key
+  R->>W: forward, at-least-once with idempotency key
   R->>DB: mark forwarded
   Note over R,W: a periodic integrity job re-walks the chain and anchors a checkpoint hash
 ```
@@ -211,7 +218,9 @@ sequenceDiagram
   hash-chain plus the external WORM anchor detect tampering after the fact.
 * **Erasure versus immutability**: crypto-shred destroys the per-subject key so the
   identifiers become unreadable while `RecordHash` stays valid and the chain still
-  verifies (ADR-0016).
+  verifies; because events are forwarded as ciphertext, key destruction also renders
+  the immutable WORM/SIEM copy unreadable (WORM cannot be deleted from), and a
+  redaction-assurance check covers the SIEM forward lane (ADR-0016).
 * **Duplicate delivery**: the claim step (SKIP LOCKED) stops two forwarders sending
   the same row, and the idempotency key lets the destination dedupe, so at-least-once
   never yields a duplicate record.
@@ -248,6 +257,9 @@ sequenceDiagram
   emitted from the handlers and `SignInManager`.
 * **Erasure test**: after crypto-shred, the identifiers are unreadable and the
   chain still verifies (ADR-0016).
+* **Two-lane independence**: with the telemetry collector blocked under load, the
+  audit outbox retains and relays every event, proving a diagnostics-lane outage
+  does not drop audit.
 * **No-duplicate test**: a forced retry delivers at-least-once but the idempotent
   destination keeps a single record, and the outbox references the entry rather than
   copying the payload.

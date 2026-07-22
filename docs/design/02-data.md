@@ -286,12 +286,12 @@ both together (09).
 | Field | Type | Key / index | Notes |
 |---|---|---|---|
 | EntryId | uuid | PK | UUIDv7 |
-| PrevHash / RecordHash | bytea | | hash-chain; `RecordHash` over the canonical payload and `PrevHash` |
+| PrevHash / RecordHash | bytea | | hash-chain; `RecordHash` = HMAC over canonical(fields) then `PrevHash` |
 | Payload_Canonical | text | | canonical form hashed (jsonb does not preserve bytes) |
 | ActorSub / OnBehalfOfSubject | text | | erasure-relevant identifiers stored as per-subject ciphertext |
 | EventType / TargetTenantId / Result / CorrelationId | text | | plus the typed authz fields (Acr, AuthTime, DecisionPath) |
 
-Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` (ADR-0008).
+Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block trigger (ADR-0008).
 
 `SigningKeys` (detailed in 09):
 
@@ -451,7 +451,8 @@ the dedicated connection for Silo tenants.
   sensitive payloads (for example reference-token payloads); PostgreSQL has no
   native TDE (ADR-0005, ADR-0037).
 * The audit table is append-only and tamper-evident at the schema level (INSERT
-  grant only, `REVOKE UPDATE/DELETE/TRUNCATE`); the mechanism is in 03.
+  grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block trigger); the mechanism is
+  in 03.
 
 ## Testing strategy
 
