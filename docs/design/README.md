@@ -32,7 +32,7 @@ implementation plan, not here.
 | [01](01-foundations.md) | Foundations and solution structure | reviewed | 0024, 0027, 0052, 0065 |
 | [02](02-data.md) | Data tier and multi-tenancy | reviewed | 0001, 0018, 0036, 0037, 0049 |
 | [03](03-audit.md) | Audit subsystem | reviewed | 0008, 0022 |
-| 04 | Core protocol server | planned | 0004, 0005, 0014, 0048, 0049 |
+| [04](04-core-protocol.md) | Core protocol server | reviewed | 0004, 0005, 0014, 0048, 0049 |
 | 05 | Authorization and delegated admin | planned | 0010, 0047, 0013 |
 | 06 | User management and authentication | planned | 0028, 0013, 0003, 0002 |
 | 07 | Email and notification subsystem | planned | 0038 |

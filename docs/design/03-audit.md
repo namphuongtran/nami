@@ -280,4 +280,4 @@ sequenceDiagram
 
 ---
 
-[← Prev: Data tier](02-data.md) · [Index](README.md) · Next: Core protocol server (04, planned)
+[← Prev: Data tier](02-data.md) · [Index](README.md) · Next: [Core protocol server →](04-core-protocol.md)
