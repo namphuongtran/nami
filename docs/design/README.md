@@ -34,7 +34,7 @@ implementation plan, not here.
 | [03](03-audit.md) | Audit subsystem | reviewed | 0008, 0022 |
 | [04](04-core-protocol.md) | Core protocol server | reviewed | 0004, 0005, 0014, 0048, 0049 |
 | [05](05-authorization.md) | Authorization and delegated admin | reviewed | 0010, 0047, 0013 |
-| 06 | User management and authentication | planned | 0028, 0013, 0003, 0002 |
+| [06](06-user-management.md) | User management and authentication | reviewed | 0028, 0013, 0003, 0002 |
 | 07 | Email and notification subsystem | planned | 0038 |
 | 08 | Login, consent, and logout UI | planned | 0019 |
 | 09 | Key management and rotation | planned | 0005, 0006, 0007, 0011, 0012, 0033 |
