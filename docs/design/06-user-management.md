@@ -51,7 +51,9 @@ choke-point shared with 04) is where session claims are produced: `acr` is
 requiring `amr` to include `mfa`, `otp`, `hwk`, or `swk` (so a passkey-only login is
 not mis-scored as aal1) and an aal2 freshness window of about 12 hours with 30-minute
 inactivity (NIST), capped by the 8h absolute session ceiling (ADR-0013) so an aged
-session downgrades; `amr` is stamped at sign-in, and `auth_time` is emitted as a JSON
+session downgrades; `amr` is stamped at sign-in via
+`SignInWithClaimsAsync(user, isPersistent, [amr claims])` and `auth_time` is sourced from
+`AuthenticationProperties.IssuedUtc`, emitted as a JSON
 number (the `long` overload, not a string). This is the canonical claims contract
 (the SSOT other docs reference):
 
@@ -66,7 +68,10 @@ number (the `long` overload, not a string). This is the canonical claims contrac
 | `tenant` | single string tenant id | access_token | resource-server tenant isolation |
 
 `acr`/`auth_time` go to both tokens so a resource server can enforce RFC 9470;
-`amr` can be absent on a silent refresh, so it is informational only. OpenIddict 7.5
+`amr` can be absent on a silent refresh, so it is informational only. A federated login
+records the underlying factor (`pwd`, `otp`) rather than a synthetic `external` value:
+RFC 8176 defines no `external` `amr`, so emitting it would be non-conformant. This is a
+deliberate divergence from the corpus (which named `external`), corrected to the RFC. OpenIddict 7.5
 does not emit `sid` natively, so `IClaimsProfileService` sets it explicitly to the
 session `sid` (id_token destination); without it a relying party can only log out by
 `sub`, killing all of the user's sessions.
@@ -77,9 +82,13 @@ Passkeys are native to .NET 10 (`SignInManager.MakePasskeyCreationOptionsAsync` 
 `PerformPasskeyAttestationAsync` / `MakePasskeyRequestOptionsAsync` /
 `PasskeySignInAsync`), but the endpoints are **not** auto-mapped and there is no
 default attestation validation, and a passkey is a **primary** factor. Nami builds:
-the passkey endpoints; an `IdentityPasskeyOptions` attestation policy; and an
-**AAL seam** that persists `UserPasskeyInfo.Aaguid` and an `AttestationTrust` column,
-with an `IAttestationValidator` port and an `AaguidAalPolicy` in `AssuranceOptions`.
+the passkey endpoints (`/account/passkey/register/options|verify` and
+`/account/passkey/login/options|verify`, antiforgery and HTTPS required); an
+`IdentityPasskeyOptions` attestation policy (v1 leaves `VerifyAttestationStatement`
+unset); and an **AAL seam** that persists `UserPasskeyInfo.Aaguid` and an
+`AttestationTrust` column, with an `IAttestationValidator` port and an `AaguidAalPolicy`
+bound in `AssuranceOptions` through `IOptionsMonitor` (hot-reload of the aal3 allow-list
+without a restart).
 **v1 ships attestation off, so every passkey is `aal2`** (the only honest tier when
 attestation is unvalidated); the aal3 allow-list is empty, ready to enable
 hardware-attested aal3 later as config plus an MDS adapter (`fido2-net-lib`, MIT). A
@@ -96,7 +105,17 @@ recovery is dual-control (05).
 ### MFA
 
 TOTP plus 10 recovery codes are the baseline (native); passkeys ship in v1. `amr`
-reflects the factors used; SMS/email OTP is roadmap (weakest factor).
+reflects the factors used; SMS/email OTP is roadmap (weakest factor). TOTP enrollment is
+`GetAuthenticatorKeyAsync` (or `ResetAuthenticatorKeyAsync` when null) then a QR from the
+`otpauth://totp/{issuer}:{email}?secret=..` provisioning URI, confirmed with
+`VerifyTwoFactorTokenAsync(user, Options.Tokens.AuthenticatorTokenProvider, code)` then
+`SetTwoFactorEnabledAsync(user, true)` (there is no `GenerateNewAuthenticatorKey` instance
+method). Recovery codes are `GenerateNewTwoFactorRecoveryCodesAsync(user, 10)` (hashes
+stored in `AspNetUserTokens`, redeemed via `TwoFactorRecoveryCodeSignInAsync`, counted with
+`CountRecoveryCodesAsync`). The challenge is `PasswordSignInAsync` then the
+`RequiresTwoFactor` branch over the `IdentityConstants.TwoFactorUserIdScheme` interim cookie
+(`GetTwoFactorAuthenticationUserAsync`) then
+`TwoFactorAuthenticatorSignInAsync(code, isPersistent, rememberClient)`.
 
 ### Server-side sessions (ADR-0003)
 
@@ -123,10 +142,13 @@ per-tenant is v2, ADR-0034). Security requirements ship with the decision:
 account-linking key is `(provider, sub)` and never an unverified email (auto-link
 only when the email is verified on both sides); external claims pass an **allow-list**
 and sensitive claims (`role`/`groups`/`email_verified`) always come from the local
-record and membership; authority/discovery URLs and every backchannel fetch pass a
-fail-closed **SSRF egress handler** (`SsrfEgressHandler` on `BackchannelHttpHandler`,
-plus `PostConfigure` host allow-listing, `AllowAutoRedirect=false`, and cross-host
-redirect rejection); each provider has a unique callback and the
+record and membership (external claims are stripped at `OnTokenValidated` before the local
+principal is built, and the linking decision runs in the `ExternalLogin` callback action,
+not a handler event); authority/discovery URLs and every backchannel fetch pass a
+fail-closed **SSRF egress handler** (`SsrfEgressHandler` on `BackchannelHttpHandler` that
+resolves the host to an IP before connecting and rejects loopback, RFC1918, link-local,
+ULA, and the `169.254.169.254` metadata address, plus `PostConfigure` host allow-listing,
+`AllowAutoRedirect=false`, and cross-host redirect rejection); each provider has a unique callback and the
 authorization-response `iss` is verified (RFC 9207; whether .NET 10's OIDC handler
 enforces `iss` natively is a verify-at-source item, and if it does not it is wired in
 `OnMessageReceived` without double-handling) with the correlation state bound to the
@@ -151,6 +173,10 @@ over complexity, strong hashing, then lockout — not complexity rules or rotati
 | Breached-password check | HIBP range API (k-anonymity), fail-open, prod-on | banned-password lever |
 | Forced rotation | none | rotation weakens passwords (NIST) |
 
+The password hasher upgrades transparently: on a successful verify against an older stored
+hash it re-hashes at the current work factor (re-hash-on-verify), so raising
+`IterationCount` migrates users at their next login without a reset.
+
 Complexity flags stay on as defense-in-depth backstop, not the primary lever. The
 lockout-DoS mitigation and the risk-triggered challenge layer are ADR-0042.
 
@@ -174,8 +200,9 @@ dual-control and Art.17/DPO-gated, not automatic per offboard); every transition
 audited with provenance (ADR-0008). The `pending-approval` state is gated by
 `CanSignInAsync` via a `Membership` status marker (approval is tenant-scoped even
 though identity is global) and is enabled by a per-tenant `RequireInviteApproval`
-flag; approval reuses the dual-control saga (05) as a constructive-action variant,
-and the invite-expiry timer is reused (not a second clock).
+flag; approval reuses the dual-control saga (05) as a constructive-action variant (a new
+`approve-user-invite` `ActionType` plus its `IProposalExecutor`, with the saga executor
+structure unchanged), and the invite-expiry timer is reused (not a second clock).
 
 ### Patterns applied
 
@@ -194,7 +221,11 @@ ASP.NET Core Identity and native .NET 10 passkeys (MIT); the external-login hand
 (`Microsoft.Identity.Web` / `AddMicrosoftAccount` / `AddOpenIdConnect`, MIT); the
 HIBP Pwned-Passwords range API (an external service, k-anonymity, fail-open); and, for
 future hardware-attested aal3, `fido2-net-lib` (MIT) with the FIDO MDS. No commercial
-dependency (ADR-0026).
+dependency (ADR-0026). The confirm/reset path integrates through Identity's generic
+`IEmailSender<TUser>` (the interface Identity infrastructure itself calls), never the
+legacy single-method `IEmailSender` (only scaffolded Razor calls that one); implementing
+only the legacy interface means confirm/reset mail silently never sends. The delivery
+mechanics are 07's.
 
 ### Packaging
 

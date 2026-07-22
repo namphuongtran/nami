@@ -100,10 +100,15 @@ implementations land in their owning phases.
 | `IEncryptionCredentialSource` | Supply the encryption credential | Database | 0005, 0006 |
 | `ISecretResolver` | Resolve secrets/connection strings | Environment / database | 0009 |
 | `IDataProtectionKeyStore` | Back the Data Protection keyring | Database | 0006 |
-| `ISecurityEventSink` | The tamper-evident audit lane | EF hash-chain sink | 0008 |
+| `IAuditSink` | Business audit-trail (client provisioned, consent granted, role assigned, key rotated) | EF hash-chain sink | 0008 |
+| `ISecurityEventSink` | Security events (login failure, token reject, replay, degraded-mode) | EF hash-chain sink | 0008 |
 | `ITenantStore` | Tenant registry and tier routing | Control-plane EF store | 0001 |
 | `IClaimsProfileService` | Deny-by-default claim destinations | Core (Phase 03) | 0005 |
 | `ICheckAccess` | Authorization decision port | DB-first (Phase 05) | 0047, 0010 |
+
+The `IAuditSink`/`ISecurityEventSink` split (ISP) is the tamper-evident audit lane, both
+hash-chained and delivery-guaranteed; it is the separate lane of the two-lane model and
+never routes through the diagnostics pipeline (ADR-0008/0022, detailed in 03).
 
 Ports are the strictest public surface (ADR-0044): a shipped port is extended only
 by a default interface method or an `IXxxV2`, never a bare added member. Ports whose
@@ -124,7 +129,12 @@ and the durable EF session table is registered as the ASP.NET `ITicketStore`
 (ADR-0003; never in-memory or a distributed cache as the source of truth). The
 order-sensitive `UseNamiIdentity()` pipeline runs `ForwardedHeaders` then
 `UseMultiTenant()` **before** authentication/authorization and the OpenIddict
-middleware, so the tenant is resolved before any protocol handling.
+middleware, so the tenant is resolved before any protocol handling. Application code
+depends on the `IOpenIddict*Manager` facades, never on the store or `DbContext` directly
+(the Manager adds validation, caching, and normalization); an ArchUnitNET test enforces
+this. Health is two endpoints: `/health/ready` (tagged `ready`, gated on the signing and
+Data Protection keys being loaded, and flipped to NotReady on shutdown drain) and
+`/health/live` (`Predicate = _ => false`, never touching readiness).
 
 ### Configuration layer (ADR-0052)
 
@@ -135,7 +145,17 @@ construction**: a public or code client is forced to PKCE (throws if absent), a
 confidential client without a credential throws, wildcard redirect URIs are
 rejected, and a native app sets `ApplicationType = Native`. Config keys follow
 `Nami:Section:Key` with env form `Nami__Section__Key` (ADR-0032); precedence is
-env then secret-store then `appsettings.{Env}` then `appsettings` (ADR-0031).
+env then secret-store then `appsettings.{Env}` then `appsettings` (ADR-0031). Config-time
+secrets load through a `SecretStoreSource : IConfigurationSource` added after the JSON
+providers (last-added-wins), which is distinct from the runtime `ISecretResolver` port.
+Required config is validated fail-fast at boot with
+`AddOptions<T>().BindConfiguration(...).ValidateDataAnnotations().ValidateOnStart()`, so a
+missing value crashes the host rather than surfacing lazily. What must be externalized per
+deploy (the four connection strings, the issuer base, the KMS/Key Vault endpoint, the OTLP
+and Redis endpoints, the tenant-resolution mode, feature flags) is separated from what is
+release-fixed and must not be env-driven (the route map, the deny-by-default policy, the
+pipeline order). A confidential or M2M client defaults to `private_key_jwt`; a
+client-credentials client still using a symmetric secret logs a warning.
 
 ### Versioning and package management
 
@@ -159,6 +179,8 @@ gate (ADR-0026). The libraries wired in Phase 01:
 | EF Core 10 | ORM | MIT | 0037 |
 | Npgsql (+ EF Core provider) | PostgreSQL driver | PostgreSQL (BSD-like) | 0037 |
 | ASP.NET Core Identity | User store | MIT | 0028 |
+| `Microsoft.AspNetCore.DataProtection.EntityFrameworkCore` | Back `DataProtectionDbContext` / the keyring | MIT | 0006 |
+| `AspNetCore.HealthChecks.*` (DB + self) | Readiness/liveness probes | MIT | 0025 |
 | Finbuckle.MultiTenant | Tenant resolution and per-tier stores | Apache-2.0 | 0001 |
 | Quartz.NET | Background jobs (pruning, rotation) | Apache-2.0 | 0025 |
 | OpenTelemetry .NET + `Microsoft.Extensions.Logging`/`.Telemetry` | Telemetry and PII-redacted diagnostics | Apache-2.0 / MIT | 0022 |
@@ -244,7 +266,11 @@ ADR-0017); development may enable migrate-on-startup for convenience.
 * The hexagonal boundary is a security boundary too: no cloud SDK or engine type
   leaks above the adapter edge, keeping the trusted surface small (ADR-0024).
 * Production logs go to stdout/OTLP only, with PII redaction on the diagnostics
-  lane; audit is the separate `ISecurityEventSink` lane (ADR-0022, ADR-0008).
+  lane; audit is the separate `ISecurityEventSink` lane (ADR-0022, ADR-0008). The logging
+  provider list is set **in code** by environment (`ClearProviders`, then OTLP always, then
+  `AddJsonConsole` only in Production) and never bound from `appsettings`, so a config edit
+  cannot inject a file sink into Production; a config test asserts no `File` provider is
+  registered there.
 
 ## Testing strategy
 

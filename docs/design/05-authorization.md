@@ -52,7 +52,9 @@ cannot silently break read-after-write on a revoke.
   minimize-latency / at-least-as-fresh (with a freshness token) / fully-consistent
   modes, without changing any call site (ADR-0047).
 * Fail-closed: an `AuthzCheckTimeout` (default 250ms, `IOptionsMonitor`-tunable)
-  returns `Deny` on timeout, forced by deny-by-default (ADR-0005).
+  returns `Deny` on timeout, forced by deny-by-default (ADR-0005). An `authz_check.duration`
+  histogram and an `authz_check_timeouts` counter back the CI SLO gate (the DB-tier p95/p99
+  and timeout-rate assertions).
 * Steady-state uses per-request scoped memoization of `(subject, capability, tenant)`;
   a cross-request decision cache is load-test-optional (not a v1 gate) and, if added,
   carries its own invalidation rather than reusing the revocation-propagation channel
@@ -80,8 +82,10 @@ The forbidden-cascade is expressed by an `IsInheritable` flag in `CapabilityCata
 
 ### Token versus decision point
 
-Coarse per-tenant roles and the `tenant` claim ride in the 15-minute access token
-(enough for a gateway/RS check, ADR-0004/0005); the **delegated-admin capability
+Coarse per-tenant roles (`member`, `tenant_admin`, `billing`, sourced from
+`Memberships.Roles_JSON`; the role catalog is a Security/DPO ratification item) and the
+`tenant` claim ride in the 15-minute access token (enough for a gateway/RS check,
+ADR-0004/0005); the **delegated-admin capability
 check runs live at the Admin API**, never baked into the token, because grants are
 revocable and subtree-scoped and a baked claim would be stale and un-revocable.
 
@@ -106,24 +110,27 @@ do it natively), a build-interim seam with a decommission marker (ADR-0021).
 
 `CapabilityRequirement` + a **scoped** `TenantCapabilityHandler` that authorizes the
 original principal against `ICheckAccess`. A single **singleton**
-`IAuthorizationPolicyProvider` parses a `Capability:` policy-name prefix and
-validates it against the catalog (an unknown capability yields 403, closing an
-injection hole), with `DefaultAuthorizationPolicyProvider` as the backup for the
+`IAuthorizationPolicyProvider` parses a `Capability:` policy-name prefix (emitted by
+the developer-facing `[HasCapability("manage_users")]` attribute as
+`Capability:manage_users`) and validates it against the catalog (an unknown capability
+yields 403, closing an injection hole), with `DefaultAuthorizationPolicyProvider` as the backup for the
 fixed role/acr/actor policies. The deny-by-default, `FullyConsistent` decision stays
 in the scoped handler, so the framework's per-name policy cache never caches an
 access decision. The `TenantTarget` comes from the route/body, not the ambient
 caller tenant, and must be passed explicitly.
 
 A precondition to any capability check is **`RequireActor`**: the request must carry
-a real user (a `sub` plus assurance claims, on the `admin-api` audience); an app-only
-or client-credentials token is rejected (403), so an application permission can never
-exercise admin authority (the anti-bypass lesson, policy detailed in 12). For
+a real user (a `sub` plus `amr` or `auth_time`, on the `admin-api` audience); an app-only
+or client-credentials token is rejected with 403 `admin_requires_actor`, so an application
+permission can never exercise admin authority (the anti-bypass lesson, policy detailed in 12). For
 **root-level id-routes** that carry an object id but no `{tenantId}`
 (`/applications/{id}`, `/users/{id}`, `/proposals/{id}`), the owning tenant is
 derived from the loaded object before the check (an object-level filter that closes
 BOLA/IDOR); because a user is global, such a route authorizes by the membership/grant
-overlap between the user's tenant-set and the object's owning tenant. It is the same
-`ICheckAccess` seam with a different `TenantTarget` source. `RequireActor` is paired
+overlap between the user's tenant-set and the object's owning tenant. When the loaded
+object belongs to a user who is in no tenant, that overlap is empty and only a global
+user-admin may act. It is the same `ICheckAccess` seam with a different `TenantTarget`
+source. `RequireActor` is paired
 with an issuance-time invariant: no client-credentials client is ever granted the
 `admin-api` scope, so an app-only token cannot exist for the admin API. A
 client-supplied acting-for or subject is always discarded; authority is only the
@@ -135,20 +142,29 @@ before authentication/authorization so the tenant is resolved before the check r
 Dangerous or high-assurance operations return `401` with
 `WWW-Authenticate: ... error="insufficient_user_authentication", acr_values, max_age`
 (RFC 9470); the required assurance is `max(client default, scope, runtime)` and is
-consumed from the `acr`/`auth_time` produced in 06. Forbidden-cascade capabilities
-that are also irreversible additionally require **dual-control**: a proposer creates
-an approval bound to a `request_hash`, a different principal approves (proposer not
-equal approver, single-use, itself step-up-gated), then execute. The saga aggregate
-is `DualControlProposals` (schema in 02); its workflow lives in the admin design
-(12). This design owns the authorization decision and the gating rule.
+consumed from the `acr`/`auth_time` produced in 06. A fixed catalog of destructive or
+irreversible actions additionally requires **dual-control** (the D-SEC-1 forbidden-cascade
+class): `delete-application`, `delete-scope`, `delete-tenant`, `suspend-tenant` and
+`resume-tenant`, `offboard-user`, `revoke-all-tokens`, a dangerous delegated-admin grant,
+`secret-revoke`, key purge, and a bulk `audit-export` (full/unfiltered, a range over 90
+days, or over 10k rows; a small export goes direct but is still audited). For one of these
+a proposer creates an approval bound to a `request_hash` = `H(capability + target + params)`,
+a different principal approves (proposer not equal approver, single-use and time-boxed
+against that hash, itself step-up-gated), then execute. A constructive variant,
+`approve-user-invite`, reuses the same four-eyes saga (gated per-tenant by
+`RequireInviteApproval`). The saga aggregate is `DualControlProposals` (schema in 02); its
+workflow and the `IProposalExecutor` registry live in the admin design (12). This design
+owns the authorization decision and the gating rule.
 
 When the upstream is Entra, the equivalent challenge is `error="insufficient_claims"`
 with a `claims` parameter and the auth-context `acrs`. Issuing or revoking a
 delegated-admin grant is itself gated: it requires `re_delegate` held **directly** on
 the root tenant plus dual-control, which closes chain re-delegation escalation. Each
 cross-tenant decision produces the authz provenance this design owns for the audit
-record (03): `grant_id`, `decision_path` (direct or delegated), `stepup_satisfied`,
-`approval_request_id` with `approver_sub`, and `request_hash`.
+record (03): `actor_sub`, the `actor_chain` (nested `act` chain) and
+`on_behalf_of_subject`, `capability`, `grant_id`, `decision_path` (direct or delegated),
+`authz_decision` (with policy) and `result`, `stepup_satisfied`, `approval_request_id`
+with `approver_sub`, and `request_hash`.
 
 ### Patterns applied
 
