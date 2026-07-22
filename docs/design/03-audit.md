@@ -89,7 +89,13 @@ The typed catalog covers success **and** the negative paths: `login_success`,
 `authz_decision`, `dual_control_approval`, `key_rotation`, `force_logout`,
 `mass_revoke`, `key_purge`, `erasure`, `degraded_mode_enabled`, `break_glass`,
 `client_auth_failure`, and `unhandled_exception`. Each event type has a fixed payload
-schema and feeds the abuse-alert rules (14).
+schema and feeds the abuse-alert rules (14). The consent receipt (`consent_grant`, with
+`consent_revoke` on revoke) carries a fixed payload — subject, `client_id`, tenant,
+scope set, purpose, legal basis, `policy_version_hash`, consent timestamp, UI locale, and
+method — as the immutable historical record, distinct from the mutable `Authorization`
+state (ADR-0053, 13). On erasure the saga appends a `subject.erased` tombstone (subject
+ref, erased fields, retained-under basis) as chained proof-of-erasure; the wider
+data-subject-rights event set (rectification, restriction, DSAR fulfilment) is owned by 13.
 
 ### Hash-chain
 
@@ -191,6 +197,18 @@ constraint this design depends on: all subject-bearing columns (`ActorSub`,
 ciphertext-at-write, so destroying a per-subject key removes the plaintext while
 keeping `RecordHash` stable (ADR-0016).
 
+The per-subject key is a DEK held **only** in the separate `SubjectDek` vault (02):
+AES-256-GCM, generated lazily on a subject's first audit PII, wrapped by the ADR-0006
+keyring master key, and **never written to the `AuditLog`, its backup, SIEM, or WORM**
+(those hold ciphertext only). That separation is exactly what lets crypto-shred reach the
+immutable copies: destroying the DEK renders every ciphertext copy, including WORM and
+replicas, permanently unreadable without deleting an append-only row (Recital 66). The
+mechanism behind it is an `IAuditChainScrubber` with an ordered model: crypto-shred is the
+runtime default; **PII-outside-chain** (an opaque `SubjectRef` plus a separately deletable
+mapping) is the schema design target, applied wherever an event need not embed PII; and
+**anonymise-in-place** is a deferred, opt-in `NotImplemented` stub, never the default. The
+erasure saga that drives it is owned by 13.
+
 ## Runtime flows
 
 ### Critical event, synchronous in-transaction
@@ -251,6 +269,9 @@ sequenceDiagram
   the write rather than defaulting.
 * **Ordering**: the chain order is the insert order; cross-lane correlation is by
   the trace id, not by audit timestamps.
+* **Silo isolation**: a hard-isolated Silo tenant may use a separate audit store and a
+  separate SIEM destination; global-plane events (identity, membership) are audited at the
+  global tier (ADR-0008, ADR-0001).
 
 ## Security considerations
 
@@ -293,9 +314,12 @@ sequenceDiagram
 
 ## Open and build-time items
 
-* DPO/Security ratify the minimum event catalog, the retention window, the
-  PII-redaction policy, and the concrete WORM/SIEM destination (ADR-0008, Pre-GA
-  checklist).
+* DPO/Security ratify the minimum event catalog, the retention window (obligation-bound
+  per Art.17(3) and Recital 65, explicitly not "keep forever"), the PII-redaction policy,
+  and the concrete WORM/SIEM destination (ADR-0008, Pre-GA checklist).
+* The SIEM/WORM forward adapter asserts the destination region equals the tenant's declared
+  data residency (PII must not leave the declared region); recommended, pending DPO
+  ratification (ADR-0054).
 * The exact set of events that commit synchronously (the critical set) is a
   Security ratification item.
 * Where the audit HMAC key lives and how it rotates is resolved through

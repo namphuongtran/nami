@@ -226,6 +226,7 @@ standard entity schema.
 |---|---|---|---|
 | Id | uuid | PK | UUIDv7 |
 | Name | text | globally unique | no `TenantId`, not `.IsMultiTenant()`; seeded once |
+| Enabled / DeletedAtUtc | boolean / timestamptz null | | disable-not-delete, same as `TenantApplication` (real columns, not `Properties`-JSON, so they index and filter); the `soft_delete` named filter is registered per entity and coexists with the tenant filter (ANDed), spike-validated |
 
 ### IdentityDbContext (global)
 
@@ -288,19 +289,33 @@ both together (09).
 | (cap) GrantId + Capability | uuid + text | PK, FK to catalog | `DelegatedAdminCapabilities` |
 | (cat) Capability + IsInheritable | text + boolean | Capability PK | `CapabilityCatalog` |
 
+The partial covering index's `WHERE RevokedAt IS NULL` predicate must be a **hard-coded
+literal, never a bind parameter**: PostgreSQL's planner only uses a partial index when it
+can prove the query implies the index predicate at plan time, which it cannot do against a
+parameter. Equality/range keys (`GranteeUserId = $1`, `@now BETWEEN ValidFrom AND ExpiresAt`)
+as binds are fine and do not defeat the index.
+
 `AuditLog` (mechanism in 03):
 
 | Field | Type | Key / index | Notes |
 |---|---|---|---|
 | EntryId | uuid | PK | UUIDv7 |
 | Timestamp | timestamptz | | when the event occurred |
-| PrevHash / RecordHash | bytea | | hash-chain; `RecordHash` = HMAC over canonical(fields) then `PrevHash` |
+| PrevHash / RecordHash | bytea | | hash-chain; `RecordHash` = HMAC over canonical(fields) then `PrevHash`; the genesis `PrevHash` is 32 zero bytes (not a string) |
 | Payload_Canonical | text | | canonical form hashed (jsonb does not preserve bytes) |
 | ActorSub / OnBehalfOfSubject / ApproverSub / ActorChain_JSON | text / jsonb | | all subject-bearing identifiers stored as per-subject ciphertext (crypto-shreddable) |
 | EventType / TargetTenantId / Result / CorrelationId | text | | event classification and correlation |
 | Acr / AuthTime / DecisionPath / AuthzDecision / Capability / GrantId / StepupSatisfied / ApprovalRequestId / RequestHash | mixed | | authz-decision and dual-control provenance (produced by 05) |
 
 Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block trigger (ADR-0008).
+
+`SubjectDek` (the crypto-shred key vault; mechanism in 03, saga in 13):
+
+| Field | Type | Key / index | Notes |
+|---|---|---|---|
+| SubjectRef | text | PK | one DEK per subject; generated lazily on first audit PII |
+| WrappedDek | bytea | | the per-subject AES-256-GCM DEK wrapped by the ADR-0006 keyring master key; never written to `AuditLog`, its backup, SIEM, or WORM |
+| CreatedAt / DestroyedAt | timestamptz (DestroyedAt null) | | erasure sets `DestroyedAt` (or KMS-destroys), rendering every ciphertext copy permanently unreadable |
 
 `SigningKeys` (detailed in 09):
 
@@ -310,8 +325,15 @@ Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block tri
 | Version / IsX509Certificate | int / boolean | | key version; whether `Data` is an X.509 cert (publish-before-sign needs X509) |
 | Use / Algorithm / State | text | index (Use, State); unique (Use, State) where State is active | prevents two active signers |
 | Data / DataProtected | bytea / boolean | | encrypted at rest; `DataProtected` records DP-wrapped versus KMS-enveloped |
-| KeyScope / TenantId | text / uuid null | | pool-group or per-Silo-tenant (ADR-0033) |
+| KeyScope / TenantId | text / uuid null | | `pool-group` or `tenant` (ADR-0033) |
 | NotBefore / NotAfter / RetiresAt / DeletesAt / RevokedAt / Created | timestamptz | | rotation lifecycle |
+
+The key store must enforce a **mandatory scope predicate centralized in one adapter** (a
+unit test asserts no query omits scope), and when a single store serves multiple scopes (a
+Pool multi-group deployment) it carries **RLS on `(KeyScope, TenantId)`** so the key store
+has the same defense-in-depth as the token store (ADR-0033 F2). Note the `KeyScope` literals
+here (`pool-group` / `tenant`) differ from `Tenants.KeyScope` (`pool-group` / `own`); the two
+columns are parallel but the vocabulary is reconciled in the key-management design (09).
 
 `ServerSideSessions` (+ `SessionParticipatingClients`; detailed in 06/08):
 
@@ -331,7 +353,7 @@ Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block tri
 |---|---|---|---|
 | Id | uuid | PK | UUIDv7 |
 | TenantId | uuid | `.IsMultiTenant()` + RLS | |
-| Status / NextAttemptUtc | text / timestamptz | index (Status, NextAttemptUtc) | at-least-once delivery |
+| Status / NextAttemptUtc | text / timestamptz | index (Status, NextAttemptUtc) | at-least-once delivery; `Status` is `pending` / `delivered` / `failed` |
 | Sid / ClientId / LogoutUri / Attempts | text / int | | |
 | CreatedUtc / DeliveredUtc | timestamptz (DeliveredUtc null) | | enqueue and delivery timestamps |
 
@@ -341,7 +363,7 @@ Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block tri
 |---|---|---|---|
 | Id | uuid | PK | UUIDv7 |
 | IdempotencyKey | text | unique | prevents double-send |
-| Status / NextAttemptAt | text / timestamptz null | index (Status, NextAttemptAt) | relay claim via SKIP LOCKED |
+| Status / NextAttemptAt | text / timestamptz null | index (Status, NextAttemptAt) | relay claim via SKIP LOCKED; `Status` is `Pending` / `InFlight` / `Sent` / `DeadLettered` |
 | Payload / Attempts / ProviderMessageId / CreatedAt | text / int / text null / timestamptz | | control-plane copy adds `TenantId` (RLS) |
 
 `SuppressionEntry` (tenant-scoped):
@@ -350,7 +372,7 @@ Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block tri
 |---|---|---|---|
 | Id | uuid | PK | UUIDv7 |
 | TenantId + RecipientHash | uuid + bytea | index (TenantId, RecipientHash) | hash only, never the address (DP.01) |
-| Reason / ExpiresAt / CreatedAt | text / timestamptz (ExpiresAt null) / timestamptz | | hard-bounce and complaint persist; soft carries a TTL |
+| Reason / ExpiresAt / CreatedAt | text / timestamptz (ExpiresAt null) / timestamptz | | `Reason` is `hard-bounce` / `complaint` / `manual`; hard-bounce and complaint persist, soft carries a TTL |
 
 `TenantBranding`:
 
@@ -360,6 +382,9 @@ Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block tri
 | LogoUri | text null | | https-only, SSRF-safe |
 | ThemeJson | jsonb null | | design tokens, not raw CSS |
 | DisplayName / UpdatedByMembershipId / UpdatedAtUtc | text / uuid / timestamptz | | |
+
+The data-subject-rights design (13) adds the Art.18 `ProcessingRestriction` table
+(control-plane, tenant-columned); its schema lands with that doc rather than here.
 
 `DualControlProposals` (detailed in 06):
 
@@ -407,7 +432,11 @@ migrates-on-startup (ADR-0017). Silo tenants are migrated by fan-out with a per-
 `SchemaVersion` and the resolver traffic-gate. Migration history must stay linear (EF
 Core 10 rejects out-of-order at runtime; a CI `HasPendingModelChanges` check enforces
 it), and EF Core 9+ takes an exclusive `__EFMigrationsHistory` lock as a
-concurrent-migrate backstop under the single-runner orchestrator.
+concurrent-migrate backstop under the single-runner orchestrator. The runtime application
+connects under a least-privilege, **no-DDL** role; migrations run under a **separate
+migration role** (Npgsql supports splitting the migration role from the query role). This is
+distinct from, and complementary to, the de-privileged `NOSUPERUSER` runtime role that makes
+FORCE RLS effective.
 
 ## Runtime flows
 
@@ -451,6 +480,10 @@ sequenceDiagram
   end
   Note over Reg: resolver refuses routing to a tenant whose SchemaVersion is not the app expected version
 ```
+
+The `SchemaVersionGate` middleware refuses a version-mismatched tenant with **HTTP 503 plus
+`Retry-After`** (a resumable signal), never a 404: a 404 would imply the tenant does not
+exist and make relying parties drop cached discovery metadata.
 
 Background jobs (prune, closure-verify) run without an ambient tenant, so they
 iterate tenants explicitly: a child DI scope sets the Finbuckle ambient tenant and

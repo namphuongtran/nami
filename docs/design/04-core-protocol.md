@@ -84,21 +84,34 @@ controller for an endpoint the engine already fully handles. The rule:
 
 Only discovery and JWKS are auto-pathed; every other endpoint is enabled explicitly
 via its `Set*EndpointUris` call. The path strings are configurable and non-normative
-(the corpus itself varies, `connect/logout` versus `connect/endsession`); the fixed
-seam is the method name, and `SetLogoutEndpointUris` was renamed
-`SetEndSessionEndpointUris` in OpenIddict (a pinned ADR-0021 seam).
+(the corpus itself varies, `connect/logout` versus `connect/endsession`) and carry no
+leading `/` since OpenIddict 4.0; the fixed seam is the method name. The pinned set
+(ADR-0021 seams, re-verified each bump) is `SetAuthorizationEndpointUris`,
+`SetTokenEndpointUris`, `SetUserInfoEndpointUris`, `SetIntrospectionEndpointUris`,
+`SetRevocationEndpointUris`, `SetEndSessionEndpointUris` (renamed from
+`SetLogoutEndpointUris`), `SetDeviceAuthorizationEndpointUris`,
+`SetEndUserVerificationEndpointUris`, `SetPushedAuthorizationEndpointUris`,
+`SetJsonWebKeySetEndpointUris`, and `SetConfigurationEndpointUris`. The interactive
+endpoints are made pass-through via `EnableAuthorizationEndpointPassthrough`,
+`EnableTokenEndpointPassthrough`, `EnableUserInfoEndpointPassthrough`, and
+`EnableEndSessionEndpointPassthrough` (plus `EnableStatusCodePagesIntegration`); the
+device flow needs **both** `SetEndUserVerificationEndpointUris` and
+`EnableEndUserVerificationEndpointPassthrough`, or the approval page never runs.
 
 ### Discovery metadata
 
 The discovery document advertises the capability surface, and getting the flags
 right is part of the protocol contract. Key advertised values:
 `authorization_response_iss_parameter_supported=true` (RFC 9207),
-`code_challenge_methods_supported=["S256"]` (plain removed),
+`code_challenge_methods_supported=["S256"]` (OpenIddict defaults to `{Plain, Sha256}`
+and unions it into discovery, so `plain` is actively removed via
+`CodeChallengeMethods.Remove` and asserted at the startup self-check),
 `tls_client_certificate_bound_access_tokens=true`,
 `token_endpoint_auth_methods_supported` covering `client_secret_basic`,
 `client_secret_post`, `private_key_jwt`, and `tls_client_auth` /
-`self_signed_tls_client_auth`, `dpop_signing_alg_values_supported` (once DPoP lands,
-11), `backchannel_logout_supported=true` and `backchannel_logout_session_supported=true`
+`self_signed_tls_client_auth`, `dpop_signing_alg_values_supported` (the 9-algorithm
+RS/PS/ES x 256/384/512 set, once DPoP lands, 11),
+`backchannel_logout_supported=true` and `backchannel_logout_session_supported=true`
 with `frontchannel_logout_supported=false`, `request_parameter_supported=false` (JAR
 de-scoped), and `claims_supported` including `sid`. Deliberately **not** advertised:
 `check_session_iframe` (front-channel is dead) and the CIBA
@@ -114,7 +127,10 @@ centralized in one `IClaimsProfileService` (the `IProfileService`-equivalent). I
 declared for a destination, so a stray or sensitive claim can never leak
 (ADR-0005). The access token is minimal (`sub`, `scopes`, `tenant`, and the coarse
 per-tenant role used for gateway/RS checks); profile PII (`name`, `email`,
-`preferred_username`) goes only to the id_token/UserInfo. The id_token also carries
+`preferred_username`) goes only to the id_token/UserInfo, and each is destination-gated
+by scope: `name`/`preferred_username` reach the id_token only under the `profile` scope,
+`email` only under `email`, and the coarse `role` reaches the access token always plus the
+id_token under `roles`. The id_token also carries
 the `memberships` list, size-capped (~10) with a `memberships_truncated` flag and a
 self-service full-list endpoint, and `sid` for back-channel-logout correlation. This
 is a security invariant with a regression test, not a convention.
@@ -135,21 +151,28 @@ is a security invariant with a regression test, not a convention.
   no-symmetric-signing-key invariant.
 * **Signing baseline RS256**, ES256 selectable via the signing credential source
   (RS256 is the baseline because ES256's slower verify would land on every resource
-  server).
-* **Per-client `AccessTokenType`** (jwt or reference) is enforced by a custom
-  `GenerateTokenContext` handler ordered **before** `GenerateIdentityModelToken` and
-  the store-persist handler (pinned by the pipeline-snapshot test), stored in
-  `Application.Properties`; the global `UseReferenceAccessTokens` is not used. A
-  reference token is opaque and cannot be validated locally, so opting a client to
-  reference forces that client's resource server onto introspection, a real
-  per-client cost noted in the selection guide.
+  server; measured, ES256 signs only ~3-4x faster and verifies ~6-9x slower, not the
+  folklore 20x). ES256-as-default is an accepted interim decision with an explicit
+  revisit trigger: an M2M client-credentials mint rate above the low-thousands RPS.
+* **Per-client `AccessTokenType`** (jwt or reference, default jwt) is enforced by a
+  custom `IOpenIddictServerHandler<GenerateTokenContext>` that reads the client's
+  `AccessTokenType` and flips `context.IsReferenceToken` / `context.PersistTokenPayload`
+  so OpenIddict then mints the reference token natively; it is registered
+  `UseScopedHandler` to inject the tenant-scoped `IOpenIddictApplicationManager` directly
+  (no `IServiceScopeFactory` dance, unlike the singleton CORS provider) and ordered
+  **before** `GenerateIdentityModelToken` and the store-persist handler (pinned by the
+  pipeline-snapshot test), with the value stored in `Application.Properties`; the global
+  `UseReferenceAccessTokens` is not used. A reference token is opaque and cannot be
+  validated locally, so opting a client to reference forces that client's resource server
+  onto introspection, a real per-client cost noted in the selection guide.
 
 ### Refresh posture (native, observation only)
 
 Rolling refresh, one-time-use, reuse/replay detection, and family (chain) revocation
 are default-on in OpenIddict and are **not disabled**. Nami adds only: a 30-second
 reuse leeway (not 15s, which sits below network timeouts and causes spurious
-logout); an **audit event on reuse detection** without calling
+logout); an **audit event on reuse detection** (a replay outside the leeway surfaces
+`invalid_grant`/`invalid_token`, error ID2012) without calling
 `RevokeByAuthorizationIdAsync` again (the engine already revokes siblings, and it
 deliberately keeps the `Authorization` so a fresh flow can start); an absolute 8h
 lifetime ceiling stamped on `Authorization.Properties` and enforced at the token
@@ -183,8 +206,15 @@ whose audience is itself; no custom owner-check controller is written (the wrong
 trap). The confinement applies to tokens that carry an explicit audience/presenter; a
 token without one is treated as not resource-specific. Introspection returns a
 uniform `active:false` (no existence oracle), is rate-limited per client, and uses a
-bounded (~5 min) result cache. Native introspection auto-surfaces the mTLS `cnf`
-(`x5t#S256`); surfacing the DPoP `cnf.jkt` is a build item gated on A-1/A-3 (11).
+bounded (~5 min) result cache. Native `AttachApplicationClaims` limits claims further:
+sensitive application claims are returned only to explicitly-listed audiences, **public
+clients are blocked from them entirely**, and a non-access-token introspection returns no
+application claims. The token-entry lookup is **tenant-scoped** (it rides the Pool filter),
+so a tenant-A caller cannot introspect or revoke a tenant-B token (a negative test asserts
+this). Native introspection auto-surfaces the mTLS `cnf` (`x5t#S256`); surfacing the DPoP
+`cnf.jkt` is a build item gated on A-1/A-3 (11), and the invariant is enrich-or-inactive: a
+DPoP-bound token either carries `cnf.jkt` in the response or returns `active:false`, never
+active-but-unbound.
 **Revocation is single-token** (RFC 7009): the endpoint revokes only the presented
 token and never cascades; "log out everywhere" is a separate built
 `RevokeBySubjectAsync` (06), and family-revoke by `AuthorizationId` is native
@@ -208,7 +238,10 @@ with no redeploy and never hits the database on a preflight. The off-hot-path ca
 refresh lists all applications per tenant under the Finbuckle ambient context and
 extracts `cors_origins` in memory. `RequireCors` is applied only to discovery, JWKS,
 token, userinfo, and revocation, never to authorize (a top-level navigation) or
-introspection (server-to-server).
+introspection (server-to-server); the middleware order is `UseRouting` then `UseCors`
+then `UseAuthentication`/`UseAuthorization` then OpenIddict. The provider returns `null`
+(no `Access-Control-Allow-Origin`) on a non-match, and an origin is scheme + host + port
+(no path), validated separately from the client's redirect URIs.
 
 ### Per-tenant issuer
 
@@ -223,16 +256,21 @@ authenticated **within the resolved tenant's store** (the Pool filter or the Sil
 connection), so a tenant-A client cannot authenticate at tenant B; service-to-service
 (client-credentials) clients authenticate with `private_key_jwt`, never a shared
 secret (ADR-0009). The per-request RLS GUC `app.current_tenant` is set here on the
-happy path, not only in background jobs.
+happy path, not only in background jobs, via `SET LOCAL` / `set_config(..., true)` inside
+the transaction (PgBouncer transaction-mode safe, parameterized to avoid injection); the
+application connection must be a de-privileged `NOSUPERUSER` role or FORCE RLS is void.
 
 ### Sender-constrained tokens (mTLS)
 
 mTLS is native: the engine stamps `cnf.x5t#S256` at issuance and validates it, so no
-`cnf` is hand-stamped. Behind a TLS-terminating proxy the client certificate is
-forwarded and read via `AddCertificateForwarding` under a `KnownProxies`/`KnownNetworks`
-allow-list that rejects a spoofed client-cert header from an untrusted source
-(terminate-and-forward is the default; L4 pass-through is the alternative, ADR-0014/0025).
-DPoP for public clients is built (11).
+`cnf` is hand-stamped. It is enabled via `EnableSelfSignedTlsClientAuthentication()` /
+`EnablePublicKeyInfrastructureTlsClientAuthentication()` and
+`UseClientCertificateBoundAccessTokens()` (plus the refresh-token variant if needed).
+Behind a TLS-terminating proxy the client certificate is forwarded and read via
+`AddCertificateForwarding`, and `app.UseCertificateForwarding()` must run **before**
+`UseAuthentication`; a `KnownProxies`/`KnownNetworks` allow-list rejects a spoofed
+client-cert header from an untrusted source (terminate-and-forward is the default; L4
+pass-through is the alternative, ADR-0014/0025). DPoP for public clients is built (11).
 
 ### Patterns applied
 
