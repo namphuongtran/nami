@@ -85,10 +85,11 @@ order-anchored position so every issue-token branch passes through), from
 (privileged CRUD and dual-control transitions), and from key rotation and erasure.
 The typed catalog covers success **and** the negative paths: `login_success`,
 `login_failure`, `lockout`, `token_issued`, `token_revoked`, `consent_grant`,
-`consent_revoke`, `refresh_reuse_detected`, `admin_config_change`, `key_rotation`,
-`force_logout`, `mass_revoke`, `key_purge`, `erasure`, `degraded_mode_enabled`,
-`break_glass`, `client_auth_failure`, and
-`unhandled_exception`.
+`consent_revoke`, `refresh_reuse_detected`, `token_reject`, `admin_config_change`,
+`authz_decision`, `dual_control_approval`, `key_rotation`, `force_logout`,
+`mass_revoke`, `key_purge`, `erasure`, `degraded_mode_enabled`, `break_glass`,
+`client_auth_failure`, and `unhandled_exception`. Each event type has a fixed payload
+schema and feeds the abuse-alert rules (14).
 
 ### Hash-chain
 
@@ -148,6 +149,21 @@ guarantee. The two are joined only by a correlation/trace id. An adapter that
 silently drops (for example an in-memory sink that discards on overflow) violates
 the delivery-guarantee contract and is a test failure, not an acceptable degrade.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant J as Integrity job
+  participant AL as AuditLog
+  participant W as WORM / SIEM
+  J->>AL: re-walk the chain in order
+  J->>J: recompute and assert each RecordHash
+  alt a link fails
+    J->>W: raise a tamper security event and page
+  else intact
+    J->>W: anchor a checkpoint hash
+  end
+```
+
 ### Libraries
 
 No new third-party dependency: the chain uses the BCL
@@ -166,9 +182,12 @@ Named per ADR-0066 (a vocabulary, applied where it clarifies intent):
 
 ## Data model
 
-No new tables. The subsystem writes `AuditLog` and uses the outbox chassis, both
-defined in [02-data](02-data.md). The one schema constraint this design depends on:
-the erasure-relevant identifier columns (`ActorSub`, `OnBehalfOfSubject`) are
+No new tables of its own beyond the `AuditLog` in [02-data](02-data.md). Forwarding
+follows the transactional-outbox pattern (the chassis of 07); its audit forward-queue
+table is a schema item to add in 02 — ADR-0008 mandates the outbox forwarder but the
+corpus does not specify its DDL, so it is an open build-time item (below). The schema
+constraint this design depends on: all subject-bearing columns (`ActorSub`,
+`OnBehalfOfSubject`, `ApproverSub`, and the `ActorChain_JSON` delegation chain) are
 ciphertext-at-write, so destroying a per-subject key removes the plaintext while
 keeping `RecordHash` stable (ADR-0016).
 
@@ -261,8 +280,10 @@ sequenceDiagram
   audit outbox retains and relays every event, proving a diagnostics-lane outage
   does not drop audit.
 * **No-duplicate test**: a forced retry delivers at-least-once but the idempotent
-  destination keeps a single record, and the outbox references the entry rather than
-  copying the payload.
+  destination keeps a single record.
+* **Forward-adapter test**: the cloud-agnostic WORM/SIEM forward adapter delivers, and
+  a redaction-assurance scan asserts no PII of an erased subject remains on the SIEM
+  forward lane.
 * **Dead-letter test**: exhausting the retry cap moves the entry to dead-letter and
   raises a security event.
 * **Tenant-tag test**: an event is tagged with the acting/target tenant, and a
@@ -280,6 +301,8 @@ sequenceDiagram
 * Where the audit HMAC key lives and how it rotates is resolved through
   `ISecretResolver` and confirmed at build (ADR-0009).
 * The SIEM/WORM adapter (and whether to ship more than one) is a build-time pick.
+* The audit forward-queue table (the outbox forwarder's storage) is a schema item to
+  add in 02; ADR-0008 mandates the forwarder but not its DDL.
 
 ## References
 

@@ -123,7 +123,12 @@ exercise admin authority (the anti-bypass lesson, policy detailed in 12). For
 derived from the loaded object before the check (an object-level filter that closes
 BOLA/IDOR); because a user is global, such a route authorizes by the membership/grant
 overlap between the user's tenant-set and the object's owning tenant. It is the same
-`ICheckAccess` seam with a different `TenantTarget` source.
+`ICheckAccess` seam with a different `TenantTarget` source. `RequireActor` is paired
+with an issuance-time invariant: no client-credentials client is ever granted the
+`admin-api` scope, so an app-only token cannot exist for the admin API. A
+client-supplied acting-for or subject is always discarded; authority is only the
+server-side grant on the resolved initiator. The pipeline wires `UseMultiTenant()`
+before authentication/authorization so the tenant is resolved before the check runs.
 
 ### Step-up and dual-control gate
 
@@ -240,6 +245,27 @@ sequenceDiagram
   end
 ```
 
+### Object-level authorization for id-routes (BOLA/IDOR)
+
+A root-level id-route carries no `{tenantId}`, so the owning tenant is derived from
+the loaded object, and a global user is authorized by membership overlap.
+
+```mermaid
+flowchart TD
+  req[GET/PUT/DELETE an object by id, no tenant in the path]:::n
+  load[load the object]:::n
+  own[derive the owning tenant from the object]:::n
+  q{caller a member or delegated-admin<br/>of the owning tenant?}:::d
+  ok[ICheckAccess on the owning tenant]:::n
+  deny[404 or 403, no cross-tenant object access]:::r
+  req --> load --> own --> q
+  q -->|overlap| ok
+  q -->|no overlap| deny
+  classDef n fill:#85bbf0,stroke:#5d82a8,color:#000000
+  classDef d fill:#fff4e6,stroke:#c69a66,color:#000000
+  classDef r fill:#f4b6b6,stroke:#a05252,color:#000000
+```
+
 ## Edge cases and failure modes
 
 * **Confused deputy**: a self-issued cross-tenant token missing `act` is rejected
@@ -289,7 +315,8 @@ production gate:
 * an app-only (client-credentials) token is rejected by `RequireActor` (403), and a
   root-level id-route authorizes against the loaded object's owning tenant so a caller
   cannot act on an object outside its tenant-set (BOLA/IDOR);
-* a CI gate asserts the DB-tier SLO (p95 < 30ms, p99 < 80ms) and a timeout rate
+* a CI gate asserts the DB-tier SLO (p95 < 30ms, p99 < 80ms; the future ReBAC tier is
+  p95 < 50ms, p99 < 150ms) and a timeout rate
   below 0.001; the single `ICheckAccess` seam is exercised by both the token and
   admin paths.
 
@@ -303,6 +330,10 @@ production gate:
   Ops/Security ratification (ADR-0047).
 * ReBAC adoption timing is deferred; the condition/caveat and consistency APIs are a
   version-dependent seam (ADR-0021).
+* Whether to use an `act` token versus OBO is IdP-dependent and a Security/DPO
+  ratification item.
+* Performance: a shallow tenant tree reduces ancestor hops, and the closure
+  ancestor-set is cached and invalidated only on tenant reshape.
 * `act` emission is a build-interim seam with a decommission marker if OpenIddict
   ships native token-exchange `act`.
 

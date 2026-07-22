@@ -81,9 +81,12 @@ Ratified names (ADR-0065): `Nami.Identity` (meta-package and reference host),
 `MultiTenant`, `Keys`, `OpenTelemetry`, `Validation`, and the cloud adapters) is
 the granular sub-package split ADR-0027 sanctions; the exact boundaries and names
 are finalized at M1. The corpus name `Nami.Identity.Server` for the host is
-superseded by `Nami.Identity` (ADR-0025/0027); there is no `.Server` project.
-Phase-later packages (`Users`, `DPoP`, `Bff`, `Validation`, `Admin.*`) are
-scaffolded when their phase arrives.
+superseded by `Nami.Identity` (ADR-0025/0027); the corpus's later
+`Nami.Identity.Host` name was likewise not ratified, so there is no `.Server` or
+`.Host` project. Phase-later packages (`Users`, `DPoP`, `Bff`, `Validation`,
+`Admin.*`, the email adapters `Email.Smtp`/`.SendGrid`/`.Ses`/`.Acs`, the ReBAC
+adapters `AccessControl.OpenFga`/`.SpiceDb`, and the resource-side `Validation.DPoP`)
+are scaffolded when their phase arrives.
 
 ### Ports catalog (in `Nami.Identity.Abstractions`)
 
@@ -93,6 +96,7 @@ implementations land in their owning phases.
 | Port | Purpose | Default adapter | Owning ADR |
 |---|---|---|---|
 | `ISigningCredentialSource` | Supply the signing credential | Database (`SigningKeys`) | 0006, 0011 |
+| `ISigningKeyStore` | The rotation key store (distinct from the credential source) | Database (`SigningKeys`) | 0011, 0006 |
 | `IEncryptionCredentialSource` | Supply the encryption credential | Database | 0005, 0006 |
 | `ISecretResolver` | Resolve secrets/connection strings | Environment / database | 0009 |
 | `IDataProtectionKeyStore` | Back the Data Protection keyring | Database | 0006 |
@@ -102,7 +106,10 @@ implementations land in their owning phases.
 | `ICheckAccess` | Authorization decision port | DB-first (Phase 05) | 0047, 0010 |
 
 Ports are the strictest public surface (ADR-0044): a shipped port is extended only
-by a default interface method or an `IXxxV2`, never a bare added member.
+by a default interface method or an `IXxxV2`, never a bare added member. Ports whose
+owning subsystem arrives later (`IEmailDispatcher` for 07, `IDPoPReplayCache` for 11,
+`IAttestationValidator` for 06) are declared with those packages, not in the Phase-01
+set.
 
 ### Composition and the fluent builder
 
@@ -111,7 +118,13 @@ wires OpenIddict, the four DbContexts, Finbuckle resolution, health, and the
 default (database) adapters, with the minimal config being a connection string
 and an issuer (ADR-0027). A `CloudProviderSelector` reads `Cloud:Provider`
 (default `Database`, plus Azure/AWS/GCP/Vault) and registers the matching adapter,
-so changing provider is configuration, not code.
+so changing provider is configuration, not code. Finbuckle resolution is wired with
+`WithHostStrategy()` + `WithPathStrategy()` + `WithEFCoreStore<ControlPlaneDbContext>()`,
+and the durable EF session table is registered as the ASP.NET `ITicketStore`
+(ADR-0003; never in-memory or a distributed cache as the source of truth). The
+order-sensitive `UseNamiIdentity()` pipeline runs `ForwardedHeaders` then
+`UseMultiTenant()` **before** authentication/authorization and the OpenIddict
+middleware, so the tenant is resolved before any protocol handling.
 
 ### Configuration layer (ADR-0052)
 
@@ -131,7 +144,8 @@ OpenIddict is pinned lock-step at one version. `Directory.Build.props` sets
 nullable, implicit usings, `TreatWarningsAsErrors`, `LangVersion latest`, and one
 central target-framework knob (host single-target `net10.0`, libraries
 multi-target, ADR-0030). MinVer derives one lock-step package version from a single
-git tag (ADR-0027); ADR-0044 governs what may change under it.
+git tag (ADR-0027); ADR-0044 governs what may change under it. `global.json` pins the
+.NET 10 SDK (`rollForward: latestFeature`).
 
 ### Key libraries and licenses
 
@@ -200,6 +214,7 @@ sequenceDiagram
   Mig->>PG: apply migrations for the four contexts
   App->>PG: auto-seed first signing key, immediate activation
   Note over App: readiness blocks until a key exists
+  Dev->>App: idempotent seed of the default tenant (tier, Silo conn ref)
   Dev->>App: seed dev clients and scopes, bootstrap first admin
   App-->>Dev: /health/ready passes, dotnet run serves
 ```

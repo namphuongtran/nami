@@ -125,10 +125,12 @@ only when the email is verified on both sides); external claims pass an **allow-
 and sensitive claims (`role`/`groups`/`email_verified`) always come from the local
 record and membership; authority/discovery URLs and every backchannel fetch pass a
 fail-closed **SSRF egress handler** (`SsrfEgressHandler` on `BackchannelHttpHandler`,
-plus `PostConfigure` host allow-listing); each provider has a unique callback and the
-authorization-response `iss` is verified (RFC 9207, which .NET 10 does not enforce
-natively, so it is wired in `OnMessageReceived`) with the correlation state bound to
-the provider scheme (mix-up defense); provider secrets live in the secret store
+plus `PostConfigure` host allow-listing, `AllowAutoRedirect=false`, and cross-host
+redirect rejection); each provider has a unique callback and the
+authorization-response `iss` is verified (RFC 9207; whether .NET 10's OIDC handler
+enforces `iss` natively is a verify-at-source item, and if it does not it is wired in
+`OnMessageReceived` without double-handling) with the correlation state bound to the
+provider scheme (mix-up defense); provider secrets live in the secret store
 (ADR-0009), never plaintext.
 
 ### Credential hardening baseline (ADR-0028 §E)
@@ -144,7 +146,8 @@ over complexity, strong hashing, then lockout — not complexity rules or rotati
 | `SecurityStampValidatorOptions.ValidationInterval` | 1-2 min | fast logout-everywhere (ADR-0003) |
 | `SignIn.RequireConfirmedAccount` | true | anti-fake-account |
 | `User.RequireUniqueEmail` | true | one email is one identity (ADR-0001) |
-| Lockout | on-failure enabled, 5 attempts | the template defaults it off |
+| `RequiredUniqueChars` | 4 | blocks trivial repeats |
+| Lockout | on-failure enabled, 5 attempts, 5-15 min timespan, plus a separate 2FA-step lockout | the template defaults on-failure off |
 | Breached-password check | HIBP range API (k-anonymity), fail-open, prod-on | banned-password lever |
 | Forced rotation | none | rotation weakens passwords (NIST) |
 
@@ -192,6 +195,13 @@ ASP.NET Core Identity and native .NET 10 passkeys (MIT); the external-login hand
 HIBP Pwned-Passwords range API (an external service, k-anonymity, fail-open); and, for
 future hardware-attested aal3, `fido2-net-lib` (MIT) with the FIDO MDS. No commercial
 dependency (ADR-0026).
+
+### Packaging
+
+Bundled as `Nami.Identity.Users` with an `.AddUsers(...)` builder (ADR-0027). The
+`IEmailDispatcher` and `IAuditSink` ports are consumer swap-points (ADR-0024), and the
+user-management public surface is governed by the SemVer and deprecation policy
+(ADR-0044).
 
 ## Data model
 
@@ -245,6 +255,40 @@ sequenceDiagram
     SM->>CP: amr becomes pwd, otp, mfa and acr recomputes to aal2
     M-->>U: signed in
   end
+```
+
+### Passkey registration and AAL resolution
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant SM as SignInManager
+  participant UM as UserManager
+  participant CP as ComputeAcr
+  U->>SM: MakePasskeyCreationOptionsAsync
+  SM-->>U: creation options, navigator.credentials.create
+  U->>SM: PerformPasskeyAttestationAsync with the credential
+  SM->>UM: AddOrUpdatePasskeyAsync, persist Aaguid and AttestationTrust
+  Note over CP: ComputeAcr resolves aaguid, trust, IsBackupEligible to a tier
+  Note over CP: v1 attestation off so aal2, aal3 allow-list empty, backup-eligible never aal3
+```
+
+### Passkey recovery (lost all devices)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant R as Recovery endpoint
+  participant E as Email
+  participant SM as SignInManager
+  Note over U: enroll-time invariant, at least one fallback before passkey-only
+  U->>R: lost all devices, request recovery
+  R->>E: email-verified recovery link, rate-limited and audited
+  U->>R: open the link, then forced step-up
+  R->>SM: re-enroll a new passkey before a full session
+  Note over R: recovery is never weaker than the replaced factor, admin-assisted is dual-control
 ```
 
 ### External login with anti-takeover linking
@@ -362,6 +406,8 @@ stateDiagram-v2
 * Sessions are revocable server-side with enforced lifetimes; change-email rotates
   the security stamp and revokes refresh so a hijacked session cannot persist
   (ADR-0003, ADR-0028).
+* Sign-in success and failure (with IP and user-agent) are emitted to the audit
+  lane, alongside lockout and reuse events (ADR-0008, catalog in 03).
 * Every lifecycle transition and recovery step is audited with provenance
   (ADR-0008); offboard invokes the gated erasure saga, which revokes live access
   first and preserves the audit hash-chain by crypto-shredding PII and appending a

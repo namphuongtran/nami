@@ -98,8 +98,9 @@ right is part of the protocol contract. Key advertised values:
 `token_endpoint_auth_methods_supported` covering `client_secret_basic`,
 `client_secret_post`, `private_key_jwt`, and `tls_client_auth` /
 `self_signed_tls_client_auth`, `dpop_signing_alg_values_supported` (once DPoP lands,
-11), and `backchannel_logout_supported=true` with
-`frontchannel_logout_supported=false`. Deliberately **not** advertised:
+11), `backchannel_logout_supported=true` and `backchannel_logout_session_supported=true`
+with `frontchannel_logout_supported=false`, `request_parameter_supported=false` (JAR
+de-scoped), and `claims_supported` including `sid`. Deliberately **not** advertised:
 `check_session_iframe` (front-channel is dead) and the CIBA
 `backchannel_authentication_endpoint` (skipped). Custom fields are emitted through a
 `HandleConfigurationRequestContext` handler. Discovery and JWKS are served per tenant
@@ -164,7 +165,7 @@ and the two compose rather than merge.
 Consent is stored via `IOpenIddictAuthorizationManager` as a `Permanent`
 authorization, found with `FindAsync(subject, client, status, type, scopes)`, where
 the scope filter drives automatic re-consent on scope expansion. The decision
-switches on the client `ConsentType` (Implicit/Explicit/External), not a raw count,
+switches on the client `ConsentType` (Implicit/Explicit/External/Systematic), not a raw count,
 and `prompt=none` splits into two errors: `login_required` (no session) versus
 `consent_required` (session but no grant). After find/create, calling
 `SetAuthorizationId` is **load-bearing**: without it, family-revoke and
@@ -217,7 +218,12 @@ The issuer is inferred per request from scheme + host + path base (no static
 with `tenant_not_resolved`. Discovery and JWKS are served per tenant issuer. Because
 Pool tenants share a pool-group signing key, the signature is **not** a tenant
 boundary at the resource server; isolation there is by issuer + `tenant`-claim
-binding plus RLS (ADR-0049, resource side detailed in 11).
+binding plus RLS (ADR-0049, resource side detailed in 11). A client is looked up and
+authenticated **within the resolved tenant's store** (the Pool filter or the Silo
+connection), so a tenant-A client cannot authenticate at tenant B; service-to-service
+(client-credentials) clients authenticate with `private_key_jwt`, never a shared
+secret (ADR-0009). The per-request RLS GUC `app.current_tenant` is set here on the
+happy path, not only in background jobs.
 
 ### Sender-constrained tokens (mTLS)
 
@@ -341,6 +347,46 @@ sequenceDiagram
   end
 ```
 
+### Per-client CORS preflight
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant B as Browser
+  participant P as Custom ICorsPolicyProvider
+  participant C as Config cache, per-tenant origin-set
+  participant DB as PostgreSQL
+  B->>P: preflight OPTIONS with Origin
+  P->>C: look up the tenant origin-set
+  alt cache hit
+    C-->>P: allowed origins
+  else miss
+    C->>DB: refresh, ListAsync per tenant under ambient context
+    DB-->>C: origins extracted in memory
+  end
+  P-->>B: allow the origin or no header
+  Note over P,DB: never queries the database on the preflight hot path
+```
+
+### Revocation (single-token)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as Client
+  participant R as Revocation endpoint
+  participant Eng as OpenIddict native
+  C->>R: revoke token, client auth private_key_jwt
+  R->>Eng: ValidateAuthorizedParty, presenter confinement
+  alt caller is the presenter
+    Eng->>Eng: revoke only the presented token, no cascade
+    Eng-->>C: 200
+  else not the caller's token
+    Eng-->>C: 200, RFC 7009 normalized, no disclosure
+  end
+  Note over Eng: logout everywhere is the separate RevokeBySubjectAsync
+```
+
 The architecture overview's [runtime view 6.1](../architecture/06-runtime-views.md)
 is the high-level version of the issuance flow above.
 
@@ -404,6 +450,11 @@ is the high-level version of the issuance flow above.
   expected auth methods, and omits `check_session_iframe` and CIBA.
 * **Per-tenant issuer**: two tenants yield two `iss` values, discovery `issuer`
   equals the token `iss`, and an unresolved tenant fails fast.
+* **Cross-tenant client auth**: a tenant-A client cannot authenticate at tenant B.
+* **Per-client token format**: a `reference` client gets an opaque persisted token, a
+  `jwt` client gets a readable JWT, and the handler runs before `GenerateIdentityModelToken`.
+* **DB-local revocation**: with `EnableTokenEntryValidation`, revoking a token yields
+  an immediate local 401.
 * **Clock skew**: a timestamp within the 60s tolerance passes and beyond it is
   rejected, using the shared constant for both the 8h ceiling and `max_age`.
 * **Pipeline + startup**: the snapshot test pins handler order (including the

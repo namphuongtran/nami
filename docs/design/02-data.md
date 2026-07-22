@@ -103,8 +103,8 @@ forking the catalog.
 
 * **Layer 1, the EF query filter** (Finbuckle): keeps cross-tenant rows off the
   wire on the normal read/write path.
-* **Layer 2, PostgreSQL FORCE row-level security**: a policy
-  `TenantId = current_setting('app.current_tenant', true)` under a **de-privileged
+* **Layer 2, PostgreSQL FORCE row-level security**: a policy comparing the row's
+  tenant to `current_setting('app.current_tenant', true)` under a **de-privileged
   role** (`NOSUPERUSER`, no `BYPASSRLS`), set per request with `SET LOCAL` inside
   the request transaction. This is the backstop for the bulk and raw-SQL paths that
   bypass the EF filter (`ExecuteDelete`/`ExecuteUpdate` honor the filter but bypass
@@ -114,7 +114,13 @@ forking the catalog.
 
 The RLS objects (ENABLE/FORCE, the policy, the role and grants) are not in the EF
 model and are added as an explicit `migrationBuilder.Sql(...)` step after table
-creation (ADR-0037, ADR-0017).
+creation (ADR-0037, ADR-0017). The policy expression must match the tenant-column
+type: `TenantId = current_setting('app.current_tenant', true)` for the `text`
+OpenIddict discriminator, but for a `uuid` tenant column (the control-plane
+`LogoutDeliveryOutbox` and `SuppressionEntry`) it must be
+`TenantId = NULLIF(current_setting('app.current_tenant', true), '')::uuid`, because an
+unset GUC returns an empty string and `''::uuid` raises `22P02` (a crash, not the
+intended fail-closed zero rows).
 
 ### Key libraries and licenses
 
@@ -277,7 +283,7 @@ both together (09).
 | GrantId | uuid | PK | UUIDv7 |
 | GranteeUserId | uuid | partial covering index | index (GranteeUserId, ExpiresAt) include (RootTenantId, ValidFrom) where RevokedAt is null |
 | RootTenantId | uuid | FK to Tenants | subtree the grant covers |
-| ValidFrom / ExpiresAt / RevokedAt | timestamptz (last two null) | | time-bounded and revocable |
+| ValidFrom / ExpiresAt / RevokedAt / CreatedAt | timestamptz (ExpiresAt, RevokedAt null) | | time-bounded and revocable |
 | GrantedByUserId | uuid | | provenance |
 | (cap) GrantId + Capability | uuid + text | PK, FK to catalog | `DelegatedAdminCapabilities` |
 | (cat) Capability + IsInheritable | text + boolean | Capability PK | `CapabilityCatalog` |
@@ -287,10 +293,12 @@ both together (09).
 | Field | Type | Key / index | Notes |
 |---|---|---|---|
 | EntryId | uuid | PK | UUIDv7 |
+| Timestamp | timestamptz | | when the event occurred |
 | PrevHash / RecordHash | bytea | | hash-chain; `RecordHash` = HMAC over canonical(fields) then `PrevHash` |
 | Payload_Canonical | text | | canonical form hashed (jsonb does not preserve bytes) |
-| ActorSub / OnBehalfOfSubject | text | | erasure-relevant identifiers stored as per-subject ciphertext |
-| EventType / TargetTenantId / Result / CorrelationId | text | | plus the typed authz fields (Acr, AuthTime, DecisionPath) |
+| ActorSub / OnBehalfOfSubject / ApproverSub / ActorChain_JSON | text / jsonb | | all subject-bearing identifiers stored as per-subject ciphertext (crypto-shreddable) |
+| EventType / TargetTenantId / Result / CorrelationId | text | | event classification and correlation |
+| Acr / AuthTime / DecisionPath / AuthzDecision / Capability / GrantId / StepupSatisfied / ApprovalRequestId / RequestHash | mixed | | authz-decision and dual-control provenance (produced by 05) |
 
 Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block trigger (ADR-0008).
 
@@ -299,10 +307,11 @@ Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block tri
 | Field | Type | Key / index | Notes |
 |---|---|---|---|
 | Id | text | PK (kid) | |
+| Version / IsX509Certificate | int / boolean | | key version; whether `Data` is an X.509 cert (publish-before-sign needs X509) |
 | Use / Algorithm / State | text | index (Use, State); unique (Use, State) where State is active | prevents two active signers |
-| Data | bytea | | encrypted at rest (DP or KMS envelope) |
+| Data / DataProtected | bytea / boolean | | encrypted at rest; `DataProtected` records DP-wrapped versus KMS-enveloped |
 | KeyScope / TenantId | text / uuid null | | pool-group or per-Silo-tenant (ADR-0033) |
-| NotBefore / NotAfter / RetiresAt / DeletesAt / RevokedAt | timestamptz | | rotation lifecycle |
+| NotBefore / NotAfter / RetiresAt / DeletesAt / RevokedAt / Created | timestamptz | | rotation lifecycle |
 
 `ServerSideSessions` (+ `SessionParticipatingClients`; detailed in 06/08):
 
@@ -311,7 +320,8 @@ Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block tri
 | Id | bigint | PK identity | the one deliberate non-UUIDv7 key (internal surrogate) |
 | Key | text | unique | the `sid` clients reference |
 | SubjectId / SessionId / Scheme | text | index (SubjectId), (SessionId) | evict-oldest on concurrent-session cap |
-| Renewed / Expires | timestamptz | index (Expires) | inactivity 1h / absolute 8h |
+| DisplayName | text null | | optional session label |
+| Created / Renewed / Expires | timestamptz | index (Expires) | `Created` backs evict-oldest; inactivity 1h / absolute 8h |
 | Data | bytea | | serialized ticket |
 | (participants) SessionKey + ClientId | text | PK, FK to Key cascade | which RPs to back-channel-logout |
 
@@ -323,6 +333,7 @@ Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block tri
 | TenantId | uuid | `.IsMultiTenant()` + RLS | |
 | Status / NextAttemptUtc | text / timestamptz | index (Status, NextAttemptUtc) | at-least-once delivery |
 | Sid / ClientId / LogoutUri / Attempts | text / int | | |
+| CreatedUtc / DeliveredUtc | timestamptz (DeliveredUtc null) | | enqueue and delivery timestamps |
 
 `OutboxEmail` (two homes: Identity and control-plane; detailed in 07):
 
@@ -331,7 +342,7 @@ Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block tri
 | Id | uuid | PK | UUIDv7 |
 | IdempotencyKey | text | unique | prevents double-send |
 | Status / NextAttemptAt | text / timestamptz null | index (Status, NextAttemptAt) | relay claim via SKIP LOCKED |
-| Payload / Attempts / ProviderMessageId | text / int / text null | | control-plane copy adds `TenantId` (RLS) |
+| Payload / Attempts / ProviderMessageId / CreatedAt | text / int / text null / timestamptz | | control-plane copy adds `TenantId` (RLS) |
 
 `SuppressionEntry` (tenant-scoped):
 
@@ -339,7 +350,7 @@ Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block tri
 |---|---|---|---|
 | Id | uuid | PK | UUIDv7 |
 | TenantId + RecipientHash | uuid + bytea | index (TenantId, RecipientHash) | hash only, never the address (DP.01) |
-| Reason / ExpiresAt | text / timestamptz null | | hard-bounce and complaint persist; soft carries a TTL |
+| Reason / ExpiresAt / CreatedAt | text / timestamptz (ExpiresAt null) / timestamptz | | hard-bounce and complaint persist; soft carries a TTL |
 
 `TenantBranding`:
 
@@ -368,6 +379,35 @@ not a database trigger, per ADR-0024), with cycle rejection on MOVE (the new par
 must not be in the moved subtree), serialized tree mutation
 (`SELECT ... FOR UPDATE` or SERIALIZABLE with retry), and a periodic
 closure-integrity verify job.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant TS as ITenantService
+  participant PG as PostgreSQL, one transaction
+  TS->>PG: lock the subtree root, SELECT FOR UPDATE
+  TS->>PG: check the new parent is not in the moved subtree
+  alt would create a cycle
+    PG-->>TS: reject the move
+  else safe
+    TS->>PG: delete closure pairs crossing the old boundary
+    TS->>PG: insert new-ancestor pairs across the moved subtree
+    TS->>PG: commit
+  end
+  Note over TS,PG: a periodic job re-derives closure from adjacency to verify integrity
+```
+
+### Migrations
+
+Each context has its own `__EFMigrationsHistory` in a separate schema
+(`openiddict`/`identity`/`dataprotection`/`controlplane`) so a shared database has no
+collision. Migrations apply through an EF Core bundle (`efbundle`), with the RLS
+objects added as a raw-SQL step after table creation; production never
+migrates-on-startup (ADR-0017). Silo tenants are migrated by fan-out with a per-tenant
+`SchemaVersion` and the resolver traffic-gate. Migration history must stay linear (EF
+Core 10 rejects out-of-order at runtime; a CI `HasPendingModelChanges` check enforces
+it), and EF Core 9+ takes an exclusive `__EFMigrationsHistory` lock as a
+concurrent-migrate backstop under the single-runner orchestrator.
 
 ## Runtime flows
 
