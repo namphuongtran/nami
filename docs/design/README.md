@@ -39,7 +39,7 @@ implementation plan, not here.
 | [08](08-login-consent-ui.md) | Login, consent, and logout UI | draft | 0019, 0004, 0003, 0002, 0013 |
 | [09](09-key-management.md) | Key management and rotation | draft | 0005, 0006, 0007, 0011, 0012, 0033 |
 | [10](10-revocation-caching.md) | Revocation propagation and caching | draft | 0039, 0040 |
-| 11 | Advanced flows | planned | 0014 |
+| [11](11-advanced-flows.md) | Advanced flows | draft | 0014 |
 | 12 | Admin API and Admin App | planned | 0020, 0015 |
 | 13 | GDPR erasure and tenant provisioning | planned | 0016, 0017, 0053, 0054 |
 | 14 | Observability, capacity, and SLO | planned | 0022, 0041, 0063 |
