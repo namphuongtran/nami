@@ -40,7 +40,7 @@ implementation plan, not here.
 | [09](09-key-management.md) | Key management and rotation | draft | 0005, 0006, 0007, 0011, 0012, 0033 |
 | [10](10-revocation-caching.md) | Revocation propagation and caching | draft | 0039, 0040 |
 | [11](11-advanced-flows.md) | Advanced flows | draft | 0014 |
-| 12 | Admin API and Admin App | planned | 0020, 0015 |
+| 12 | Admin: [API](12-admin-api.md) + [App](12-admin-app.md) | draft | 0020, 0015 |
 | 13 | GDPR erasure and tenant provisioning | planned | 0016, 0017, 0053, 0054 |
 | 14 | Observability, capacity, and SLO | planned | 0022, 0041, 0063 |
 | 15 | Testing, CI/CD, and deployment | planned | 0060, 0025, 0023, 0031, 0051 |

@@ -386,15 +386,17 @@ columns are parallel but the vocabulary is reconciled in the key-management desi
 The data-subject-rights design (13) adds the Art.18 `ProcessingRestriction` table
 (control-plane, tenant-columned); its schema lands with that doc rather than here.
 
-`DualControlProposals` (detailed in 06):
+`DualControlProposals` (the dual-control saga; detailed in 12):
 
 | Field | Type | Key / index | Notes |
 |---|---|---|---|
 | ProposalId | uuid | PK | UUIDv7 |
-| TargetETag | text | | TOCTOU guard, re-checked at execute |
+| TargetETag | text | | TOCTOU guard (the `xmin`-derived ETag), re-checked at execute |
 | Status / ProposedBy / ApprovedBy | text (last null) | | proposer not equal approver |
 | ActionType / TargetType / TargetId / TenantId | text / uuid | | routes to a keyed executor |
-| PayloadJson / PriorProposalId / ExpiresAt / CorrelationId | jsonb / uuid null / timestamptz / text | | single-use, expiring |
+| ProposedAt / DecidedAt / ExecutedAt | timestamptz (last two null) | | lifecycle timestamps |
+| FailReason / FailDetail | text / jsonb (both null) | | `target_changed` etc.; `FailDetail` holds the expected/observed ETag |
+| PayloadJson / PriorProposalId / ExpiresAt / CorrelationId | jsonb / uuid null / timestamptz / text | | single-use, expiring; `PriorProposalId` links a re-propose after a terminal `Failed(target_changed)` |
 
 ### The tenant tree
 
