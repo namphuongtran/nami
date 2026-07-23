@@ -39,7 +39,7 @@ self-check, and the per-tenant inferred issuer (04); the numeric SLO table (14);
 | ADR-0012 | Bootstrap sequence (DP keyring before first key), auto-seed the first key with immediate activation, `ProtectKeysWithCertificate` default, restore-both |
 | ADR-0033 | One keyset per running instance; pool-group (Pool) vs tenant (Silo) `KeyScope`; scope-aware store with a centralized predicate; the Pool-shared-keyset accepted risk |
 | ADR-0009 / ADR-0021 | No static store secret (least-privilege / workload identity); every access audited; the rotation monitor is a catalogued version-sensitive seam with a per-bump contract test |
-| ADR-0039 / ADR-0049 | Break-glass RS propagation under 60s via a fail-closed distrusted-kid set; the shared-Pool-key mitigation (RS validates signature + issuer + audience + tenant) |
+| ADR-0039 / ADR-0049 | Break-glass triggers the fail-closed distrusted-kid module (owned by 10) for RS propagation under 60s; the shared-Pool-key mitigation (RS validates signature + issuer + audience + tenant) |
 
 ## OpenIddict facts this design is built on (verified 7.5, pinned seams)
 
@@ -327,10 +327,11 @@ dirty key, refreshes the cache and trips the change-token so the key disappears 
 list and JWKS on every node with no restart, un-registers the dirty certificate, and
 force-evicts the JWKS/discovery caches. Local self-validation drops the revoked key through
 the live `IConfigurationManager` (not the change-token). Resource-server propagation is
-under 60 seconds via a Redis-backed **fail-closed** distrusted-kid set (Redis unreachable
-means the kid is treated as distrusted) served from an in-process L1 cache so the happy
-path takes no per-request Redis hit, plus an RS refresh interval of about 5 minutes. A
-signing-key compromise means tokens stop validating once the key leaves JWKS (bounded by
+under 60 seconds via the fail-closed distrusted-kid module (the Redis-backed set, its
+in-process L1 cache, and the ~5-minute resource-server refresh are owned by the
+revocation-propagation design, 10); the break-glass step here is the **trigger** that sets
+`RevokedAt`, refreshes the cache, and trips the change-token. A signing-key compromise
+means tokens stop validating once the key leaves JWKS (bounded by
 the 15-minute access-token TTL; issued JWTs are not retroactively un-trusted by JWKS
 alone); an encryption-key compromise means every outstanding refresh token, authorization
 code, and device code is treated as burned and revoked. Mass-revoke and purge are
@@ -343,8 +344,9 @@ Key-health metrics: a `key_rotations` counter, a `keys_loaded` gauge, and a
 `signing_key_days_to_expiry` observable gauge with a low-value alert routing to the
 key-rotation runbook; a JWKS-availability burn alert pages (JWKS down breaks all
 verification). The rotation runner emits a last-successful-run heartbeat, alerting when
-stale beyond two intervals. JWKS and discovery are output-cached with a Redis backplane and
-tag-evicted on rotation (they are about a quarter of traffic and effectively free from
+stale beyond two intervals. JWKS and discovery are output-cached and tag-evicted on
+rotation (the output cache and its Redis backplane are owned by 10; they are about a
+quarter of traffic and effectively free from
 cache). The JWKS-availability SLO is 99.99%; the full numeric SLO table is owned by 14.
 
 ## Security considerations
@@ -377,8 +379,8 @@ cache). The JWKS-availability SLO is 99.99%; the full numeric SLO table is owned
   silently regenerated.
 - **Readiness probe:** asserts the active `kid` matches the expected persisted `kid`, not a
   bare round-trip.
-- **Distrusted-kid:** cross-node propagation under 60 seconds, and fail-closed when Redis is
-  down.
+- **Distrusted-kid trigger:** revoking a key sets `RevokedAt` and drops it from the live
+  validation set; the cross-node propagation and fail-closed behavior are verified in 10.
 - **X509-only ordering:** a startup assertion rejects a non-X509 rotation signing key.
 - **Cache correctness:** `CurrentValue` read many times per request does not regenerate a
   key each time (the `Lazy` cache holds).
