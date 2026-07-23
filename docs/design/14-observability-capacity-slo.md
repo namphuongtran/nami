@@ -328,4 +328,4 @@ sequenceDiagram
 
 ---
 
-Previous: [13 Tenant lifecycle](13-tenant-lifecycle.md) · Next: [15 Testing, CI/CD, and deployment](README.md)
+Previous: [13 Tenant lifecycle](13-tenant-lifecycle.md) · Next: [15 Testing](15-testing.md)

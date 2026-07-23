@@ -43,7 +43,7 @@ implementation plan, not here.
 | 12 | Admin: [API](12-admin-api.md) + [App](12-admin-app.md) | draft | 0020, 0015 |
 | 13 | GDPR: [Erasure + DSR](13-erasure-and-data-subject-rights.md) + [Tenant lifecycle](13-tenant-lifecycle.md) | draft | 0016, 0053, 0017, 0054 |
 | [14](14-observability-capacity-slo.md) | Observability, capacity, and SLO | draft | 0022, 0041, 0063 |
-| 15 | Testing, CI/CD, and deployment | planned | 0060, 0025, 0023, 0031, 0051 |
+| 15 | Testing + CI/CD/deploy: [Testing](15-testing.md) + [CI/CD & deployment](15-cicd-and-deployment.md) | draft | 0060, 0062, 0025, 0023, 0031, 0051 |
 
 Docs are produced in dependency order, one at a time. A `planned` row becomes a
 linked `draft`, then `reviewed` once approved.
