@@ -37,7 +37,7 @@ implementation plan, not here.
 | [06](06-user-management.md) | User management and authentication | reviewed | 0028, 0013, 0003, 0002 |
 | [07](07-email-notification.md) | Email and notification subsystem | draft | 0038 |
 | [08](08-login-consent-ui.md) | Login, consent, and logout UI | draft | 0019, 0004, 0003, 0002, 0013 |
-| 09 | Key management and rotation | planned | 0005, 0006, 0007, 0011, 0012, 0033 |
+| [09](09-key-management.md) | Key management and rotation | draft | 0005, 0006, 0007, 0011, 0012, 0033 |
 | 10 | Revocation propagation and caching | planned | 0039, 0040 |
 | 11 | Advanced flows | planned | 0014 |
 | 12 | Admin API and Admin App | planned | 0020, 0015 |
