@@ -42,7 +42,7 @@ implementation plan, not here.
 | [11](11-advanced-flows.md) | Advanced flows | draft | 0014 |
 | 12 | Admin: [API](12-admin-api.md) + [App](12-admin-app.md) | draft | 0020, 0015 |
 | 13 | GDPR: [Erasure + DSR](13-erasure-and-data-subject-rights.md) + [Tenant lifecycle](13-tenant-lifecycle.md) | draft | 0016, 0053, 0017, 0054 |
-| 14 | Observability, capacity, and SLO | planned | 0022, 0041, 0063 |
+| [14](14-observability-capacity-slo.md) | Observability, capacity, and SLO | draft | 0022, 0041, 0063 |
 | 15 | Testing, CI/CD, and deployment | planned | 0060, 0025, 0023, 0031, 0051 |
 
 Docs are produced in dependency order, one at a time. A `planned` row becomes a

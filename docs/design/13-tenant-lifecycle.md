@@ -269,4 +269,4 @@ stateDiagram-v2
 
 ---
 
-Previous: [13 Erasure and data-subject rights](13-erasure-and-data-subject-rights.md) · Next: [14 Observability, capacity, and SLO](README.md)
+Previous: [13 Erasure and data-subject rights](13-erasure-and-data-subject-rights.md) · Next: [14 Observability, capacity, and SLO](14-observability-capacity-slo.md)
