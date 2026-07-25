@@ -81,3 +81,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0068](0068-continuous-access-evaluation-shared-signals.md) | Support continuous access evaluation via the OpenID Shared Signals Framework (Nami as transmitter) | proposed |
 | [0069](0069-verifiable-credentials-openid4vc.md) | Support issuing Verifiable Credentials via OpenID4VC (Nami as issuer) | proposed |
 | [0070](0070-local-development-tls.md) | Serve HTTPS in local development with a locally-trusted cert behind a terminating reverse proxy | accepted |
+| [0071](0071-identity-change-event-publishing.md) | Publish identity change events outward through a transactional outbox to a message broker, for backend consumers that are not OIDC relying parties | accepted |

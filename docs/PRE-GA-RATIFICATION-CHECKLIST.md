@@ -13,6 +13,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 - ☐ Telemetry / registration: telemetry data categories (no PII); registration PII retention; privacy notice; registration terms ([ADR-0032](adr/0032-usage-visibility-and-licensing-posture.md))
 - ☐ HIBP breach-check: sending a hash prefix to an external service (DP.01) ([ADR-0028](adr/0028-user-management.md))
 - ☐ Deprovision key-escrow retention window and residency ([ADR-0017](adr/0017-tenant-provisioning-and-silo-migration.md))
+- ☐ Change-event publishing (v2): PII in event payloads flowing to the broker and its consumers, the outward data flow, and event retention (DP.01) ([ADR-0071](adr/0071-identity-change-event-publishing.md))
 
 ## Security
 
@@ -25,6 +26,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 - ☐ Accepted risk: Pool-shared keyset (pool-group blast radius) ([ADR-0033](adr/0033-key-scope-isolation-model.md))
 - ☐ Authorization SLO / timeout (with Ops) ([ADR-0047](adr/0047-authorization-decision-engine.md))
 - ☐ Trusted-proxy IP list for mTLS (with Ops) ([ADR-0014](adr/0014-advanced-protocol-scope.md))
+- ☐ Change-event publishing (v2): per-consumer bus access control; whether configuring the broker connection is an IAM-class change requiring dual-control; thin-versus-fat payload for PII minimization ([ADR-0071](adr/0071-identity-change-event-publishing.md))
 - ☐ OWASP ASVS 5.0 Level 2 self-assessment coverage complete (L3 for key/token/dual-control/tenant-isolation), API Security Top 10 mapped ([ADR-0062](adr/0062-owasp-asvs-security-baseline.md))
 
 ## Ops
@@ -32,6 +34,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 - ☐ Formal RTO/RPO targets, DR runbook, per-adapter capability matrix ([ADR-0006](adr/0006-disaster-recovery-key-material.md))
 - ☐ Root-cert provisioning/rotation ceremony; per-environment cloud-protector adapter ([ADR-0012](adr/0012-key-bootstrap-and-dr-sequence.md))
 - ☐ Public reference-host decision (owner / hosting / patch-cadence / cost) versus local-Docker-only ([ADR-0027](adr/0027-packaging-and-distribution.md))
+- ☐ Change-event publishing (v2): broker sizing, dead-letter policy, and alerting; confirm the single-stream topology once real tenant numbers exist ([ADR-0071](adr/0071-identity-change-event-publishing.md))
 
 ## Product / Ops
 

@@ -31,6 +31,8 @@ Every entity needs a primary-key type, and the choice is a foundational, cross-c
 
 Chosen option: "UUIDv7 for the clustered primary key of every entity", represented as a .NET `Guid`, because it is globally unique like a v4 GUID but time-ordered, so it preserves index locality and avoids v4's fragmentation, and it is generated natively by both PostgreSQL 18 and .NET.
 
+**The time-ordering is coarse, and must never be used as a sort key where exact order matters.** `Guid.CreateVersion7()` in .NET is **not monotonic within a single millisecond**: the sub-millisecond bits are random rather than a counter, so values created in the same millisecond sort in effectively arbitrary order under `ORDER BY id`. This was found empirically, not assumed: a v2 spike's per-subject ordering test failed on exactly this at high enqueue rate, and the fix was to add a separate monotonic `seq bigint GENERATED ALWAYS AS IDENTITY` column and order by that (matching AWS's guidance to use a timestamp **and** a sequence number). The property this ADR relies on is **index locality**, which only needs coarse time-clustering, and that is unaffected. So the rule is: UUIDv7 stays the primary key and the deduplication/idempotency key, and anything requiring a strict order carries its own sequence column (ADR-0071's outbox is the first such case).
+
 Fixed parameters of the decision:
 
 * **Every entity's clustered primary key is UUIDv7**, represented as a `Guid`.
