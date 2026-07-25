@@ -33,12 +33,13 @@ Fixed parameters of the decision:
 
 * **Backend: durable relational store (PostgreSQL via EF Core)**, implemented as an `ITicketStore` that persists the `AuthenticationTicket`; the cookie carries only a handle. A read-through cache (for example Redis) may be added later for high concurrency, but PostgreSQL remains the source of truth.
 * **The store is global**: a session belongs to the human, not to a tenant, matching the global identity model of ADR-0001. For Silo tenants with hard isolation requirements, separate storage or access controls for their session/activity data is a consideration during tenant onboarding.
-* Sessions are keyed by `sid`; indexed columns: `sub`, `sid`, `last_activity_utc`, `absolute_expiry_utc`, `revoked`.
-* Cookie re-validation interval of 1 to 2 minutes balances revocation immediacy against database load (exact value finalized during implementation).
-* `sid` lifecycle: stable across passive refresh; **rotated on step-up or re-authentication**.
+* **Storage shape** (`ServerSideSessions`, field-level detail in the data design): `Id` is a `bigint` identity, the one deliberate exception to the UUIDv7 primary-key rule (ADR-0036), because this table is an internal, high-churn surrogate; `Key` is the unique `sid` that clients reference; `Scheme`, `SubjectId`, `SessionId`, and an optional `DisplayName` identify the session; `Created`, `Renewed` (last activity, driving the inactivity window), and `Expires` (the absolute ceiling) carry its lifetime; and `Data` holds the serialized ticket. Indexes cover `Expires`, `SubjectId` (for concurrent-session evict-oldest), and `SessionId`. A child table `SessionParticipatingClients` maps a session `Key` to the client IDs present in it, cascade-deleted with the session, and is the registry that back-channel logout reads to know which relying parties to notify (ADR-0019).
+* **Revocation deletes the row.** There is deliberately **no `revoked` column**: force-logout, admin kill, and logout-everywhere all remove the `ITicketStore` row, and the cookie re-validation interval is the backstop that makes the removal take effect on any node. A soft-delete flag would create a second source of truth for "is this session live" and an easy way to mistake a dead session for a live one. An early sketch of this table did list a `revoked` column and omitted `Data`; it was replaced because without `Data` the `ITicketStore` contract cannot work at all, and the row-delete semantics followed from that.
+* **Cookie re-validation** is driven by `SecurityStampValidatorOptions.ValidationInterval`, set to 1 to 2 minutes to balance revocation immediacy against database load (the exact value is finalized during implementation, together with the kill-propagation target below).
+* **`sid` lifecycle**: stable across passive or silent refresh; **rotated on step-up** (MFA or elevation, ADR-0013). A separate session-fixation guard mints a fresh `sid` on the anonymous-to-authenticated transition; that guard is enforced in the core protocol pipeline rather than by this store.
 * **Strict timeouts** (sensitive-data posture): inactivity (sliding) 1 hour, absolute 8 hours; past the absolute limit, re-authentication is required.
-* Authorization and refresh requests are denied when the session is revoked.
-* **Concurrent-session cap**: a per-user `MaxConcurrentSessions` limit (default around 5, overridable per tenant), enforced on login by counting the user's live sessions by `SubjectId` and evicting the oldest when the cap is exceeded.
+* Authorization and refresh requests are denied once the session row is gone.
+* **Concurrent-session cap**: a per-user `MaxConcurrentSessions` limit, overridable per tenant, enforced on login by counting the user's rows by `SubjectId` and evicting the oldest (ordered by `Created`) when the cap is exceeded. The shipped default is an illustrative 5 rather than a fixed policy number; the acceptance test for the cap is 9.T19.
 
 ### Consequences
 
@@ -48,7 +49,7 @@ Fixed parameters of the decision:
 
 ### Confirmation
 
-* Integration tests: a revoked session is denied at the authorize and refresh endpoints within one validation interval; logout-everywhere revokes all of a user's sessions; absolute expiry forces re-authentication.
+* Integration tests: deleting a session row denies the authorize and refresh endpoints within one validation interval; logout-everywhere removes all of a user's session rows; absolute expiry forces re-authentication; and test 9.T19 covers the concurrent-session cap evicting the oldest session.
 * Kill-propagation across nodes is a stated NFR with a target below 2 minutes (finalized with the validation interval during implementation).
 * Code review confirms the session store remains global and PostgreSQL-backed per this ADR.
 
@@ -80,4 +81,4 @@ Tickets persisted in PostgreSQL keyed by `sid`; the cookie holds a handle; revoc
 * Deferred to a post-v1 wave (proposed, no ADR yet): an end-user session/device management UI (view active logins, sign out everywhere) built over this session store; revisit when end-user self-service is prioritized.
 * Related decisions: ADR-0001 (global identity), ADR-0006 (DR), ADR-0019 (single logout strategy), ADR-0021 (OpenIddict version adaptation).
 * Open follow-up (does not block implementation): exact validation interval (1 or 2 minutes) and the kill-propagation SLO number.
-* Imported into this repository and translated in 2026-07; content preserved, internal references generalized.
+* Imported into this repository and translated in 2026-07, then reconciled against the design corpus on 2026-07-25. The reconcile corrected a real error: this ADR had listed a `revoked` column among the session store's indexed columns, which does not exist. Revocation is a row delete, confirmed by the corpus ADR, the corpus data-model DDL, the corpus session/logout design in two places, and this repository's own login/logout and data designs, all of which already said row removal. The column and index names were also corrected to the PascalCase identifier convention that the data design owns, and the storage shape, the `SessionParticipatingClients` child table, and the session-fixation guard were added.
