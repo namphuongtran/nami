@@ -116,11 +116,20 @@ The RLS objects (ENABLE/FORCE, the policy, the role and grants) are not in the E
 model and are added as an explicit `migrationBuilder.Sql(...)` step after table
 creation (ADR-0037, ADR-0017). The policy expression must match the tenant-column
 type: `TenantId = current_setting('app.current_tenant', true)` for the `text`
-OpenIddict discriminator, but for a `uuid` tenant column (the control-plane
-`LogoutDeliveryOutbox` and `SuppressionEntry`) it must be
+OpenIddict discriminator, but for a `uuid` tenant column it must be
 `TenantId = NULLIF(current_setting('app.current_tenant', true), '')::uuid`, because an
 unset GUC returns an empty string and `''::uuid` raises `22P02` (a crash, not the
 intended fail-closed zero rows).
+
+**This list is the single authority for which tables take the `uuid` form**, and a new
+guarded table with a `uuid` tenant column is added here rather than only in its own
+design, because the failure is a crash rather than a leak and is therefore easy to
+discover late. In v1 it is four control-plane tables: `LogoutDeliveryOutbox` (this doc),
+`OutboxEmail` and `SuppressionEntry` (07), and `ProcessingRestriction` (13). The v2
+change-event outbox joins them (ADR-0071). `TenantBranding` carries a `uuid` tenant column
+as its primary key but has **no row-level-security policy recorded**, which is an open
+item, not an exemption: either it is guarded and takes the `uuid` form, or the reason it
+does not need a policy is stated where the table is defined.
 
 ### Key libraries and licenses
 

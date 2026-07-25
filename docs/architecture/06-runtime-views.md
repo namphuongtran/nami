@@ -150,13 +150,25 @@ unknown `kid`), so 14 days is a large safety margin rather than a tight fit. A k
 retention window, so in-flight tokens never fail validation. Exactly one clustered
 runner rotates, so nothing double-runs (ADR-0031).
 
-Readiness is an assertion, not a smoke test: the probe asserts the active `kid`
-**matches the expected persisted `kid`**, because a bare protect-and-unprotect round trip
-would pass on a freshly regenerated key and mask the loss. That matters because if the
-Data Protection keyring is lost while the key store survives, the framework **silently
-regenerates** a new key on keyring load and skips the undecryptable one instead of
-throwing, so every previously issued token and cookie breaks with no error anywhere
+Publish-before-sign has **one deliberate exception, key #1**. At genesis there is no
+active key and nothing cached to protect, so the propagation window is vacuous and the
+first key activates immediately; announce-before-sign applies from key #2 onward. Stating
+the rule without the exception would make the cold-start path look like a violation of it
 (ADR-0012).
+
+Promotion is also not instantaneous at the `NotBefore` second. It takes effect on the next
+options re-resolve through the custom monitor, which is why the rotation runner **trips a
+refresh** around the window rather than relying on wall-clock arrival.
+
+Readiness gates cold start on three conditions, all of them, and fails closed until they
+hold: at least one active signing key, at least one encryption key, and a successful
+data-protection unprotect. The third is an **assertion, not a smoke test**: the probe
+asserts the active `kid` **matches the expected persisted `kid`**, because a bare
+protect-and-unprotect round trip would pass on a freshly regenerated key and mask the loss.
+That matters because if the Data Protection keyring is lost while the key store survives,
+the framework **silently regenerates** a new key on keyring load and skips the
+undecryptable one instead of throwing, so every previously issued token and cookie breaks
+with no error anywhere (ADR-0012).
 
 Two traps are load-bearing. **Every rotation signing key must be an `X509SecurityKey`**,
 because OpenIddict's comparator demotes not-yet-valid keys and prefers the furthest
@@ -212,12 +224,19 @@ sequenceDiagram
 that needs instant access revocation must be issued a **reference token**, which is a
 built per-client property (`AccessTokenType`) and not the native global
 `UseReferenceAccessTokens` flag, and that choice forces the client's resource server
-onto introspection. **Force-logout is not instant.** It takes effect on the next cookie
-re-validation on any node, backstopped by a 1-to-2-minute validation interval; treating
-it as immediate would overstate the guarantee by up to two minutes at exactly the moment
-an operator is relying on it. The distrusted-kid check is **fail-closed** (an
-unreachable Redis means treat the `kid` as distrusted) and is served from an L1 cache so
-the happy path takes no per-request Redis hit. The configuration cache needs a
+onto introspection. **Force-logout is near-immediate, not instant.** It takes effect on the
+next request on any node because cookie validation reads the store, backstopped by a
+1-to-2-minute validation interval, giving a kill-propagation bound under two minutes;
+treating it as immediate would overstate the guarantee by up to that interval at exactly
+the moment an operator is relying on it. Revocation there is a **row delete, and there is
+no `revoked` flag**, so "still present" is the only meaning of "still valid" and no second
+state can drift out of agreement with the first. The distrusted-kid check is
+**fail-closed** (an unreachable Redis means treat the `kid` as distrusted) and is served
+from an L1 cache so the happy path takes no per-request Redis hit. The 60-second bound also
+depends on a **pinned dependency floor**: the resource server's automatic-refresh interval
+has a framework-enforced 5-minute minimum, so the identity-model protocols package is
+pinned rather than floated, otherwise that floor and its defaults could drift silently
+across an upgrade and change the bound with no code change (ADR-0021). The configuration cache needs a
 cross-node backplane because the plain hybrid cache has **no** built-in cross-node L1
 invalidation (dotnet/runtime #125602), so without one a change on one node would not
 reach the others inside the 30-second bound.
@@ -529,7 +548,11 @@ sequenceDiagram
 
 **Invariants.** Consent is a **permanent OpenIddict authorization** created via
 `SetAuthorizationId`, not a bespoke consent table, so revoking the authorization is what
-forces re-consent. **Consent lifetime is deliberately unbounded, and that is a recorded
+forces re-consent. The lookup filters on **scopes**, and that filter **is** the re-consent
+mechanism: a request whose scopes widen finds no matching authorization and therefore
+prompts, with no separate scope-comparison logic to keep correct. `SetAuthorizationId` is
+load-bearing for a second reason beyond storage, since it is what couples this
+authorization to family-revoke (flow 11) and to entry validation (flow 4). **Consent lifetime is deliberately unbounded, and that is a recorded
 decision rather than an unexamined default** (ADR-0004): a granted consent persists until
 the user revokes it on the grants page, and per-client consent expiry is revisited only
 if a security or data-protection policy later requires periodic re-consent, at which
@@ -617,10 +640,17 @@ That ordering matters: a minted token queued at enqueue time would be a bearer c
 sitting at rest, and it would already be near expiry by the time a retry ran. The trigger
 is **session end by any cause**, active logout, revoke, or absolute expiry, not only an
 end-session call. Interactive logout **never blocks** on the fan-out. The token carries
-`typ=logout+jwt`, the `backchannel-logout` events member, `sub` and/or `sid`, `iat`, a
-`jti` replay guard, no `nonce`, and an `exp` under about two minutes. The
+`typ=logout+jwt`, the `backchannel-logout` events member, `iat`, a `jti` replay guard, no
+`nonce`, and an `exp` under about two minutes; the spec permits `sub` and/or `sid`, and
+Nami uses **`sid`**, so a logout ends exactly the one session that ended rather than every
+session of that subject. It is **signed and not encrypted** (ADR-0005), because a relying
+party must be able to validate it with the published JWKS alone. The
 `backchannel_logout_uri` is validated against SSRF. Retry is bounded (about five attempts
-over about ten minutes) and then dead-letters. `sid` is in `claims_supported`, and
+over about ten minutes) and then dead-letters, and the retry classification is not uniform:
+a **4xx is non-retryable** and dead-letters immediately, since a relying party rejecting
+the token will reject it identically on every attempt, while transient errors retry. On
+exhaustion the flow emits a security event and **falls back to bounded logout**, so that
+relying party is bounded at the access-token TTL rather than silently left signed in. `sid` is in `claims_supported`, and
 `backchannel_logout_supported` and `backchannel_logout_session_supported` are advertised
 so relying parties can correlate. Front-channel logout and `check_session_iframe` are
 **dropped as dead** under third-party-cookie blocking (verification V11), with end-session
@@ -662,9 +692,14 @@ syntax only** (`subject_token` required, `actor_token` paired, token types in th
 set); the authority logic, `act` emission, subject-versus-actor resolution,
 delegation-versus-impersonation, the confused-deputy rejection, and the Entra
 on-behalf-of exemption are **Nami's own code**, because the engine's exchange handler has
-no `act` logic. **`may_act` is deliberately not issued**: it would be precisely the
-stale, un-revocable authority carrier this model rejects, so the emitted chain is `act`
-alone. Initiator classification runs **first**, so a delegation token whose `sub` is the
+no `act` logic. **`may_act` is deliberately not issued**: RFC 8693 puts `act` in section
+4.1 as the carrier expressing that delegation occurred and identifying the acting party,
+and `may_act` in section 4.4 as an **optional** way to authorize delegation while
+explicitly permitting other means. Nami's other means is the live, time-bound, revocable
+server-side grant, so `may_act` is neither emitted, stored, nor validated: baking
+delegation authority into a token is precisely the stale, un-revocable authority this
+model rejects. The emitted chain is `act` alone, nested to carry the chain from the current
+actor to the prior one. Initiator classification runs **first**, so a delegation token whose `sub` is the
 *target* is never mistaken for the actor: same-tenant non-delegation takes `sub`;
 Entra on-behalf-of (RFC 7523, which never carries `act`) resolves the initiator from
 `oid` or `sub` and **runs the grant check rather than returning 403**; self-issued
@@ -713,9 +748,13 @@ row-level-security-guarded outbox**, deliberately with no per-tenant topic. That
 compares a **uuid** tenant column and must therefore use
 `NULLIF(current_setting(...), '')::uuid`, because a **pooled** connection returns an
 empty string rather than NULL once the transaction ends and casting an empty string to
-`uuid` **throws** instead of failing closed; the trap applies only to control-plane
-tables with an explicit uuid tenant column, so v1's text tenant column is unaffected.
-Nami is a **producer only** and takes no inbound dependency on any consumer. The kill
+`uuid` **throws** instead of failing closed. The trap is scoped by **column type, not by
+release**: it does not reach the OpenIddict tenant tables, whose discriminator is `text`
+and therefore fails closed on an unset variable, but it reaches every guarded
+`uuid`-tenant table, and **v1 already has four** (`LogoutDeliveryOutbox`, `OutboxEmail`,
+`SuppressionEntry`, `ProcessingRestriction`), so this outbox follows an existing rule
+rather than introducing one. Nami is a **producer only** and takes no inbound dependency on any
+consumer. The kill
 switch is simply not calling the registration extension, so nothing is added to the hot
 issuance path in v1. Proven by spike A-9 (2026-07-21, 10 of 10), which changed the design
 rather than confirming it: the row-level-security cast, the `seq` column, and the
@@ -755,7 +794,8 @@ sequence adds little above the component view. They are listed so the omission i
   the 12-hour client JWKS refresh, the `X509SecurityKey` ordering invariant, and the
   `KeyRotationHostedService` name).
 * Flow 4: ADR-0039 (the per-path freshness model and each bound), ADR-0003 (the
-  validation-interval backstop), ADR-0074 (the distrusted-key rebuild invariant), and
+  validation-interval backstop), ADR-0074 (the distrusted-key rebuild invariant), ADR-0021
+  (the pinned dependency floor under the refresh interval), and
   [10-revocation-caching](../design/10-revocation-caching.md) (the per-path sequence this
   view adopts).
 * Flow 5: ADR-0014 (DPoP as a build, spikes A-1 and A-3), ADR-0048 (introspection
@@ -792,7 +832,8 @@ sequence adds little above the component view. They are listed so the omission i
   consequences).
 * Flow 14: ADR-0019 (the mechanism, the trigger set, the dropped front channel, V11, the
   bounded-logout fallback), ADR-0003 (the participating-clients registry and the
-  `logout_token` hygiene notes), ADR-0021 (the decommission marker),
+  `logout_token` hygiene notes), ADR-0005 (signed and not encrypted),
+  ADR-0021 (the decommission marker),
   [08-login-consent-ui](../design/08-login-consent-ui.md) (intent storage, fresh minting,
   the retry envelope), [04-core-protocol](../design/04-core-protocol.md) (the advertised
   metadata and `sid` in `claims_supported`).

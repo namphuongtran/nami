@@ -12,6 +12,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 - ☐ Cross-border / residency: per-tenant residency classification; lawfulness and mechanism of each transfer; transfer-assessment content and filing; Law-on-Data core/important-data export path if applicable ([ADR-0054](adr/0054-cross-border-transfer-and-data-residency.md))
 - ☐ Telemetry / registration: telemetry data categories (no PII); registration PII retention; privacy notice; registration terms ([ADR-0032](adr/0032-usage-visibility-and-licensing-posture.md))
 - ☐ HIBP breach-check: sending a hash prefix to an external service (DP.01) ([ADR-0028](adr/0028-user-management.md))
+- ☐ Consent re-prompt cadence: whether a granted consent must expire and be re-asked periodically. ADR-0004 deliberately leaves consent lifetime unbounded (an OpenIddict permanent authorization persists until the user revokes it), so bounding it is a policy call, not a build gap. If it is required, the mechanism is an expiry stamped on `Authorization.Properties` plus a prune ([ADR-0004](adr/0004-refresh-token-posture.md))
 - ☐ Deprovision key-escrow retention window and residency ([ADR-0017](adr/0017-tenant-provisioning-and-silo-migration.md))
 - ☐ Change-event publishing (v2): PII in event payloads flowing to the broker and its consumers, the outward data flow, and event retention (DP.01) ([ADR-0071](adr/0071-identity-change-event-publishing.md))
 
