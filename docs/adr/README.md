@@ -82,3 +82,5 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0069](0069-verifiable-credentials-openid4vc.md) | Support issuing Verifiable Credentials via OpenID4VC (Nami as issuer) | proposed |
 | [0070](0070-local-development-tls.md) | Serve HTTPS in local development with a locally-trusted cert behind a terminating reverse proxy | accepted |
 | [0071](0071-identity-change-event-publishing.md) | Publish identity change events outward through a transactional outbox to a message broker, for backend consumers that are not OIDC relying parties | accepted |
+| [0072](0072-ui-rendering-stack.md) | Render the human-facing UI as server-rendered Razor with no client runtime: Razor Pages for login and consent, MVC Razor for admin, Blazor deferred | accepted |
+| [0073](0073-edge-posture-and-forwarded-headers.md) | Assume an L7 edge in front of the deployment, define the direct-to-internet fallback, and process forwarded headers only from trusted proxies | accepted |

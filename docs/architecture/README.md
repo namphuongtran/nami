@@ -31,8 +31,8 @@ question. Each topic is one file.
 
 | File | Topic | C4 / diagram |
 |---|---|---|
-| [00-introduction-and-scope](00-introduction-and-scope.md) | Introduction, scope, and what is deliberately out of it | - |
-| [09-drivers-and-constraints](09-drivers-and-constraints.md) | Architecture drivers, quality targets, and hard constraints | - |
+| [00a-introduction-and-scope](00a-introduction-and-scope.md) | Introduction, scope, and what is deliberately out of it | - |
+| [00b-drivers-and-constraints](00b-drivers-and-constraints.md) | Architecture drivers, quality targets, and hard constraints | - |
 | [01-context](01-context.md) | System context: actors and external systems | C4 L1 |
 | [02-domain](02-domain.md) | Bounded contexts and the ubiquitous language | - |
 | [03-containers](03-containers.md) | Host processes, package graph, and datastores | C4 L2 |
@@ -184,4 +184,4 @@ standards bodies, and packages appear only for factual identification.
 
 ---
 
-Next: [Introduction and scope](00-introduction-and-scope.md)
+Next: [Introduction and scope](00a-introduction-and-scope.md)

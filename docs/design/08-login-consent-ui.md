@@ -239,8 +239,12 @@ render explicit success versus expired/invalid states with a request-new link.
 
 ### Key libraries and patterns
 
-Razor Pages on ASP.NET Core (the established quickstart idiom for this style of
-server-rendered identity UI; Blazor is a later option). Bootstrap 5 is the default CSS framework (CSS-variable driven so the CSP stays
+Razor Pages on ASP.NET Core, now owned by **ADR-0072**, which records why Blazor is not
+used for this surface: Blazor Server requires session affinity that the no-sticky-session
+deployment forbids, its circuits hold per-user server memory at odds with the externalized
+session state, and both its WebAssembly and its server-side documented CSP baselines are
+looser than Razor Pages needs. Blazor static server-side rendering is the option to
+evaluate first if this surface ever becomes genuinely interactive. Bootstrap 5 is the default CSS framework (CSS-variable driven so the CSP stays
 strict, no npm/Tailwind build step; Tailwind is a later option). `IStringLocalizer` /
 `.resx` for localization, `RequestLocalizationMiddleware` for culture resolution, and the
 built-in antiforgery and data-protection stacks. All are part of ASP.NET Core or

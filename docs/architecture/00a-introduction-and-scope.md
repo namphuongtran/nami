@@ -39,7 +39,7 @@ architecture altitude:
 * How do the important flows run at runtime? ([06-runtime-views](06-runtime-views.md))
 * How is data structured, stored, and isolated? ([05-data](05-data.md))
 * What forces and hard constraints shape it?
-  ([09-drivers-and-constraints](09-drivers-and-constraints.md))
+  ([00b-drivers-and-constraints](00b-drivers-and-constraints.md))
 * Which concerns cut across every container? ([07-cross-cutting](07-cross-cutting.md))
 * Why were the load-bearing decisions made? ([the ADR corpus](../adr/README.md))
 
@@ -80,9 +80,9 @@ The v1 authorization server and its administration, multi-tenant from day one.
   logout, passkeys, account management, error), decoupled from the protocol engine by a
   thin interaction service, since the engine ships no UI and no interaction abstraction.
   Note this is a different technology from the **MVC Razor** admin app below, and the
-  two must not be conflated: the Razor Pages choice is recorded in the login and consent
-  detailed design and has **no owning ADR** (see section 5 of that design), whereas
-  ADR-0020 decides the admin app only.
+  two must not be conflated. ADR-0072 owns the end-user surface and records why Blazor is
+  not used for it (session affinity, per-user circuit memory, and a looser Content
+  Security Policy baseline); ADR-0020 owns the admin app.
 * **Administration** (ADR-0020): an Admin API and an Admin App over a
   backend-for-frontend (ADR-0029), capability-scoped delegated administration with no
   super-admin (ADR-0010), dual-control on irreversible actions, break-glass access
@@ -180,7 +180,8 @@ restating it.
   ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0019, ADR-0020, ADR-0022,
   ADR-0027, ADR-0028, ADR-0029, ADR-0031, ADR-0033, ADR-0034, ADR-0035, ADR-0037,
   ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0049, ADR-0052, ADR-0053, ADR-0054,
-  ADR-0055, ADR-0056, ADR-0057, ADR-0061, ADR-0064, ADR-0068, ADR-0069, ADR-0071.
+  ADR-0055, ADR-0056, ADR-0057, ADR-0061, ADR-0064, ADR-0068, ADR-0069, ADR-0071,
+  ADR-0072.
 * [`docs/design/README.md`](../design/README.md): the detailed-design set this layer
   points into.
 * [`docs/PRE-GA-RATIFICATION-CHECKLIST.md`](../PRE-GA-RATIFICATION-CHECKLIST.md): the

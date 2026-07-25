@@ -142,7 +142,7 @@ each bump (ADR-0021).
   residency, and audit are designed for, and jurisdiction-specific parameters are a
   ratified profile rather than hardcoded. No compliance verdict is asserted anywhere
   in this repository; those belong to Legal and the data-protection owner.
-* **Edge assumption (open item, no ADR of record yet).** The reference deployment
+* **Edge assumption (ADR-0073).** The reference deployment
   **assumes an L7 edge in front** of the identity provider (a WAF, CDN, or reverse
   proxy) carrying TLS termination policy, IP-reputation and bot filtering, geographic
   and per-IP velocity rules, request and header size caps, and L7 denial-of-service
@@ -153,8 +153,13 @@ each bump (ADR-0021).
   two layers are complementary rather than alternatives: the edge handles volumetric
   traffic and the application handles per-user and per-client fairness. Anyone
   self-hosting the reference host must decide explicitly which posture they are in.
-  This is imported from the design corpus as a **stated assumption**; it has no ADR of
-  record here yet, and the concrete edge stack is an Ops ratification tracked in the
+  ADR-0073 also pins the consequence that makes this load-bearing rather than advisory:
+  behind a terminating proxy, forwarded headers must be processed and restricted to
+  trusted proxies, because a lost scheme defeats the ADR-0043 cookie invariants, a lost
+  client address collapses per-IP defenses into a single global bucket, and an
+  unvalidated forwarded host becomes an input to host-based tenant resolution
+  (ADR-0001). The concrete edge stack and the trusted-proxy ranges are an Ops
+  ratification tracked in the
   [pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 
 ### 4.3 Architecture-style constraint (ADR-0024)
@@ -261,8 +266,12 @@ ADR-0066).
   keyed HMAC form; and the corpus's documentation-convention section recorded a
   name-placeholder rule and an organization-specific compliance label that do not
   apply to this repository.
-* The section 4.2 edge assumption is imported from the design corpus's
-  non-functional-requirements document (section 7.11bis, pre-implementation review
-  dated 2026-07-13). It is the one claim in this file with **no ADR of record in this
-  repository**, and is therefore stated as an assumption and an open item rather than
-  as a decision.
+* The section 4.2 edge assumption came from the design corpus's
+  non-functional-requirements document (section 7.11bis, pre-implementation review dated
+  2026-07-13). When this file was first written it was the one claim here with no ADR of
+  record, and was stated as an open item on that basis. **ADR-0073 now owns it**, having
+  been written the same day precisely because an infrastructure assumption that
+  load-bearing should not sit in the architecture layer without a decision behind it. That
+  ADR also independently verified the forwarded-header behaviour it depends on, and
+  deliberately records one remaining gap: the application's own transport-security settings
+  (HSTS parameters and the Kestrel TLS floor) are still not fixed by any ADR.
