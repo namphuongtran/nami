@@ -11,7 +11,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-Nami depends on three layers of key material: (a) the signing certificate, (b) the encryption certificate (JWE, which cannot be disabled), and (c) the ASP.NET Core Data Protection keyring (which protects cookies and some artifacts). Losing or wrongly restoring any layer is severe and sometimes unrecoverable: losing the Data Protection keyring makes every cookie and handle unreadable — a self-inflicted mass logout — and losing the encryption certificate makes refresh-token, authorization-code, and device-code JWEs permanently undecryptable. An RTO under 15 minutes and RPO under 5 minutes were stated as targets but were not yet wired to concrete mechanisms, and no recovery drill existed. Under the tiered isolation model, disaster recovery must also cover three distinct key groups. How should key material be stored and recovered?
+Nami depends on three layers of key material: (a) the signing certificate, (b) the encryption certificate (JWE, which cannot be disabled), and (c) the ASP.NET Core Data Protection keyring (which protects cookies and some artifacts). Losing or wrongly restoring any layer is severe and sometimes unrecoverable: losing the Data Protection keyring makes every cookie and handle unreadable (a self-inflicted mass logout), and losing the encryption certificate makes refresh-token, authorization-code, and device-code JWEs permanently undecryptable. An RTO under 15 minutes and RPO under 5 minutes were stated as targets but were not yet wired to concrete mechanisms, and no recovery drill existed. Under the tiered isolation model, disaster recovery must also cover three distinct key groups. How should key material be stored and recovered?
 
 ## Decision Drivers
 
@@ -32,7 +32,7 @@ Chosen option: "Actively designed, provider-agnostic disaster recovery", but **n
 
 Fixed parameters of the decision:
 
-* **The application never calls a cloud SDK directly.** It defines ports and plugs an adapter per deployment: `ISigningCredentialSource` / `IEncryptionCredentialSource` (load certs/keys into OpenIddict's multi-certificate rotation), `ISecretResolver` (resolve external-IdP client secrets, connection strings), and an `IDataProtectionKeyStore` configuration (persist the keyring portably).
+* **The application never calls a cloud SDK directly.** It defines ports and plugs an adapter per deployment: `ISigningKeyStore` (the storage port, whose `LoadAsync(scope, ct)` returns the active, announced, and retired key records of a single scope per ADR-0033), `ISigningCredentialSource` / `IEncryptionCredentialSource` (the consumer-facing seam that supplies materialized credentials to OpenIddict's multi-certificate rotation), `ISecretResolver` (resolve external-IdP client secrets and connection strings), and an `IDataProtectionKeyStore` configuration (persist the keyring portably). The two key-related layers are deliberately distinct: a cache sits between them, reading the store and materializing `SigningCredentials` once per version, and it is that cache which implements the credential sources (ADR-0011). Only the storage port is scope-aware; the credential sources are not.
 * **The default adapter is DB-backed**: a `SigningKeys` table encrypted at rest via Data Protection, following the common signing-key-store pattern (a keys table behind a store abstraction), independently designed here. This is the cloud-neutral baseline that runs on-premises, because not every deployment uses a cloud.
 * **Cloud adapters are optional** (HashiCorp Vault, Azure Key Vault, AWS KMS + Secrets Manager, GCP KMS + Secret Manager) for those wanting HSM-backed or managed rotation. Every adapter must meet mandatory capabilities: versioning, soft-delete/recovery-window, purge-protection, encrypt-at-rest, and access auditing. The DB adapter meets these via a status-column soft-delete, Data Protection encryption, and the audit log.
 * **Root of trust at rest**: keys in the database are encrypted by the Data Protection keyring; the keyring is protected by a certificate/DPAPI on-premises, or a cloud KEK when a cloud is present.
@@ -41,7 +41,7 @@ Fixed parameters of the decision:
 
 Disaster-recovery requirements (provider-agnostic):
 
-* Enable **soft-delete plus purge-protection** (or the equivalent) for all three — signing certificate, encryption certificate, and the keyring-wrapping key — at whatever provider is in use.
+* Enable **soft-delete plus purge-protection** (or the equivalent) for all three keys (signing certificate, encryption certificate, and the keyring-wrapping key) at whatever provider is in use.
 * **Persist the Data Protection keyring** to a durable, portable store, encrypted at rest, with a **fixed `SetApplicationName`** (it must restore verbatim; changing the name loses the old keys).
 * Bind the RTO under 15 minutes and RPO under 5 minutes targets to **each store** (keyring, certificates, operational database, session store).
 * Run a **DR restore drill quarterly and after every key-infrastructure change**, producing evidence that tokens and cookies issued before the restore still validate after it.
@@ -81,7 +81,7 @@ Ports plus per-cloud adapters, a DB-backed default, soft-delete/purge-protection
 ## More Information
 
 * Original decision: 2026-06-28. The cloud-agnostic direction is accepted; the formal RTO/RPO targets, the DR runbook, and the per-adapter capability matrix (versioning, soft-delete, purge-protection, audit) await Ops/DPO ratification during operation.
-* Disaster recovery must cover three key groups per the ADR-0001 tiered model: the global Data Protection keyring, the Pool-group key-set, and each Silo tenant's own key-set. The earlier v1 assumption of a per-tenant key for every tenant is dropped — only Silo tenants have their own key-set.
+* Disaster recovery must cover three key groups per the ADR-0001 tiered model: the global Data Protection keyring, the Pool-group key-set, and each Silo tenant's own key-set. The earlier v1 assumption of a per-tenant key for every tenant is dropped: only Silo tenants have their own key-set.
 * Deferred to a post-v1 wave (proposed, no ADR yet): a FIPS 140-3-validated crypto mode (an OS/HSM-tier configuration over this key and crypto stack); revisit for a US-government or otherwise regulated deployment.
 * Related decisions: ADR-0001 (tiered key-set scope), ADR-0005 (encryption credential lifecycle), ADR-0007 (key-compromise runbook), ADR-0009 (key vault access and dual-control).
 * Imported into this repository and translated in 2026-07; content preserved, internal references generalized.
