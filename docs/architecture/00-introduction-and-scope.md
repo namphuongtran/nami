@@ -76,8 +76,13 @@ The v1 authorization server and its administration, multi-tenant from day one.
   TOTP and recovery codes, passkeys, external login through the framework handler
   (ADR-0002), server-side sessions as a core feature rather than an option
   (ADR-0003), and assurance levels with step-up (ADR-0013).
-* **User interface**: Razor Pages for login, consent, logout, tenant switch, and
-  step-up.
+* **User interface**: the human-facing surface is **Razor Pages** (login, consent,
+  logout, passkeys, account management, error), decoupled from the protocol engine by a
+  thin interaction service, since the engine ships no UI and no interaction abstraction.
+  Note this is a different technology from the **MVC Razor** admin app below, and the
+  two must not be conflated: the Razor Pages choice is recorded in the login and consent
+  detailed design and has **no owning ADR** (see section 5 of that design), whereas
+  ADR-0020 decides the admin app only.
 * **Administration** (ADR-0020): an Admin API and an Admin App over a
   backend-for-frontend (ADR-0029), capability-scoped delegated administration with no
   super-admin (ADR-0010), dual-control on irreversible actions, break-glass access
@@ -172,7 +177,7 @@ restating it.
 * [`docs/adr/README.md`](../adr/README.md) and ADR-0001 through ADR-0071: the
   decisions of record. Specifically cited above: ADR-0001, ADR-0002, ADR-0003,
   ADR-0004, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012,
-  ADR-0013, ADR-0014, ADR-0016, ADR-0017, ADR-0019, ADR-0020, ADR-0022, ADR-0026,
+  ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0019, ADR-0020, ADR-0022,
   ADR-0027, ADR-0028, ADR-0029, ADR-0031, ADR-0033, ADR-0034, ADR-0035, ADR-0037,
   ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0049, ADR-0052, ADR-0053, ADR-0054,
   ADR-0055, ADR-0056, ADR-0057, ADR-0061, ADR-0064, ADR-0068, ADR-0069, ADR-0071.

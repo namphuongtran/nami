@@ -63,19 +63,26 @@ a commercial product. The load-bearing goals:
 | Availability (token and authorize) | **99.9% or 99.95%, not yet ratified** | SLO monitor | ADR-0041 |
 | JWKS availability | Around 99.99%, held higher than the rest | SLO monitor | ADR-0041 |
 | Error budget | Exactly `1 - SLO` over the trailing window, so 0.1% at 99.9% and 0.05% at 99.95% | Drives the release freeze | ADR-0041 |
-| Recovery | RTO under 15 minutes and RPO under 5 minutes, bound **per store** (keyring, certificates, operational database, session store), not one global figure | DR drill plus continuous RPO monitoring on archiving lag, backup age, and replication lag | ADR-0006 |
+| Recovery | RTO under 15 minutes and RPO under 5 minutes, **interim and not yet ratified**, bound **per store** (keyring, certificates, operational database, session store) rather than as one global figure | DR drill plus continuous RPO monitoring on archiving lag, backup age, and replication lag | ADR-0006 |
 | Client and scope config propagation | 30 seconds or less across nodes | Synthetic canary | ADR-0039 |
 | Compromised-key ejection | A distrusted key propagates in 60 seconds or less through a fail-closed distrusted-key set; a resource server's own JWKS refresh floor is 5 minutes | Canary plus break-glass drill | ADR-0039, ADR-0007 |
 | Token revocation | A reference token is revoked immediately through introspection; a self-contained JWT dies at expiry, bounded by the 15-minute access-token lifetime | Synthetic canary | ADR-0004, ADR-0039, ADR-0048 |
 | Scalability | Horizontal and stateless, with no sticky sessions | Scale-out load test | ADR-0041, ADR-0031 |
 | Security baseline | OAuth 2.0 Security BCP (RFC 9700); OWASP ASVS 5.0 Level 2, with Level 3 on key, token, dual-control, and tenant-isolation controls | Startup hardening-invariant check, security suite, self-assessment | ADR-0043, ADR-0062 |
 
-The availability target is deliberately left as two candidates. It is an explicit
-Product and Ops ratification (see the
-[pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md)), and because the
-error budget is `1 - SLO` and drives the release-freeze threshold, quoting a single
-availability figure here while the choice is open would set that threshold wrong by a
-factor of two.
+Two rows in that table are deliberately not presented as settled, and for the same
+reason: both are tracked as open items in the
+[pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
+
+* **Availability** is left as two candidates because the choice is an explicit Product
+  and Ops ratification. Since the error budget is `1 - SLO` and drives the
+  release-freeze threshold, quoting a single availability figure while the choice is
+  open would set that threshold wrong by a factor of two.
+* **RTO and RPO** are the interim figures ADR-0006 binds per store; the formal targets,
+  the DR runbook, and the per-adapter capability matrix await Ops and DPO ratification.
+  ADR-0006 records that these numbers were originally stated as targets without being
+  wired to a concrete mechanism, which is precisely why the mechanism and the number are
+  tracked separately here.
 
 Representative quality-attribute scenarios, as stimulus, response, and measure:
 
@@ -206,8 +213,9 @@ ADR-0066).
 * **Deny by default on claims.** A single claims choke-point emits nothing into a
   token unless it is explicitly declared for a destination (ADR-0005).
 * **Isolate tenants in two layers.** An EF Core global query filter is the primary
-  control and forced row-level security is the backstop, because the filter is
-  bypassed by raw and bulk paths (ADR-0001, ADR-0037, ADR-0049).
+  control and forced row-level security under a de-privileged role is the database-level
+  backstop, because in pooled mode the filter is a load-bearing security control and a
+  single forgotten filter is a cross-tenant leak (ADR-0001, ADR-0037, ADR-0049).
 * **Audit is a separate lane.** The tamper-evident hash-chain trail is kept strictly
   apart from operational logging and telemetry, and the two lanes are joined only by a
   correlation identifier (ADR-0008, ADR-0022).
@@ -231,7 +239,9 @@ ADR-0066).
   authority for section 3), ADR-0006 (per-store RTO and RPO, cloud-agnostic key
   material, and continuous RPO monitoring), ADR-0039 (the per-path freshness model
   with the 30-second config and 60-second break-glass bounds), ADR-0007 (the
-  five-minute compromised-key ejection), ADR-0004 and ADR-0048 (token lifetimes and
+  five-minute compromised-key ejection), ADR-0011 and ADR-0012 (no-restart rotation and
+  the key bootstrap and restore sequence, the mechanism behind driver D2), ADR-0004 and
+  ADR-0048 (token lifetimes and
   the reference-token instant-revocation path), ADR-0043 and ADR-0062 (the security
   baselines).
 * ADR-0001, ADR-0033, ADR-0049 (tenant isolation), ADR-0019 and ADR-0003 (logout and
