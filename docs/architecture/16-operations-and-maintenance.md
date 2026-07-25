@@ -213,4 +213,4 @@ Operations-facing items awaiting ratification before production, tracked in the
 
 ---
 
-[Index](README.md) · Prev: [Reliability, backup, and DR](13-reliability-backup-and-dr.md)
+[Prev: Observability and monitoring](15-observability-and-monitoring.md) · [Index](README.md)

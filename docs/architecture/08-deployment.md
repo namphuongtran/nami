@@ -141,7 +141,7 @@ ADR-0051). Four entrypoint modes ship in that one image (ADR-0027):
 | `export` | Dumps the current declarative configuration, never secrets or keys | An operator-run Job, for GitOps and backup |
 | `prune` | Bulk-deletes expired tokens and authorizations, iterating tenants | A scheduled Job, kept off the request path (ADR-0031) |
 
-Three invariants sit on top. **No secret is ever baked into the image**: connection strings
+Four invariants sit on top. **No secret is ever baked into the image**: connection strings
 and the root certificate arrive by environment, mounted file, or secret store, with
 precedence environment over secret store over `appsettings.{Environment}` over
 `appsettings` (ADR-0031, ADR-0009). **Configuration keys follow one shape** so an operator
@@ -286,4 +286,4 @@ behind a terminating proxy, trusted on both the browser and back-channel sides (
 
 ---
 
-[Prev: Cross-cutting](07-cross-cutting.md) · [Index](README.md) · Next: [Reliability, backup, and DR](13-reliability-backup-and-dr.md)
+[Prev: Cross-cutting](07-cross-cutting.md) · [Index](README.md) · Next: [Quality attributes](10-nfr-catalogue.md)

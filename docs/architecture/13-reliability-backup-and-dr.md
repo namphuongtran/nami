@@ -205,4 +205,4 @@ the observability and delivery designs, and their pass criterion is SLO impact u
 
 ---
 
-[Index](README.md) · Next: [Operations and maintenance](16-operations-and-maintenance.md)
+[Prev: Performance and scalability](12-performance-and-scalability.md) · [Index](README.md) · Next: [Observability and monitoring](15-observability-and-monitoring.md)
