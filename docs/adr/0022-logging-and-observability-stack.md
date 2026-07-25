@@ -14,7 +14,7 @@ informed: all contributors, via this repository
 Early design documents listed Serilog as the structured-logging library. The question was whether Serilog is warranted or whether native `ILogger` plus OpenTelemetry is enough: whether Serilog adds bulk for little real benefit here. Two existing facts about the project shift the balance away from the general-purpose advice found online:
 
 * Audit is already first-class and **separate** from logging (ADR-0008: `ISecurityEventSink` plus a hash-chain plus a delivery guarantee, not `ILogger`), so Serilog, if used, would serve only diagnostic logs and nothing security-critical.
-* Observability is already OpenTelemetry-centric (native .NET 10 meters plus custom `Meter`/`ActivitySource` at the handler seam, exported over OTLP), so metrics and traces are already OpenTelemetry.
+* Observability is already OpenTelemetry-centric (the native .NET 10 `Microsoft.AspNetCore.*` meters plus a custom `Meter`/`ActivitySource` at the handler seam, exported over OTLP), so metrics and traces are already OpenTelemetry.
 
 Given those, should Nami add Serilog or standardize on native `ILogger` plus OpenTelemetry?
 
@@ -37,8 +37,8 @@ Chosen option: "Native `ILogger` plus OpenTelemetry (OTLP), dropping Serilog", b
 Fixed parameters of the decision:
 
 * **Diagnostic logging** is `Microsoft.Extensions.Logging` (`ILogger`) with source-generated `LoggerMessage` (structured and low-allocation).
-* **Unified export through OpenTelemetry**: `builder.Logging.AddOpenTelemetry()` plus the OTLP logs exporter, so logs, metrics, and traces travel through one OTLP pipeline (vendor-neutral and cloud-agnostic, matching ADR-0006/0009). Trace-to-log correlation is native, because OpenTelemetry attaches the trace/span context to each log record.
-* **PII/secret redaction** uses `Microsoft.Extensions.Telemetry` (redaction and enrichment), so no Serilog enricher is needed.
+* **Unified export through OpenTelemetry**: `builder.Logging.AddOpenTelemetry()` plus `OpenTelemetry.Exporter.OpenTelemetryProtocol.Logs`, so logs, metrics, and traces travel through one OTLP pipeline (vendor-neutral and cloud-agnostic, matching ADR-0006/0009). Trace-to-log correlation is native, because OpenTelemetry attaches the trace/span context to each log record.
+* **PII/secret redaction** (acceptance requirement 9.14a) uses `Microsoft.Extensions.Telemetry` (redaction and enrichment), so no Serilog enricher is needed.
 * **Audit is unchanged**: it remains the first-class `ISecurityEventSink` (ADR-0008), strictly separate from diagnostic logging and never routed through the OpenTelemetry/`ILogger` pipeline, which lacks tamper-evidence and a delivery guarantee; the two lanes join only by a correlation/trace id.
 * **Dev and on-premises without a collector**: the native console logger, or OTLP to a local collector, or native file logging if needed.
 
@@ -75,6 +75,6 @@ The common online default: Serilog structured logs bridged to OTLP via a Serilog
 * Original decision: 2026-07-04.
 * This is the diagnostic-logging lane. The audit lane stays on `ISecurityEventSink` (ADR-0008) and is never routed through this pipeline; the two lanes are joined only by a correlation/trace id.
 * **Scope boundary:** this ADR fixes the observability *stack* (how signals are emitted and exported). The quantitative NFR targets, the SLO-as-release-gate, the error-budget freeze policy, and the burn-rate alerting built on the metrics this pipeline emits are a separate decision, recorded in ADR-0041. (An earlier corpus note that NFR/SLO should stay a document banner rather than an ADR is superseded by ADR-0041.)
-* Deferred to a post-v1 wave (proposed, no ADR yet): a diagnostics data dump for support, built on this telemetry and the event catalogue; revisit when the support burden warrants it.
+* Deferred to a post-v1 wave (proposed, no ADR yet): a diagnostics data dump for support, built on this telemetry and the event catalogue; revisit when the support burden warrants it. This idea originated in this repository rather than in the source design corpus, which records no such item; it is carried as an open suggestion, not as an inherited commitment.
 * Related decisions: ADR-0006/0009 (cloud-agnostic ports; OTLP is vendor-neutral), ADR-0008 (the separate audit lane), ADR-0041 (the NFR targets and SLO release gate built on this pipeline's signals), and ADR-0063 (the backend and dev-visualization choice for the OTLP data this pipeline emits).
 * Imported into this repository and translated in 2026-07; content preserved, internal references generalized. Library and product citations (Serilog, OpenTelemetry, and the Microsoft telemetry packages) are retained as neutral technical references.

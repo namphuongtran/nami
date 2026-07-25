@@ -39,13 +39,13 @@ Fixed parameters of the decision:
 ### Consequences
 
 * Good, because it gives license freedom (MPL), native state encryption (a security bonus for an IdP), a drop-in migration, and features that are ahead of the Terraform OSS CLI (state encryption, provider `for_each`, and `-exclude`).
-* Bad, because its market share and ecosystem are smaller than Terraform's; this is mitigated by the drop-in compatibility and by large production adopters, and the missing vendor-cloud-specific features do not apply because Nami is cloud-agnostic.
+* Bad, because its market share and ecosystem are smaller than Terraform's; this is mitigated by the drop-in compatibility and by large production adopters (Fidelity, reported at over 50,000 state files and more than 4 million resources, plus Capital One, Oracle, and VMware), and the missing vendor-cloud-specific features do not apply because Nami is cloud-agnostic.
 * This is coupled to ADR-0006: state-encryption key management uses the cloud-agnostic secret/key ports.
 
 ### Confirmation
 
-* Terraform was relicensed to BSL v1.1 in August 2023; OpenTofu is an MPL-2.0 fork of Terraform 1.5 under the Linux Foundation (a CNCF sandbox project with an exception to retain MPL). OpenTofu features ahead of the Terraform OSS CLI include state encryption (v1.7), provider `for_each` (v1.9), and `-exclude` (v1.9). As of 2026 the drop-in claim is credible and migration is trivial because HCL, modules, and state are compatible, with large adopters running it in production.
-* Follow-ups (Ops): the state backend (object storage or Postgres) plus state-encryption key management tied to the ADR-0006 cloud-agnostic key ports; provider version pinning; and CI wiring where plan/apply is gated by dual-control.
+* Terraform was relicensed to BSL v1.1 in August 2023; OpenTofu is an MPL-2.0 fork of Terraform 1.5 under the Linux Foundation (a CNCF sandbox project with an exception to retain MPL). OpenTofu features ahead of the Terraform OSS CLI include state encryption (v1.7), provider `for_each` (v1.9), and `-exclude` (v1.9). As of 2026 the drop-in claim is credible and migration is trivial because HCL, modules, and state are compatible, with named large adopters running it in production at the scale cited above.
+* Follow-ups (Ops): the state backend (object storage or Postgres) plus state-encryption key management tied to the ADR-0006 cloud-agnostic key ports; provider version pinning; and CI wiring where `plan`/`apply` is gated by dual-control (acceptance items 9.19 for IaC and 9.22 for the dual-control gate).
 
 ## Pros and Cons of the Options
 
