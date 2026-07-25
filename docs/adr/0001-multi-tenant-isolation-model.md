@@ -3,7 +3,7 @@ status: "accepted"
 stack-record: true
 date: 2026-06-28
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect and security lead
-consulted: evidence review of commercial identity servers, Azure Architecture Center, AWS SaaS guidance, Auth0 Organizations, ABP Framework (see More Information)
+consulted: evidence review of commercial identity servers, Azure Architecture Center, AWS SaaS guidance, Auth0 Organizations, ABP Framework (see More Information); data-protection stakeholders on the Pool-versus-Silo tenant classification (data processing agreements, residency)
 informed: all contributors, via this repository
 ---
 
@@ -41,9 +41,9 @@ The decision fixes five sub-decisions:
 
 * **Identity is global**: credentials, MFA, email, security stamps live in a global identity store; one user for all tenants, one login, one password change, one MFA enrollment.
 * **Membership is global**: a mapping of user to tenant to roles is the single source of truth for "which tenants does this user belong to". Adding a user to a tenant creates a membership row, never a duplicate user.
-* **Tenant registry (control plane) is global**: a `Tenants` table holds `{ TenantId, Parent, IsolationMode (Pool | Silo), ConnectionString, KeyScope }`. This is the switch that routes each tenant to its store.
-* **Tenant-scoped data** (OpenIddict Applications, Authorizations, Tokens, plus detailed roles/claims) lives where `IsolationMode` says: Pool tenants share one database, discriminated by a mandatory `TenantId` column with a mandatory EF Core global query filter; Silo tenants get a dedicated database (no discriminator column needed).
-* **The scope catalog is global, not per-tenant**: scopes are defined by the product's APIs and shared by all tenants. Scopes carry no `TenantId`, scope names are globally unique, and the catalog is seeded once. Per-tenant differences are expressed as scope allowlists on the client grant, never by forking the catalog. (Consistent with Auth0, ABP host-global scopes, mainstream commercial IdPs, and RFC 8707; validated empirically, see Confirmation.)
+* **Tenant registry (control plane) is global**: a `Tenants` table holds `{ TenantId, Parent, IsolationMode (Pool | Silo), ConnectionString, KeyScope }`. This is the switch that routes each tenant to its store: Finbuckle.MultiTenant reads `Tenants.ConnectionString`, so a Pool tenant resolves onto the shared `DbContext` plus its query filter while a Silo tenant resolves onto its own connection.
+* **Tenant-scoped data** (OpenIddict Applications, Authorizations, Tokens, plus detailed roles/claims) lives where `IsolationMode` says: Pool tenants share one database, discriminated by a mandatory `TenantId` column with a mandatory EF Core global query filter; Silo tenants get a dedicated database (no discriminator column needed). Because OpenIddict's shipped entities have no tenant concept, the `TenantId` column is introduced by replacing them with derived types through `ReplaceDefaultEntities`.
+* **The scope catalog is global, not per-tenant**: scopes are defined by the product's APIs and shared by all tenants. The Scope entity is deliberately **not** marked `.IsMultiTenant()`, so it carries no `TenantId`, its `Name` is globally unique, and the catalog is seeded once. Per-tenant differences are expressed as scope allowlists on the client grant, never by forking the catalog. (Consistent with Auth0, ABP host-global scopes, mainstream commercial IdPs, and RFC 8707; validated empirically, see Confirmation.)
 * This layering is realized as **four DbContexts**: `OpenIddictDbContext` (tenant-scoped: pool filter or silo connection), `IdentityDbContext` (global), `DataProtectionDbContext` (global), `ControlPlaneDbContext` (global: tenants, memberships, delegated admin, audit log, server-side sessions). This topology is fixed; changing it requires a superseding ADR.
 
 ### B. Tenant switching without re-login
@@ -58,11 +58,11 @@ Tenant is resolved from the subdomain/host or path (for example `acme.id.example
 
 ### D. Per-tenant key sets
 
-Silo tenants get their own signing/encryption key set (full isolation). Pool tenants share one pool-group key set. There is deliberately **no per-tenant key inside the Pool**: a pool tenant that needs its own keys must move to Silo (see ADR-0033 for the key-scope isolation model and its one-keyset-per-deployment invariant). Related: ADR-0005, ADR-0006, ADR-0007.
+Silo tenants get their own signing/encryption key set (full isolation). Pool tenants share one pool-group key set. There is deliberately **no per-tenant key inside the Pool**: a pool tenant that needs its own keys must either move to Silo, or wait for the spike-gated co-host upgrade path (Option A, a per-request per-scope key via tenanted options). Both are governed by ADR-0033 and its one-keyset-per-deployment invariant. Related: ADR-0005, ADR-0006, ADR-0007.
 
 ### E. Client registration
 
-* Pool tenants: a client is a row in the shared database with a `TenantId` column; the same logical `client_id` may exist for several tenants. **Mandatory index override**: OpenIddict's EF Core defaults create a globally unique index on `ClientId`, and the multi-tenant library does not scope it automatically; the pool DbContext must replace it with a composite unique index on `(TenantId, ClientId)`. This was proven empirically: without the override, a second tenant reusing a `client_id` fails with a PostgreSQL unique violation; with it, registration succeeds and stays isolated per tenant.
+* Pool tenants: a client is a row in the shared database with a `TenantId` column; the same logical `client_id` may exist for several tenants. **Mandatory index override**: OpenIddict's EF Core defaults set a globally unique index on `ClientId` (`OpenIddictEntityFrameworkCoreApplicationConfiguration.cs`, lines 48 to 49), and Finbuckle's `.IsMultiTenant()` does not scope that index automatically; the pool `DbContext` must drop it in `OnModelCreating` and add a composite unique index on `(TenantId, ClientId)`. This was proven empirically: without the override, a second tenant reusing a `client_id` fails with PostgreSQL unique violation `23505`; with it, both registrations succeed and stay isolated per tenant.
 * Silo tenants: clients live in the tenant's own database, no override needed.
 * Provisioning a tenant seeds its clients automatically; scopes are never seeded per tenant (global catalog, see A).
 
@@ -75,8 +75,10 @@ Silo tenants get their own signing/encryption key set (full isolation). Pool ten
 
 ### Confirmation
 
-* Cross-tenant negative tests are a permanent acceptance criterion: a pool tenant must never read another tenant's rows through the filter, and a silo tenant must always land on its own connection.
-* The riskiest composition (multi-tenant library + OpenIddict + pooled DbContext isolation) was validated before adoption by a dedicated runnable spike (17/17 tests passing against real PostgreSQL via testcontainers), covering filter behavior under context pooling, internal writes, the composite `ClientId` index, and the global scope catalog. The spike harness is kept as regression tests.
+* Cross-tenant negative tests are a **blocking CI gate**, not merely an acceptance criterion: a pool tenant must never read another tenant's rows through the filter, and a silo tenant must always land on its own connection.
+* The riskiest composition (Finbuckle.MultiTenant plus OpenIddict plus EF Core context isolation) was validated before adoption by a dedicated runnable spike (**A-4**, verification record **V25**, 17/17 tests passing against real PostgreSQL via Testcontainers), covering filter behavior under context pooling, OpenIddict's internal writes, the composite `ClientId` index, and the global scope catalog. Tests **T13** and **T14** additionally proved the design **fails closed** when no ambient tenant is set, rather than degrading to an unfiltered read. The spike harness is kept as a regression suite.
+* The composite `(TenantId, ClientId)` override was proven **required**, not optional (verification record **V21**, tests T8 to T10): without it a second tenant reusing a `client_id` cannot register at all; with it both tenants succeed and stay isolated.
+* The global scope catalog, with globally unique names visible across tenants, was proven by **V24** test **T15**, following research record **R18** on scope tenancy.
 * Compliance is checked in code review against this ADR; the DbContext topology in A may not be changed without a superseding ADR.
 
 ## Pros and Cons of the Options
@@ -119,8 +121,8 @@ Pool by default, silo on demand, selected per tenant via the control-plane regis
 
 ## More Information
 
-* Original decision: 2026-06-28 (v2, revised from a v1 database-per-tenant decision after the evidence review below). Imported into this repository and translated in 2026-07; content is preserved, internal references generalized.
-* Evidence reviewed at decision time: a commercial identity server's multi-tenancy discussion ("a great many subtly different requirements", with vendor hooks for a `tenant` claim and re-auth validation); Azure Architecture Center guidance on identity vs data multi-tenancy decisions; AWS SaaS isolation guidance (pool default, silo for hard isolation, shared identity within silo definitions); Auth0 Organizations model; ABP Framework's host-global OpenIddict stores; OpenIddict maintainer warning on claim-based tenant resolution (openiddict-core #1699).
+* Original decision: 2026-06-28 (v2, revised from a v1 database-per-tenant decision after the evidence review below). Imported into this repository and translated in 2026-07, then reconciled against the design corpus on 2026-07-25 to restore the OpenIddict source citation, the empirical evidence records, and the real name of the multi-tenant dependency. Product comparison stays generalized; OSS packages Nami actually depends on are named, per ADR-0026.
+* Evidence reviewed at decision time: a commercial identity server's multi-tenancy discussion ("a great many subtly different requirements", with vendor hooks for a `tenant` claim and re-auth validation); Azure Architecture Center guidance on identity vs data multi-tenancy decisions; AWS SaaS isolation guidance (pool default, silo for hard isolation, shared identity within silo definitions); Auth0's Organizations model (one user belonging to many organizations, an `org_id` claim in the token, switching via SSO); ABP Framework's host-global OpenIddict stores; OpenIddict maintainer warning on claim-based tenant resolution (openiddict-core #1699).
 * Related decisions: ADR-0005 (encryption and credential lifecycle), ADR-0006 (DR and keyring), ADR-0007 (key compromise), ADR-0010 (tenant hierarchy: no automatic parent-child role inheritance; explicit membership plus scoped, time-bound delegated admin), ADR-0018 (DbContext pooling with mutable tenant), ADR-0033 (key-scope isolation model).
 * Open follow-up (does not block implementation): the classification criteria for which tenants qualify for Silo (for example DPA or residency requirements) are ratified with security/data-protection stakeholders during tenant onboarding.
 * Background jobs (for example token pruning) run outside a request and must iterate tenants and set the tenant context explicitly; this is a known constraint carried into the implementation docs.
