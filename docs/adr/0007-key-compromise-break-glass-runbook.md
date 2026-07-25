@@ -10,7 +10,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-Nami's routine key rotation is graceful expiry only: a new certificate with a further-out `NotAfter` gradually supersedes the old one. When a signing or encryption key is **compromised**, graceful expiry is far too slow — an attacker can sign forged tokens until the old key expires on its own. Nami needs a **break-glass** path that pulls a dirty key out of the JWKS almost immediately. No mainstream product ships a turnkey break-glass procedure, so this is bespoke on any platform. Blast radius depends on the scope of the leaked key, so the runbook must first determine that scope before it purges or revokes anything.
+Nami's routine key rotation is graceful expiry only: a new certificate with a further-out `NotAfter` gradually supersedes the old one. When a signing or encryption key is **compromised**, graceful expiry is far too slow: an attacker can sign forged tokens until the old key expires on its own. Nami needs a **break-glass** path that pulls a dirty key out of the JWKS almost immediately. No mainstream product ships a turnkey break-glass procedure, so this is bespoke on any platform. Blast radius depends on the scope of the leaked key, so the runbook must first determine that scope before it purges or revokes anything.
 
 ## Decision Drivers
 
@@ -32,10 +32,10 @@ Fixed parameters of the decision:
 * **SLO: a dirty key is out of the JWKS in under 5 minutes.**
 * Runbook steps (automation plus checklist):
   1. Provision a clean certificate/key through the key-store port and promote it to signer (DB adapter: insert the new key and mark it signer; cloud adapter: create it in the vault/KMS).
-  2. **Coordinated reload of every node**, reusing the rotation routine's reload mechanism (custom `IOptionsMonitor` plus a tripped change-token, no restart — ADR-0011).
+  2. **Coordinated reload of every node**, reusing the rotation routine's reload mechanism (custom `IOptionsMonitor` plus a tripped change-token, no restart, per ADR-0011).
   3. **Un-register the dirty certificate** from the credential set.
   4. **Force-evict** the discovery and JWKS cache on every node (override the count-based cache and set downstream `Cache-Control`).
-  5. **Purge server-side state** for the blast radius (session store — ADR-0003).
+  5. **Purge server-side state** for the blast radius (the session store of ADR-0003).
 * **Signing-key compromise**: tokens signed with the dirty key stop validating once it is pulled from the JWKS; revoke related sessions and authorizations if needed.
 * **Encryption-key compromise**: treat **every outstanding refresh token, authorization code, and device code as burned** and revoke them all, because the attacker can decrypt them.
 * Mass-revocation requires **dual-control** (ADR-0009), triggers an incident-response notification, and is audit-logged (ADR-0008).

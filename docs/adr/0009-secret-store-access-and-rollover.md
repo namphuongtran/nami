@@ -18,7 +18,7 @@ Every key decision (ADR-0005, ADR-0006, ADR-0007) rests on one foundation that h
 * Store access must use no static long-lived secret.
 * Client-secret rotation must be zero-downtime.
 * Purge and IAM changes are irreversible and require dual-control.
-* Under ADR-0001 the store organizes key material by tier — a shared Pool-group set and each Silo tenant's own set — and the adapter must resolve the right key-set for the resolved tenant.
+* Under ADR-0001 the store organizes key material by tier (a shared Pool-group set, and each Silo tenant's own set), so the adapter must resolve the right key-set for the resolved tenant.
 
 ## Considered Options
 
@@ -36,14 +36,14 @@ Fixed parameters of the decision:
 * The application accesses the store through an `ISecretResolver`/credential-source **port plus an adapter**, never a cloud SDK directly. The default adapter is DB-backed; cloud is optional.
 * Access model per adapter:
   * **DB-backed (default)**: a least-privilege database user (read/write on the key/secret tables, no DROP or admin rights); keys encrypted at rest via Data Protection; "purge" means deleting a row (soft-delete via a status column first) under dual-control; the Data Protection keyring is protected by a certificate/DPAPI on-premises.
-  * **Cloud (optional)**: per-platform **workload identity** (Azure Managed Identity, AWS IRSA, GCP Workload Identity, or Vault auth) — no static secret; least-privilege `get`/`unwrap`/`wrap` (and `sign` if store-managed); no `purge`/`delete`/`set` at runtime.
+  * **Cloud (optional)**: per-platform **workload identity** (Azure Managed Identity, AWS IRSA, GCP Workload Identity, or Vault auth), with no static secret; least-privilege `get`/`unwrap`/`wrap` (and `sign` if store-managed); no `purge`/`delete`/`set` at runtime.
 * **Purge/destroy** (DB and cloud alike) is a separate **break-glass** path with **two-approver dual-control** (aligned with ADR-0007).
 * **Every store access is audited** into the audit sink (ADR-0008).
 * The store has soft-delete/recovery-window plus purge-protection (or the equivalent) per ADR-0006: native in cloud; in DB mode a status-column soft-delete plus backup plus dual-control hard delete.
 
 **B. Client-secret rollover** (zero-downtime)
 
-* **Standard: `private_key_jwt` client assertions** for service/M2M clients — asymmetric-key authentication. OpenIddict allows registering multiple keys at once, enabling zero-downtime rotation (add the new key, let clients migrate, remove the old one). No shared secret; each client manages its own private key.
+* **Standard: `private_key_jwt` client assertions** for service/M2M clients, which is asymmetric-key authentication. OpenIddict allows registering multiple keys at once, enabling zero-downtime rotation (add the new key, let clients migrate, remove the old one). No shared secret; each client manages its own private key.
 * **Fallback (symmetric secret)**: only when a client cannot manage its own keys. Support multiple parallel secrets (a side-table `ApplicationSecrets` with expiry) so they overlap during rollover; mask in the admin API; store only the hash.
 
 ### Consequences
