@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ADR / docs guardrail (neutral, public). Run by CI and available locally.
 # Checks: template placeholders, ADR cross-reference integrity, ADR index/status,
-# and ADR-0061 stack-of-record table membership.
+# ADR-0061 stack-of-record table membership, and the no-em-dash style rule.
 # Contains no competitor/real-name logic; that is a local, git-ignored concern
 # (see scripts/README.md).
 #
@@ -72,9 +72,18 @@ for n in $tabled; do
   echo "$marked" | grep -qx "$n" || add "ADR ${n} is in the ADR-0061 stack table but is missing the 'stack-record: true' frontmatter marker"
 done
 
+# --- Check 5: no em dash in tracked markdown (project style rule) ---
+# Use a comma, colon, or parentheses instead. The pattern is built from the
+# codepoint so this file stays pure ASCII and cannot trip its own check.
+emdash=$(printf '\xe2\x80\x94')
+em=$(grep -Fn -e "$emdash" $md 2>/dev/null || true)
+if [ -n "$em" ]; then
+  while IFS= read -r l; do add "em dash (use a comma, colon, or parentheses): $l"; done <<< "$em"
+fi
+
 # --- Report ---
 if [ "${#problems[@]}" -gt 0 ]; then
-  echo "ADR/docs guardrail FAILED — ${#problems[@]} problem(s):"
+  echo "ADR/docs guardrail FAILED: ${#problems[@]} problem(s):"
   printf '  - %s\n' "${problems[@]}"
   exit 1
 fi
