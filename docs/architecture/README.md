@@ -37,8 +37,8 @@ question. Each topic is one file.
 | [02-domain](02-domain.md) | Bounded contexts and the ubiquitous language | - |
 | [03-containers](03-containers.md) | Host processes, package graph, and datastores | C4 L2 |
 | [04-components](04-components.md) | The IdP core internals and its subsystems | C4 L3 |
-| [06-runtime-views](06-runtime-views.md) | Key end-to-end sequences | Sequence |
 | [05-data](05-data.md) | Logical data model and database topology | ER + flow |
+| [06-runtime-views](06-runtime-views.md) | Sixteen key end-to-end sequences, each with the invariants it must preserve | Sequence |
 | [08-deployment](08-deployment.md) | Topology, HA, and the edge | Deployment |
 
 ### Quality and operational views (how the system behaves)

@@ -425,8 +425,11 @@ sequenceDiagram
   Note over Eng: logout everywhere is the separate RevokeBySubjectAsync
 ```
 
-The architecture overview's [runtime view 6.1](../architecture/06-runtime-views.md)
-is the high-level version of the issuance flow above.
+The architecture overview's [runtime view 1](../architecture/06-runtime-views.md#1-authorization-code-with-pkce-and-tenant-resolution)
+is the high-level version of the issuance flow above; its
+[view 11](../architecture/06-runtime-views.md#11-refresh-token-rotation-with-reuse-detection)
+and [view 12](../architecture/06-runtime-views.md#12-consent-persistence-and-silent-reuse)
+cover the refresh-rotation and consent flows this design details.
 
 ## Edge cases and failure modes
 
