@@ -114,7 +114,7 @@ wins and this one is the bug.
 | Protocol engine | OpenIddict 7.5, version-pinned and seam-isolated | ADR-0021 |
 | Database engine | PostgreSQL 18, the sole engine, with `FORCE ROW LEVEL SECURITY` | ADR-0037 |
 | ORM and driver | EF Core 10 with Npgsql, pooled `DbContext` | ADR-0037, ADR-0018 |
-| Primary keys | UUIDv7, with one deliberate `bigint` identity exception for strict ordering | ADR-0036 |
+| Primary keys | UUIDv7 everywhere, with **one** deliberate `bigint` identity exception, the server-side session surrogate. Separately, anything needing a strict order carries its own `seq` column, because UUIDv7 is not monotonic within a millisecond | ADR-0036 |
 | Signing baseline | RS256, with ES256 selectable by configuration | ADR-0005 |
 | Audit integrity | A **keyed** hash-chain, `HMAC_k(PrevHash \|\| canonical(fields))`, application-held key, prev-first operands, canonicalized to text | ADR-0008 |
 | Logging and telemetry | `Microsoft.Extensions.Logging` plus OpenTelemetry over OTLP; Serilog deliberately dropped | ADR-0022 |
