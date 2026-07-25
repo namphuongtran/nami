@@ -10,7 +10,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-The admin portal is an OIDC client of the very identity provider it manages (dogfooding). If the IdP is down, misconfigured, missing a signing key, or on a first deploy with an empty database, OIDC login is impossible, so an administrator cannot get in to fix it — a chicken-and-egg problem. This is distinct from ADR-0007, which is break-glass for a *compromised key*; this is break-glass for *admin access* when the IdP itself is unavailable. It is a SEV-2 hidden risk and an ISMS control, not merely code. How should an administrator recover access when the normal login path is dead, and how is the very first admin created on an empty database?
+The admin portal is an OIDC client of the very identity provider it manages (dogfooding). If the IdP is down, misconfigured, missing a signing key, or on a first deploy with an empty database, OIDC login is impossible, so an administrator cannot get in to fix it, a chicken-and-egg problem. This is distinct from ADR-0007, which is break-glass for a *compromised key*; this is break-glass for *admin access* when the IdP itself is unavailable. It is a SEV-2 hidden risk and an ISMS control, not merely code. How should an administrator recover access when the normal login path is dead, and how is the very first admin created on an empty database?
 
 ## Decision Drivers
 
@@ -31,7 +31,7 @@ Chosen: a separate emergency cookie scheme, two sealed accounts with dual-contro
 
 Fixed parameters of the decision:
 
-* **Emergency local login is a separate `"BreakGlass"` cookie scheme** (`AddCookie`, `__Host-bg`, path `/breakglass`, a 15-minute hard cap), with the session issued via `SignInAsync`, **independent of the OIDC token pipeline**. The cookie is protected by Data Protection, not the OIDC signing key, so it works even with no key or JWKS — exactly the situation that needs rescuing. Its only dependency is the Data Protection keyring, kept minimal.
+* **Emergency local login is a separate `"BreakGlass"` cookie scheme** (`AddCookie`, `__Host-bg`, path `/breakglass`, a 15-minute hard cap), with the session issued via `SignInAsync`, **independent of the OIDC token pipeline**. The cookie is protected by Data Protection, not the OIDC signing key, so it works even with no key or JWKS, exactly the situation that needs rescuing. Its only dependency is the Data Protection keyring, kept minimal.
 * **Gating (so it is not a backdoor)**: a feature flag `EmergencyAccess:Enabled` defaulting OFF, an IP allow-list (returning 404 to hide the endpoint), binding to an internal admin-network listener, a policy that adds the `BreakGlass` scheme plus a role, and least-privilege repair-only, time-boxed access.
 * **Sealed credential**: two break-glass accounts (not ordinary user rows), whose hashes are verified with `PasswordHasher<T>` from the secret store; **dual-control unseal** (a password and a second factor held by two different custodians); rotated after every use; never expired by disuse. Microsoft Entra recommends FIDO2 / certificate-based, phishing-resistant authentication for emergency accounts, which is stronger than a password hash, so the password hash is the baseline and an upgrade to FIDO2/CBA is to be considered at ratification.
 * **Audit-before-action**: `await audit.RecordSuccessAndAlert()` (Severity-0) runs **before** `SignInAsync`; a sink failure is fail-closed; every attempt, including failures, is recorded; a post-mortem and a quarterly drill follow.
@@ -48,25 +48,25 @@ Fixed parameters of the decision:
 ### Confirmation
 
 * Verify-before-build: the break-glass cookie login works with an empty store and no signing key; the audit-before-`SignInAsync` ordering holds; and the gating returns 404 when disabled or off-allow-list.
-* A mandatory validation drill runs every 90 days and after each staff change, and confirms that break-glass can be flipped on when the IdP is down — the tension being that a default-OFF feature flag must not render it unavailable exactly when it is needed, so the enable mechanism is independent of the IdP.
+* A mandatory validation drill runs every 90 days and after each staff change, and confirms that break-glass can be flipped on when the IdP is down, the tension being that a default-OFF feature flag must not render it unavailable exactly when it is needed, so the enable mechanism is independent of the IdP.
 * Precedent verified: Microsoft Entra emergency access (at least two cloud-only, non-federated accounts, excluded from Conditional Access with a different strong factor, split sealed storage, a Severity-0 alert per use, no expiry, a 90-day review); AWS SEC03-BP03 (alternate direct access, split-custody dual-control, rotate-after-use, and the explicit framing that break-glass is a backdoor); Keycloak's temporary bootstrap admin (banner, removed after a permanent admin); and NIST SP 800-53 AC-2/AC-2(2) (an emergency account that bypasses authorization, short-term, auto-disabled). ASP.NET Core 10 mechanics verified: a named cookie scheme, a cookie protected by Data Protection, `PasswordHasher` PBKDF2 at 100k iterations, `AuthenticationSchemes.Add` on the policy, and API endpoints that return 401 rather than redirecting.
 
 ## Pros and Cons of the Options
 
 ### Emergency path
 
-* **Separate cookie scheme (chosen)** — good, because it does not depend on the OIDC pipeline or signing keys, so it survives the exact failure it exists for; bad, because it is a second authentication surface that must be gated carefully.
-* **Repair OIDC in place** — good, because there is no second path to secure; bad, because it cannot help when there is no signing key or the database is empty, which is precisely the failure mode.
+* **Separate cookie scheme (chosen)**: good, because it does not depend on the OIDC pipeline or signing keys, so it survives the exact failure it exists for; bad, because it is a second authentication surface that must be gated carefully.
+* **Repair OIDC in place**: good, because there is no second path to secure; bad, because it cannot help when there is no signing key or the database is empty, which is precisely the failure mode.
 
 ### Sealed credential
 
-* **Two sealed accounts with dual-control unseal (chosen)** — good, because no single custodian can use it and there is redundancy; bad, because it needs two custodians and a rotation ceremony.
-* **One sealed account** — good, because it is simpler; bad, because it is a single point of both failure and compromise.
+* **Two sealed accounts with dual-control unseal (chosen)**: good, because no single custodian can use it and there is redundancy; bad, because it needs two custodians and a rotation ceremony.
+* **One sealed account**: good, because it is simpler; bad, because it is a single point of both failure and compromise.
 
 ### First-admin seed
 
-* **One-time setup token with forced change (chosen)** — good, because no lasting seeded secret exists and the temporary account self-retires; bad, because the operator must complete setup promptly.
-* **Seed password from the secret store** — good, because it is straightforward; bad, because a standing seeded password is a default-credential risk.
+* **One-time setup token with forced change (chosen)**: good, because no lasting seeded secret exists and the temporary account self-retires; bad, because the operator must complete setup promptly.
+* **Seed password from the secret store**: good, because it is straightforward; bad, because a standing seeded password is a default-credential risk.
 
 ## More Information
 

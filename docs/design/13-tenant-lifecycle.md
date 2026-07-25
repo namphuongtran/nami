@@ -100,7 +100,7 @@ no key touched). Suspension enforces on every surface, not just login:
 | Authorize endpoint | reject with an error page, no code redirect |
 | Discovery + JWKS | 503 with `Retry-After` (never 404, which makes a relying party purge cached metadata) |
 | Server-side sessions | force-revoke all at suspend (row delete) |
-| Outstanding JWT access tokens | remain valid until they expire (at most about 15 minutes) — an intentional, documented residual, since a self-contained JWT cannot be pulled mid-life |
+| Outstanding JWT access tokens | remain valid until they expire (at most about 15 minutes), an intentional, documented residual, since a self-contained JWT cannot be pulled mid-life |
 | Refresh tokens / authorizations | not individually revoked (the token endpoint rejects at the door); resume keeps the grant and consent |
 | Admin API (tenant-scoped) | still works, so an operator can inspect and resume |
 

@@ -10,13 +10,13 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-ADR-0001 settled that tenants are flat: a `Tenants` table with a `ParentTenantId` column, global identity, and explicit membership (user ↔ tenant ↔ roles). One question was left open. When one tenant is the parent of another — for example an acquiring company and the subsidiary it acquired — what may the parent's administrator do in the child tenant? Does authority inherit automatically, or must it be granted explicitly? This is a security decision touching privilege escalation, blast radius, and tenant isolation.
+ADR-0001 settled that tenants are flat: a `Tenants` table with a `ParentTenantId` column, global identity, and explicit membership (user ↔ tenant ↔ roles). One question was left open. When one tenant is the parent of another (for example an acquiring company and the subsidiary it acquired) what may the parent's administrator do in the child tenant? Does authority inherit automatically, or must it be granted explicitly? This is a security decision touching privilege escalation, blast radius, and tenant isolation.
 
 ## Decision Drivers
 
 * Security: avoid privilege escalation and any global super-admin; keep blast radius bounded.
 * Auditability: every cross-tenant decision must record its provenance (direct membership vs delegated via a parent).
-* Reflect real organizational structure — a parent genuinely administering a subsidiary — without implicit inheritance.
+* Reflect real organizational structure (a parent genuinely administering a subsidiary) without implicit inheritance.
 * Least privilege, revocability, and time-bounding.
 
 ## Considered Options
@@ -35,7 +35,7 @@ Fixed parameters of the decision:
 * **Default is explicit per-tenant membership**: one human holds separate membership in each tenant they touch.
 * **Cross-tenant admin is an explicit delegated-admin grant, never automatic seniority:**
   * **Scoped** to a subtree rooted at a parent tenant, applying only downward to descendants.
-  * **Capability-typed** (for example manage-users, view-audit, billing) — least privilege, not "god over the child".
+  * **Capability-typed** (for example manage-users, view-audit, billing), least privilege, not "god over the child".
   * **Time-bound / just-in-time** where possible, **revocable**, and a **first-class grant object** (enumerable, auditable, revocable).
   * **Inheritance only narrows**: a child never exceeds its parent, and a parent DENY wins.
 * **Dangerous capabilities never cascade**: deleting a tenant, cross-tenant data export, IAM changes, and re-delegation each require a direct grant on that tenant plus dual-control (matching the deployment's dual-control policy and ADR-0009).

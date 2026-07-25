@@ -27,7 +27,7 @@ Out of scope, referenced not redefined: the authorization **decision** and the d
 erasure saga **bodies** (13, entered here); the **schema** (02, the SSOT); the audit catalog
 (03); the numeric SLO table (14); the front end ([Admin App](12-admin-app.md)); and the
 **key**-compromise break-glass (09, distinct). Dynamic per-tenant external IdP management is
-**v2** (ADR-0034 / design 32), so there is no IdentityProvider CRUD in v1 — external IdPs are
+**v2** (ADR-0034 / design 32), so there is no IdentityProvider CRUD in v1, external IdPs are
 static host-level configuration (06).
 
 ## Decisions realized
@@ -46,7 +46,7 @@ static host-level configuration (06).
 Two hosts plus two DTO assemblies, flat under `src/`, grouped by name prefix:
 `Nami.Identity.Admin.Api` (this doc), `Nami.Identity.Admin.App` (the front end),
 `Nami.Identity.Admin.Contracts` (DTOs + `ProblemCodes`, referenced only by the two admin
-hosts — the core IdP never references it, a compile-enforced boundary), and
+hosts, the core IdP never references it, a compile-enforced boundary), and
 `Nami.Identity.Contracts` (cross-cutting types only). Business logic is an **`Application/`
 folder** inside `Admin.Api` (vertical-slice feature folders), not a separate project; an
 ArchUnitNET test forbids it from referencing ASP.NET/HTTP or EF types.
@@ -64,14 +64,14 @@ future store swap keep working:
 
 The Admin API is itself a **resource server of the IdP** (`AddValidation`, audience
 `admin-api`, `EnableTokenEntryValidation` for instant admin-token revocation). It holds no
-auth of its own — authentication and authorization both go through the main Identity (below).
+auth of its own, authentication and authorization both go through the main Identity (below).
 Optimistic concurrency uses PostgreSQL `xmin` as the ETag (never SQL-Server `rowversion`).
 
 ## Authentication, authorization, and who can access admin
 
 **The main Identity is the authority.** The Admin App authenticates as a confidential OIDC
 client of the IdP and forwards the *user's* delegated token; the Admin API validates that
-IdP-issued token (`AddValidation`, audience `admin-api`) — there is no separate admin auth
+IdP-issued token (`AddValidation`, audience `admin-api`); there is no separate admin auth
 system. The `RequireActor` policy accepts **only user-delegated tokens** (a `sub` plus `amr`
 or `auth_time` on the `admin-api` audience) and rejects any app-only / client-credentials
 token with 403 `admin_requires_actor`; no client is ever granted the `admin-api` scope
@@ -88,20 +88,20 @@ Granular RBAC policies (not one flat admin role):
 | `Admin.TenantScope` | membership or delegated-admin grant for `{tenantId}` (via `ICheckAccess`, 05) | every tenant-scoped route |
 
 A dangerous action lacking sufficient `acr` returns **401** `WWW-Authenticate: Bearer
-error="insufficient_user_authentication", acr_values="urn:nami.identity:aal2|aal3"` (RFC 9470 — a 401
+error="insufficient_user_authentication", acr_values="urn:nami.identity:aal2|aal3"` (RFC 9470, a 401
 challenge, not a 403), and the App re-authenticates. Tenant-scoped resources sit under
 `/tenants/{tenantId}/...` where `TenantScopeHandler` checks the grant and sets the tenant
 context; global id-routes pass the deny-by-default BOLA/IDOR object-level filter (05).
 (`Admin.TenantScope`'s set-tenant-context side effect must be rehomed before that handler is
-retired in favor of `[HasCapability]` — a build-time item flagged by 05.)
+retired in favor of `[HasCapability]`, a build-time item flagged by 05.)
 
 **Who can access, and how admin is granted.** There are two ways to hold admin authority,
 both deny-by-default:
 
 - A **global admin role** (`Admin`, plus the granular roles above) assigned on the user via
-  `RoleManager` — for platform operators.
+  `RoleManager`, for platform operators.
 - A **delegated-admin grant** (05/ADR-0010): scoped to a tenant subtree, capability-typed,
-  time-bound, and revocable — for tenant administrators, with **no global super-admin**.
+  time-bound, and revocable, for tenant administrators, with **no global super-admin**.
 
 The **first admin** is created by the bootstrap seeder (below). After that, granting admin is
 itself an admin action: assigning a global admin role or issuing a delegated-admin grant goes
@@ -117,7 +117,7 @@ the corpus's Swagger-UI placeholder (a design decision, not a corpus fact; the O
 document itself is the standard built-in .NET output). The document declares an **OAuth2/OIDC security
 scheme** pointing at the main IdP (authorization-code + PKCE against the tenant issuer,
 scope `admin-api`), so the reference UI performs a real login through Identity and every
-"try it" call carries a user-delegated token — consistent with `RequireActor` (no static API
+"try it" call carries a user-delegated token, consistent with `RequireActor` (no static API
 key, no app-only path). Scalar is exposed in Development by default; if enabled in a
 non-Development environment it sits behind the same authenticated admin surface (never
 anonymous), and the raw OpenAPI JSON is likewise gated. Every operation is annotated with its
@@ -132,7 +132,7 @@ ISO-8601 UTC; ETag on every resource (from `xmin`), `If-Match` required on mutat
 versioned under `V1`. Secrets are never returned in a DTO (a create/rollover returns the
 value exactly once).
 
-### Clients (Applications) — the hardest screen
+### Clients (Applications): the hardest screen
 
 `GET/POST /tenants/{t}/applications`, `GET/PUT /applications/{id}`, `DELETE`→proposal,
 `POST /applications/{id}/secrets/rollover`, `PUT /applications/{id}/cors-origins`.
@@ -152,7 +152,7 @@ config layer, 01): a public/code client is
 forced to PKCE (throws if absent), a confidential client without a credential is rejected,
 wildcard/non-exact redirects are rejected, an origin is scheme+host+port (no path). The
 Permissions/Requirements mapping to OpenIddict constants follows the `thomasduft/openiddict-ui`
-pattern (referenced, not a dependency — the CRUD is built).
+pattern (referenced, not a dependency; the CRUD is built).
 
 ### Scopes
 
@@ -204,7 +204,7 @@ the dual-control gate.
 ### Tenant branding
 
 `GET/PUT /tenants/{t}/branding`. `TenantBrandingDto`: `TenantId`, `LogoUri?` (https-only,
-SSRF-safe), `Theme?` (design tokens — colors/fonts — not raw CSS), `DisplayName?`,
+SSRF-safe), `Theme?` (design tokens (colors/fonts) not raw CSS), `DisplayName?`,
 `UpdatedAtUtc`, `ETag`. PUT is direct + ETag + audit `tenant.branding.updated`.
 
 ### Sessions and audit
@@ -238,7 +238,7 @@ The destructive-action catalog and the gating rule (proposer ≠ approver, `requ
 H(capability + target + params)`, single-use, step-up-gated, the `FullyConsistent` re-check)
 are owned by 05. This design owns the **workflow**: the saga state machine, the
 `IProposalExecutor` registry (one keyed executor per catalog `ActionType`), and the
-`DualControlProposals` behavior. Enforcement is at the Application layer — `ProposalService`
+`DualControlProposals` behavior. Enforcement is at the Application layer, `ProposalService`
 is the *only* path to an executor, so adding a controller cannot bypass it. EDA is forbidden
 for execution: approve-and-execute is synchronous, transactional, and TOCTOU-safe.
 
@@ -258,7 +258,7 @@ stateDiagram-v2
 
 The TOCTOU guard stores the target's `TargetETag` (the `xmin`-derived ETag) at propose time
 and re-checks it `FullyConsistent` before execution; a changed target becomes
-`Failed(target_changed)` — **terminal and single-use**: the transaction sets `FailReason` and
+`Failed(target_changed)`, **terminal and single-use**: the transaction sets `FailReason` and
 `FailDetail` (expected/observed ETag), emits `proposal.failed`, and enqueues the proposer
 notification in the same transaction via `IEmailDispatcher` on the `ControlPlaneDbContext`
 (07's control-plane outbox home). Recovery is a new proposal with a fresh `TargetETag` and a
@@ -297,8 +297,8 @@ sequenceDiagram
 
 ## Secret rollover, bootstrap, and break-glass
 
-**Secret rollover** (ADR-0009): the standard is `private_key_jwt` multi-key — a client's
-`JsonWebKeySet` holds several keys for zero-downtime add/migrate/remove — with a masked,
+**Secret rollover** (ADR-0009): the standard is `private_key_jwt` multi-key, a client's
+`JsonWebKeySet` holds several keys for zero-downtime add/migrate/remove, with a masked,
 hash-only `ApplicationSecrets` side-table as the symmetric fallback; revoking the old
 credential is a proposal, and every step is audited. Self-service client CRUD (ADR-0035) is
 distinct: it generates a random secret, shows it once, stores no plaintext, and does not use
@@ -332,8 +332,8 @@ Every mutation and dual-control transition emits on the `ISecurityEventSink` has
 `ILogger`), with the security-critical ones (`admin_config_change`, proposal execute)
 committing synchronously in the action's transaction. It reuses the existing catalog
 (`admin_config_change`, `dual_control_approval`, `force_logout`, `mass_revoke`, `key_purge`)
-and **proposes a minimal net-new set** — the granular `proposal.created/approved/rejected/
-executed/failed` events and `audit_read` — raised as a proposed addition to the ADR-0008
+and **proposes a minimal net-new set**: the granular `proposal.created/approved/rejected/
+executed/failed` events and `audit_read`, raised as a proposed addition to the ADR-0008
 catalog (flagged, not settled here), each carrying the authz provenance produced by 05
 (`actor_sub`, `actor_chain`, `on_behalf_of_subject`, `capability`, `grant_id`, `decision_path`,
 `authz_decision`, `stepup_satisfied`, `approval_request_id`, `approver_sub`, `request_hash`,
@@ -351,10 +351,10 @@ request.
   owned by 15/CI), with BOLA/IDOR object-level authz a must-pass (05).
 - **Performance.** List endpoints are always paged (`X-Total-Count`, no unbounded scans); each
   request incurs one `ICheckAccess` call (DB-tier p95 < 30ms / p99 < 80ms, fail-closed at
-  250ms — 05); reads go through the manager caches (per-request, no cross-node backplane, 10);
+  250ms, 05); reads go through the manager caches (per-request, no cross-node backplane, 10);
   the config/CORS cache is the FusionCache+Redis one (10), invalidated on a client change; the
   audit list query is tenant-filtered and indexed. The numeric SLO table is owned by 14.
-- **Availability.** The Admin API is **not on the critical authentication path** — if it is
+- **Availability.** The Admin API is **not on the critical authentication path**: if it is
   down, token issuance and validation continue. Rate limiting is per actor; a hard 429 write
   ceiling uses the same `Microsoft.AspNetCore.RateLimiting` mechanism as the device/PAR
   endpoints (11).

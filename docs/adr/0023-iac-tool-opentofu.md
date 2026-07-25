@@ -11,7 +11,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-The design documents listed "Terraform/Helm/Bicep" for infrastructure as code. HashiCorp relicensed Terraform from MPL-2.0 to BSL v1.1 in August 2023, restricting "competitive" use and reverting to MPL only four years after each release. Nami follows a license-freedom, OSS line — it chose an Apache-2.0 protocol engine over a commercial alternative and chose OSS PostgreSQL — and the IaC tool should be consistent with that. Which IaC tool should be the default?
+The design documents listed "Terraform/Helm/Bicep" for infrastructure as code. HashiCorp relicensed Terraform from MPL-2.0 to BSL v1.1 in August 2023, restricting "competitive" use and reverting to MPL only four years after each release. Nami follows a license-freedom, OSS line (it chose an Apache-2.0 protocol engine over a commercial alternative and chose OSS PostgreSQL) and the IaC tool should be consistent with that. Which IaC tool should be the default?
 
 ## Decision Drivers
 
@@ -62,6 +62,6 @@ Fixed parameters of the decision:
 ## More Information
 
 * Original decision: 2026-07-04.
-* This continues the project's license-freedom line — an Apache-2.0 protocol engine and OSS PostgreSQL, and now an MPL-2.0 IaC tool.
+* This continues the project's license-freedom line: an Apache-2.0 protocol engine and OSS PostgreSQL, and now an MPL-2.0 IaC tool.
 * Related decisions: ADR-0006/0009 (cloud-agnostic ports and adapters; state-encryption key management uses these).
 * Imported into this repository and translated in 2026-07; content preserved, internal references generalized. A reference to having chosen an Apache-2.0 engine over a commercial alternative was generalized (no competitor named); Terraform, OpenTofu, and the tool and foundation names are retained as the factual subject of the decision.

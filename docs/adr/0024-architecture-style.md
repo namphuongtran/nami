@@ -81,7 +81,7 @@ Chosen option: "The synthesis", applied as one rulebook to both the IdP-core and
 ### Pure vertical slice
 
 * Good, because it fits the pipeline/handler model and minimizes abstraction.
-* Bad, because it drops the guardrails, putting the discipline burden on the team, risking duplicated shared logic, and leaving cross-cutting concerns and infrastructure swaps without a clear home — and Nami genuinely needs those swaps (cloud-agnostic ports, audit sink, tenant store).
+* Bad, because it drops the guardrails, putting the discipline burden on the team, risking duplicated shared logic, and leaving cross-cutting concerns and infrastructure swaps without a clear home, and Nami genuinely needs those swaps (cloud-agnostic ports, audit sink, tenant store).
 
 ### Hexagonal shell plus vertical slice inside (chosen)
 

@@ -10,7 +10,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-A commercial identity server offers Dynamic Client Registration, and the coverage audit placed CIBA, DCR, and dynamic-external-IdP after v1. Having opened dynamic external IdP (ADR-0034), the goal now is to complete the self-service tenant-onboarding line: a delegated tenant-admin registers and manages their own tenant's clients/apps, in parallel with self-registering an IdP in v2. This is a v2.1 scope — it comes after the v2 dynamic-IdP work, is not part of v1, and does not touch the in-flight dynamic-IdP effort. How should self-service client registration work?
+A commercial identity server offers Dynamic Client Registration, and the coverage audit placed CIBA, DCR, and dynamic-external-IdP after v1. Having opened dynamic external IdP (ADR-0034), the goal now is to complete the self-service tenant-onboarding line: a delegated tenant-admin registers and manages their own tenant's clients/apps, in parallel with self-registering an IdP in v2. This is a v2.1 scope, it comes after the v2 dynamic-IdP work, is not part of v1, and does not touch the in-flight dynamic-IdP effort. How should self-service client registration work?
 
 ## Decision Drivers
 

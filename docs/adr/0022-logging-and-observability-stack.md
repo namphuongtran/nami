@@ -11,7 +11,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-Early design documents listed Serilog as the structured-logging library. The question was whether Serilog is warranted or whether native `ILogger` plus OpenTelemetry is enough — whether Serilog adds bulk for little real benefit here. Two existing facts about the project shift the balance away from the general-purpose advice found online:
+Early design documents listed Serilog as the structured-logging library. The question was whether Serilog is warranted or whether native `ILogger` plus OpenTelemetry is enough: whether Serilog adds bulk for little real benefit here. Two existing facts about the project shift the balance away from the general-purpose advice found online:
 
 * Audit is already first-class and **separate** from logging (ADR-0008: `ISecurityEventSink` plus a hash-chain plus a delivery guarantee, not `ILogger`), so Serilog, if used, would serve only diagnostic logs and nothing security-critical.
 * Observability is already OpenTelemetry-centric (native .NET 10 meters plus custom `Meter`/`ActivitySource` at the handler seam, exported over OTLP), so metrics and traces are already OpenTelemetry.
@@ -61,7 +61,7 @@ Fixed parameters of the decision:
 The common online default: Serilog structured logs bridged to OTLP via a Serilog OTLP sink, keeping the rich enricher and sink ecosystem.
 
 * Good, because it keeps Serilog's mature sinks (notably rolling-file) and familiar enrichers.
-* Bad, because it runs two parallel log pipelines and adds dependencies and configuration — exactly the bulk this decision set out to avoid — for a benefit that audit-separation and OTel-first observability have already made marginal.
+* Bad, because it runs two parallel log pipelines and adds dependencies and configuration (exactly the bulk this decision set out to avoid), for a benefit that audit-separation and OTel-first observability have already made marginal.
 
 ### Native `ILogger` plus OpenTelemetry (OTLP), dropping Serilog (chosen)
 

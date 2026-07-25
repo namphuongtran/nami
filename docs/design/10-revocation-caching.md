@@ -99,8 +99,8 @@ re-validation within the 1-2 minute `ValidationInterval`. No backplane is involv
 When a signing key is revoked in a break-glass event, tokens it signed must stop
 validating fast, but a resource server's `ConfigurationManager` caches the JWKS for about
 12 hours. Two mechanisms close that window, and both are owned here (the key-management
-design owns only the *trigger* — setting `RevokedAt`, refreshing its cache, tripping the
-change-token, un-registering the cert, and evicting JWKS — and references this module):
+design owns only the *trigger*, setting `RevokedAt`, refreshing its cache, tripping the
+change-token, un-registering the cert, and evicting JWKS, and references this module):
 
 - The resource-server `AutomaticRefreshInterval` is shortened to about 5 minutes (the
   lowest legal automatic value); on a distrusted-kid signal a resource server may
@@ -237,7 +237,7 @@ replace or alter the internal per-path enforcement in this design, and v1 stays 
 ## Testing strategy
 
 - **Cross-node propagation:** a revoke on node A is enforced on node B within the path's
-  SLO — the distrusted-kid set within 60 seconds (9.T16), config within 30 seconds (9.T18),
+  SLO, the distrusted-kid set within 60 seconds (9.T16), config within 30 seconds (9.T18),
   a reference-token revoke DB-fresh with no lag, and force-logout on the next request.
 - **Redis-down fail-closed:** with Redis unreachable, the distrusted-kid check rejects
   (9.T17), and paths (a)-(d) continue DB-fresh.

@@ -33,9 +33,9 @@ Chosen option: "docker-compose for dependencies plus Testcontainers plus `dotnet
 **A. docker-compose (dependency-only for the inner loop).** `deploy/docker-compose.yml` starts the dependencies; the app runs via `dotnet run`/IDE for a fast inner loop, or via a compose profile:
 
 * `postgres`: image `postgres:18` (matching production: native `uuidv7()`, forced RLS), on the same major as Testcontainers and production so behavior does not drift; a persistent volume; `POSTGRES_*` from `.env` (no committed secrets).
-* `pgadmin` (a DB admin UI; a lighter alternative is adminer) — dev only, never production.
-* `redis` (distributed cache, DPoP replay, cache backplane) — optional for the inner loop, degrading fail-open.
-* `otel-collector` (with optional trace/log viewers) for local logs, metrics, and traces (ADR-0022) — optional.
+* `pgadmin` (a DB admin UI; a lighter alternative is adminer), dev only, never production.
+* `redis` (distributed cache, DPoP replay, cache backplane), optional for the inner loop, degrading fail-open.
+* `otel-collector` (with optional trace/log viewers) for local logs, metrics, and traces (ADR-0022), optional.
 * No local KMS/key vault, so the Database-provider default applies (ADR-0006/0009): the signing key, the Data Protection keyring, and secrets live in PostgreSQL, with the DP-root certificate mounted from a file in dev. It runs 100% offline.
 
 **B. Dockerfile (multi-stage, per deployable).** Each runnable project (`Nami.Identity`, `Nami.Identity.Admin.Api`, `Nami.Identity.Admin.App`) has a multi-stage Dockerfile:
@@ -49,13 +49,13 @@ Chosen option: "docker-compose for dependencies plus Testcontainers plus `dotnet
 **C. First-run setup (an explicit order that avoids chicken-and-egg),** on an empty database, matching the ADR-0012 bootstrap:
 
 1. `docker compose up -d postgres redis`, then wait for `postgres` to be healthy (`pg_isready`).
-2. Migrate the database (dev) with a dedicated one-shot migrator (a `migrator` compose service, or `dotnet ef database update` per context) — never migrate-on-startup in production (ADR-0017); dev may enable migrate-on-startup in `Development` for convenience. This applies to the four contexts (OpenIddict, Identity, Data Protection, control plane) in order, each with its own history table.
+2. Migrate the database (dev) with a dedicated one-shot migrator (a `migrator` compose service, or `dotnet ef database update` per context), never migrate-on-startup in production (ADR-0017); dev may enable migrate-on-startup in `Development` for convenience. This applies to the four contexts (OpenIddict, Identity, Data Protection, control plane) in order, each with its own history table.
 3. Auto-seed the first key (ADR-0012): app startup blocks until ready, seeds the signing and encryption key with immediate activation and DP-wrapping, and `/health/ready` fails until a key exists.
 4. Seed clients/scopes (dev) with idempotent seeders from `appsettings.Development` (for example `web`, `worker`, and `admin-app` clients, an `admin-api` scope, and an example tenant).
 5. Bootstrap the first admin (ADR-0015) through the separate, audited break-glass path.
 6. `dotnet run` (or the full compose profile), then `/health/ready` passes and the system is usable.
 
-A Makefile/`justfile`/`dotnet` tool wraps these into one `make dev-up`. A production-deploy note that gates the provision saga: when a tenant uses an issuer subdomain (`tenant.id.<domain>`), the provision saga must include a DNS-plus-TLS-cert step before `Enabled=true` — defaulting to a wildcard `*.id.<domain>` certificate (simplest) in Helm/IaC, or per-subdomain ACME/cert-manager (more isolated) — gating `Enabled=true` on cert-ready, with a path-based fallback (`id.<domain>/tenant`) for environments that cannot provision a subdomain (local dev uses path-based, needing no wildcard cert).
+A Makefile/`justfile`/`dotnet` tool wraps these into one `make dev-up`. A production-deploy note that gates the provision saga: when a tenant uses an issuer subdomain (`tenant.id.<domain>`), the provision saga must include a DNS-plus-TLS-cert step before `Enabled=true` (defaulting to a wildcard `*.id.<domain>` certificate (simplest) in Helm/IaC, or per-subdomain ACME/cert-manager (more isolated)) gating `Enabled=true` on cert-ready, with a path-based fallback (`id.<domain>/tenant`) for environments that cannot provision a subdomain (local dev uses path-based, needing no wildcard cert).
 
 **D. Testcontainers (integration tests, matching the spike-harness).** Integration tests spin Testcontainers PostgreSQL 18 (not SQLite, because RLS, `xmin`, and `uuidv7()` are PostgreSQL-specific), reusing a container across a test class for speed. `WebApplicationFactory<Program>` boots the app in-memory against Testcontainers PostgreSQL to exercise the full pipeline (the multi-tenant filter, RLS, applied migrations), with Redis Testcontainers when testing replay/backplane. Pure handler unit tests need no container.
 

@@ -27,7 +27,7 @@ Out of scope, referenced not redefined: sender-constrained **mTLS** (04 owns it 
 this design adds nothing but a pointer to the trusted-proxy ratification gate); the
 token-exchange **`act`**/initiator resolution and confused-deputy handling (05);
 **step-up** authentication, which doc 07 lists as its largest build but which is already
-allocated across the producer (06), the enforcement (05), and the UI (08) — this design
+allocated across the producer (06), the enforcement (05), and the UI (08), this design
 owns **none** of it; the device and step-up **UI** pages and the back-channel logout
 fan-out (08); and the core native-verify flows (04). It adds no database tables.
 
@@ -60,13 +60,13 @@ fan-out (08); and the core native-verify flows (04). It adds no database tables.
 | CIBA | skipped | this doc |
 | Dynamic Client Registration (RFC 7591/7592) | roadmap-wait (OpenIddict 8.0); interim Admin CRUD | this doc / 12 |
 
-## DPoP (RFC 9449) — the core build
+## DPoP (RFC 9449): the core build
 
 OpenIddict 7.5 has no DPoP on either side (no `jkt`/`ath`/`htm`/`htu`/`dpop+jwt`
 constants; `CreateConfirmationClaim` stamps only `x5t#S256`; validation is Bearer-only and
 throws on a `jkt`), so both the issuance and validation handlers are built. This was
 de-risked with runnable spikes (A-1 issuance, A-3 validation; results in V18). What the spikes
-proved is the **shape** — the event/order selection and the nested-`cnf` emission at issuance,
+proved is the **shape**: the event/order selection and the nested-`cnf` emission at issuance,
 and the `SR.ID2196` throw plus its neutralization before the built-in at validation. The proof
 cryptography itself (signature, `htm`/`htu`/`ath`, thumbprint, `jti` replay) is standard code the
 spikes did **not** exercise (A-1 stamped a simulated `jkt` from a test header; A-3 did not run the
@@ -86,15 +86,15 @@ or a MAC), and a public `jwk` (never a private key); its payload has `jti` (at l
 ### Issuance (order/shape spike-proven, A-1)
 
 A handler on **`ProcessSignInContext`** (the event where the access-token principal is
-built — not `ProcessAuthenticationContext`), registered `UseScopedHandler` and ordered
-`SetOrder(OpenIddictServerHandlers.PrepareAccessTokenPrincipal.Descriptor.Order + 1_000)`
-— that is, **after** `PrepareAccessTokenPrincipal`. It validates the proof (no `ath` at
+built, not `ProcessAuthenticationContext`), registered `UseScopedHandler` and ordered
+`SetOrder(OpenIddictServerHandlers.PrepareAccessTokenPrincipal.Descriptor.Order + 1_000)`,
+that is, **after** `PrepareAccessTokenPrincipal`. It validates the proof (no `ath` at
 issuance, since there is no access token yet), computes the thumbprint, and stamps the
 confirmation on the **access-token** principal:
 `context.AccessTokenPrincipal.SetClaim(Claims.Confirmation, JsonElement{"jkt":thumb})`.
 Two spike-proven details are load-bearing: stamping on `context.Principal` *before* that
 handler is silently dropped (the access-token principal is already built), and the `cnf`
-must be a nested `JsonElement` (`"cnf":{"jkt":".."}`) — a string value would
+must be a nested `JsonElement` (`"cnf":{"jkt":".."}`); a string value would
 double-serialize (issue #219) and a flattened `cnf.jkt` key is wrong. A request with no
 DPoP proof stamps nothing and issues a plain token (no half-bound token). Discovery
 advertises `dpop_signing_alg_values_supported` as the 9-algorithm set (RS/PS/ES ×
@@ -138,8 +138,8 @@ standalone anchor is confirmed at build time (a contract test per bump).
 The `jti` replay cache is `IDPoPReplayCache` (`AddAsync`/`ExistsAsync`, key
 `"DPoPReplay-jti-" + jti`) backed by a Redis `IDistributedCache`, with a TTL of the proof
 validity plus twice the applicable skew (2× the max applicable skew for the active
-validation mode — the client clock skew in iat mode, the server clock skew in nonce mode
-— not their sum). Unlike the general caches, this one is **fail-closed by necessity**: it
+validation mode: the client clock skew in iat mode, the server clock skew in nonce mode,
+not their sum). Unlike the general caches, this one is **fail-closed by necessity**: it
 is the authoritative L2 store (a replay set has no durable source to read through to), so
 if the Redis write cannot be confirmed the proof is rejected (`invalid_dpop_proof`), the
 same carve-out class as the email throttle. This is distinct from the distrusted-kid
@@ -147,7 +147,7 @@ denylist (10), which is fail-closed but rebuildable from the database. The port 
 `Nami.Identity.Abstractions` (shared by the server and resource packages) and reuses the
 Redis wiring owned by 10 rather than re-wiring it. One consequence to state plainly: the
 `jti` check is a per-request, Redis-authoritative hit at the resource-server validation
-path **for DPoP-bound tokens only** — a deliberate proof-of-possession cost, not a
+path **for DPoP-bound tokens only**: a deliberate proof-of-possession cost, not a
 regression of the core token path's no-mandatory-Redis property (10).
 
 ### Introspection, refresh, nonce, and the fallback
@@ -177,7 +177,7 @@ with two separate skews (a client clock skew for the `iat` window, a server cloc
 (header, signature, payload, freshness, replay). A SPA generates a non-extractable
 WebCrypto ECDSA P-256 key; a mobile app uses a hardware-backed key. The security caveat
 must be stated: a non-extractable key stops token *exfiltration* but not in-place XSS use
-(XSS can call `subtle.sign()` as a signing oracle — the "DPoP storage paradox"), so
+(XSS can call `subtle.sign()` as a signing oracle, the "DPoP storage paradox"), so
 browser DPoP defends against replay from another host, not against XSS. **The real SPA
 mitigation is the BFF** (08 / the BFF design); native mobile, by contrast, uses DPoP
 directly with its hardware key.
@@ -191,7 +191,7 @@ resource API need not pull the server package). `IDPoPReplayCache` sits in
 `Nami.Identity.Abstractions` so both share it. The package names are reserved in the
 foundations package graph (01); exact boundaries land at M1 (ADR-0027).
 
-## Device flow (RFC 8628) — backend hardening
+## Device flow (RFC 8628): backend hardening
 
 The grant is native (`AllowDeviceAuthorizationFlow`, `SetDeviceAuthorizationEndpointUris`
 plus `SetEndUserVerificationEndpointUris`, a native `user_code` of 12 characters by
@@ -199,7 +199,7 @@ default and a 10-minute lifetime, native `authorization_pending`/`expired_token`
 verification endpoint needs its `Enable*EndpointPassthrough` (the exact builder method name,
 inferred by analogy with the other `Enable*EndpointPassthrough` methods as
 `EnableEndUserVerificationEndpointPassthrough`, is not confirmed in the checked-in reference
-tree — verify on pin, contract-tested per bump, ADR-0021) or the approval page (08) never runs. The gap this design closes: OpenIddict emits **no `interval`** and
+tree, verify on pin, contract-tested per bump, ADR-0021) or the approval page (08) never runs. The gap this design closes: OpenIddict emits **no `interval`** and
 **never returns `slow_down`**, so a client falls back to 5-second polling with no
 server-enforced backoff and no rate limit on unauthenticated device-code polling. The
 hardening is layered:
@@ -210,13 +210,13 @@ hardening is layered:
   order 100_000): a Redis last-poll store keyed by `device_code` rejects a too-fast poll
   and widens the accept window by 5 seconds each time (RFC 8628 §3.5), while a correct
   cadence falls through to the native `authorization_pending`.
-- Cap the token endpoint with a hard **429** via `Microsoft.AspNetCore.RateLimiting` — the
+- Cap the token endpoint with a hard **429** via `Microsoft.AspNetCore.RateLimiting`, the
   real DoS control against a client that ignores `slow_down`.
 
 A contract test asserts both that `interval` is emitted and that the backoff handler is
 ordered before device-code consumption (ADR-0021).
 
-## PAR (RFC 9126) — backend hardening
+## PAR (RFC 9126): backend hardening
 
 PAR is native (since OpenIddict 6.1, `SetPushedAuthorizationEndpointUris`); the endpoint
 and seam are owned by 04. This design owns the hardening: a client must hold
@@ -230,12 +230,12 @@ seconds (RFC 9126); and an anti-flood control rate-limits `/par` per client (and
 for public clients) with a bounded maximum of outstanding `request_uri`s, returning 429 on
 breach (the same 429 mechanism as the device endpoint).
 
-## Token exchange (RFC 8693) — grant wiring
+## Token exchange (RFC 8693): grant wiring
 
 `AllowTokenExchangeFlow()` registers the native grant and validates parameter syntax
 (`subject_token` required, `actor_token` paired, token types in the allowed set). The
-authority logic — `act` emission, subject/actor resolution, delegation-versus-impersonation,
-the confused-deputy rejection, and the Entra-OBO exemption — is **not native** (the engine's
+authority logic, `act` emission, subject/actor resolution, delegation-versus-impersonation,
+the confused-deputy rejection, and the Entra-OBO exemption, is **not native** (the engine's
 exchange handler has no `act` logic) and is owned by the authorization design (05). This
 design wires the grant and defers that logic to 05.
 
@@ -252,18 +252,18 @@ checklist).
 
 Recorded so they are not rediscovered:
 
-- **JAR (RFC 9101)** — de-scoped; OpenIddict hard-rejects the `request` parameter, and PAR
+- **JAR (RFC 9101)**: de-scoped; OpenIddict hard-rejects the `request` parameter, and PAR
   plus issuer identification plus mTLS cover the integrity benefit for non-FAPI. Revisit
   only on entering FAPI (the message-signing tier, proposed ADR-0056).
-- **JARM, RAR (RFC 9396), EdDSA** — de-scoped; `iss` plus Resource Indicators plus
+- **JARM, RAR (RFC 9396), EdDSA**: de-scoped; `iss` plus Resource Indicators plus
   RSA/ECDSA cover the current model. RAR's fine-grained `authorization_details` is the MCP
   resource-policy revisit trigger (proposed ADR-0064).
-- **Front-channel logout and `check_session_iframe`** — dead (third-party cookies);
+- **Front-channel logout and `check_session_iframe`**: dead (third-party cookies);
   replaced by end-session as a top-level redirect plus the interim back-channel logout
   (08/10, ADR-0019).
-- **CIBA** — skipped; no engine support, no roadmap, no use case; revisit on a real
+- **CIBA**: skipped; no engine support, no roadmap, no use case; revisit on a real
   decoupled-device flow.
-- **Dynamic Client Registration (RFC 7591/7592)** — waits for OpenIddict 8.0 (issue #2404,
+- **Dynamic Client Registration (RFC 7591/7592)**: waits for OpenIddict 8.0 (issue #2404,
   re-targeted from 7.6, which shipped as maintenance without it); interim onboarding is the
   authenticated Admin-API client CRUD (12 / ADR-0035).
 

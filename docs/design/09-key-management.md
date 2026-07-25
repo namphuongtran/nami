@@ -164,7 +164,7 @@ test asserts no query omits scope); a store serving multiple scopes carries RLS 
 
 The `KeyScope` vocabulary reconciles with the data tier: `Tenants.KeyScope` (`own` /
 `pool-group`) records a tenant's isolation *choice*, while `SigningKeys.KeyScope`
-(`tenant` / `pool-group`) tags the *key* — a Silo tenant's `own` choice produces
+(`tenant` / `pool-group`) tags the *key*, a Silo tenant's `own` choice produces
 `tenant`-scoped keys. Because a pool-group signature is shared, it is **not** a tenant
 boundary at the resource server: isolation there is by issuer plus the `tenant` claim
 (and RLS), and the resource server must validate signature **and** issuer **and** audience
@@ -296,8 +296,8 @@ traffic open. First-key minting is done by the app identity, mitigated by a mand
 bootstrap audit event (who, when, `kid`); dual-control applies to revoke/purge/rotate-out,
 not to bootstrap.
 
-Disaster recovery must **restore all three together** — `SigningKeys`,
-`DataProtectionKeys`, and the `rootCert` protector — with an identical `SetApplicationName`,
+Disaster recovery must **restore all three together**: `SigningKeys`,
+`DataProtectionKeys`, and the `rootCert` protector, with an identical `SetApplicationName`,
 covering the pool-group key and each Silo key. Deleting a Data Protection key is
 irreversible and is not the same as revoking it: a revoked DP key still unwraps old
 payloads (it merely stops protecting new ones), but a deleted one loses everything it
@@ -312,7 +312,7 @@ result is that all old tokens and sessions silently break. So the readiness prob
 the active `kid` **matches the expected persisted `kid`** (a bare Protect/Unprotect
 round-trip would pass on a freshly regenerated key and mask the loss), and the DR-restore
 validation runs the probe with `DisableAutomaticKeyGeneration()` so a missing protector
-fails loudly — scoped to DR only, so it does not block a legitimate empty-ring cold-start
+fails loudly, scoped to DR only, so it does not block a legitimate empty-ring cold-start
 seed. Targets are RTO under 15 minutes and RPO under 5 minutes per store, with the DP
 keyring the strictest (RPO near zero); the exact numbers are an Ops ratification item. A DR
 drill runs quarterly and after every key-infrastructure change, with the pass criterion
@@ -367,9 +367,9 @@ cache). The JWKS-availability SLO is 99.99%; the full numeric SLO table is owned
 
 - **No-restart rotation:** signing uses the active key, JWKS contains announced + active +
   retired, and nothing restarts.
-- **The seam contract regression (per OpenIddict bump):** the paired T3b/T3c test — the
+- **The seam contract regression (per OpenIddict bump):** the paired T3b/T3c test, the
   change-token alone fails local self-validation with `ID2090` (tripwire), and the dynamic
-  `IConfigurationManager` makes a new-key token self-validate with no restart — plus the
+  `IConfigurationManager` makes a new-key token self-validate with no restart, plus the
   overlap-window check (old and new tokens both validate).
 - **Bootstrap:** an empty DB and empty ring seed exactly one signing and one encryption key
   even under concurrent multi-node start; readiness fails before and passes after; an

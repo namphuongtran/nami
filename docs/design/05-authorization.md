@@ -46,7 +46,7 @@ cannot silently break read-after-write on a revoke.
 * `ConsistencyRequirement`: `MinimizeLatency` (default, steady-state),
   `AtLeastAsFresh` (at least as fresh as a supplied token), `FullyConsistent`
   (bypass any cache, **mandatory on the check immediately after a revoke or grant
-  write** — this closes the "new-enemy" problem on any engine swap).
+  write**: this closes the "new-enemy" problem on any engine swap).
 * Adapters: `DbCheckAccess` now (PostgreSQL strong reads satisfy all three modes);
   `OpenFgaCheckAccess`/`SpiceDbCheckAccess` later, mapping to that engine's
   minimize-latency / at-least-as-fresh (with a freshness token) / fully-consistent

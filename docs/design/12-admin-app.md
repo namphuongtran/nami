@@ -47,7 +47,7 @@ package (which must not depend on the `Admin.*` assemblies).
 
 ## UI design
 
-- **Stack.** ASP.NET Core MVC + Razor views, Bootstrap 5, **minimal JavaScript** — standard
+- **Stack.** ASP.NET Core MVC + Razor views, Bootstrap 5, **minimal JavaScript**: standard
   form POSTs with antiforgery, no SPA framework. Changing the theme or CSS never touches the
   flow (the engine-decoupled principle from 08). A single `AdminApiClient` maps the API's
   ProblemDetails to UI errors and carries the ETag through edit round-trips.
@@ -62,7 +62,7 @@ package (which must not depend on the `Admin.*` assemblies).
   disabled).
 - **Forms and components.** Reusable partials per resource. The Clients form renders
   Permissions/Requirements as **grouped checkboxes** (endpoints, grant types, response types,
-  scopes, PKCE/PAR toggles) — never raw JSON. Every mutation is a confirm dialog; a
+  scopes, PKCE/PAR toggles), never raw JSON. Every mutation is a confirm dialog; a
   proposal-generating action additionally requires a **justification** field. A **diff viewer**
   (the approval inbox) shows the proposed payload against current, with the `TargetETag` status.
   An `ETag`/`If-Match` is carried on every edit; a 409 offers reload-diff.
@@ -110,10 +110,10 @@ actions show a "requires AAL2/AAL3" hint before the button.
 
 The `AdminApiClient` maps each ProblemDetails `code` to a message and action: a **transient 409**
 (the data changed during an edit) offers "reload and re-diff"; a **`target_changed` 409** on a
-post-approval execute is different — the proposal is now `Failed` (terminal, single-use), so the
+post-approval execute is different: the proposal is now `Failed` (terminal, single-use), so the
 UI shows the failure with `FailReason`/`FailDetail`, notifies the proposer (in-app + email), and
 offers **re-propose only** (a new proposal pre-filled with a fresh `TargetETag` and a
-`PriorProposalId` link) — never a reload-diff retry. `428` (missing `If-Match`) is a front-end
+`PriorProposalId` link), never a reload-diff retry. `428` (missing `If-Match`) is a front-end
 bug (auto-attach). `admin_requires_actor` should never occur from the App (only from
 misconfigured tooling). Every mutation confirms; a proposal-generating one collects a
 justification; the correlation id is shown for tracing.

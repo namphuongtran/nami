@@ -158,7 +158,7 @@ provider scheme (mix-up defense); provider secrets live in the secret store
 ### Credential hardening baseline (ADR-0028 §E)
 
 The levers, in order of effect, are MFA/passkeys, a breached-password check, length
-over complexity, strong hashing, then lockout — not complexity rules or rotation
+over complexity, strong hashing, then lockout, not complexity rules or rotation
 (which NIST shows weaken passwords):
 
 | Setting | Baseline | Why |

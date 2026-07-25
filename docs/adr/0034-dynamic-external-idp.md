@@ -10,7 +10,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-ADR-0002 fixed v1 as a static external-IdP set at the host level (configured at boot, for example Entra ID or Google shared across the host) and explicitly deferred dynamic per-tenant IdP "until a real B2B need arises, and then build a dynamic scheme provider". A design skeleton was left (following the dynamic-identity-providers / federation-gateway pattern of a commercial identity server: an identity-provider store plus a dynamic scheme provider), unscheduled. The v2 need (Nam, 2026-07-09) is for a tenant to define, from the admin, which external IdPs they want to integrate with their identity — self-service "bring-your-own-IdP" B2B — rather than a host-level hard assignment. This is a v2 scope, not part of the decision-complete v1.
+ADR-0002 fixed v1 as a static external-IdP set at the host level (configured at boot, for example Entra ID or Google shared across the host) and explicitly deferred dynamic per-tenant IdP "until a real B2B need arises, and then build a dynamic scheme provider". A design skeleton was left (following the dynamic-identity-providers / federation-gateway pattern of a commercial identity server: an identity-provider store plus a dynamic scheme provider), unscheduled. The v2 need (Nam, 2026-07-09) is for a tenant to define, from the admin, which external IdPs they want to integrate with their identity (self-service "bring-your-own-IdP" B2B) rather than a host-level hard assignment. This is a v2 scope, not part of the decision-complete v1.
 
 ## Decision Drivers
 
@@ -58,21 +58,21 @@ Impact on v1 is additive and non-breaking if the design constraints hold (decora
 
 ### Actor
 
-* **Delegated tenant-admin self-service (chosen)** — good, because it meets the real B2B need; bad, because it carries the heaviest threat model, which the design must center on.
-* **Product-operator only** — good, because it is safer; bad, because it is not true self-service.
-* **Hybrid (tenant enters, operator approves)** — good, because it balances the two; bad, because it adds workflow state.
+* **Delegated tenant-admin self-service (chosen)**: good, because it meets the real B2B need; bad, because it carries the heaviest threat model, which the design must center on.
+* **Product-operator only**: good, because it is safer; bad, because it is not true self-service.
+* **Hybrid (tenant enters, operator approves)**: good, because it balances the two; bad, because it adds workflow state.
 
 ### Protocol
 
-* **OIDC-only (chosen)** — good, because discovery covers nearly all enterprise IdPs and minimizes the SSRF surface; bad, because it excludes the rare non-OIDC B2B case.
-* **OIDC plus generic OAuth2** — good, because it is broader; bad, because it is rare for B2B SSO and adds manual-endpoint and claim-mapping complexity.
-* **SAML/WS-Fed** — good, because some enterprises still use it; bad, because it is a separate, larger effort, so it is out of scope here.
+* **OIDC-only (chosen)**: good, because discovery covers nearly all enterprise IdPs and minimizes the SSRF surface; bad, because it excludes the rare non-OIDC B2B case.
+* **OIDC plus generic OAuth2**: good, because it is broader; bad, because it is rare for B2B SSO and adds manual-endpoint and claim-mapping complexity.
+* **SAML/WS-Fed**: good, because some enterprises still use it; bad, because it is a separate, larger effort, so it is out of scope here.
 
 ### Runtime mechanism
 
-* **Dynamic scheme provider (chosen)** — good, because it is no-restart and lets the framework handler own the protocol; bad, because it is real machinery and needs spike A-8.
-* **Per-request proxy handler** — good, because it is conceptually simple; bad, because it fights the framework (swapping Authority/correlation per request) and is risky.
-* **Semi-dynamic config reload** — good, because it is close to the v1 static model; bad, because it is not real self-service from the database.
+* **Dynamic scheme provider (chosen)**: good, because it is no-restart and lets the framework handler own the protocol; bad, because it is real machinery and needs spike A-8.
+* **Per-request proxy handler**: good, because it is conceptually simple; bad, because it fights the framework (swapping Authority/correlation per request) and is risky.
+* **Semi-dynamic config reload**: good, because it is close to the v1 static model; bad, because it is not real self-service from the database.
 
 ## More Information
 

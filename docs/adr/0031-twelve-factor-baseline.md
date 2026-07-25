@@ -45,7 +45,7 @@ Chosen option: "An ADR plus a mapping document plus enforcement", adopting 12-fa
   * A health-probe test asserts that `/health/live` and `/health/ready` exist and that readiness fails without a key or database (from ADR-0025), plus a graceful-shutdown test that in-flight requests complete on SIGTERM.
   * An architecture/config test (ArchUnitNET) asserts that no secret is read from a baked-in file, that there is no file-sink logging in the container profile, and that a stateful background job registers through clustered Quartz rather than an unguarded `BackgroundService`.
   * A CI gate adds "12-factor checks" alongside the license-scan and contract-regression gates, and the reference image must declare `HEALTHCHECK`, run non-root, and read config from the environment (extending ADR-0025).
-* **D. Versioning management (Factor V and XIII, the part emphasized):** a release is an immutable, version-identified artifact (build/release/run separated, ADR-0025); published packages use SemVer with the public-API analyzers (ADR-0027); dependencies are pinned lock-step via CPM (ADR-0026); and the target-framework/runtime version follows ADR-0030 — giving consumers a clear version story.
+* **D. Versioning management (Factor V and XIII, the part emphasized):** a release is an immutable, version-identified artifact (build/release/run separated, ADR-0025); published packages use SemVer with the public-API analyzers (ADR-0027); dependencies are pinned lock-step via CPM (ADR-0026); and the target-framework/runtime version follows ADR-0030, giving consumers a clear version story.
 
 ### Consequences
 
