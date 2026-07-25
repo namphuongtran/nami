@@ -46,6 +46,8 @@ question. Each topic is one file.
 | File | Topic | Covers |
 |---|---|---|
 | [07-cross-cutting](07-cross-cutting.md) | Concerns that span every container | Tenancy, security, observability, configuration |
+| [13-reliability-backup-and-dr](13-reliability-backup-and-dr.md) | Behaviour under failure, and the cost of getting back | High availability, resiliency, per-store recovery objectives, backup, DR drills |
+| [16-operations-and-maintenance](16-operations-and-maintenance.md) | Running it and keeping it healthy | Runbooks, background jobs, key operations, the two break-glass paths, upgrade cadence |
 
 ### Decisions and evolution
 
