@@ -11,7 +11,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-OpenIddict enforces encryption by default: the access token is a JWE, and the authorization code, refresh token, and device code are JWEs that **cannot be turned off**. Nami therefore needs **both** a signing key and an encryption key. An early rotation plan applied one shared retention rule to "the cert": remove it once the tokens it signed have expired. That rule is correct for a *signing* key but wrong and dangerous for an *encryption* key: removing an encryption key while live refresh-token, authorization-code, or device-code JWEs still reference it destroys the ability to decrypt them, which kills those artifacts — users are logged out and redeems fail. Should the two credentials share one lifecycle, or be tracked separately?
+OpenIddict enforces encryption by default: the access token is a JWE, and the authorization code, refresh token, and device code are JWEs that **cannot be turned off**. Nami therefore needs **both** a signing key and an encryption key. An early rotation plan applied one shared retention rule to "the cert": remove it once the tokens it signed have expired. That rule is correct for a *signing* key but wrong and dangerous for an *encryption* key: removing an encryption key while live refresh-token, authorization-code, or device-code JWEs still reference it destroys the ability to decrypt them, which kills those artifacts: users are logged out and redeems fail. Should the two credentials share one lifecycle, or be tracked separately?
 
 ## Decision Drivers
 
@@ -57,7 +57,7 @@ Fixed parameters of the decision:
 
 One retention rule ("retire the cert once its signed tokens expire") applied to both keys.
 
-* Good, because it is the simplest model — one timeline, one guard.
+* Good, because it is the simplest model: one timeline, one guard.
 * Bad, because it retires the encryption key on the signing key's schedule and destroys live JWE refresh tokens, authorization codes, and device codes, logging users out and failing redeems.
 
 ### Separate lifecycles (chosen)
@@ -71,5 +71,5 @@ Track the encryption credential independently with a retention floor set by the 
 
 * Original decision: 2026-06-28. `DisableAccessTokenEncryption()` was confirmed enabled (plain signed access-token JWT) with a minimal claim set; the 8-hour refresh-token ceiling (ADR-0004) is the upper bound that sets the encryption retention floor at roughly 8 hours plus margin.
 * Rationale for the plain access token: it removes per-request JWE decryption CPU on first-party resource servers and eases debugging, while refresh tokens, authorization codes, and device codes stay JWE.
-* Related decisions: ADR-0001 (tiered key-set scope), ADR-0004 (8-hour refresh-token ceiling, the retention-floor upper bound), ADR-0006 (disaster recovery for the key material), ADR-0007 (key-compromise runbook), ADR-0011 (no-restart key rotation), ADR-0033 (key-scope isolation model).
-* Imported into this repository and translated in 2026-07; content preserved, internal references generalized.
+* Related decisions: ADR-0001 (tiered key-set scope), ADR-0004 (8-hour refresh-token ceiling, the retention-floor upper bound), ADR-0006 (disaster recovery for the key material), ADR-0007 (key-compromise runbook), ADR-0011 (no-restart key rotation), ADR-0033 (key-scope isolation model, whose finding **F49** records that encryption and JWE keys follow the same Option B model as signing keys, so a Silo tenant has its own encryption key-set and Pool tenants share the pool-group one).
+* Imported into this repository and translated in 2026-07, then reconciled against the design corpus on 2026-07-25 to carry the ADR-0033 finding label F49 that ties the encryption key-set to the same tier-aligned scope model.
