@@ -301,7 +301,7 @@ as binds are fine and do not defeat the index.
 |---|---|---|---|
 | EntryId | uuid | PK | UUIDv7 |
 | Timestamp | timestamptz | | when the event occurred |
-| PrevHash / RecordHash | bytea | | hash-chain; `RecordHash` = HMAC over canonical(fields) then `PrevHash`; the genesis `PrevHash` is 32 zero bytes (not a string) |
+| PrevHash / RecordHash | bytea | | hash-chain; `RecordHash` = `HMAC_k(PrevHash \|\| canonical(fields))`, prev-first per ADR-0008; the genesis `PrevHash` is 32 zero bytes (not a string) |
 | Payload_Canonical | text | | canonical form hashed (jsonb does not preserve bytes) |
 | ActorSub / OnBehalfOfSubject / ApproverSub / ActorChain_JSON | text / jsonb | | all subject-bearing identifiers stored as per-subject ciphertext (crypto-shreddable) |
 | EventType / TargetTenantId / Result / CorrelationId | text | | event classification and correlation |

@@ -90,22 +90,25 @@ The typed catalog covers success **and** the negative paths: `login_success`,
 `mass_revoke`, `key_purge`, `erasure`, `degraded_mode_enabled`, `break_glass`,
 `client_auth_failure`, and `unhandled_exception`. Each event type has a fixed payload
 schema and feeds the abuse-alert rules (14). The consent receipt (`consent_grant`, with
-`consent_revoke` on revoke) carries a fixed payload — subject, `client_id`, tenant,
+`consent_revoke` on revoke) carries a fixed payload: subject, `client_id`, tenant,
 scope set, purpose, legal basis, `policy_version_hash`, consent timestamp, UI locale, and
-method — as the immutable historical record, distinct from the mutable `Authorization`
+method, as the immutable historical record, distinct from the mutable `Authorization`
 state (ADR-0053, 13). On erasure the saga appends a `subject.erased` tombstone (subject
 ref, erased fields, retained-under basis) as chained proof-of-erasure; the wider
 data-subject-rights event set (rectification, restriction, DSAR fulfilment) is owned by 13.
 
 ### Hash-chain
 
-Each record carries `RecordHash`, an HMAC/SHA-256 over a canonical TEXT
-serialization of the payload followed by the previous record's hash, that is
-`HMAC/SHA-256(canonical(fields) || PrevHash)`, with the genesis `PrevHash` a
-32-byte zero; the concatenation order matches the schema definition in
-[02-data](02-data.md) so the writer and verifier agree byte-for-byte. The canonical form is hashed separately
+Each record carries `RecordHash`, an HMAC/SHA-256 over the previous record's hash
+followed by a canonical TEXT serialization of the payload, that is
+`HMAC_k(PrevHash || canonical(fields))`, with the genesis `PrevHash` a
+32-byte zero. The operand order is **prev-first** and is fixed by ADR-0008: it is the
+standard hash-chain convention, so an independent verifier can reproduce the chain, and
+it must match the schema definition in [02-data](02-data.md) byte-for-byte or the
+verify-chain job will report false breaks. The canonical form is hashed separately
 because `jsonb` does not preserve input bytes. The HMAC key is resolved through
-`ISecretResolver` (ADR-0009) so the application, not a table editor, holds it.
+`ISecretResolver` (ADR-0009) so the application, not a table editor, holds it, which is
+what makes the chain resistant to someone with database write access.
 Storage is append-only: INSERT grant only, with `REVOKE UPDATE/DELETE/TRUNCATE` plus a block trigger;
 because a superuser can still tamper with storage, the hash-chain plus an external
 WORM anchor is what actually provides tamper-evidence, not the grants alone.
@@ -190,7 +193,7 @@ Named per ADR-0066 (a vocabulary, applied where it clarifies intent):
 
 No new tables of its own beyond the `AuditLog` in [02-data](02-data.md). Forwarding
 follows the transactional-outbox pattern (the chassis of 07); its audit forward-queue
-table is a schema item to add in 02 — ADR-0008 mandates the outbox forwarder but the
+table is a schema item to add in 02: ADR-0008 mandates the outbox forwarder but the
 corpus does not specify its DDL, so it is an open build-time item (below). The schema
 constraint this design depends on: all subject-bearing columns (`ActorSub`,
 `OnBehalfOfSubject`, `ApproverSub`, and the `ActorChain_JSON` delegation chain) are
@@ -221,7 +224,7 @@ sequenceDiagram
   participant AL as AuditLog
   H->>Tx: begin, perform the action
   H->>AL: append critical event, chained to PrevHash
-  Note over AL: RecordHash is keyed HMAC over the canonical payload then PrevHash
+  Note over AL: RecordHash is keyed HMAC over PrevHash then the canonical payload
   H->>Tx: commit action and audit together
   alt audit append fails
     Tx-->>H: rollback, action fails closed
