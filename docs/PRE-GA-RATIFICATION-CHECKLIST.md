@@ -35,6 +35,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 - ☐ Root-cert provisioning/rotation ceremony; per-environment cloud-protector adapter ([ADR-0012](adr/0012-key-bootstrap-and-dr-sequence.md))
 - ☐ Public reference-host decision (owner / hosting / patch-cadence / cost) versus local-Docker-only ([ADR-0027](adr/0027-packaging-and-distribution.md))
 - ☐ Change-event publishing (v2): broker sizing, dead-letter policy, and alerting; confirm the single-stream topology once real tenant numbers exist ([ADR-0071](adr/0071-identity-change-event-publishing.md))
+- ☐ Edge posture: the concrete L7 edge stack (WAF, CDN, or reverse proxy) assumed in front of the reference deployment, or the Kestrel-hardening fallback where it is deployed direct to the internet ([architecture/09-drivers-and-constraints](architecture/09-drivers-and-constraints.md) section 4.2; this is an architecture-level assumption with no ADR of record yet, so it also needs a decision on whether to promote it to one)
 
 ## Product / Ops
 

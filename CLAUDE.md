@@ -100,7 +100,10 @@ These are legal/OSS constraints and the CI guardrail + local hook enforce parts 
 Neutral, public, run by CI (`adr-guardrail` job) and the local hook. Five checks:
 placeholder tokens, ADR cross-reference integrity, index/status consistency,
 ADR-0061 stack-of-record table membership (bidirectional), and the no-em-dash style
-rule across all tracked markdown. The em-dash pattern is built from its codepoint so
+rule. Checks 1, 2, and 5 read **all tracked markdown**, not just `docs/adr/`: the
+architecture and design layers cite far more ADR numbers than the ADRs do, and a
+number that resolves nowhere is the same defect wherever it is written. Checks 3 and
+4 are ADR-corpus-scoped by nature. The em-dash pattern is built from its codepoint so
 the script stays pure ASCII and cannot trip its own check.
 It is written for **portability to macOS bash 3.2 and the Ubuntu runner**: no
 `mapfile`, no associative arrays, no GNU-only flags; ADR enumeration uses on-disk
@@ -110,6 +113,11 @@ globs. Preserve that portability if you edit it. The local hook
 ## Docs layout and the KB boundary
 
 - `docs/adr/`, settled decisions (MADR). One decision → one ADR.
+- `docs/architecture/`, the SAD: the coherent picture across views (C4 L1-L3, runtime,
+  data, quality/operational, supporting). It **never** introduces a decision; it
+  synthesizes the ADRs and points into the designs, and it is the bug when it
+  disagrees with either. Numbering is stable once other files link to a page.
+- `docs/design/`, per-feature detailed designs, the authority for implementation detail.
 - `docs/kb/notes/`, a lesson, how-something-works, or gotcha that is **not** a decision.
 - `docs/kb/research/`, deeper investigation, usually preceding an ADR, linking to it.
 - KB files use their own frontmatter (`title`, `tags`, `created`, `related`), no H1,

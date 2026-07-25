@@ -1,125 +1,187 @@
 ---
 status: reviewed
 created: 2026-07-18
-tags: [architecture, sad, c4, overview]
+tags: [architecture, sad, c4, arc42, overview]
 ---
 
-# Nami Software Architecture Overview
+# Nami Software Architecture Document (SAD)
 
-A high-level, diagram-first view of what Nami is and how it is built, meant to be
-understood quickly by an architect, a CTO, or a new contributor. It synthesizes
-the decisions recorded in the [ADR corpus](../adr/README.md); the ADRs remain the
-authority. Where this overview and an accepted ADR ever disagree, the ADR wins and
-this page is the bug.
+**System:** Nami, an open-source multi-tenant OAuth 2.0 / OpenID Connect identity
+provider for .NET, built on OpenIddict 7.5 and .NET 10, released under Apache-2.0.
 
-> Status: reviewed. A living overview kept in sync with the ADR corpus, which
-> remains the authority. The C4 model is used at Level 1 (context), Level 2
-> (containers), and Level 3 (the IdP core). Diagrams are Mermaid and render on
-> GitHub. Assembly and package names follow ADR-0065.
+**Notation:** the [C4 model](https://c4model.com) at Levels 1 to 3, plus supporting
+sequence, ER, and deployment diagrams, all rendered as Mermaid.
 
-## How this document is organized
+**Structure:** an arc42-flavored, ISO/IEC/IEEE 42010-conformant architecture
+description: structural views (C4), quality and operational views, a decisions
+index, and supporting views (stakeholders and concerns, risks and technical debt,
+threat model, glossary).
 
-| View | Page | Contents |
+This folder is the **architecture layer** of the repository. It gives the decisions
+in [`docs/adr/`](../adr/README.md) and the detail in [`docs/design/`](../design/README.md)
+a single coherent picture. It does not replace either: it points into them as the
+authoritative source, and where it disagrees with one of them, this layer is the bug.
+
+## 1. How to read this SAD
+
+Read top to bottom for the full picture, or jump to the view that answers your
+question. Each topic is one file.
+
+### Structural views (what the system is)
+
+| File | Topic | C4 / diagram |
 |---|---|---|
-| Context (C4 L1) | [01-context](01-context.md) | Actors and external systems around Nami |
-| Domain | [02-domain](02-domain.md) | Bounded contexts and the ubiquitous language |
-| Containers (C4 L2) | [03-containers](03-containers.md) | The host processes, package graph, and datastores |
-| Components (C4 L3) | [04-components](04-components.md) | The IdP core internals and its subsystems |
-| Data | [05-data](05-data.md) | The logical data model across the four contexts |
-| Runtime views | [06-runtime-views](06-runtime-views.md) | Key end-to-end sequences |
-| Cross-cutting | [07-cross-cutting](07-cross-cutting.md) | Concerns that span every container |
-| Deployment | [08-deployment](08-deployment.md) | Topology, HA, and the edge |
+| [00-introduction-and-scope](00-introduction-and-scope.md) | Introduction, scope, and what is deliberately out of it | - |
+| [09-drivers-and-constraints](09-drivers-and-constraints.md) | Architecture drivers, quality targets, and hard constraints | - |
+| [01-context](01-context.md) | System context: actors and external systems | C4 L1 |
+| [02-domain](02-domain.md) | Bounded contexts and the ubiquitous language | - |
+| [03-containers](03-containers.md) | Host processes, package graph, and datastores | C4 L2 |
+| [04-components](04-components.md) | The IdP core internals and its subsystems | C4 L3 |
+| [06-runtime-views](06-runtime-views.md) | Key end-to-end sequences | Sequence |
+| [05-data](05-data.md) | Logical data model and database topology | ER + flow |
+| [08-deployment](08-deployment.md) | Topology, HA, and the edge | Deployment |
 
-## 1. Purpose and positioning
+### Quality and operational views (how the system behaves)
 
-Nami is an open-source, multi-tenant OAuth 2.0 and OpenID Connect identity
-provider for .NET, built on OpenIddict, and released under Apache-2.0. It is a
-permissive alternative to the commercial identity servers. The protocol engine is
-OpenIddict, which Nami never hand-rolls; Nami's value is the opinionated,
-batteries-included layer on top: multi-tenancy, delegated administration,
-no-restart key rotation, administration, cloud-agnostic adapters, observability,
-and configuration developer-experience (ADR-0027).
+| File | Topic | Covers |
+|---|---|---|
+| [07-cross-cutting](07-cross-cutting.md) | Concerns that span every container | Tenancy, security, observability, configuration |
 
-The architecture matches commercial-grade coverage on the common surface
-(authorization code with PKCE, client credentials, refresh, device flow, PAR,
-introspection, revocation, mTLS and DPoP sender-constrained tokens, passkeys,
-server-side sessions, back-channel logout) and leads on three things that are
-first-class here by design:
+### Decisions and evolution
 
-* **Native multi-tenancy**: tiered Pool and Silo isolation with a delegated
-  administration model (ADR-0001, ADR-0010, ADR-0033).
-* **No-restart key rotation**: signing and encryption keys rotate without a
-  process restart, with provider-agnostic disaster recovery (ADR-0011, ADR-0012,
-  ADR-0006).
-* **Cloud-agnostic ports**: key store, secret store, data protection, email, and
-  observability sit behind ports whose default runs offline on PostgreSQL with no
-  cloud dependency (ADR-0006, ADR-0009, ADR-0038, ADR-0022).
+| File | Topic | Covers |
+|---|---|---|
+| [`../adr/README.md`](../adr/README.md) | The ADR corpus | Every decision of record, with context and rationale |
 
-## 2. Non-goals for v1
+> The remaining quality and operational views (NFR catalogue, security,
+> performance, reliability and DR, schema migration, observability, operations),
+> the decisions index and v2 evolution view, and the supporting views
+> (stakeholders and concerns, risks and technical debt, threat model, glossary)
+> are being added in sequence. This index gains a row in the same change that adds
+> the file, so what is listed here always exists.
 
-Deliberately out of scope for the first release, each with an owning decision:
-SAML 2.0 and WS-Federation (proposed, ADR-0055), FAPI 2.0 high-assurance profiles
-(proposed, ADR-0056), Windows integrated authentication (proposed, ADR-0057),
-CIBA (skipped, ADR-0014), the standards DCR endpoint (waits for the OpenIddict 8.0
-native implementation), front-channel logout and `check_session_iframe` (dropped,
-ADR-0019), and JARM, RAR, and EdDSA (de-scoped, ADR-0014). Dynamic per-tenant
-federation (ADR-0034) and self-service client registration (ADR-0035) are planned
-additive features for v2 and v2.1.
+Numbering is stable: a file keeps its number once other documents link to it, so
+the reading order above is set by this index rather than by the filenames.
 
-## 3. Architecture principles
+## 2. C4 legend
 
-The structure follows a small set of binding principles (ADR-0058, ADR-0024):
+The SAD uses four abstraction levels of the C4 model and stops at Level 3:
 
-* **Hexagonal shell, vertical slices inside.** A dependency rule with ports and
-  adapters only at the infrastructure edge; feature logic is organized as vertical
-  slices, not technical-layer folders.
-* **One extension mechanism for the protocol.** Custom protocol behavior is an
-  inserted OpenIddict event handler at a named, order-anchored position, never a
-  fork of the engine (ADR-0021, ADR-0024).
-* **Managers, not stores.** Application code depends on `IOpenIddict*Manager`
-  facades, never on the underlying stores or `DbContext` directly.
-* **Deny by default on claims.** A single claims choke-point emits nothing to a
-  token unless explicitly declared for a destination (ADR-0005).
-* **Isolate tenants in two layers.** An EF query filter is the primary control;
-  PostgreSQL FORCE row-level security is the backstop (ADR-0001, ADR-0049).
-* **Audit is a separate lane.** A tamper-evident hash-chain audit trail is kept
-  strictly apart from operational logging and telemetry (ADR-0008, ADR-0022).
-* **Version-adaptation is first-class.** Every dependency on OpenIddict, EF Core,
-  Npgsql, and Finbuckle internals is a catalogued seam with a contract-regression
-  test, re-verified on every bump (ADR-0021).
-* **Permissive dependencies only.** MIT, Apache-2.0, or BSD-class, enforced by a
-  license-scan gate (ADR-0026). The committed stack of record is ADR-0061.
+- **Level 1, System Context** ([01-context](01-context.md)): Nami as one box, with
+  the people and external systems it interacts with. Audience: everyone.
+- **Level 2, Container** ([03-containers](03-containers.md)): the separately
+  deployable or runnable units (the IdP host, Admin API, Admin App and BFF,
+  databases, cache, message broker) and how they communicate. Audience: architects
+  and operators.
+- **Level 3, Component** ([04-components](04-components.md)): the major building
+  blocks inside the important containers (protocol pipeline, tenant resolution,
+  key-rotation service, admin security module, outbox relay). Audience: developers.
+- **Level 4, Code** is deliberately **out of scope** for this layer. Class-level and
+  field-level detail belongs to the detailed designs in
+  [`docs/design/`](../design/README.md).
 
-## 4. Diagram conventions
+Structural views are drawn as **styled Mermaid flowcharts that follow C4 levels and
+semantics**, rather than the C4-specific Mermaid diagram type, which renders cramped
+and cannot be coloured consistently. Every diagram shares one colour system, the
+classic C4 blue palette, so a reader never has to ask what a box is.
 
-Every diagram uses the same C4-semantic colour key:
+**Visual conventions, consistent across every diagram here:**
+
+- A solid arrow is a synchronous call. A dashed arrow is an asynchronous or event
+  flow, or an optional or v2 relationship. The arrow label states the protocol or
+  the intent.
+- Shape and colour carry fixed meaning:
 
 ```mermaid
 graph LR
-  P([Person]):::person
-  S[Software system or host]:::host
+  P([Person or actor]):::person
+  H[Our system, container, or host]:::host
   C[Component]:::comp
   D[(Datastore)]:::store
-  E[External system]:::ext
+  X[External system]:::ext
+  O[Optional, not required for v1]:::optional
+  V[v2 evolution]:::v2
+
   classDef person fill:#08427b,stroke:#052e56,color:#ffffff
   classDef host fill:#1168bd,stroke:#0b4884,color:#ffffff
   classDef comp fill:#85bbf0,stroke:#5d82a8,color:#000000
   classDef store fill:#438dd5,stroke:#2e6295,color:#ffffff
   classDef ext fill:#999999,stroke:#6b6b6b,color:#ffffff
+  classDef v2 fill:#7b4fa0,stroke:#54356f,color:#ffffff,stroke-dasharray:5 4
+  classDef optional fill:#cfd8dc,stroke:#90a4ae,color:#1a2b34,stroke-dasharray:5 4
 ```
 
-## 5. Decision references
+| Class | Colour and shape | Meaning |
+|---|---|---|
+| `person` | Dark blue stadium | Person, actor, or role |
+| `host` | Medium blue rectangle | Our system, container, or host |
+| `comp` | Light blue rectangle | A component inside a container (C4 L3) |
+| `store` | Blue cylinder | Datastore (database or cache) |
+| `ext` | Grey rectangle | External system (not ours) |
+| `v2` | Purple dashed | v2 evolution, kill-switched off in v1 |
+| `optional` | Slate dashed | Optional, not required for v1 |
 
-This overview is a synthesis. The authority for every choice is the
-[ADR corpus](../adr/README.md); the committed technology stack with its selection
-rules is [ADR-0061](../adr/0061-technology-stack-of-record.md); the naming and
-package conventions are [ADR-0065](../adr/0065-coding-and-naming-conventions.md);
-and deferred policy and sign-off items are consolidated in the
-[Pre-GA Ratification Checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
+Subgraphs mark a system boundary or the container being decomposed. Node labels stay
+short so nothing overlaps; the detail lives in the table beneath each diagram.
 
-Detailed per-feature designs and the phased implementation roadmap will be added
-alongside these pages as separate deliverables.
+## 3. Where this layer sits (authority order)
+
+```text
+docs/adr/                            decisions and why      (authority for a decision)
+        |
+docs/design/                         per-feature detail     (authority for how it is built)
+        |
+docs/architecture/  <- THIS LAYER    the coherent picture across all views
+        |
+docs/kb/                             evidence and lessons   (how we know)
+docs/PRE-GA-RATIFICATION-CHECKLIST.md  the deferred human sign-offs
+```
+
+Authority runs upward, not downward:
+
+- For a **decision**, an accepted ADR is the authority and is binding until
+  superseded. If this layer contradicts one, this layer is corrected.
+- For **implementation detail**, the detailed design is the authority. If this layer
+  contradicts one, this layer is corrected.
+- This layer **never introduces a decision** that is not already recorded in an ADR.
+  Where a topic it must cover is genuinely undecided, it is labelled an open item
+  and, if a human owner must settle it, mirrored into the
+  [pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
+
+## 4. Verification discipline
+
+Every file here follows the repository conventions in
+[`CLAUDE.md`](../../CLAUDE.md), in particular:
+
+1. **Read the whole relevant set first.** For each topic, the ADR of record, the
+   detailed design, and the supporting evidence are enumerated and read in full, not
+   sampled.
+2. **Verify before asserting, and cite or research.** A claim is reconciled against
+   the ADR of record and, where it is externally checkable (an RFC, a package
+   version, a database behaviour), against the primary source. No claim is written
+   here without a source, and where two sources disagree the disagreement is
+   resolved at the primary source rather than by preferring one document.
+3. **Flag what is not settled.** An optional lever, an unratified number, or a
+   compliance question is labelled as such rather than presented as decided. A
+   read-replica read/write split, for example, is an optional scale lever and not a
+   v1 requirement.
+4. **Every file ends with a `Sources` section** naming the exact documents it
+   derives from. ADR cross-references are machine-checked by
+   [`scripts/check-adrs.sh`](../../scripts/check-adrs.sh), so an `ADR-NNNN` written
+   here must resolve to a real ADR.
+
+## 5. Scope of claims
+
+This is a **technical architecture description**. It asserts no legal or regulatory
+compliance: no statement here is a verdict on GDPR, on a data-residency regime, or
+on any other legal obligation. Those verdicts belong to the Legal and
+data-protection owners of whoever deploys Nami, and the sign-offs this project
+defers to a human owner are consolidated in the
+[pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
+
+Nami is an independent open-source project. Names of third-party projects,
+standards bodies, and packages appear only for factual identification.
 
 ---
 
-Next: [Context (C4 L1) →](01-context.md)
+Next: [Introduction and scope](00-introduction-and-scope.md)

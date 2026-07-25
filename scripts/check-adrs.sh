@@ -11,7 +11,9 @@
 # word-split intentionally; see the plan for the `-z` fallback if that changes.
 # ADR-file existence/enumeration (Checks 2-3) uses on-disk globs, not git
 # ls-files: identical to CI's tracked-only checkout, and locally it also
-# surfaces an untracked ADR before it is committed.
+# surfaces an untracked ADR before it is committed. Where a check reads
+# *references* rather than ADR files (Checks 1, 2, 5) the input is the tracked
+# markdown set, so a dangling ADR number is caught in any layer that cites one.
 set -uo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
@@ -27,12 +29,14 @@ if [ -n "$ph" ]; then
   while IFS= read -r l; do add "placeholder token: $l"; done <<< "$ph"
 fi
 
-# --- Check 2: ADR cross-reference integrity ---
-adr_md=$(git ls-files 'docs/adr/*.md')
-nums=$(grep -hoE 'ADR-[0-9]{4}' $adr_md 2>/dev/null | sed 's/ADR-//' | sort -u)
+# --- Check 2: ADR cross-reference integrity (all tracked markdown) ---
+# Scope is every tracked markdown file, not just docs/adr: the architecture and
+# detailed-design layers carry far more ADR references than the ADRs do, and an
+# ADR number that resolves nowhere is the same defect wherever it is written.
+nums=$(grep -hoE 'ADR-[0-9]{4}' $md 2>/dev/null | sed 's/ADR-//' | sort -u)
 for n in $nums; do
   if ! ls docs/adr/${n}-*.md >/dev/null 2>&1; then
-    locs=$(grep -nE "ADR-${n}" $adr_md 2>/dev/null || true)
+    locs=$(grep -nE "ADR-${n}" $md 2>/dev/null || true)
     while IFS= read -r l; do add "dangling ADR-${n} -> $l"; done <<< "$locs"
   fi
 done
