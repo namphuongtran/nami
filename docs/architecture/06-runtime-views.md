@@ -127,7 +127,7 @@ Announce, publish-before-sign, promote, rebuild credentials with no restart
 ```mermaid
 sequenceDiagram
   autonumber
-  participant Q as KeyRotationHostedService, one clustered runner
+  participant Q as KeyRotationHostedService, clustered, one trigger fires
   participant KS as ISigningKeyStore
   participant OM as Custom IOptionsMonitor
   participant JWKS as JWKS and discovery
@@ -147,8 +147,12 @@ sequenceDiagram
 clients cache JWKS (12-hour default refresh, 5-minute floor, out-of-band refresh on an
 unknown `kid`), so 14 days is a large safety margin rather than a tight fit. A key is
 **published before it signs**, and a retired key **stays in the JWKS** for its
-retention window, so in-flight tokens never fail validation. Exactly one clustered
-runner rotates, so nothing double-runs (ADR-0031).
+retention window, so in-flight tokens never fail validation. Rotation runs **in-process on
+every replica**, and clustering is what makes that safe: every replica has a scheduler and
+**exactly one replica's trigger fires**, which is not the same as there being one runner
+process. Rotation additionally takes a database advisory lock as an **independent** barrier,
+because two simultaneously active signing keys is a corruption rather than a hiccup and that
+guarantee must not rest on the scheduler's correctness alone (ADR-0031).
 
 Publish-before-sign has **one deliberate exception, key #1**. At genesis there is no
 active key and nothing cached to protect, so the propagation window is vacuous and the

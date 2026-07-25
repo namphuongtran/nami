@@ -29,8 +29,7 @@ graph TB
     idp[Identity host<br/>OIDC endpoints, login/consent/logout UI]:::host
     aapi[Admin API<br/>REST admin, RBAC, dual-control saga]:::host
     aapp[Admin App / BFF<br/>MVC Razor, user token stays server-side]:::host
-    run[Background runner<br/>Quartz clustered: prune and rotate]:::host
-    dr[Delivery relay v1<br/>email and back-channel-logout outbox drain]:::host
+    prune[Prune invocation<br/>own process, prune mode, off the request path]:::host
     relay[Outbox relay v2<br/>drains the change-event outbox]:::v2
     opdb[(Operational store<br/>applications, authorizations, tokens<br/>tenant-scoped)]:::store
     iddb[(Identity store<br/>users and roles, global)]:::store
@@ -49,8 +48,8 @@ graph TB
   idp -->|federated sign-in| extidp
   idp --> opdb & iddb & cpdb & dpdb & redis
   aapi --> opdb & iddb & cpdb
-  run -->|prune, rotate| opdb & dpdb
-  dr -->|drain email and logout outboxes| cpdb & iddb
+  prune -->|bulk delete per tenant| opdb
+  idp -->|rotate keys, drain outboxes, in-process| cpdb & dpdb
   relay -->|drain| cpdb
   relay -.->|CloudEvents| broker
 
@@ -74,9 +73,23 @@ boundary. The consumer-side **BFF** is likewise the consumer's deployment, not N
 | **Identity host** (`Nami.Identity.Host`) | ASP.NET Core, flat host (ADR-0024) | The authorization server: every OAuth2 and OIDC endpoint plus the Razor Pages login, consent, and logout UI (ADR-0072) | Stateless, no sticky session, multi-instance and multi-zone. Readiness gated on keys-loaded. The access token is a plain signed JWT (`at+jwt`, ADR-0005) |
 | **Admin API** (`Nami.Identity.Admin.Api`) | ASP.NET Core REST | Administration over the managers: clients, scopes, users, roles, tenants, memberships, delegated admins | Requires an actor and rejects app-only tokens; the dual-control saga is enforced server-side; capability policies plus step-up (RFC 9470); `ProblemDetails` errors. The application layer is a folder inside, not a separate project (ADR-0020) |
 | **Admin App / BFF** (`Nami.Identity.Admin.App`) | MVC Razor plus `Duende.AccessTokenManagement.OpenIdConnect` (Apache-2.0) | The admin front end | The user-delegated access token is held server-side and never reaches the browser; approval inbox and audit viewer; step-up carried end to end (ADR-0020, ADR-0029) |
-| **Background runner** | Quartz.NET, clustered | Token and authorization pruning, and the key-rotation trigger | **Exactly one** clustered runner, so nothing double-runs; it iterates tenants (a Pool filter, or a per-Silo connection) because tenant-partitioned data cannot be pruned in one global pass; emits a last-successful-run heartbeat for alerting (ADR-0011, ADR-0031) |
-| **Delivery relay (v1)** | .NET `BackgroundService` | Drains the **v1** delivery outboxes: email, and back-channel logout | At-least-once with retry, backoff, and a dead-letter path; `FOR UPDATE SKIP LOCKED` for multi-node drains; per-recipient throttle degrades to an in-process bucket rather than switching off. One relay polls both outboxes, and it may co-host with the identity host or run standalone (ADR-0038, ADR-0019) |
+| **Prune invocation** | The same image in `prune` mode (ADR-0027) | Bulk deletion of expired tokens and authorizations | The **only** background job deliberately kept off the request-serving path, because it iterates every tenant (a Pool filter, or a per-Silo connection) and issues bulk deletes, so co-hosting it would put a scheduled latency spike on one replica while the load balancer treats all replicas as equal. Invoked on a platform-owned schedule, not a hosted service in `serve` mode; its retention floor must exceed the longest refresh lifetime (ADR-0031, ADR-0004) |
 | **Outbox relay (v2)** | .NET worker | Drains the change-event outbox to the broker | v2 only, kill-switched off in v1. At-least-once with consumer-side idempotency; ordered by an IDENTITY `seq` column and **not** by the UUIDv7 key, which is not monotonic within a millisecond; `FOR UPDATE SKIP LOCKED` for multi-node (ADR-0071, ADR-0036) |
+
+**Most background work is not a container, and that is a decision rather than an omission.**
+ADR-0031 sanctions exactly three patterns for it, and only the third produces a separate
+process:
+
+* **Key rotation** runs **in-process on every identity-host replica**, through the clustered
+  scheduler. Clustering does not mean one runner process exists; it means every replica has a
+  scheduler and **exactly one replica's trigger fires**. Rotation additionally takes a
+  database advisory lock as an independent barrier, because two simultaneously active signing
+  keys is a corruption and that guarantee must not rest on the scheduler alone (ADR-0011).
+* **The v1 delivery relays** (email, and back-channel logout) also run **in-process on every
+  replica**, and need no leader at all: they claim rows with `FOR UPDATE SKIP LOCKED` and are
+  idempotent per row, so N replicas simply drain faster. Giving them their own replica set is
+  an operator knob for resource isolation, not a correctness requirement (ADR-0038, ADR-0019).
+* **The prune job** is the one exception, and it is in the table above.
 
 **`Nami.Identity` and `Nami.Identity.Host` are deliberately different things**, and the
 distinction is what makes both consumption stories work (ADR-0027, ADR-0065):
@@ -238,12 +251,18 @@ database-backed store, so the product runs with no cloud dependency at all (ADR-
   and ADR-0019 (the email and back-channel-logout outboxes the v1 relay drains), ADR-0071
   and ADR-0036 (the v2 relay and why ordering uses a `seq` column, not the UUIDv7 key),
   ADR-0028 (user management).
-* Reconciled against the design corpus's container view on 2026-07-25. The corpus supplied
-  three real gaps this view had: the **background runner** and the **v1 delivery relay** as
-  first-class runnable hosts rather than invisible in-process work, and the four stores
-  drawn separately instead of as one database box. Three things were corrected rather than
-  imported: the corpus names the host assembly `Nami.Identity.Host`, which is not in the
-  ADR-0065 ratified set and is not adopted; the corpus's sub-package names are not ratified
+* Reconciled against the design corpus's container view on 2026-07-25, then corrected on the
+  same day. The corpus supplied two real gaps this view had: **background work made visible
+  rather than left implicit**, and the four stores drawn separately instead of as one database
+  box. The first was initially imported wrongly, as a "background runner" and a "delivery
+  relay" drawn as separate runnable hosts with the note "exactly one clustered runner". That
+  **misdescribes the mechanism** ADR-0031 fixes: clustering gives every replica a scheduler
+  and lets exactly one trigger fire, so there is no single runner process, and the relays are
+  safe at any replica count through `SKIP LOCKED` rather than through a leader. Corrected to
+  in-process work on every replica, with only the prune job as its own process. The same pass
+  widened ADR-0031's Factor VIII invariant from one pattern to three, because as written it
+  would have condemned the relays it was never meant to reach. Two further things were
+  corrected rather than imported: the corpus's sub-package names are not ratified
   here, so only the axes of the split are described; and this repository's own earlier
   statement that PgBouncer is "mandatory in transaction mode for Silo" **overstated
   ADR-0018 and ADR-0037**, which make it conditional on Silo scale and add a
