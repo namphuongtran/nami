@@ -31,3 +31,15 @@ is never committed, so nothing sensitive is published.
 
 Terms are matched case-insensitively as whole words; use plain names and avoid
 regular-expression metacharacters.
+
+An optional companion file, `scripts/.local/name-allowlist`, exempts exact
+identifiers that legitimately contain a denied term. The motivating case is an OSS
+package the project actually depends on: a dependency record that hides the package
+identifier is factually wrong and cannot drive the license-scan gate of
+[ADR-0026](../docs/adr/0026-dependency-license-policy.md), while product comparison
+and rejected commercial packages must still be generalized. For each denied term the
+hook blanks every allowlisted identifier out of the matched lines and re-tests, so a
+line that matched only because of an allowed identifier passes, and a line that also
+carries a genuine mention still blocks. Allowlist entries are matched
+**case-sensitively**: write package identifiers in their canonical casing, which is
+also what the license scan needs.

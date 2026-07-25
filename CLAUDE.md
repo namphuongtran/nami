@@ -73,6 +73,19 @@ These are legal/OSS constraints and the CI guardrail + local hook enforce parts 
   (`scripts/.local/name-denylist`, checked by the opt-in pre-commit hook) — do not
   commit it, and do not add a public denylist of those names (publishing the list
   would itself leak the names and demotivate contributors).
+- **One exception, decided 2026-07-25: OSS packages Nami actually depends on keep
+  their real package identifiers**, even when the identifier carries the vendor's
+  name. Hiding a dependency's identifier makes the dependency record factually wrong
+  and unusable by the ADR-0026 license-scan gate, which needs exact package IDs. This
+  covers `Duende.AccessTokenManagement`, `Duende.AccessTokenManagement.OpenIdConnect`,
+  and their transitive `Duende.IdentityModel` (all Apache-2.0 at 4.2.0 / 8.1.0,
+  verified at nuget.org 2026-07-25, published from the vendor's separate FOSS
+  repository, not its commercial line). It does **not** cover product comparison,
+  parity framing, the vendor's internal source or type references, its issue tracker
+  and blog posts, or commercial packages Nami rejects (such as its BFF package): those
+  stay generalized. The exemptions live in the git-ignored
+  `scripts/.local/name-allowlist` (see `scripts/README.md`); the policy itself belongs
+  in ADR-0026.
 - **No template placeholders** in tracked markdown: the curly-brace `Product`,
   `Company`, and `domain` tokens must never appear (guardrail Check 1). Note that
   `scripts/README.md` deliberately describes these tokens in prose to avoid tripping

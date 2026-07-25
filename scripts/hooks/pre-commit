@@ -1,20 +1,34 @@
 #!/usr/bin/env bash
 # Opt-in local hook. Enable with:  git config core.hooksPath scripts/hooks
 # 1) runs the neutral public guardrail; 2) if a local (git-ignored) denylist
-#    exists, blocks a commit that introduces any of those terms in staged markdown.
-# Contains no names itself; the term list lives only in scripts/.local/ (git-ignored).
+#    exists, blocks a commit that introduces any of those terms in staged markdown;
+# 3) an optional local allowlist exempts exact identifiers that legitimately contain
+#    a denied term, such as an OSS package the project actually depends on.
+# Contains no names itself; both lists live only in scripts/.local/ (git-ignored).
 set -uo pipefail
 root="$(git rev-parse --show-toplevel)"
 
 bash "$root/scripts/check-adrs.sh" || exit 1
 
 denylist="$root/scripts/.local/name-denylist"
+allowlist="$root/scripts/.local/name-allowlist"
 if [ -f "$denylist" ]; then
   staged=$(git diff --cached --name-only --diff-filter=ACM -- '*.md')
   if [ -n "$staged" ]; then
     while IFS= read -r term; do
       case "$term" in ''|\#*) continue;; esac
       hits=$(grep -HniE "\\b${term}\\b" $staged 2>/dev/null || true)
+      # Blank each allowed identifier out of the matched lines, then re-test the term.
+      # A line that matched only because of an allowed identifier stops matching; a
+      # line that also carries a genuine mention still blocks. Allowlist entries are
+      # matched case-sensitively, so write package identifiers in canonical casing.
+      if [ -n "$hits" ] && [ -f "$allowlist" ]; then
+        while IFS= read -r allow; do
+          case "$allow" in ''|\#*) continue;; esac
+          hits=$(printf '%s\n' "$hits" | sed "s|${allow}||g")
+        done < "$allowlist"
+        hits=$(printf '%s\n' "$hits" | grep -iE "\\b${term}\\b" || true)
+      fi
       if [ -n "$hits" ]; then
         echo "pre-commit blocked: local denylist term '${term}' in staged markdown:"
         echo "$hits" | sed 's/^/  - /'
