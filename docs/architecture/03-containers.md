@@ -127,9 +127,13 @@ operational store wants a high-write tier; placement and HA are in
 
 **Redis** is an accelerator container, not a source of truth (ADR-0040): output cache for
 discovery and JWKS, the configuration-cache backplane, and the DPoP replay cache. On Redis
-failure the ordinary cache **fails open** and sessions stay durable in PostgreSQL. Two
-deliberate carve-outs **fail closed** instead, choosing security over availability: the
-distrusted-key set (ADR-0039) and the DPoP proof-replay cache (ADR-0014). Note that the
+failure the ordinary cache **fails open** and sessions stay durable in PostgreSQL, while the
+two security checks that use Redis **fail closed**, choosing security over availability: the
+distrusted-key set (ADR-0039) and the DPoP proof-replay cache (ADR-0014). Those two are
+fail-closed **by the general rule** that security checks fail closed, not as exceptions to
+it; the resiliency posture's one deliberate **carve-out** is elsewhere, the email anti-abuse
+throttle, which would ordinarily follow the fail-open cache rule and instead degrades to an
+in-process bucket (ADR-0040, ADR-0038). Note that the
 protocol engine's own entity cache is **per-request**, so it needs no cross-node backplane
 at all (ADR-0039).
 
@@ -233,7 +237,8 @@ database-backed store, so the product runs with no cloud dependency at all (ADR-
 * ADR-0001 (the fixed four-context topology and tenant scoping), ADR-0037 (PostgreSQL 18,
   forced row-level security, `SET LOCAL`), ADR-0018 (the per-context DbContext pooling
   matrix, the A-4 / T7 outcome, connection-pool sizing, and the PgBouncer condition),
-  ADR-0006 (the keyring's independence from Redis).
+  ADR-0006 (the keyring's independence from Redis), ADR-0004 (the prune retention floor that
+  must exceed the longest refresh lifetime).
 * ADR-0024 (the flat host and ports at infrastructure edges), ADR-0027 and ADR-0025 (the
   meta-package plus reference host), ADR-0065 (the ratified assembly set), ADR-0020 (the
   two admin projects, the actor requirement, and the compile boundary), ADR-0029 (the BFF

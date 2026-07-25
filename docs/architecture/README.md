@@ -56,7 +56,7 @@ question. Each topic is one file.
 | [`../adr/README.md`](../adr/README.md) | The ADR corpus | Every decision of record, with context and rationale |
 
 > The remaining quality and operational views (NFR catalogue, security,
-> performance, reliability and DR, schema migration, observability, operations),
+> performance, schema migration, observability),
 > the decisions index and v2 evolution view, and the supporting views
 > (stakeholders and concerns, risks and technical debt, threat model, glossary)
 > are being added in sequence. This index gains a row in the same change that adds

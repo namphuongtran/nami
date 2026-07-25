@@ -140,7 +140,6 @@ These prove different things and neither substitutes for the other:
 | Write-ahead-log archiving lag | Lag exceeds the operational store's recovery-point objective |
 | Backup age, per store | Age exceeds the backup interval plus a margin. This is the silent-failure detector |
 | Replication lag | Lag exceeds the objective, **or the standby is disconnected**, since a failover would then lose data |
-| Restore-verify probe | An automated restore plus smoke query fails |
 
 The disconnected-standby condition is called out separately because it is the one where the
 dashboard looks healthy: the primary is fine, latency is fine, and the only thing that has
@@ -159,8 +158,11 @@ fault. Read replicas remain available as a separate, deliberate, non-v1 lever (A
 parameters B and C). A test asserts the application's connection configuration targets the
 primary, so a replica endpoint cannot be introduced for ordinary reads without failing it.
 
-Chaos-failover and mixed-version behaviour are production-parity gates in the test strategy
-rather than assumptions here (ADR-0060).
+Chaos-failover and mixed-version behaviour are measured rather than assumed: the chaos
+scenarios (zone loss, database and pooler failover, a Redis outage exercising fail-open, a
+pod killed mid-issuance) and a mixed-version rolling-deploy compatibility test are gates in
+the observability and delivery designs, and their pass criterion is SLO impact under fault
+(ADR-0041, ADR-0060).
 
 ## Sources
 
@@ -178,8 +180,14 @@ rather than assumptions here (ADR-0060).
   overlap window that covers in-flight tokens), ADR-0072 (the no-session-affinity invariant
   the stateless tier depends on).
 * ADR-0016 and ADR-0008 (crypto-shred against an append-only chain and immutable backups),
-  ADR-0041 (the availability target that motivates the topology, and the alert pipeline),
-  ADR-0060 (chaos-failover and mixed-version as parity gates).
+  ADR-0041 (the availability target that motivates the topology, the alert pipeline, and the
+  SLO-impact-under-fault criterion the chaos and mixed-version gates are measured against),
+  ADR-0060 (the test strategy those gates live in).
+* **One corpus item deliberately not carried:** the corpus monitoring table includes a
+  weekly restore-verify probe. It is a sound control, but ADR-0074 parameter F defines the
+  monitoring set as archiving lag, backup age, replication lag, and a disconnected standby,
+  and this layer never adds to a decision. Recorded as a candidate for ADR-0074 or ADR-0006
+  rather than asserted here.
 * Reconciled against the design corpus's reliability view on 2026-07-25. Taken from it: the
   high-availability measure table, the per-store recovery table with its reasoning about what
   each loss actually means, the restore-both requirement, the crypto-shred-versus-backup

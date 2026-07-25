@@ -144,8 +144,9 @@ an unrelated authorization bug (ADR-0021).
 
 ## 7. Incidents and on-call
 
-Alerts deduplicate into one incident per `(rule, deployment, tenant scope)`, so a
-multi-tenant fault does not page once per tenant. Escalation runs primary, then secondary,
+Alerts deduplicate into one incident per `(rule, deployment, tenant scope)`, so many pods
+raise one incident and a multi-tenant fault does not page once per tenant (ADR-0041, with
+the key itself fixed in the observability design). Escalation runs primary, then secondary,
 then team lead, with an acknowledgement timeout that re-pages. The roster and the timeouts
 are an Ops ratification item.
 

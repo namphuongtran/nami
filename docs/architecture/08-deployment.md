@@ -141,10 +141,17 @@ ADR-0051). Four entrypoint modes ship in that one image (ADR-0027):
 | `export` | Dumps the current declarative configuration, never secrets or keys | An operator-run Job, for GitOps and backup |
 | `prune` | Bulk-deletes expired tokens and authorizations, iterating tenants | A scheduled Job, kept off the request path (ADR-0031) |
 
-Two invariants sit on top. **No secret is ever baked into the image**: connection strings
+Three invariants sit on top. **No secret is ever baked into the image**: connection strings
 and the root certificate arrive by environment, mounted file, or secret store, with
 precedence environment over secret store over `appsettings.{Environment}` over
-`appsettings` (ADR-0031, ADR-0009). And **production logs go to stdout and OTLP only**,
+`appsettings` (ADR-0031, ADR-0009). **Configuration keys follow one shape** so an operator
+can predict them: `Nami:Section:Key` in configuration, `Nami__Section__Key` as the
+environment form, and a short `NAMI_X` alias for common toggles (ADR-0065, ADR-0052,
+ADR-0032). **A deploy is zero-downtime and dual-controlled**: a production release is itself
+one of the actions that passes through the dual-control gate rather than being a
+single-operator act (ADR-0046), and the schema side of that is expand-and-contract so old
+code and new schema coexist within a release, which is what makes a rollout reversible
+(ADR-0017; the mechanics are in the schema-evolution view). And **production logs go to stdout and OTLP only**,
 with no file sink inside the container, because log collection is the platform's job
 (ADR-0022). The audit stream is drawn as its own arrow to a write-once destination on
 purpose: it is a separate lane from diagnostics, joined only by a correlation identifier,
@@ -179,7 +186,7 @@ F53).
 | `PodDisruptionBudget` with `minAvailable >= 1` | A voluntary disruption (node drain, cluster upgrade) must not take every replica down at once |
 | `topologySpreadConstraints` or anti-affinity | Replicas spread across at least two zones, so losing one zone leaves the service up |
 | `rollingUpdate` (`maxUnavailable`, `maxSurge`) | Zero-downtime deploys, timed against graceful shutdown |
-| Resource requests and limits | Stable scheduling and no OOM-kill; the CPU profile comes from the signing and encryption budget |
+| Resource requests and limits | Stable scheduling and no OOM-kill. Size them from the measured profile, **not** from a signing budget: signing CPU is explicitly **not** the binding constraint, at roughly 0.07 of a core for the 10k-concurrent-user goal (ADR-0041 and the capacity model) |
 | `preStop` sleep, plus readiness flip, plus graceful shutdown | On SIGTERM readiness flips to NotReady and the `preStop` sleep lets the load balancer drain **before** Kestrel stops accepting, with `terminationGracePeriodSeconds` greater than the `preStop` sleep plus the shutdown timeout |
 | **Liveness never probes `/health/ready`** | A draining pod reports NotReady on purpose. If liveness watched readiness, the platform would kill the pod mid-drain and turn a clean rollout into dropped requests |
 
@@ -209,6 +216,11 @@ drift and is not a substitute for synchronisation.
   explicitly not v1.** Adopting it means accepting a replication-lag caveat on
   configuration reads and deciding how that interacts with the 30-second
   configuration-propagation bound, which is a decision to make then (ADR-0074, ADR-0039).
+* **The keyring is shared across nodes under a fixed application name.** Every replica must
+  resolve the same keyring, so the application name is fixed rather than defaulted: renaming
+  it isolates the keyring and silently loses access to everything the old keys protect
+  (ADR-0011, ADR-0012). This is a deploy-time invariant, not a code detail, because the
+  rename that breaks it usually arrives through configuration.
 * **Redis is an accelerator that fails open.** Sessions stay durable in PostgreSQL and the
   data-protection keyring is deliberately independent of Redis, so a Redis outage degrades
   latency without breaking authentication. Its durability is an operator option the
@@ -240,6 +252,10 @@ behind a terminating proxy, trusted on both the browser and back-channel sides (
   requirement with its 30-second alert threshold), ADR-0041 (the alerting pipeline the
   drift alert rides), ADR-0012 (the persisted-`kid` readiness comparison and why a round
   trip is not enough).
+* ADR-0011 and ADR-0012 (the keyring shared under a fixed application name, and what a
+  rename costs), ADR-0046 (a production deploy passes the dual-control gate), ADR-0017
+  (expand-and-contract, so old code and new schema coexist within a release), ADR-0065 with
+  ADR-0052 and ADR-0032 (the configuration-key shape and its environment form).
 * ADR-0027 (the four entrypoint modes and the three onboarding paths), ADR-0025 (the
   chiseled digest-pinned image, no migrate-on-startup, docker-compose for development
   only), ADR-0051 (signing and attestation of the image), ADR-0023 (OpenTofu for

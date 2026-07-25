@@ -55,9 +55,12 @@ per-client through a custom policy provider, not a static global policy (ADR-005
 ## Resiliency and overload
 
 One outbound resiliency handler (Polly), rate limiting distinct from load
-shedding, and Redis as a fail-open accelerator with deliberate fail-closed
-carve-outs (the email anti-abuse throttle and the distrusted-kid check)
-(ADR-0040). Capacity is modelled and load-tested to an SLO that is a release gate
+shedding, and Redis as a fail-open accelerator. The rule has two halves and
+exactly one exception: ordinary performance caches fail open, security checks
+such as the distrusted-key set fail **closed**, and the single deliberate
+**carve-out** is the email anti-abuse throttle, an abuse control that would
+otherwise follow the fail-open rule and instead degrades to an in-process bucket
+(ADR-0040, ADR-0039, ADR-0038). Capacity is modelled and load-tested to an SLO that is a release gate
 (ADR-0041).
 
 ## Privacy and compliance
