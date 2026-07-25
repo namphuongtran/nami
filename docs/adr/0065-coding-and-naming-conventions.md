@@ -51,6 +51,7 @@ The Microsoft .NET Framework Design Guidelines for naming (capitalization, gener
 * **Wire contracts**: a versioned namespace (`...Contracts.V1`), enums serialized as strings, additive-only within a version (ADR-0044).
 * **Diagnostic ids**: `NAMIxxxx` for `[Obsolete]` messages and any Nami analyzer (ADR-0044).
 * **Telemetry**: meter and metric names are stable and treated as contract, under a `nami.`-rooted naming scheme (ADR-0022/0044).
+* **Protocol URNs and claim values** use the **lowercase product form `nami.identity`**, not the organization name: `urn:nami.identity:<value>`, for example the assurance levels `urn:nami.identity:aal1|aal2|aal3` (ADR-0013). These strings are on the wire, so they are a stable public contract under ADR-0044 and cannot be changed without a version bump. Recorded here because substituting the organization form (`urn:nami:...`) is a mistake this project has already made once and propagated across four documents; the three name forms are distinct and not interchangeable: `Nami.Identity.*` for assemblies and namespaces, `Nami:...` for configuration keys, and `nami.identity` for URNs and other lowercase wire identifiers.
 * **Asynchronous methods**: the `Async` suffix, per the Microsoft guideline, enforced.
 * **Private instance fields**: `_camelCase`, following the Microsoft C# convention; this is the deliberate house choice, recorded so it is not re-litigated.
 * **Test naming**: behavior-first, Given/When/Then, per the testing strategy (ADR-0060).

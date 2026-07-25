@@ -99,7 +99,7 @@ managed via Scopes).
 
 ## Step-up UX (RFC 9470)
 
-When an API call returns **401** `WWW-Authenticate: ... acr_values="urn:nami:aal2|aal3"`, a
+When an API call returns **401** `WWW-Authenticate: ... acr_values="urn:nami.identity:aal2|aal3"`, a
 `StepUpChallengeHelper` branches on the 401, saves the return URL and the pending action, and
 issues an OIDC challenge to the IdP with `acr_values`/`max_age` (and `prompt=login` if needed)
 as a **top-level redirect** (never an iframe, ADR-0019). After MFA the App returns with a

@@ -88,7 +88,7 @@ Granular RBAC policies (not one flat admin role):
 | `Admin.TenantScope` | membership or delegated-admin grant for `{tenantId}` (via `ICheckAccess`, 05) | every tenant-scoped route |
 
 A dangerous action lacking sufficient `acr` returns **401** `WWW-Authenticate: Bearer
-error="insufficient_user_authentication", acr_values="urn:nami:aal2|aal3"` (RFC 9470 — a 401
+error="insufficient_user_authentication", acr_values="urn:nami.identity:aal2|aal3"` (RFC 9470 — a 401
 challenge, not a 403), and the App re-authenticates. Tenant-scoped resources sit under
 `/tenants/{tenantId}/...` where `TenantScopeHandler` checks the grant and sets the tenant
 context; global id-routes pass the deny-by-default BOLA/IDOR object-level filter (05).

@@ -10,7 +10,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-MFA is where the `acr`, `amr`, and `auth_time` claims are **produced** — the same claims that the session, single-logout, and authorization designs **consume**. Previously the consumer side had a spec but the producer side did not, so the binding "TOTP verified, therefore emit `acr`/`amr`/`auth_time`" was never defined. An earlier design even referenced a step-up ADR that was never written. OpenIddict does not implement MFA (it leaves it to the host UI), so Nami builds MFA on ASP.NET Core Identity. How should MFA produce assurance claims, and how should step-up be enforced?
+MFA is where the `acr`, `amr`, and `auth_time` claims are **produced**, the same claims that the session, single-logout, and authorization designs **consume**. Previously the consumer side had a spec but the producer side did not, so the binding "TOTP verified, therefore emit `acr`/`amr`/`auth_time`" was never defined. An earlier design even referenced a step-up ADR that was never written. OpenIddict does not implement MFA (it leaves it to the host UI), so Nami builds MFA on ASP.NET Core Identity. How should MFA produce assurance claims, and how should step-up be enforced?
 
 ## Decision Drivers
 
@@ -33,8 +33,8 @@ Fixed parameters of the decision:
 
 * **Methods**: a TOTP authenticator plus 10 recovery codes is the production baseline; WebAuthn/passkey (`amr` `hwk`/`swk`) ships in v1 (native to .NET 10, per ADR-0028, as a primary factor with enroll/list/remove UI); SMS/email OTP (`amr` `sms`) is roadmap.
 * **`amr` (RFC 8176)**: password plus TOTP produces `["pwd","otp","mfa"]` (an array; a historical fact of the sign-in). It is stamped at sign-in via `SignInWithClaimsAsync`, with `AuthenticationProperties.IssuedUtc` as `auth_time`. Because `amr` can be absent on a silent refresh, resource servers gate on `acr` plus `auth_time` and treat `amr` as informational.
-* **`acr`**: URN-style `urn:nami:aal1|aal2|aal3`, **recomputed per token-request** from `amr` plus session age (NIST AAL2 freshness is 12h/30min, so an aged session drops out of aal2 even when `amr` still shows MFA). The effective freshness window is capped by the 8-hour absolute session ceiling (ADR-0003), so the 12-hour aal2 branch is never actually reached (effective aal2 window is at most 8h). Levels: aal1 = password, aal2 = password plus TOTP/passkey, aal3 = hardware plus a second factor.
-* This `acr` recompute is **bespoke on top of NIST 800-63B**: mainstream commercial identity servers do not recompute the AAL tier — they use `max_age`/a max-age requirement (the relying party or API decides freshness per request) and compare `acr_values` against the session claim. Nami's per-request evaluation matches that industry approach; the AAL-tier mapping and automatic downgrade are Nami's own design, more rigorous but not a feature copied from any product.
+* **`acr`**: URN-style `urn:nami.identity:aal1|aal2|aal3` (the lowercase product URN form, ADR-0065), **recomputed per token-request** from `amr` plus session age (NIST AAL2 freshness is 12h/30min, so an aged session drops out of aal2 even when `amr` still shows MFA). The effective freshness window is capped by the 8-hour absolute session ceiling (ADR-0003), so the 12-hour aal2 branch is never actually reached (effective aal2 window is at most 8h). Levels: aal1 = password, aal2 = password plus TOTP/passkey, aal3 = hardware plus a second factor.
+* This `acr` recompute is **bespoke on top of NIST 800-63B**: mainstream commercial identity servers do not recompute the AAL tier: they use `max_age`/a max-age requirement (the relying party or API decides freshness per request) and compare `acr_values` against the session claim. Nami's per-request evaluation matches that industry approach; the AAL-tier mapping and automatic downgrade are Nami's own design, more rigorous but not a feature copied from any product.
 * **Producer (OpenIddict, verified constants)**: `SetClaims(Claims.AuthenticationMethodReference, [...])` (array), `SetClaim(Claims.AuthenticationContextReference, ComputeAcr(...))`, and `SetClaim(Claims.AuthenticationTime, ...)`. Destinations: `amr` goes to the id_token; `acr` and `auth_time` go to both the id_token and the access_token, so resource servers can implement RFC 9470.
 * **Step-up (RFC 9470)**: an API returns `401 insufficient_user_authentication` with `acr_values`/`max_age`; the authorize endpoint checks `GetAcrValues()`/`MaxAge`/`prompt` against the session and re-challenges; `prompt=none` yields a `login_required` forbid; the `sid` rotates on step-up (ADR-0003).
 * **Three-tier enforcement**: `required_acr = max(per-client DefaultAcr, per-scope RequiredAcr, runtime step-up)`. A sensitive scope forces aal2 even when the client defaults to aal1.
@@ -56,18 +56,18 @@ Fixed parameters of the decision:
 
 ### MFA methods
 
-* **TOTP plus recovery, with WebAuthn/passkey in v1 (chosen)** — good, because it is a strong, phishing-resistant baseline native to .NET 10; the SMS/email OTP path is deferred to roadmap because it is the weakest factor.
+* **TOTP plus recovery, with WebAuthn/passkey in v1 (chosen)**: good, because it is a strong, phishing-resistant baseline native to .NET 10; the SMS/email OTP path is deferred to roadmap because it is the weakest factor.
 
 ### `acr` storage
 
-* **Recompute per token-request (chosen)** — good, because assurance reflects current session freshness and can auto-downgrade; bad, because it needs correct freshness-window logic.
-* **Static stored `acr`** — good, because it is trivial; bad, because it cannot express freshness decay and would report aal2 for a stale session.
+* **Recompute per token-request (chosen)**: good, because assurance reflects current session freshness and can auto-downgrade; bad, because it needs correct freshness-window logic.
+* **Static stored `acr`**: good, because it is trivial; bad, because it cannot express freshness decay and would report aal2 for a stale session.
 
 ### Enforcement
 
-* **Three-tier `max(client, scope, runtime)` (chosen)** — good, because a sensitive scope can force elevation regardless of the client default, and runtime step-up still applies; bad, because it is more logic than a single per-client flag.
-* **Always-MFA** — good, because it is simple; bad, because it is a poor user experience for low-risk clients and is not how mainstream servers behave.
-* **Per-client only** — good, because it is simple; bad, because it cannot elevate for a sensitive scope or a runtime step-up.
+* **Three-tier `max(client, scope, runtime)` (chosen)**: good, because a sensitive scope can force elevation regardless of the client default, and runtime step-up still applies; bad, because it is more logic than a single per-client flag.
+* **Always-MFA**: good, because it is simple; bad, because it is a poor user experience for low-risk clients and is not how mainstream servers behave.
+* **Per-client only**: good, because it is simple; bad, because it cannot elevate for a sensitive scope or a runtime step-up.
 
 ## More Information
 
@@ -75,4 +75,4 @@ Fixed parameters of the decision:
 * Enforcement precedent: mainstream identity servers, including Keycloak and Auth0, all drive assurance enforcement by policy; none hardcodes "always".
 * The `acr` freshness numbers should be confirmed against the mandated revision of NIST SP 800-63B.
 * Related decisions: ADR-0003 (session `sid` rotation and absolute ceiling), ADR-0010 (step-up for dangerous capabilities), ADR-0028 (user management, including passkey/WebAuthn).
-* Imported into this repository and translated in 2026-07; content preserved, internal references generalized. References to a specific commercial identity server were generalized (Keycloak and Auth0 are retained as neutral enforcement-pattern precedent); the product-name placeholder in the `acr` URN was set to Nami.
+* Imported into this repository and translated in 2026-07, then reconciled against the design corpus on 2026-07-25, which corrected the `acr` URN. The 2026-07 import had substituted the organization name, producing `urn:nami:aalN`; the convention is the lowercase **product** URN form, so the correct value is `urn:nami.identity:aalN`. The same error had propagated into three design documents and is fixed with this change, and ADR-0065 now records the URN form so it cannot drift again. References to a specific commercial identity server stay generalized; Keycloak and Auth0 are named as neutral enforcement-pattern precedent.

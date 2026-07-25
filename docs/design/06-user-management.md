@@ -60,7 +60,7 @@ number (the `long` overload, not a string). This is the canonical claims contrac
 | Claim | Shape | Destination | Consumer |
 |---|---|---|---|
 | `memberships` | JSON array of `{tid, name?, roles?}`, capped ~10 with a `memberships_truncated` flag | id_token | tenant-switcher UI, integrators (full list via self-service when truncated) |
-| `acr` | single string `urn:nami:aal1`/`aal2`/`aal3` (`0` = below-aal1, not for valuable resources) | id_token + access_token | step-up (05), Admin `AcrRequirement` |
+| `acr` | single string `urn:nami.identity:aal1`/`aal2`/`aal3` (`0` = below-aal1, not for valuable resources) | id_token + access_token | step-up (05), Admin `AcrRequirement` |
 | `amr` | JSON array (RFC 8176): `pwd`, `otp`, `mfa`, `hwk`, `swk` (never `passkey`; a federated login records the underlying factor) | id_token | informational (gate on `acr`+`auth_time`, not `amr`) |
 | `auth_time` | JSON number | id_token + access_token | `max_age`/step-up freshness |
 | `idp` | string: external scheme or `local` | id_token | RP and tenant/membership decisions |
