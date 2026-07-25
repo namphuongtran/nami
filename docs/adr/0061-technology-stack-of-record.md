@@ -54,6 +54,7 @@ Every technology in the table below was chosen under these rules, and a future c
 | User management | ASP.NET Core Identity, native passkeys | 0028 |
 | Distributed cache | Redis with FusionCache (accelerator, fail-open) | 0039, 0040, 0050 |
 | Resiliency | Polly (one outbound handler; rate-limit versus load-shed) | 0040 |
+| Background processing | Quartz.NET with clustered job storage on PostgreSQL for schedule-driven work. Background work has **three** sanctioned patterns and no fourth: a leader-guarded singleton through the clustered scheduler, competing consumers claiming rows with `SKIP LOCKED`, and a separate invocation for bulk work, which in v1 is the token and authorization prune alone | 0031, 0011 |
 | BFF and proxy | YARP with access-token management | 0029 |
 | Admin and login UI | Server-rendered Razor, two distinct technologies: **MVC Razor** for the admin BFF (token off the browser) and **Razor Pages** for the login, consent, and logout surface; Bootstrap 5, no build step; Blazor deferred | 0020, 0072 |
 | Authorization engine | DB-first `ICheckAccess`, swappable to ReBAC | 0047 |
@@ -77,6 +78,8 @@ Every technology in the table below was chosen under these rules, and a future c
 When a new technology decision is accepted, add a row here in the same change that adds the ADR; when a choice is superseded, update the row to point at the superseding ADR. This table is an index, never the authority: if it disagrees with an owning ADR, the owning ADR wins and the table is the bug.
 
 This rule is machine-enforced. An ADR that belongs in this table carries `stack-record: true` in its frontmatter, and the docs guardrail (`scripts/check-adrs.sh`) checks set-equality between the marked ADRs and this table, so a forgotten row or a forgotten marker fails the build. Proposed ADRs are not stack entries and carry no marker.
+
+**What that enforcement cannot see, stated so it is not mistaken for coverage.** The guardrail compares two lists that are both derived from this repository's own markup: the marked ADRs and this table's rows. It therefore catches a *disagreement* between them and is blind to a *shared omission*. A technology that Nami genuinely uses, but that has no row here **and** no marked ADR, produces two empty entries that agree perfectly, so the build passes. That is not hypothetical: clustered background scheduling was load-bearing in ADR-0031, named in the container view and in five detailed designs, and had no row here until 2026-07-25, with the guardrail green throughout. The durable fix is to check this table against the real dependency manifest (`Directory.Packages.props`) once code exists at M1, so completeness is measured against what is actually referenced rather than against prose; until then, adding a row is a human step in the same change that introduces the technology.
 
 ### Consequences
 

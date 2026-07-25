@@ -1,5 +1,6 @@
 ---
 status: "accepted"
+stack-record: true
 date: 2026-07-04
 decision-makers: Nam Phuong Tran (@namphuongtran), acting as solution architect
 consulted: Ops; the 12-factor methodology (12factor.net, Adam Wiggins at Heroku) and the 15-factor extension ("Beyond the Twelve-Factor App", Kevin Hoffman)
