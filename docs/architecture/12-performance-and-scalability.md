@@ -180,4 +180,4 @@ single source of truth rather than loosening one file (ADR-0041).
 
 ---
 
-[Prev: Quality attributes](10-nfr-catalogue.md) · [Index](README.md) · Next: [Reliability, backup, and DR](13-reliability-backup-and-dr.md)
+[Prev: Security architecture](11-security-architecture.md) · [Index](README.md) · Next: [Reliability, backup, and DR](13-reliability-backup-and-dr.md)

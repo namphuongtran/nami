@@ -47,8 +47,10 @@ question. Each topic is one file.
 |---|---|---|
 | [07-cross-cutting](07-cross-cutting.md) | Concerns that span every container | Tenancy, security, observability, configuration |
 | [10-nfr-catalogue](10-nfr-catalogue.md) | What must be true, with a way to measure it | Quality-attribute targets, the SLO and error budget, ratification status |
+| [11-security-architecture](11-security-architecture.md) | The primary quality attribute, given its own view | Trust boundaries, the three isolation layers, token and key protection, administration controls, audit, abuse resistance |
 | [12-performance-and-scalability](12-performance-and-scalability.md) | How the throughput and latency attributes are met | Capacity model, bottleneck ordering, sizing, overload controls, the load-test gate |
 | [13-reliability-backup-and-dr](13-reliability-backup-and-dr.md) | Behaviour under failure, and the cost of getting back | High availability, resiliency, per-store recovery objectives, backup, DR drills |
+| [14-schema-migration-and-evolution](14-schema-migration-and-evolution.md) | How the schema and the tenant fleet change safely | Migration as a build artifact, the traffic gate, expand-and-contract, the tenant lifecycle |
 | [15-observability-and-monitoring](15-observability-and-monitoring.md) | How it is seen, and how objectives become alerts | The two lanes, metrics and cardinality control, burn-rate alerting, the canary |
 | [16-operations-and-maintenance](16-operations-and-maintenance.md) | Running it and keeping it healthy | Runbooks, background jobs, key operations, the two break-glass paths, upgrade cadence |
 
@@ -58,8 +60,7 @@ question. Each topic is one file.
 |---|---|---|
 | [`../adr/README.md`](../adr/README.md) | The ADR corpus | Every decision of record, with context and rationale |
 
-> The remaining quality and operational views (security, schema migration),
-> the decisions index and v2 evolution view, and the supporting views
+> The decisions index and v2 evolution view, and the supporting views
 > (stakeholders and concerns, risks and technical debt, threat model, glossary)
 > are being added in sequence. This index gains a row in the same change that adds
 > the file, so what is listed here always exists.

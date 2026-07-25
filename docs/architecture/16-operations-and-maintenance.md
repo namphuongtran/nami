@@ -129,6 +129,21 @@ The philosophy behind the contract-regression suite is the recurring lesson of t
 suite exists so that failure lands in CI rather than in production, where it would look like
 an unrelated authorization bug (ADR-0021).
 
+**An upgrade is also how features leave, not only how they arrive.** Several capabilities are
+**build-interim**: Nami implements them because the engine does not, and each carries a
+decommission marker so it retires when a native equivalent ships rather than accumulating as
+permanent parallel code. That set is DPoP, back-channel logout, the token-exchange delegation
+logic, and the custom telemetry meter. Reviewing those markers is part of a bump, which is
+why an upgrade is scheduled work rather than a dependency bump (ADR-0021, ADR-0014, ADR-0019).
+
+**Not everything waiting on the engine is a build-interim, and the difference changes what a
+bump means.** Dynamic client registration is the counter-example: the standard endpoint waits
+on the engine, but Nami did not build an interim of it. It chose a **different mechanism**,
+self-service registration through the authenticated Admin API, as a decision rather than a
+placeholder (ADR-0035). So a native registration endpoint arriving does not retire anything;
+it would be a new option to evaluate. Treating the two shapes alike would put a decision on
+the retirement list by mistake.
+
 ## 6. Deploy, configuration, and disposability
 
 * **Migration is a Job, never a startup step in production.** The application runs `serve`
@@ -188,7 +203,9 @@ Operations-facing items awaiting ratification before production, tracked in the
   (the dual-control saga for irreversible actions), ADR-0028 (the hardened hash iteration
   count the sealed credentials use).
 * ADR-0030 (the LTS-to-LTS cadence with its dated no-gap argument), ADR-0021 (the
-  contract-regression suite and what each bump re-verifies), ADR-0025 and ADR-0051 (the
+  contract-regression suite, what each bump re-verifies, and the decommission markers that
+  make a build-interim feature retire rather than persist), ADR-0014, ADR-0019, and ADR-0035
+  (the build-interim capabilities carrying those markers), ADR-0025 and ADR-0051 (the
   image cadence and resigning).
 * ADR-0031 (migration as a Job, configuration precedence, stdout-only logging, graceful
   shutdown, and the liveness rule), ADR-0027 and ADR-0052 (the export mode and idempotent

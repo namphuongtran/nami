@@ -205,4 +205,4 @@ dependency: nothing Nami ships carries them (ADR-0063, ADR-0026).
 
 ---
 
-[Prev: Reliability, backup, and DR](13-reliability-backup-and-dr.md) · [Index](README.md) · Next: [Operations and maintenance](16-operations-and-maintenance.md)
+[Prev: Schema migration and evolution](14-schema-migration-and-evolution.md) · [Index](README.md) · Next: [Operations and maintenance](16-operations-and-maintenance.md)

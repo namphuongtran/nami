@@ -1,100 +1,60 @@
 ---
 status: reviewed
 created: 2026-07-18
-tags: [architecture, cross-cutting]
+tags: [architecture, cross-cutting, navigation]
 ---
 
 # Cross-cutting concerns
 
-Concerns that span every container rather than living in one of them.
+> **Part of:** the [Software Architecture Document](README.md), quality and operational
+> views.
 
-## Multi-tenancy and isolation
+**This page navigates rather than explains.** A cross-cutting concern is one that spans every
+container, so it has no single owning view, and the natural failure is to summarise it here as
+well as in the view that owns it. Two summaries of one thing drift, and the shorter one wins
+by being read first. So each concern below names **where the substance is** and **which
+decision owns it**, and nothing else.
 
-Identity (users and roles) is global; the OpenIddict application, authorization,
-and token entities are tenant-scoped; the scope catalog is global. Pool tenants
-share a database with a `TenantId` column, an EF query filter, and FORCE RLS; Silo
-tenants get a dedicated database and key set. Because Pool tenants can share a
-pool-group key set, a signature alone is not an isolation boundary: issuer and
-tenant binding are what isolate resource validation (ADR-0001, ADR-0033,
-ADR-0049).
+Where a concern has no architecture view, this page points at the ADRs directly. That is the
+honest answer rather than a gap: not every cross-cutting concern is a structural or
+operational view.
 
-## Security posture
+## Concern index
 
-OWASP ASVS is the verification baseline, L2 as the floor and L3 for key, token,
-dual-control, and tenant-isolation paths (ADR-0062). A fail-fast startup
-self-check enforces the hardening invariants: HTTPS issuer, `Secure` cookies,
-PKCE, encryption, and no degraded mode in a token-issuing environment (ADR-0043).
-Abuse defense layers beyond rate limiting and lockout (ADR-0042).
+| Concern | Where the substance is | Owning decisions |
+|---|---|---|
+| **Multi-tenancy and isolation** | [05-data](05-data.md) section 5 for the model, [11-security-architecture](11-security-architecture.md) section 2 for the three layers and the signature caveat, [06-runtime-views](06-runtime-views.md#13-per-request-tenant-resolution-and-isolation) view 13 for the per-request flow | ADR-0001, ADR-0033, ADR-0037, ADR-0049 |
+| **Security posture** | [11-security-architecture](11-security-architecture.md), the whole view | ADR-0043, ADR-0062, ADR-0042 |
+| **Key management** | [04-components](04-components.md) for the rotation state machine, [16-operations-and-maintenance](16-operations-and-maintenance.md) section 3 for the operations, [11-security-architecture](11-security-architecture.md) section 4 for the protections | ADR-0005, ADR-0011, ADR-0012, ADR-0033, ADR-0006 |
+| **Audit and diagnostics, the two lanes** | [15-observability-and-monitoring](15-observability-and-monitoring.md) section 1 for the split, [11-security-architecture](11-security-architecture.md) section 6 for the chain's properties | ADR-0008, ADR-0022, ADR-0063 |
+| **Endpoint isolation and CORS** | [11-security-architecture](11-security-architecture.md) sections 3 and 7 | ADR-0048, ADR-0050 |
+| **Resiliency and overload** | [12-performance-and-scalability](12-performance-and-scalability.md) section 5 for the controls, [13-reliability-backup-and-dr](13-reliability-backup-and-dr.md) section 2 for behaviour under dependency failure | ADR-0040, ADR-0018 |
+| **Data protection and privacy mechanisms** | [11-security-architecture](11-security-architecture.md) section 6, [06-runtime-views](06-runtime-views.md#10-gdpr-erasure-saga) view 10 for the erasure ordering | ADR-0016, ADR-0053, ADR-0054 |
+| **Quality attributes and the SLO** | [10-nfr-catalogue](10-nfr-catalogue.md) | ADR-0041, ADR-0006 |
+| **Version adaptation** | [16-operations-and-maintenance](16-operations-and-maintenance.md) section 5 for the cadence, [14-schema-migration-and-evolution](14-schema-migration-and-evolution.md) section 4 for the version-pinned hazards | ADR-0021, ADR-0030 |
+| **Governance and supply chain** | **No architecture view; the decisions are the substance.** ADR-driven decisions with DCO sign-off and dual-controlled releases (ADR-0046), keyless signing and provenance attestation (ADR-0051), permissive-OSS-only dependencies enforced by a license scan (ADR-0026), and an AI-assisted-development policy requiring human accountability and disclosure (ADR-0067) | ADR-0046, ADR-0051, ADR-0026, ADR-0067 |
 
-## Key management
+## Three invariants that reappear in almost every view
 
-RS256 baseline with an asymmetric-only invariant, encryption credential lifecycle
-tracked separately from signing, per-tier key scope, and provider-agnostic DR that
-restores the signing keys, the data protection keyring, and the root certificate
-together (ADR-0005, ADR-0011, ADR-0012, ADR-0033).
+These are listed here not as a summary but because they are the cross-cutting statements most
+often dropped when a view is written in isolation, and each one is stated fully in its owning
+view.
 
-## Audit and observability: two lanes
-
-Two lanes that never cross (ADR-0022, ADR-0008):
-
-* **Audit lane**: `ISecurityEventSink`, append-only, hash-chained, delivery-guaranteed,
-  forwarded to a WORM/SIEM destination through an outbox, with a periodic integrity
-  job. Covers the negative paths (failures, denials, errors).
-* **Diagnostics lane**: native `ILogger` plus OpenTelemetry (OTLP) for logs,
-  metrics, and traces, with PII redaction. The backend is operator-chosen; a
-  self-hosted Grafana stack serves local development (ADR-0063).
-
-The two are joined only by a correlation/trace id.
-
-## Endpoint isolation and CORS
-
-Introspection and revocation are client-authenticated and audience-confined, and
-are handled natively rather than through a custom controller (ADR-0048). CORS is
-per-client through a custom policy provider, not a static global policy (ADR-0050).
-
-## Resiliency and overload
-
-One outbound resiliency handler (Polly), rate limiting distinct from load
-shedding, and Redis as a fail-open accelerator. The rule has two halves and
-exactly one exception: ordinary performance caches fail open, security checks
-such as the distrusted-key set fail **closed**, and the single deliberate
-**carve-out** is the email anti-abuse throttle, an abuse control that would
-otherwise follow the fail-open rule and instead degrades to an in-process bucket
-(ADR-0040, ADR-0039, ADR-0038). Capacity is modelled and load-tested to an SLO that is a release gate
-(ADR-0041).
-
-## Privacy and compliance
-
-Right-to-erasure reconciles with the immutable audit chain through
-chain-over-commitments and per-subject crypto-shred (ADR-0016). The
-data-subject-rights suite (access and portability), consent receipts, and breach
-hooks are reusable mechanisms (ADR-0053), and data residency and cross-border
-personal-data transfer are jurisdiction-profiled controls (ADR-0054). Several of
-these carry DPO/Legal sign-off items in the Pre-GA checklist.
-
-## Quality attributes
-
-Performance and availability targets are self-load-tested and the SLO is a formal
-release gate, with burn-rate alerting and an external synthetic canary (ADR-0041).
-Availability rests on stateless scale-out, no-restart key rotation (ADR-0011), and
-a per-store RTO/RPO with the data protection keyring the strictest (ADR-0006). The
-concrete SLO numbers and the error-budget policy are an Ops ratification item
-before GA.
-
-## Version adaptation
-
-Every OpenIddict, EF Core, Npgsql, and Finbuckle touchpoint is a catalogued seam
-with a contract-regression test and a decommission marker. Build-interim features
-(DPoP, back-channel logout, DCR) retire when the engine ships a native equivalent
-(ADR-0021).
-
-## Governance and supply chain
-
-ADR-driven decisions, DCO sign-off, and dual-control releases (ADR-0046);
-keyless signing and provenance attestation for release artifacts (ADR-0051);
-permissive-OSS-only dependencies enforced by a license-scan gate (ADR-0026); and
-an AI-assisted development policy (ADR-0067).
+1. **A valid signature does not prove the tenant.** Pool tenants share a pool-group signing
+   key, so isolation rests on issuer and audience and the `tenant` claim, never on the
+   signature. Dropping it re-opens cross-tenant token acceptance
+   ([11-security-architecture](11-security-architecture.md) section 2, ADR-0033, ADR-0049).
+2. **Fail-open is the rule for performance caches, fail-closed is the rule for security
+   checks, and there is exactly one carve-out.** The carve-out is the email anti-abuse
+   throttle (ADR-0038). The distrusted-key set (ADR-0039) and the proof-replay set are **not**
+   exceptions; they follow the rule
+   ([13-reliability-backup-and-dr](13-reliability-backup-and-dr.md) section 2, ADR-0040).
+3. **This layer never introduces a decision.** Where a view found a load-bearing claim with no
+   owner, the resolution was a new ADR rather than an assertion here, which is how ADR-0072,
+   ADR-0073, and ADR-0074 came to exist. Where a view found a useful control that no decision
+   covers, it is recorded in place as a candidate rather than adopted (ADR-0000, and the
+   authority order in the [index](README.md)).
 
 ---
 
-[← Prev: Runtime views](06-runtime-views.md) · [Index](README.md) · Next: [Deployment →](08-deployment.md)
+[Prev: Runtime views](06-runtime-views.md) · [Index](README.md) · Next: [Deployment](08-deployment.md)
