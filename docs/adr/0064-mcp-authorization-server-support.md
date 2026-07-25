@@ -20,7 +20,7 @@ The question is whether Nami should explicitly support being the authorization s
 * Reuse over rebuild: most of what an MCP authorization server needs, Nami already has.
 * Do not reinvent the protocol: the MCP requirements are OAuth RFCs that OpenIddict supports natively (ADR-0021/0061).
 * Demand-driven: do not build an MCP surface ahead of evidence that Nami's users want it.
-* Track a moving target: the spec changed three times in 2025, so any commitment must pin to a confirmed revision.
+* Track a moving target: the spec changed three times in 2025, so any commitment must pin to a confirmed revision. This is a live constraint rather than a hypothetical one: as of 2026-07 a further revision is already in release-candidate stage, so the caution has been vindicated once since this ADR was written.
 
 ## Considered Options
 
