@@ -26,9 +26,9 @@ Nami must let users sign in through external identity providers (Microsoft Entra
 
 ## Decision Outcome
 
-Chosen option: "ASP.NET Core Identity external login (handler-based)", because the user store, provisioning, and account linking already live on ASP.NET Core Identity, so the handler-based path (`AddAuthentication().AddOpenIdConnect()` and provider packages, callback via `SignInManager.GetExternalLoginInfoAsync()`) integrates naturally with no provisioning bridge. The OpenIddict client stack remains an allowed exception where provider-specific token management is genuinely needed (for example calling a provider's downstream APIs), accepting that such a use must bring its own provisioning bridge.
+Chosen option: "ASP.NET Core Identity external login (handler-based)", because the user store, provisioning, and account linking already live on ASP.NET Core Identity, so the handler-based path (`AddAuthentication().AddOpenIdConnect()`, or a provider package such as `AddMicrosoftIdentityWebApp()`, with the callback completing through `SignInManager.GetExternalLoginInfoAsync()`) integrates naturally with no provisioning bridge. The OpenIddict client stack remains an allowed exception where provider-specific token management is genuinely needed (for example calling a provider's downstream APIs), accepting that such a use must bring its own provisioning bridge.
 
-Alignment with ADR-0001 (important): an external login provisions or links into the **global** identity store; one external person is one Nami identity. Tenant access is then granted through **membership**, never by creating a per-tenant identity.
+Alignment with ADR-0001 (important): an external login provisions or links an `ApplicationUser` in the **global** identity store; one external person is one Nami identity. Tenant access is then granted through **membership**, never by creating a per-tenant identity.
 
 Scope note: v1 uses a **static, host-level set of external IdPs** configured at deployment time. Dynamic per-tenant self-service federation was deliberately deferred, and later opened as a separate additive v2 feature (ADR-0034); that does not change this decision.
 
@@ -60,7 +60,7 @@ Standard ASP.NET Core authentication handlers per provider, with `SignInManager`
 
 ### OpenIddict client stack (`OpenIddict.Client.WebIntegration`)
 
-OpenIddict's own client with `UseWebProviders()`, offering a large catalog of prebuilt provider integrations and strong token management.
+OpenIddict's own client with `UseWebProviders()`, offering a catalog of over a hundred prebuilt provider integrations and strong token management.
 
 * Good, because of the prebuilt provider catalog and first-class token management for calling providers' APIs.
 * Neutral, because it is a natural fit in an OpenIddict-based server codebase.
@@ -70,5 +70,5 @@ OpenIddict's own client with `UseWebProviders()`, offering a large catalog of pr
 ## More Information
 
 * Original decision: 2026-06-28, synchronized with ADR-0001 v2 (global identity, tenant-scoped membership). Imported into this repository and translated in 2026-07; content preserved, internal references generalized.
-* Related decisions: ADR-0001 (multi-tenant isolation: global identity and membership), ADR-0034 (dynamic per-tenant external IdP, v2, additive).
+* Related decisions: ADR-0001 (multi-tenant isolation: global identity and membership), ADR-0019 (single logout, which governs how an external-IdP session ends), ADR-0034 (dynamic per-tenant external IdP, v2, additive).
 * Open follow-up (does not block implementation): the initial list of external providers (for example Entra ID, Google) is finalized during implementation of the federation feature.

@@ -37,7 +37,7 @@ Chosen option: "Build an interim back-channel logout plus a BFF for SPAs", becau
 Fixed parameters of the decision:
 
 * **The foundation already exists**: the server-side session store (ADR-0003) is exactly the "session entity, manager, and store" the maintainer said back-channel logout requires, so this is feasible now rather than after 8.0.
-* **Mechanism**: when a session (`sid`) ends — an active logout, a revoke, or absolute expiry — Nami mints an OIDC Back-Channel Logout token (a `logout_token` JWT carrying `sub`/`sid` and the `events` claim) and pushes it to each registered `backchannel_logout_uri` of the RPs in that session, so each RP ends its own session server-side.
+* **Mechanism**: when a session (`sid`) ends, whether by active logout, revoke, or absolute expiry, Nami mints an OIDC Back-Channel Logout token (a `logout_token` JWT carrying `sub`/`sid` and the `events` claim) and pushes it to each registered `backchannel_logout_uri` of the RPs in that session, so each RP ends its own session server-side.
 * **First-party SPAs use a BFF**: the SPA delegates authentication to a server-side BFF, and the BFF receives the back-channel logout. It is the same BFF used by the DPoP design (ADR-0014).
 * **Migration**: when OpenIddict 8.0 ships native back-channel logout, Nami migrates to it; the interim implementation is designed to be replaceable.
 * **Two mandatory fixes, applied regardless of the option chosen**: drop the front-channel iframe logout from the design (it is dead), keeping `end-session` as a top-level redirect; and make tenant-switch `prompt=none` a top-level redirect rather than an iframe, so it survives cookie-blocking.
