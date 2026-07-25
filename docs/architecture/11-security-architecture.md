@@ -101,10 +101,13 @@ The three layers are not redundant restatements: each covers a path the others d
   confirmation, a cross-node replay set, and the confirmation surfaced in introspection so a
   resource server using introspection can actually enforce proof-of-possession. A DPoP-bound
   token presented as a bare Bearer is rejected (ADR-0014, runtime view 5).
-* **The DPoP replay set fails closed.** Unlike an ordinary cache, if the replay-set write is
-  not confirmed the proof is **rejected**, not accepted: security over availability. It is
-  fail-closed by the general rule for security checks rather than as an exception to the
-  fail-open cache policy (ADR-0014, ADR-0040).
+* **The DPoP replay set fails closed.** Unlike an ordinary cache, if the check-then-add on the
+  replay set is not confirmed the proof is **rejected**, not accepted: security over
+  availability. It is fail-closed by the general rule for security checks rather than as an
+  exception to the fail-open cache policy (ADR-0040), and the set is **authoritative with no
+  durable source to read through to**, which is why losing it is a bounded replay window
+  rather than a cache miss (ADR-0074; the check-then-add behaviour is fixed in the
+  advanced-flows design rather than in ADR-0014, which scopes DPoP as a build).
 * **A short access lifetime bounds what revocation cannot reach.** Fifteen minutes is the
   window a revoked-but-unexpired JWT survives, and a client needing instant revocation is
   issued a reference token instead, which forces its resource server onto introspection
@@ -123,8 +126,12 @@ The three layers are not redundant restatements: each covers a path the others d
 
 * Signing key material is stored **encrypted at rest**, wrapped by the data-protection
   keyring, and a uniqueness constraint on the active state per use makes **two simultaneous
-  active signers impossible at the schema level** rather than by convention (ADR-0011,
-  [05-data](05-data.md)).
+  active signers impossible at the schema level** rather than by convention, which is also why
+  cold-start seeding needs no distributed lock (ADR-0012, and [05-data](05-data.md)).
+* **Rotation bounds the cryptoperiod without an availability cost**, which is what makes a
+  short cryptoperiod affordable: keys rotate in process with a publish-before-sign window and
+  an overlap during which the retired key still validates, so rotating more often never costs
+  a restart and is never traded away for uptime (ADR-0011).
 * **Signing keys must be asymmetric.** A startup guard fails fast if a symmetric key is
   present, because a symmetric signing key would let any holder of the verification key mint
   tokens (ADR-0043, ADR-0005).
@@ -283,12 +290,12 @@ A short list, not the threat model. Each row names the control rather than the i
 * ADR-0005 (the plain signed access token, the mandatory minimal claim set, deny-by-default
   destinations, the asymmetric-signing rule, and the encryption retention floor of roughly
   the 8-hour ceiling plus margin), ADR-0004 (refresh posture and the engine's sibling
-  revoke), ADR-0014 (sender-constrained tokens and the fail-closed replay set), ADR-0039 (the
+  revoke), ADR-0014 (sender-constrained tokens as a build, with the replay set's check-then-add behaviour owned by the advanced-flows design and its no-durable-source property by ADR-0074), ADR-0039 (the
   15-minute residual and the reference-token alternative), ADR-0048 (native introspection and
   revocation, and the controller not to write), ADR-0009 (machine-to-machine authentication,
   least-privilege key rights with no purge at runtime, and secrets never in an image).
 * ADR-0011 and ADR-0012 (encrypted key material, the schema-level single-active-signer
-  constraint, and the joint restore), ADR-0006 (the provider-agnostic store and the keyring's
+  constraint that ADR-0012 owns, and the joint restore), ADR-0006 (the provider-agnostic store and the keyring's
   independence from Redis), ADR-0043 (the startup self-check, and the distinction between
   enforcing a decision owned elsewhere and fixing a parameter that had no home).
 * ADR-0020, ADR-0010, ADR-0029, ADR-0007, and ADR-0015 (the dual-control saga, actor
