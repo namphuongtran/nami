@@ -35,13 +35,13 @@ Fixed parameters of the decision:
 * **Default is explicit per-tenant membership**: one human holds separate membership in each tenant they touch.
 * **Cross-tenant admin is an explicit delegated-admin grant, never automatic seniority:**
   * **Scoped** to a subtree rooted at a parent tenant, applying only downward to descendants.
-  * **Capability-typed** (for example manage-users, view-audit, billing), least privilege, not "god over the child".
+  * **Capability-typed** (for example `manage_users`, `view_audit`, `view_config`), least privilege, not "god over the child".
   * **Time-bound / just-in-time** where possible, **revocable**, and a **first-class grant object** (enumerable, auditable, revocable).
-  * **Inheritance only narrows**: a child never exceeds its parent, and a parent DENY wins.
+  * **Inheritance narrows in effect, not by a DENY rule.** The v1 grant model is purely **additive**: a grant grants, and there is no scoped DENY row, so v1 deliberately does **not** implement a parent-DENY-override or an explicit "a child cannot exceed its parent" ceiling. The narrowing intent is met by three other mechanisms instead: least-privilege capabilities on each grant, forbidden-cascade for dangerous capabilities, and the non-cascading `re_delegate` gate below. A scoped deny-override is a ReBAC-era consideration, not a v1 property, and nothing in v1 may be designed as if the ceiling were enforced.
 * **Dangerous capabilities never cascade**: deleting a tenant, cross-tenant data export, IAM changes, and re-delegation each require a direct grant on that tenant plus dual-control (matching the deployment's dual-control policy and ADR-0009).
 * **Provenance in audit**: each authorization decision records whether it came from direct membership or was delegated via a named parent (ADR-0008).
 * **Anti confused-deputy**: privileged handlers authorize the original principal, never a service identity (CWE-441).
-* **Evolution**: start with the grant model in the membership/delegation tables; if relationships grow complex (many levels, many resource types), move to a ReBAC engine (for example OpenFGA or SpiceDB) with a `parent->admin` arrow. The membership/delegation schema is designed to map cleanly onto ReBAC later.
+* **Evolution**: start with the grant model in the membership/delegation tables, concretely `Memberships`, `DelegatedAdmin` (the subtree-rooted, time-bound, revocable grant carrying its own provenance), `DelegatedAdminCapabilities`, `CapabilityCatalog(Capability, IsInheritable)`, and `TenantClosure` for ancestor lookup. If relationships grow complex (many levels, many resource types), move to a ReBAC engine (for example OpenFGA or SpiceDB) with a `parent->admin` arrow. The schema is designed to map cleanly onto ReBAC later, and the `IsInheritable` flag is what carries the forbidden-cascade rule in the meantime.
 
 ### Consequences
 
@@ -51,11 +51,12 @@ Fixed parameters of the decision:
 
 ### Confirmation
 
-The enforcement design is detailed in a separate delegated-admin enforcement document (distinct from ADR-0017, which covers tenant provisioning). Its binding points:
+The enforcement design is detailed in a separate delegated-admin enforcement document (distinct from ADR-0017, which covers tenant provisioning), backed by research into RFC 8693, RFC 9068, RFC 9470, Azure RBAC/PIM/GDAP, OpenFGA and SpiceDB, OWASP, and CWE-441. Its binding points:
 
 * **Token vs decision-point split**: the 15-minute, single-tenant token carries only the `tenant` claim and coarse roles; the delegated-admin check runs **live at the Admin API** (revocable and time-bound, never baked into the token).
 * **Authority is a server-side, deny-by-default grant check on the real initiator**; delegation is carried by the `act` claim (RFC 8693), not impersonation.
 * **Forbidden-cascade** is enforced by an `IsInheritable` flag in the DB model (or the absence of a `from parent` arrow in ReBAC); tests confirm the forbidden capabilities never cascade from a parent grant.
+* **Grant management is itself gated**, which is what makes `re_delegate` meaningful: creating or revoking a delegated-admin grant requires the actor to hold `re_delegate` **directly** on that tenant (it never cascades) plus dual-control, so a delegated admin cannot mint sub-grants and build an escalation chain.
 * **Step-up (RFC 9470) plus dual-control** (proposer ≠ approver) gate dangerous and irreversible capabilities.
 * `ICheckAccess` is DB-first (recursive CTE/closure) and moves to ReBAC later behind an unchanged contract.
 
@@ -84,8 +85,8 @@ Model `admin = direct_admin + parent->admin` in a ReBAC engine so a parent-admin
 
 ## More Information
 
-* Original decision: 2026-06-28 (Option 2). The initial capability taxonomy (proposed: `manage-users`, `manage-clients`, `manage-scopes`, `view-audit`, `view-config`; forbidden-cascade: `delete-tenant`, `data-export`, `iam-change`, `re-delegate`) and the timing of any ReBAC adoption await Security/DPO ratification.
+* Original decision: 2026-06-28 (Option 2). The initial capability taxonomy (proposed inheritable: `manage_users`, `manage_clients`, `manage_scopes`, `view_audit`, `view_config`; forbidden-cascade: `delete_tenant`, `data_export`, `iam_change`, `re_delegate`) and the timing of any ReBAC adoption await Security/DPO ratification. The identifiers are lowercase snake_case because they are stored values in `CapabilityCatalog` and appear in policy names and the capability attribute, not prose (ADR-0065).
 * Research evidence: identity platforms are almost all flat tenants with explicit membership (Auth0 does not support sub-organizations; Okta treats orgs as hard boundaries with Org2Org/Aerial for time-bound delegation; WorkOS and FusionAuth are flat; ABP leaves hierarchy to the implementer, with the host as super-admin via `ICurrentTenant.Change`). Native-hierarchy exceptions include Frontegg (sub-accounts with opt-in role cascade) and Cerbos (scoped policy where a child only narrows). Microsoft's M&A guidance defaults to consolidating into one tenant, with delegated admin via Administrative Units plus PIM (AUs do not nest) or cross-tenant sync (linking, not nesting); GDAP replaces all-or-nothing with granular, scoped, time-bound admin. Cloud IAM: Azure and GCP inherit grants downward by default (additive, deny-override), whereas AWS does not (SCPs only restrict; cross-account access is an explicit assumable role), making AWS a stronger tenant-isolation reference. Authorization models: ReBAC (Zanzibar/OpenFGA `tuple_to_userset`, SpiceDB's `parent->admin` arrow) is the modern way to model hierarchy plus inheritance, while NIST hierarchical RBAC is role-to-role rather than a resource tree. OWASP Multi-Tenant guidance and CWE-441 warn about privilege escalation and the confused-deputy problem.
-* Deferred to a post-v1 wave (proposed, no ADR yet): groups (distinct from roles) and attribute groups over the membership model; revisit when a customer needs group-based access beyond roles.
+* Deferred to a post-v1 wave (proposed, no ADR yet): groups (distinct from roles) and attribute groups, built over the membership model, sized small-to-medium, with the trigger being a customer that models group-based access beyond roles. Carried over from the source project's v2 backlog and production-readiness register, where it is a post-v1 minor item rather than a gap. The coarse `roles` claim v1 puts in the token is compatible with that later move: RFC 9068 section 2.2.3.1 treats `groups`, `roles`, and `entitlements` (SCIM, RFC 7643) as the interchangeable authorization-claim family, and Microsoft's own guidance prefers application roles over group identifiers in tokens, so adding groups later is an additive claim, not a change to the ones already issued.
 * Related decisions: ADR-0001 (flat tenants, explicit membership, `ParentTenantId`), ADR-0008 (audit provenance), ADR-0009 (dual-control), ADR-0047 (the authorization engine that evaluates these grants). The detailed enforcement lives in a separate delegated-admin enforcement design document, which is not ADR-0017.
 * Imported into this repository and translated in 2026-07; content preserved, internal references generalized. The source's example acquisition scenario used specific company names; these are replaced here with generic parent/subsidiary placeholders.

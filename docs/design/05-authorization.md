@@ -80,6 +80,14 @@ The forbidden-cascade is expressed by an `IsInheritable` flag in `CapabilityCata
 | `manage_users`, `manage_clients`, `manage_scopes`, `view_audit`, `view_config` | yes, cascade down the subtree | routine tenant administration |
 | `delete_tenant`, `data_export`, `iam_change`, `re_delegate` | **no**, direct grant only | dangerous/irreversible; also gated by step-up + dual-control |
 
+**The v1 model is purely additive, so read ADR-0010's "inheritance only narrows" as an
+outcome, not a rule.** There is no scoped DENY row and no parent-DENY-override: a grant
+grants, and nothing subtracts. The narrowing intent is delivered by the three mechanisms
+above instead (least-privilege capabilities per grant, `IsInheritable = false` for the
+dangerous family, and the non-cascading `re_delegate` gate on grant management). Nothing
+here may assume a "child cannot exceed parent" ceiling is enforced, because it is not; a
+scoped deny-override belongs to the ReBAC-era adapter, not to v1.
+
 ### Token versus decision point
 
 Coarse per-tenant roles (`member`, `tenant_admin`, `billing`, sourced from

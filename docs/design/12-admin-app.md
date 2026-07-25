@@ -38,9 +38,10 @@ The App is a **confidential OIDC client of the IdP** (dogfooding): authorization
 redirect URIs. The session is a `__Host-` HttpOnly/Secure/SameSite=Lax cookie over the
 server-side session store (03); it receives back-channel logout (validating
 `iss`/`aud`/`sid`/`events` with a `jti` replay guard) so an admin's IdP logout ends the console
-session. Token management uses an OSS-permissive, provider-agnostic OIDC BFF
-access-token-management library (Apache-2.0): the user's access and refresh tokens live
-server-side and are auto-refreshed, and a typed `AdminApiClient` attaches the bearer to each
+session. Token management uses `Duende.AccessTokenManagement.OpenIdConnect` (Apache-2.0,
+provider-agnostic, ADR-0026 section D): `AddOpenIdConnectAccessTokenManagement()` plus
+`AddUserAccessTokenHttpClient("adminApi", ...)` keep the user's access and refresh tokens
+server-side and auto-refresh them, and a typed `AdminApiClient` attaches the bearer to each
 API call. Login requires the admin role and MFA; the current `acr`/`amr` are surfaced so the
 UI can show the session's assurance level. It is built on the shared `Nami.Identity.Bff`
 package (which must not depend on the `Admin.*` assemblies).
