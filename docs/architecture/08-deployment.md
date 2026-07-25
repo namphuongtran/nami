@@ -65,9 +65,11 @@ graph TB
 * No migrate-on-startup in production; Pool schema changes are additive
   expand/contract within a release; deploys are zero-downtime with dual control
   (ADR-0017, ADR-0031, ADR-0046).
-* PostgreSQL runs with streaming replication and managed or Patroni failover, WAL
-  archiving for PITR, and a per-store RTO/RPO with the keyring the strictest
-  (ADR-0006, ADR-0011).
+* PostgreSQL runs as a primary with a streaming-replication standby and automatic
+  failover, managed or self-managed, with write-ahead-log archiving for
+  point-in-time recovery. The standby is a **failover** target, not a read replica;
+  a read/write split is an optional lever outside v1. Recovery objectives are bound
+  per store with the keyring the strictest (ADR-0074, ADR-0006, ADR-0011).
 * Configuration is 12-factor: `Nami:Section:Key` keys (env `Nami__Section__Key`,
   alias `NAMI_X`), no secrets baked into images (ADR-0031, ADR-0032, ADR-0052).
 * All nodes are NTP-synchronised; a 60-second clock-skew tolerance bridges only

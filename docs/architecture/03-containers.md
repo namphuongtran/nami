@@ -71,18 +71,30 @@ boundary. The consumer-side **BFF** is likewise the consumer's deployment, not N
 
 | Container | Runtime | Responsibility | Key traits |
 |---|---|---|---|
-| **Identity host** (`Nami.Identity`) | ASP.NET Core, flat host (ADR-0024) | The authorization server: every OAuth2 and OIDC endpoint plus the Razor Pages login, consent, and logout UI (ADR-0072) | Stateless, no sticky session, multi-instance and multi-zone. Readiness gated on keys-loaded. The access token is a plain signed JWT (`at+jwt`, ADR-0005) |
+| **Identity host** (`Nami.Identity.Host`) | ASP.NET Core, flat host (ADR-0024) | The authorization server: every OAuth2 and OIDC endpoint plus the Razor Pages login, consent, and logout UI (ADR-0072) | Stateless, no sticky session, multi-instance and multi-zone. Readiness gated on keys-loaded. The access token is a plain signed JWT (`at+jwt`, ADR-0005) |
 | **Admin API** (`Nami.Identity.Admin.Api`) | ASP.NET Core REST | Administration over the managers: clients, scopes, users, roles, tenants, memberships, delegated admins | Requires an actor and rejects app-only tokens; the dual-control saga is enforced server-side; capability policies plus step-up (RFC 9470); `ProblemDetails` errors. The application layer is a folder inside, not a separate project (ADR-0020) |
 | **Admin App / BFF** (`Nami.Identity.Admin.App`) | MVC Razor plus `Duende.AccessTokenManagement.OpenIdConnect` (Apache-2.0) | The admin front end | The user-delegated access token is held server-side and never reaches the browser; approval inbox and audit viewer; step-up carried end to end (ADR-0020, ADR-0029) |
 | **Background runner** | Quartz.NET, clustered | Token and authorization pruning, and the key-rotation trigger | **Exactly one** clustered runner, so nothing double-runs; it iterates tenants (a Pool filter, or a per-Silo connection) because tenant-partitioned data cannot be pruned in one global pass; emits a last-successful-run heartbeat for alerting (ADR-0011, ADR-0031) |
 | **Delivery relay (v1)** | .NET `BackgroundService` | Drains the **v1** delivery outboxes: email, and back-channel logout | At-least-once with retry, backoff, and a dead-letter path; `FOR UPDATE SKIP LOCKED` for multi-node drains; per-recipient throttle degrades to an in-process bucket rather than switching off. One relay polls both outboxes, and it may co-host with the identity host or run standalone (ADR-0038, ADR-0019) |
 | **Outbox relay (v2)** | .NET worker | Drains the change-event outbox to the broker | v2 only, kill-switched off in v1. At-least-once with consumer-side idempotency; ordered by an IDENTITY `seq` column and **not** by the UUIDv7 key, which is not monotonic within a millisecond; `FOR UPDATE SKIP LOCKED` for multi-node (ADR-0071, ADR-0036) |
 
-`Nami.Identity` is both the NuGet meta-package (ADR-0027) and the runnable reference host
-(ADR-0025). **There is no separate host or server project**: the ratified assembly set is
-`Nami.Identity` plus `Core`, `Abstractions`, `Users`, `Bff`, `Admin.Api`, `Admin.App`,
-`Contracts`, and `Admin.Contracts` (ADR-0065), and no `Host` or `Server` assembly is among
-them.
+**`Nami.Identity` and `Nami.Identity.Host` are deliberately different things**, and the
+distinction is what makes both consumption stories work (ADR-0027, ADR-0065):
+
+* `Nami.Identity` is the **meta-package**: what a consumer adds to their own application to
+  get the default stack in one reference, the way one adds a protocol library. By
+  construction it is an empty project carrying only package references, so it cannot also
+  be a host.
+* `Nami.Identity.Host` is the **runnable reference host**: an application project with an
+  entry point, configuration, a Dockerfile, and health endpoints. It is **not published to
+  NuGet** (`IsPackable=false`); it is distributed as a container image and as a
+  `dotnet new` template, which is also what makes turnkey "run the container and log in"
+  possible (ADR-0025, ADR-0027).
+
+That split is why the end-to-end tests are meaningful: they exercise **the host that ships**
+rather than one a test project assembled for itself (ADR-0060). The same `IsPackable=false`
+rule applies to `Nami.Identity.Admin.Api` and `Nami.Identity.Admin.App`, which are
+applications too.
 
 ## Stores
 
@@ -143,16 +155,33 @@ multiplexed connection (ADR-0018, ADR-0037).
 Because the product ships as libraries, most packages compose into the hosts above rather
 than running on their own. The ratified set (ADR-0065):
 
+**Libraries**, published to NuGet:
+
 | Package | Responsibility |
 |---|---|
-| `Nami.Identity` | Meta-package re-exporting the default stack, and the reference host ("one line to run") |
-| `Nami.Identity.Core` | Protocol-server wiring, claims, consent, profile, and tokens; the `AddNamiIdentity()` builder |
+| `Nami.Identity` | Meta-package: the default stack in one reference, the consumer entry point |
 | `Nami.Identity.Abstractions` | The ports, and the dependency-inversion centre; depends on nothing |
-| `Nami.Identity.Users` | ASP.NET Core Identity, passkeys, MFA, and user lifecycle; the `.AddUsers()` builder (ADR-0028) |
-| `Nami.Identity.Bff` | Reusable backend-for-frontend for browser clients; the `AddNamiBff()` builder (ADR-0029) |
-| `Nami.Identity.Admin.Api`, `Nami.Identity.Admin.App` | The two admin host projects (ADR-0020) |
-| `Nami.Identity.Contracts` | Minimal DTOs shared with the core IdP; zero dependencies |
+| `Nami.Identity.Core` | Protocol-server wiring, claims, consent, profile, and tokens; the `AddNamiIdentity()` builder |
+| `Nami.Identity.Users` | ASP.NET Core Identity, passkeys, MFA, and user lifecycle (ADR-0028) |
+| `Nami.Identity.EntityFrameworkCore` (+ `.PostgreSQL`) | Persistence, and the PostgreSQL provider (ADR-0037) |
+| `Nami.Identity.MultiTenant` | Tenant resolution and per-tier store routing (ADR-0001) |
+| `Nami.Identity.Keys` (+ `.Keys.Azure`, `.Keys.Aws`, `.Keys.Gcp`, `.Keys.Vault`) | Key store and rotation, with optional cloud adapters (ADR-0011, ADR-0006) |
+| `Nami.Identity.OpenTelemetry` | Telemetry wiring (ADR-0022) |
+| `Nami.Identity.Validation` | The resource-server validation edge, embedded in the **consumer's** API process (ADR-0049) |
+| `Nami.Identity.Bff` (+ `.Bff.Yarp`) | Backend-for-frontend, with the remote proxy as its own package (ADR-0029) |
+| `Nami.Identity.Contracts` | DTOs shared with the core IdP; zero dependencies |
 | `Nami.Identity.Admin.Contracts` | Admin request and response DTOs plus problem codes; referenced only by the two admin projects |
+
+**Applications**, `IsPackable=false`, distributed as images:
+
+| Application | Responsibility |
+|---|---|
+| `Nami.Identity.Host` | The runnable reference identity host, plus a `dotnet new` template (ADR-0027) |
+| `Nami.Identity.Admin.Api`, `Nami.Identity.Admin.App` | The two admin projects (ADR-0020) |
+
+The cloud adapters are named after the **port they adapt**, not after one vendor's product:
+only one of those providers has an offering called Key Vault, so naming the family after it
+would be wrong for the other three (ADR-0065).
 
 Two boundaries are enforced rather than conventional:
 
@@ -163,14 +192,8 @@ Two boundaries are enforced rather than conventional:
   consumer embeds in its own API process, which is why per-tenant validation is a contract
   Nami documents rather than a service it runs (ADR-0049).
 
-Finer sub-packages (persistence and its PostgreSQL provider, multi-tenancy, key
-management, telemetry, the validation edge, and the per-cloud adapters) are split at M1 per
-ADR-0027, and the cloud adapter is selected at runtime by configuration, defaulting to the
-database-backed store. **Their exact names are a build-time detail and are not ratified
-here**; they appear as components in [04-components](04-components.md) rather than as
-package names. The same caveat covers the possible `.Bff.Yarp` split for the remote proxy:
-whether that ships as its own package or folds into `Nami.Identity.Bff` is an explicit open
-build-time question in ADR-0029, not a settled name.
+The cloud adapter is selected at runtime by configuration and defaults to the
+database-backed store, so the product runs with no cloud dependency at all (ADR-0006).
 
 ## Communication and protocols
 
@@ -209,7 +232,8 @@ build-time question in ADR-0029, not a settled name.
   distrusted-key set, and the backplane placement), ADR-0040 (Redis as accelerator and the
   load-shed 503), ADR-0073 (the edge and forwarded headers).
 * ADR-0008 and ADR-0022 (the two observability lanes the hosts emit to, tamper-evident
-  security events kept apart from OTLP telemetry).
+  security events kept apart from OTLP telemetry), ADR-0060 (the testing strategy whose
+  end-to-end suites exercise the shipped host rather than a test-assembled one).
 * ADR-0011 and ADR-0031 (the single clustered runner and the rotation trigger), ADR-0038
   and ADR-0019 (the email and back-channel-logout outboxes the v1 relay drains), ADR-0071
   and ADR-0036 (the v2 relay and why ordering uses a `seq` column, not the UUIDv7 key),

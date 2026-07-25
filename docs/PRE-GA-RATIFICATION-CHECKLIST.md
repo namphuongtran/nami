@@ -35,6 +35,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 - ☐ Root-cert provisioning/rotation ceremony; per-environment cloud-protector adapter ([ADR-0012](adr/0012-key-bootstrap-and-dr-sequence.md))
 - ☐ Public reference-host decision (owner / hosting / patch-cadence / cost) versus local-Docker-only ([ADR-0027](adr/0027-packaging-and-distribution.md))
 - ☐ Change-event publishing (v2): broker sizing, dead-letter policy, and alerting; confirm the single-stream topology once real tenant numbers exist ([ADR-0071](adr/0071-identity-change-event-publishing.md))
+- ☐ Database HA: the concrete failover mechanism (self-managed cluster manager versus managed HA); whether Redis durability is enabled, given the quantified proof-replay window it closes and the write-durability cost it adds; the read-replica trigger threshold if that lever is ever adopted; failover-drill cadence ([ADR-0074](adr/0074-database-ha-and-cache-durability.md))
 - ☐ Edge posture: the concrete L7 edge stack (WAF, CDN, or reverse proxy) assumed in front of the reference deployment, plus the trusted-proxy addresses or networks that forwarded-header processing and the mTLS carve-out both depend on ([ADR-0073](adr/0073-edge-posture-and-forwarded-headers.md), with [ADR-0014](adr/0014-advanced-protocol-scope.md) for the mTLS trusted-proxy list)
 
 ## Product / Ops

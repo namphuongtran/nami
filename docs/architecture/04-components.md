@@ -70,8 +70,9 @@ graph TB
   contract-regression test so a version bump that moves an endpoint between the two
   categories fails CI (ADR-0021, ADR-0024).
 * **Extend by inserting a handler, never by forking the engine.** A custom handler is
-  anchored to a **named built-in position** rather than a hardcoded order number, and a
-  pipeline-snapshot test pins the resulting order, so a bump that reorders handlers fails CI
+  anchored **relative to a named built-in descriptor's order** rather than to a hardcoded
+  number, so the offset survives the engine renumbering its own handlers, and a
+  pipeline-snapshot test pins the resulting order so a bump that reorders handlers fails CI
   instead of production (ADR-0021).
 * **Claims are deny-by-default.** `IClaimsProfileService` is the single choke-point, and
   nothing reaches a token unless explicitly declared for a destination, so a stray claim
@@ -219,7 +220,9 @@ graph TB
   does not sign; the JWKS publishes every asymmetric key so validation can accept any of
   them by `kid`, which is what makes the overlap window work (ADR-0011).
 * Rotation happens with **no process restart**, through a custom options monitor and a
-  change token. One sharp caveat is designed around rather than assumed: when the
+  change token. This is a **maintainer-endorsed but undocumented seam** (the upstream issue
+  that established it is catalogued in ADR-0021), which is why it carries a contract-regression
+  test that re-runs on every engine bump rather than being trusted to keep working. One sharp caveat is designed around rather than assumed: when the
   application validates its own tokens in-process, the framework snapshots signing keys into
   an immutable configuration manager at startup, and tripping the change token does not
   refresh it, so a freshly rotated key would fail self-validation until restart. The fix,

@@ -12,11 +12,18 @@ The architecture-level data view: where the four context boundaries are drawn an
 entity relationships that carry an architectural decision, the multi-tenancy data model, and
 the physical database topology.
 
-**Scope boundary.** This view gives the tables, keys, relationships, and only those fields
-that carry an architectural decision. The exhaustive column contract, with full type
-precision, nullability, defaults, check constraints, and the complete index set, belongs to
-the [data-tier detailed design](../design/02-data.md), which is the authority for anything
-at column level.
+**Where this stops.** The tables and fields below are the design-fidelity model. The exact DDL
+(column defaults, constraint names, the raw-SQL row-level-security and role step, index storage)
+lives in the implementation plan, and the
+[data-tier detailed design](../design/02-data.md) remains the **schema single source of truth**:
+the fields here are taken from it, and if the two ever disagree that design wins and this page is
+the bug.
+
+Conventions across every table (ADR-0036, ADR-0037): primary keys are UUIDv7 `uuid` except the
+one `bigint` session surrogate and the `text` signing-key `kid`; the optimistic-concurrency token
+is the `xmin` system column, surfaced as the admin ETag and as the dual-control
+time-of-check guard (ADR-0020); `jsonb` is an extension bag and never the only home for data that must be
+queried; timestamps are `timestamptz`; encrypted blobs are `bytea`; enums are stored as `text`.
 
 ## 1. The four-context boundary map
 
@@ -61,7 +68,7 @@ share one physical database without colliding, or be split apart later without a
 different: the per-tenant schema version is the fleet-level indicator, while the
 per-database history table is the truth (ADR-0017).
 
-## 2. Control-plane relationships
+## 2. Control-plane: tenancy, authorization, and audit
 
 ```mermaid
 erDiagram
@@ -70,179 +77,324 @@ erDiagram
     TENANTS ||--o{ DELEGATED_ADMIN : "rooted at"
     DELEGATED_ADMIN ||--o{ DELEGATED_ADMIN_CAPABILITIES : "grants"
     CAPABILITY_CATALOG ||--o{ DELEGATED_ADMIN_CAPABILITIES : "typed by"
-    TENANTS ||--o| TENANT_BRANDING : "themed by"
+    TENANTS ||--|| TENANT_BRANDING : "themed by"
     TENANTS ||--o{ DUAL_CONTROL_PROPOSALS : "dual-control saga"
     TENANTS ||--o{ AUDIT_LOG : "audit trail"
     DUAL_CONTROL_PROPOSALS ||--o{ AUDIT_LOG : "approval recorded"
-    TENANTS ||--o{ SIGNING_KEYS : "Silo key set"
-    TENANTS ||--o{ LOGOUT_DELIVERY_OUTBOX : "logout delivery"
-    TENANTS ||--o{ OUTBOX_EMAIL : "tenant-scoped mail"
-    TENANTS ||--o{ SUPPRESSION_ENTRY : "suppression list"
-    SERVER_SIDE_SESSIONS ||--o{ SESSION_PARTICIPATING_CLIENTS : "includes RP"
+    SUBJECT_DEK ||--o{ AUDIT_LOG : "decrypts subjects in"
 
     TENANTS {
-        uuid TenantId PK
-        uuid ParentTenantId FK "adjacency, source of truth"
-        string Identifier "unique, IMMUTABLE after provisioning"
-        string IsolationMode "Pool or Silo"
-        string ConnectionString "Silo only"
-        string KeyScope
+        uuid TenantId PK "UUIDv7"
+        uuid ParentTenantId FK "nullable, adjacency, source of truth for the tree"
+        text Identifier "unique, IMMUTABLE post-provision, drives the per-tenant issuer"
+        text Name "display"
+        text IsolationMode "Pool or Silo"
+        text ConnectionString "nullable, Silo only"
+        text KeyScope "pool-group or own"
+        boolean Enabled "not-yet-live at provisioning versus suspending a live tenant"
+        text SchemaVersion "migration traffic-gate"
+        boolean RequireInviteApproval "per-tenant invite-approval gate"
     }
     TENANT_CLOSURE {
-        uuid AncestorId PK
-        uuid DescendantId PK
-        int Depth "drives the forbidden cascade"
+        uuid AncestorId PK "FK to Tenants"
+        uuid DescendantId PK "FK, reverse index includes Depth"
+        int Depth "self-row is depth 0, drives the forbidden cascade"
     }
-    CAPABILITY_CATALOG {
-        string Capability PK "lowercase snake_case"
-        bool IsInheritable "false blocks the cascade"
+    MEMBERSHIPS {
+        uuid UserId PK "FK into the Identity context"
+        uuid TenantId PK "FK to Tenants"
+        jsonb Roles_JSON "roles within this tenant, source of truth for belonging"
     }
     DELEGATED_ADMIN {
-        uuid GrantId PK
-        uuid RootTenantId FK
-        timestamptz ExpiresAt "time-bound"
-        timestamptz RevokedAt "filtered covering index"
+        uuid GrantId PK "UUIDv7"
+        uuid GranteeUserId "partial covering index where RevokedAt is null"
+        uuid RootTenantId FK "the subtree the grant covers"
+        timestamptz ValidFrom "window start"
+        timestamptz ExpiresAt "nullable, time-bound"
+        timestamptz RevokedAt "nullable, revocable"
+        uuid GrantedByUserId "provenance"
+        timestamptz CreatedAt "when granted"
+    }
+    DELEGATED_ADMIN_CAPABILITIES {
+        uuid GrantId PK "FK"
+        text Capability PK "FK to the catalog"
+    }
+    CAPABILITY_CATALOG {
+        text Capability PK "lowercase snake_case"
+        boolean IsInheritable "false blocks the cascade down the tree"
+    }
+    TENANT_BRANDING {
+        uuid TenantId PK "FK, one row per tenant"
+        text LogoUri "nullable, https-only and SSRF-safe"
+        jsonb ThemeJson "nullable, design tokens, never raw CSS"
+        text DisplayName "nullable"
+        uuid UpdatedByMembershipId "who changed it"
+        timestamptz UpdatedAtUtc "when"
     }
     DUAL_CONTROL_PROPOSALS {
-        uuid ProposalId PK
-        string ActionType "kebab-case wire contract"
-        string TargetETag "TOCTOU guard"
-        uuid ProposedBy
-        uuid ApprovedBy "must differ from ProposedBy"
-        string Status
-        timestamptz ExpiresAt "bounded approval window"
+        uuid ProposalId PK "UUIDv7"
+        text ActionType "kebab-case wire contract, routes to a keyed executor"
+        text TargetType "what class of thing is targeted"
+        uuid TargetId "which one"
+        uuid TenantId "nullable, FK"
+        jsonb PayloadJson "the proposed change"
+        text TargetETag "TOCTOU guard, the xmin-derived ETag, re-checked at execute"
+        text Status "state machine"
+        uuid ProposedBy "the proposer"
+        uuid ApprovedBy "nullable, MUST differ from ProposedBy"
+        timestamptz ProposedAt "created"
+        timestamptz DecidedAt "nullable"
+        timestamptz ExecutedAt "nullable"
+        text FailReason "nullable, for example target_changed"
+        jsonb FailDetail "nullable, holds expected versus observed ETag"
+        uuid PriorProposalId "nullable, links a re-propose after a terminal failure"
+        timestamptz ExpiresAt "single-use and expiring, 72h window"
+        text CorrelationId "ties the saga together"
     }
     AUDIT_LOG {
-        uuid EntryId PK
-        json ActorChain_JSON "delegation chain"
-        string DecisionPath "why the decision went this way"
-        bool StepupSatisfied
-        text Payload_Canonical "canonicalized before hashing"
-        bytea PrevHash
+        uuid EntryId PK "UUIDv7"
+        timestamptz Timestamp "when the event occurred"
+        bytea PrevHash "previous link, genesis is 32 zero bytes"
         bytea RecordHash "keyed chain link"
+        text Payload_Canonical "the canonical form that is hashed"
+        text ActorSub "per-subject ciphertext, crypto-shreddable"
+        text OnBehalfOfSubject "per-subject ciphertext"
+        text ApproverSub "per-subject ciphertext"
+        jsonb ActorChain_JSON "delegation chain, per-subject ciphertext"
+        text EventType "classification"
+        uuid TargetTenantId "which tenant"
+        text Result "outcome"
+        text CorrelationId "correlation"
+        text Acr "assurance at decision time"
+        timestamptz AuthTime "when the user authenticated"
+        text DecisionPath "why the authorization decision went this way"
+        text AuthzDecision "the decision itself"
+        text Capability "which capability was exercised"
+        uuid GrantId "nullable, which grant authorized it"
+        boolean StepupSatisfied "whether step-up was met"
+        uuid ApprovalRequestId "nullable, FK to a proposal"
+        bytea RequestHash "binds the audited request"
     }
-    SIGNING_KEYS {
-        uuid Id PK "kid"
-        string Use
-        string State "exactly one active per Use"
-        timestamptz RetiresAt
-        timestamptz DeletesAt
-        string KeyScope
-    }
-    SERVER_SIDE_SESSIONS {
-        bigint Id PK "the one bigint exception"
-        string Key UK "sid, what clients reference"
-        timestamptz Renewed "inactivity window"
-        timestamptz Expires "absolute ceiling"
-    }
-    SUPPRESSION_ENTRY {
-        bytea RecipientHash "hash only, never a raw address"
+    SUBJECT_DEK {
+        text SubjectRef PK "one data-encryption key per subject, created lazily"
+        bytea WrappedDek "per-subject key wrapped by the keyring master key"
+        timestamptz CreatedAt "when created"
+        timestamptz DestroyedAt "nullable, erasure sets this and every ciphertext copy becomes unreadable"
     }
 ```
 
 Facts that matter at this altitude:
 
 * **Tenant hierarchy is adjacency plus a derived closure table.** `ParentTenantId` is the
-  source of truth; the closure table exists so an ancestor or descendant question is one
-  seek on the hot authorization path. Closure is maintained **in application code inside a
-  transaction, not by database triggers**, because tree invariants are domain logic; cycle
-  rejection and serialized tree mutation live there too (ADR-0010, ADR-0024).
-* **`Tenants.Identifier` is immutable after provisioning.** It drives the per-tenant issuer,
-  so renaming it would invalidate every issued token, every relying-party configuration, and
-  every logout registration. A rename is provision-new, migrate, deprovision-old (ADR-0017).
-* **`ServerSideSessions` deliberately has no edge to `Tenants`.** It is global and keyed by
-  `sid`, so one login session can span a tenant switch. This is a design decision, not an
-  omission (ADR-0003). Its child table maps a session to the relying parties present in it and
-  is what back-channel logout reads to know whom to notify (ADR-0019).
-* **`DataProtectionKeys` is not a control-plane table.** It lives alone in its own context.
-  The keyring it holds **wraps the signing-key material**, which is why disaster recovery has
-  to restore both together, plus the root certificate (ADR-0006, ADR-0012).
+  source of truth; the closure exists so an ancestor or descendant question is one seek on the
+  hot authorization path. It is maintained **in application code inside one transaction, not by
+  a database trigger**, because tree invariants are domain logic, with cycle rejection on a
+  move, serialized tree mutation, and a periodic job that re-derives closure from adjacency to
+  verify integrity (ADR-0010, ADR-0024).
+* **`Tenants.Identifier` is immutable after provisioning.** It drives the per-tenant issuer, so
+  renaming it would invalidate every issued token, every relying-party configuration, and every
+  logout registration. A rename is provision-new, migrate, deprovision-old (ADR-0017).
 * **The audit chain is keyed**: `RecordHash = HMAC_k(PrevHash || canonical(fields))` with an
   application-held key, prev-first operands, and the record canonicalized to text before
-  hashing because `jsonb` does not preserve input byte order. The genesis previous-hash is 32
-  zero bytes. Append-only, with an insert-only grant (ADR-0008).
+  hashing because `jsonb` does not preserve input byte order. The table is append-only, an
+  insert grant only, with update, delete, and truncate revoked plus a block trigger (ADR-0008).
+* **Every subject-bearing audit field is per-subject ciphertext**, and `SubjectDek` holds the
+  wrapping keys. Erasure destroys a subject's key rather than deleting audit rows, which is what
+  lets an immutable chain coexist with a right to erasure: rows survive for chain verification
+  while their subject content becomes permanently unreadable, including in backups and in any
+  write-once copy (ADR-0016, ADR-0008).
+* **The delegated-admin hot lookup uses a partial covering index**, and its
+  `WHERE RevokedAt IS NULL` predicate must be a **hard-coded literal, never a bind parameter**:
+  the planner only uses a partial index when it can prove at plan time that the query implies
+  the index predicate, which it cannot do against a parameter.
 * **Two identifier namespaces meet in this diagram and must not be unified.** A capability is
-  lowercase `snake_case` (`delete_tenant`), while a proposal's action type is `kebab-case`
+  lowercase `snake_case` (`delete_tenant`); a proposal action type is `kebab-case`
   (`delete-tenant`) because it is a published wire contract. The overlap is deliberate
   (ADR-0065).
-* `OutboxEmail` exists in **two** contexts, one global and one tenant-scoped, so an enqueue
-  can always join the transaction that triggered it (ADR-0038).
 
-## 3. Operational, identity, and data-protection relationships
+## 3. Control-plane: keys, sessions, and delivery outboxes
 
 ```mermaid
 erDiagram
-    APPLICATION ||--o{ AUTHORIZATION : "authorizes"
-    APPLICATION ||--o{ TOKEN : "issues"
-    AUTHORIZATION ||--o{ TOKEN : "backs"
-    SCOPE }o--o{ APPLICATION : "granted by allowlist"
-    USER ||--o{ USER_ROLE : "has"
-    ROLE ||--o{ USER_ROLE : "assigned in"
+    TENANTS ||--o{ SIGNING_KEYS : "Silo key set"
+    TENANTS ||--o{ LOGOUT_DELIVERY_OUTBOX : "logout delivery"
+    TENANTS ||--o{ SUPPRESSION_ENTRY : "suppression list"
+    SERVER_SIDE_SESSIONS ||--o{ SESSION_PARTICIPATING_CLIENTS : "includes RP"
 
-    APPLICATION {
-        uuid Id PK
-        string TenantId "Pool discriminator, RLS column"
-        string ClientId "unique per (TenantId, ClientId)"
-        bool Enabled "soft-delete"
+    TENANTS {
+        uuid TenantId PK "anchor only, full fields in section 2"
     }
-    AUTHORIZATION {
-        uuid Id PK
-        string TenantId
-        uuid ApplicationId FK "OPTIONAL, LEFT JOIN"
+    SIGNING_KEYS {
+        text Id PK "the kid"
+        int Version "key version, materialized once per version"
+        boolean IsX509Certificate "publish-before-sign needs X509"
+        text Use "signing or encryption"
+        text Algorithm "for example RS256 or ES256"
+        text State "unique per Use where active, so two active signers are impossible"
+        bytea Data "encrypted at rest"
+        boolean DataProtected "data-protection wrapped versus envelope-encrypted"
+        text KeyScope "pool-group or tenant"
+        uuid TenantId "nullable, Silo only"
+        timestamptz NotBefore "validity start"
+        timestamptz NotAfter "validity end"
+        timestamptz RetiresAt "leaves the active slot"
+        timestamptz DeletesAt "leaves the JWKS"
+        timestamptz RevokedAt "nullable, break-glass"
+        timestamptz Created "when created"
     }
-    TOKEN {
-        uuid Id PK
-        string TenantId
-        uuid AuthorizationId FK "OPTIONAL, LEFT JOIN"
-        string ReferenceId UK "reference tokens only"
+    SERVER_SIDE_SESSIONS {
+        bigint Id PK "identity, the one deliberate non-UUIDv7 key"
+        text Key UK "the sid that clients reference"
+        text SubjectId "indexed, drives evict-oldest"
+        text SessionId "indexed"
+        text Scheme "auth scheme"
+        text DisplayName "nullable, session label"
+        timestamptz Created "backs evict-oldest"
+        timestamptz Renewed "last activity, inactivity window 1h"
+        timestamptz Expires "indexed, absolute ceiling 8h"
+        bytea Data "serialized ticket"
     }
-    SCOPE {
-        uuid Id PK
-        string Name UK "GLOBALLY unique, no TenantId"
+    SESSION_PARTICIPATING_CLIENTS {
+        text SessionKey PK "FK to the session Key, cascade delete"
+        text ClientId PK "which RP to back-channel-logout"
     }
-    USER {
-        uuid Id PK
-        string NormalizedEmail
-        bool TwoFactorEnabled
+    LOGOUT_DELIVERY_OUTBOX {
+        uuid Id PK "UUIDv7"
+        uuid TenantId "tenant-scoped with row-level security"
+        text Sid "the session being logged out"
+        text ClientId "the relying party"
+        text LogoutUri "where the logout token is POSTed"
+        text Status "pending, delivered, or failed"
+        int Attempts "retry counter"
+        timestamptz NextAttemptUtc "indexed with Status for the drain"
+        timestamptz CreatedUtc "enqueued"
+        timestamptz DeliveredUtc "nullable"
     }
-    ROLE {
-        uuid Id PK
+    OUTBOX_EMAIL {
+        uuid Id PK "UUIDv7"
+        text IdempotencyKey UK "prevents a double send"
+        text Status "Pending, InFlight, Sent, or DeadLettered"
+        timestamptz NextAttemptAt "nullable, indexed with Status for the SKIP LOCKED claim"
+        text Payload "the message"
+        int Attempts "retry counter"
+        text ProviderMessageId "nullable, from the provider"
+        timestamptz CreatedAt "enqueued"
+        uuid TenantId "control-plane copy only, with row-level security"
     }
-    USER_ROLE {
-        uuid UserId PK
-        uuid RoleId PK
+    SUPPRESSION_ENTRY {
+        uuid Id PK "UUIDv7"
+        uuid TenantId "indexed with RecipientHash"
+        bytea RecipientHash "hash only, never the address"
+        text Reason "hard-bounce, complaint, or manual"
+        timestamptz ExpiresAt "nullable, soft reasons carry a TTL"
+        timestamptz CreatedAt "when suppressed"
+    }
+```
+
+* **`ServerSideSessions` deliberately has no edge to `Tenants`.** It is global and keyed by
+  `sid`, so one login session can span a tenant switch: a design decision, not an omission
+  (ADR-0003). Its child table is what back-channel logout reads to know which relying parties
+  to notify (ADR-0019), and revocation is a **row delete**, not a status flag.
+* **`OutboxEmail` exists in two contexts**, one global in the Identity context for confirm and
+  reset mail and one tenant-scoped in the control plane, so an enqueue can always join the
+  transaction that triggered it (ADR-0038).
+* **`SigningKeys` uses a `text` primary key**, the `kid` itself, rather than a UUIDv7. It is the
+  one table whose key is an externally meaningful protocol identifier instead of a surrogate.
+* The key store enforces a **mandatory scope predicate centralized in one adapter**, and where a
+  single store serves several scopes it additionally carries row-level security on the scope and
+  tenant columns, giving the key store the same defense in depth as the token store (ADR-0033).
+* One vocabulary caveat worth knowing before reading code: `SigningKeys.KeyScope` uses
+  `pool-group` and `tenant`, while `Tenants.KeyScope` uses `pool-group` and `own`. The columns
+  are parallel but not identical, and the key-management design reconciles them.
+
+## 4. Operational, identity, and data-protection contexts
+
+```mermaid
+erDiagram
+    TENANT_APPLICATION ||--o{ TENANT_AUTHORIZATION : "authorizes"
+    TENANT_APPLICATION ||--o{ TENANT_TOKEN : "issues"
+    TENANT_AUTHORIZATION ||--o{ TENANT_TOKEN : "anchors"
+    TENANT_SCOPE }o--o{ TENANT_APPLICATION : "granted by allowlist"
+    ASPNETUSERS ||--o{ ASPNETUSERROLES : "has"
+    ASPNETROLES ||--o{ ASPNETUSERROLES : "assigned in"
+    ASPNETUSERS ||--o{ USER_PASSKEY_INFO : "enrolls"
+
+    TENANT_APPLICATION {
+        uuid Id PK "UUIDv7, overrides the engine default string key"
+        text TenantId "composite unique with ClientId, and the RLS column"
+        text ClientId "unique per TenantId, replacing the engine global unique index"
+        boolean Enabled "disable-not-delete default"
+        timestamptz DeletedAtUtc "nullable, named soft_delete filter, ANDed with the tenant filter"
+    }
+    TENANT_AUTHORIZATION {
+        uuid Id PK "UUIDv7"
+        text TenantId "RLS column, auto-stamped"
+        uuid ApplicationId FK "OPTIONAL so the join is a LEFT JOIN, Restrict, no cascade"
+    }
+    TENANT_TOKEN {
+        uuid Id PK "UUIDv7"
+        text TenantId "RLS column, auto-stamped"
+        uuid ApplicationId FK "optional"
+        uuid AuthorizationId FK "optional and indexed, backs family revoke and prune"
+    }
+    TENANT_SCOPE {
+        uuid Id PK "UUIDv7"
+        text Name UK "GLOBALLY unique, no TenantId, seeded once"
+        boolean Enabled "a real column, so it indexes and filters"
+        timestamptz DeletedAtUtc "nullable, soft_delete filter"
+    }
+    ASPNETUSERS {
+        uuid Id PK "UUIDv7"
+        text NormalizedUserName UK "lookup key"
+        text NormalizedEmail "lookup"
+        boolean EmailConfirmed "confirmation state"
+        boolean TwoFactorEnabled "MFA enrolled"
+        text PasswordHash "hardened per ADR-0028"
+    }
+    ASPNETROLES {
+        uuid Id PK "UUIDv7"
+        text NormalizedName UK "lookup key"
+    }
+    ASPNETUSERROLES {
+        uuid UserId PK "FK"
+        uuid RoleId PK "FK"
+    }
+    USER_PASSKEY_INFO {
+        uuid UserId FK "the owner"
+        text Aaguid "authenticator model identifier"
+        text AttestationTrust "attestation-validation outcome"
     }
     DATA_PROTECTION_KEYS {
-        int Id PK
+        int Id PK "identity, the framework schema"
+        text FriendlyName "key label"
         text Xml "serialized key element"
     }
 ```
 
-There is **no user-to-tenant edge here**, and that is the point: a user reaches tenants
-through a membership in the control plane, which is what keeps identity global.
+The Identity context also holds the remaining standard framework tables (user claims, user
+logins, user tokens, role claims) and one copy of the email outbox. **There is no
+user-to-tenant edge here**, and that is the point: a user reaches tenants through a membership
+in the control plane, which is what keeps identity global (ADR-0001).
+
+`DataProtectionKeys` is the single table of its own context. The keyring it holds **wraps
+`SigningKeys.Data`**, which is why disaster recovery must restore the signing keys, the keyring,
+and the root certificate **together**, keeping the same application name: restoring signing keys
+alone leaves them undecryptable (ADR-0006, ADR-0012).
 
 Three rules in this area are rules rather than preferences:
 
-* **Navigations to a filtered entity must be optional.** The token-to-authorization and
+* **A navigation to a filtered entity must be optional.** The token-to-authorization and
   authorization-to-application navigations are optional, producing a LEFT JOIN. Marking one
-  as required would produce an INNER JOIN and **silently drop token rows** whenever the
-  principal is filtered out or soft-deleted. Proven by a spike test rather than reasoned
-  about (ADR-0018, and the [data design](../design/02-data.md)).
+  required would produce an INNER JOIN and **silently drop token rows** whenever the principal
+  is filtered out or soft-deleted. Proven by a spike test, not reasoned about (ADR-0018).
 * **Client-id uniqueness is composite.** The engine's global unique index on the client
   identifier is dropped and replaced with `(TenantId, ClientId)`, so the same client id can
-  exist in different Pool tenants. `Scope.Name` stays globally unique, because the catalog is
-  global (ADR-0001).
-* **Row-level security is a manual raw-SQL migration step.** It is not in the EF model, so
-  neither the tooling nor a create-from-model call will generate it. Forgetting the step
-  produces a database that looks correct and has no backstop (ADR-0017, ADR-0037).
+  exist in different Pool tenants, while `TenantScope.Name` stays globally unique because the
+  catalog is global (ADR-0001).
+* **Soft-delete flags are real columns, not extension-bag JSON**, so they index and filter, and
+  the named soft-delete filter coexists with the tenant filter by being ANDed with it.
 
-Keys and concurrency across every context: **UUIDv7** primary keys for time-ordered index
-locality on the hot write path, with **one** deliberate exception, the server-side session's
-`bigint` surrogate. Anything needing a strict order carries its **own** sequence column,
-because UUIDv7 is not monotonic within a millisecond. Concurrency is PostgreSQL `xmin`,
-surfaced as an ETag on admin mutations (ADR-0036, ADR-0018, ADR-0020).
-
-## 4. The multi-tenancy data model
+## 5. The multi-tenancy data model
 
 Isolation is defense in depth, two layers, and both were proven necessary by spike A-4.
 
@@ -286,7 +438,7 @@ the default. Silo gives a tenant its own database for hard isolation, whether fo
 or regulatory reasons, at the cost of a per-tenant connection pool and a per-tenant migration
 fan-out (ADR-0001, ADR-0018, ADR-0054).
 
-## 5. Physical topology
+## 6. Physical topology
 
 The four contexts are logical. Physically they may share one cluster or be split, and two
 placement facts are architectural:
@@ -314,28 +466,30 @@ graph TB
   classDef optional fill:#cfd8dc,stroke:#90a4ae,color:#1a2b34,stroke-dasharray:5 4
 ```
 
-Two things here are deliberately **not** the same, and collapsing them would misrepresent the
-design:
+The topology is fixed by **ADR-0074**, and two things in it are deliberately **not** the same,
+because collapsing them would change the consistency contract without anyone deciding to:
 
 * **High availability (in scope).** A primary handling reads and writes, a
-  streaming-replication standby, automatic failover, and point-in-time recovery through
-  write-ahead-log archiving. **The standby exists for failover, not for read scaling**, and
-  the application talks to the primary.
-* **A read/write split onto read replicas (optional, explicitly not v1).** Routing read-heavy
-  configuration and discovery reads to a read-only replica is a **scale lever** to apply only
-  when a measured read-throughput bottleneck appears, and it carries a replication-lag caveat:
-  a configuration change made through the Admin API lags on the replica. It is not a default
-  and not part of the v1 topology.
+  streaming-replication standby, **automatic failover**, and point-in-time recovery through
+  write-ahead-log archiving. No failover product is mandated, so a managed offering and a
+  self-managed cluster manager both satisfy it. **The standby exists for failover, not for read
+  scaling**, and the application talks to the primary. This is an invariant rather than a
+  convention, because violating it fails **silently**: a read served from a lagging standby
+  returns stale data with no error, so an administrative change would appear not to have taken
+  effect.
+* **A read/write split onto read replicas (optional, explicitly not v1).** A **scale lever** to
+  apply only when a measured read-throughput bottleneck exists, carrying a replication-lag
+  caveat on configuration reads that would interact with the 30-second propagation bound of
+  ADR-0039. Adopting it is a decision to be made then, not an assumption now.
 
-Failover behaviour, per-store recovery objectives, backup, and replication-lag monitoring are
-deployment concerns in [08-deployment](08-deployment.md).
-
-**Open item.** The high-availability topology above is stated in this repository's
-architecture layer but is **owned by no ADR**: no accepted decision records the
-primary-standby-failover choice, the point-in-time-recovery approach, or the read-replica
-lever's status. ADR-0006 fixes per-store recovery objectives for **key material** and
-ADR-0037 fixes the engine, but neither decides the database HA topology. This is flagged here
-rather than left implicit, in the same way the edge posture was before ADR-0073 was written.
+Where a **connection pooler** is used it sits on the hot path, so ADR-0074 requires it to be
+highly available in its own right and its failover to be drilled rather than assumed. ADR-0074
+also settles what happens when Redis restarts: durability is an operator option the application
+never depends on, the distrusted-key set is rebuilt from the key store rather than trusted when
+empty, and the proof-replay set has no durable source, so losing it opens a bounded replay
+window. Per-store recovery objectives, backup, and continuous monitoring stay with ADR-0006;
+failover behaviour and deployment topology are elaborated in
+[08-deployment](08-deployment.md).
 
 ## Sources
 
@@ -352,10 +506,14 @@ rather than left implicit, in the same way the edge posture was before ADR-0073 
   store and why it has no tenant edge), ADR-0019 (the client registry back-channel logout
   reads), ADR-0008 (the keyed audit chain), ADR-0038 (the two outbox homes and the hashed
   suppression store).
-* ADR-0006 and ADR-0012 (the keyring as root of trust, its recovery objective, and the joint
-  restore with signing keys and the root certificate), ADR-0054 (residency as a driver for
-  Silo placement), ADR-0073 (the precedent for flagging an architecture-level topology claim
-  that no ADR yet owns).
+* ADR-0074 (the physical topology, the standby-is-not-a-replica invariant, the read-replica
+  lever's status, the pooler high-availability requirement, and the Redis-durability posture),
+  ADR-0006 and ADR-0012 (the keyring as root of trust, its recovery objective, and the joint
+  restore with signing keys and the root certificate), ADR-0039 (the propagation bound a read
+  replica would interact with), ADR-0054 (residency as a driver for Silo placement).
+* ADR-0016 (the crypto-shred vault and the per-subject ciphertext that let an immutable audit
+  chain coexist with a right to erasure), ADR-0033 (the key-store scope predicate and its
+  row-level security), ADR-0028 (passkey storage and password hardening).
 * [`docs/design/02-data.md`](../design/02-data.md) is the authority for column-level detail;
   this view deliberately stops above it.
 * Reconciled against the design corpus's data-architecture view on 2026-07-25. The corpus
@@ -363,15 +521,19 @@ rather than left implicit, in the same way the edge posture was before ADR-0073 
   adjacency split, the immutable-identifier consequence, the sessions-not-tenant-linked
   decision, the optional-navigation and composite-uniqueness rules, row-level security as a
   raw-SQL step, and the physical topology with its standby-versus-read-replica distinction.
-  Two things were handled differently. The corpus reproduces full column lists for every
-  table, deferring only exhaustive type and index detail; here that would duplicate
-  `docs/design/02-data.md`, which was checked and already carries all of it, including the
-  composite index, the LEFT JOIN rule, the raw-SQL row-level-security step, and the `NULLIF`
-  cast, so this view keeps only the architecturally significant fields and points there. And
-  the corpus's audit note writes the chain as `H(PrevHash || canonical(fields))` while calling
-  it HMAC-keyed in the same sentence, an internal inconsistency; ADR-0008's keyed form is used.
-  This view's own earlier mis-citation of the global scope catalog to ADR-0018 and ADR-0037
-  was corrected to ADR-0001, which is where that decision actually lives.
+  Field lists were then rebuilt from **this repository's** data design rather than transcribed
+  from the corpus, and that changed several things. The entity names are `TenantApplication`,
+  `TenantAuthorization`, `TenantToken`, and `TenantScope`, not the corpus's unprefixed names.
+  `SigningKeys.Id` is a `text` `kid`, where the corpus has `uuid`. `Tenants` carries
+  `SchemaVersion` and `RequireInviteApproval`, which the corpus omits. `SubjectDek` exists at
+  all, which the corpus has no equivalent for, and the audit table's subject-bearing fields are
+  per-subject ciphertext, which the corpus does not record. Several load-bearing details are
+  ours only: the hard-coded-literal requirement on the partial index predicate, soft-delete
+  flags as real columns rather than extension-bag JSON, and the `KeyScope` vocabulary mismatch
+  between two tables. The corpus's audit note also writes the chain as
+  `H(PrevHash || canonical(fields))` while calling it HMAC-keyed in the same sentence, an
+  internal inconsistency; ADR-0008's keyed form is used. This view's own earlier mis-citation of
+  the global scope catalog to ADR-0018 and ADR-0037 was corrected to ADR-0001.
 
 ---
 

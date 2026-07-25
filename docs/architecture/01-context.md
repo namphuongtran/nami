@@ -91,7 +91,7 @@ they are not interchangeable:
 | Cloud key and secret store | Outbound | Optional envelope encryption and secret resolution behind ports; the **database-backed adapter is the default** so the product runs with no cloud at all, and the Data Protection keyring is deliberately independent of Redis (ADR-0006, ADR-0009) |
 | Observability and SIEM | Outbound | Two separate lanes: OTLP for logs, traces, and metrics (ADR-0022), and a distinct tamper-evident security-event stream forwarded to a write-once destination (ADR-0008). They are joined only by a correlation identifier |
 | Breach-check service | Outbound | Password-exposure check using a k-anonymity hash prefix, fail-open, with the outward data flow itself a pre-GA data-protection sign-off (ADR-0028) |
-| Message broker and backend consumers | Outbound (v2) | Transactional-outbox delivery of CloudEvents 1.0 through an `IMessageTransporter` port, with one reference adapter and other brokers as extension points. Nami is a **producer only**. Not present in v1 (ADR-0071) |
+| Message broker and backend consumers | Outbound (v2) | Transactional-outbox delivery of CloudEvents 1.0 through an `IMessageTransporter` port, with one reference adapter and other brokers as extension points. Nami is a **producer only**, with no inbound dependency on any consumer. Note a backend consumer is usually **also a resource server**, so it appears twice in this table under two different relationships: it validates tokens inbound and receives events outbound. Not present in v1 (ADR-0071) |
 
 ## Responsibilities and boundaries
 

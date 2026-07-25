@@ -64,7 +64,8 @@ Every technology in the table below was chosen under these rules, and a future c
 | Infrastructure as code | OpenTofu | 0023 |
 | Local dev and test | docker-compose plus Testcontainers, Playwright, xUnit; local HTTPS via dev-certs and a terminating proxy | 0025, 0060, 0070 |
 | Code style and conventions | `.editorconfig` plus .NET analyzers and `dotnet format` | 0065 |
-| Packaging and distribution | NuGet meta-package plus reference host image and template | 0027, 0044 |
+| Packaging and distribution | NuGet meta-package (`Nami.Identity`) plus a non-packable reference host application (`Nami.Identity.Host`) shipped as an image and a template | 0027, 0044, 0065 |
+| Database high availability | Primary plus streaming-replication standby, automatic failover, PITR; read replicas optional and not v1; Redis durability an operator option never depended on | 0074 |
 | Supply chain | Keyless signing and provenance attestation | 0051 |
 | Dependency policy | Permissive OSS only, CI license-scan | 0026 |
 | Key management | No-restart rotation, provider-agnostic DR, per-scope keyset | 0005, 0006, 0011, 0012, 0033 |

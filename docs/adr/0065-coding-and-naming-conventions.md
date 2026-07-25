@@ -44,7 +44,33 @@ The Microsoft .NET Framework Design Guidelines for naming (capitalization, gener
 
 ### Nami-specific tailoring (binding; consolidated from where it was scattered)
 
-* **Assemblies and namespaces**: rooted at `Nami.Identity.*` (the `Nami.Identity` meta-package plus `Core`, `Abstractions`, `Users`, `Bff`, `Admin.Api`, `Admin.App`, `Contracts`, `Admin.Contracts`); a namespace matches its folder and assembly; no `Common` god-namespace (ADR-0024/0027).
+* **Assemblies and namespaces**: rooted at `Nami.Identity.*`; a namespace matches its folder and assembly; no `Common` god-namespace (ADR-0024/0027). The ratified set splits into **libraries**, which are published to NuGet, and **applications**, which are not:
+
+  | Libraries (NuGet) | Purpose |
+  | --- | --- |
+  | `Nami.Identity` | Meta-package: the default stack in one reference, the consumer entry point |
+  | `Nami.Identity.Abstractions` | The ports, the dependency-inversion centre; depends on nothing |
+  | `Nami.Identity.Core` | Protocol-server wiring, claims, consent, tokens; the `AddNamiIdentity()` builder |
+  | `Nami.Identity.Users` | ASP.NET Core Identity, passkeys, MFA, user lifecycle (ADR-0028) |
+  | `Nami.Identity.EntityFrameworkCore` | Persistence, provider-neutral |
+  | `Nami.Identity.EntityFrameworkCore.PostgreSQL` | The PostgreSQL provider (ADR-0037) |
+  | `Nami.Identity.MultiTenant` | Tenant resolution and per-tier store routing (ADR-0001) |
+  | `Nami.Identity.Keys` | Key store and rotation (ADR-0011/0012) |
+  | `Nami.Identity.Keys.Azure`, `.Keys.Aws`, `.Keys.Gcp`, `.Keys.Vault` | Optional cloud key and secret adapters (ADR-0006/0009) |
+  | `Nami.Identity.OpenTelemetry` | Telemetry wiring (ADR-0022) |
+  | `Nami.Identity.Validation` | The resource-server validation edge, embedded in the **consumer's** API process (ADR-0049) |
+  | `Nami.Identity.Bff` | Backend-for-frontend core (ADR-0029) |
+  | `Nami.Identity.Bff.Yarp` | The remote proxy, shipped as its own package |
+  | `Nami.Identity.Contracts` | DTOs shared with the core IdP; zero dependencies |
+  | `Nami.Identity.Admin.Contracts` | Admin DTOs and problem codes; referenced only by the admin projects |
+
+  | Applications (not on NuGet) | Purpose |
+  | --- | --- |
+  | `Nami.Identity.Host` | The runnable reference identity host (ADR-0027) |
+  | `Nami.Identity.Admin.Api` | The admin REST API (ADR-0020) |
+  | `Nami.Identity.Admin.App` | The admin MVC Razor front end (ADR-0020) |
+
+  Three naming rules follow from that split and are binding. **An application sets `IsPackable=false`**: it is distributed as a container image and, for the host, a `dotnet new` template, never as a package a consumer references, so `Nami.Identity` stays unambiguously "the thing you add" and `Nami.Identity.Host` unambiguously "the thing that runs". **The cloud adapters are named after the port they adapt, not after one vendor's product**: `.Keys.Azure`, `.Keys.Aws`, `.Keys.Gcp`, `.Keys.Vault`, because only one of those providers has a product called Key Vault and naming the family after it would be wrong for the other three and redundant for the fourth. And **`Nami.Identity.Validation` is a consumer-side library**, not one of Nami's hosts, so it is packaged and versioned for external consumption even though nothing in this repository runs it.
 * **Ports and interfaces**: `I`-prefixed and living in `Nami.Identity.Abstractions`; extended only via `IXxxV2` or a default interface method, never a bare added member, and only where a port has a real reason to exist (ADR-0044/0024/0058).
 * **Vertical-slice folders**: `Features/<Area>/<UseCase>/`, grouping request, handler, validator, and response; not technical folders such as `Services/`, `DTOs/`, `Validators/` (ADR-0024).
 * **Configuration keys**: `Nami:Section:Key` in configuration, `Nami__Section__Key` as the environment form, and a short `NAMI_X` alias for common toggles; avoid mixed-case single-underscore keys (ADR-0032).
