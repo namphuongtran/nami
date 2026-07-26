@@ -319,7 +319,9 @@ ADR-0017); development may enable migrate-on-startup for convenience.
   cloud adapters) are finalized at M1 per ADR-0027; this doc treats them as the
   planned split, not ratified names. No new ADR is required unless the split
   diverges from ADR-0027's intent.
-* MinVer versus an alternative version tool is a build-time pick (ADR-0027).
+* The **version tool is settled**, not open: ADR-0027 fixes package versions as generated
+  from a single git tag by MinVer, yielding one lock-step version across the whole graph.
+  What remains is wiring it, not choosing it.
 * The test assertion library must be permissive (ADR-0026): FluentAssertions moved
   to a commercial license at v8, so it is out. Pick an MIT/BSD alternative (an MIT
   assertions fork, or Shouldly) at M1, the same license caution ADR-0020 raised for

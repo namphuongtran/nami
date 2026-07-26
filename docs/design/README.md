@@ -30,10 +30,11 @@ section ordering are used: no standard text is reproduced.
 
 ## Two numbering axes, and how to tell them apart
 
-Design documents are numbered `01` to `22`, and that number is the **reading order** of
-this layer, with one deliberate exception: `22` is a **reference registry**, read when a
-dependency is bumped rather than in sequence, which is why it was appended rather than
-inserted. Several documents also cite a **`Phase NN`**, which is a different axis
+Design documents are numbered `01` to `23`. That number is the **reading order** for `01`
+to `21`. The tail, `22` and `23`, was **appended rather than inserted**, because inserting a
+chapter renumbers everything after it and invalidates every cross-reference, including the
+prose ones. Those two are read when their subject comes up rather than in sequence: `22`
+when a dependency is bumped, `23` when a client is declared. Several documents also cite a **`Phase NN`**, which is a different axis
 entirely: the **build order** of the design corpus this layer was reconciled from, which
 has nine phases.
 
@@ -107,6 +108,7 @@ plan, not here.
 | [20](20-testing.md) | Testing | draft | 0060, 0062 |
 | [21](21-cicd-and-deployment.md) | CI/CD and deployment | draft | 0025, 0023, 0031, 0051 |
 | [22](22-openiddict-seam-catalogue.md) | Engine seam catalogue and version adaptation | draft | 0021, 0024, 0030, 0011, 0014, 0018, 0019, 0022, 0075 |
+| [23](23-configuration-and-client-declaration.md) | Configuration and client declaration | draft | 0052, 0043, 0009, 0039, 0050, 0001, 0031, 0065, 0044, 0021 |
 
 Every number is now a written document; the last reserved `planned` row was filled by
 `09`. A row's ADR set starts from what the design corpus records for that module and is

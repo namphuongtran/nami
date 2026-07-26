@@ -159,7 +159,16 @@ in [20 testing](20-testing.md) proves.
 The four tightened invariants:
 
 - **III Config:** every per-deploy value comes from the environment or the secret store, never the image, with the precedence environment then secret-store then `appsettings.{Environment}` then `appsettings`; `ValidateOnStart` fails fast on a missing required value.
-- **VIII Concurrency:** a stateful background job runs through clustered Quartz (AdoJobStore on PostgreSQL) for a single run across nodes, and the rotation timer additionally sits behind a PostgreSQL advisory-lock barrier (never a Redis lease, whose GC-pause split-brain would leave two active keys); there is no unguarded `Timer` or `BackgroundService`, and nodes are NTP-synchronized.
+- **VIII Concurrency:** a stateful background job runs through clustered Quartz (AdoJobStore on PostgreSQL) for a single run across nodes, and the rotation timer additionally sits behind a PostgreSQL advisory-lock barrier (never a Redis lease, whose GC-pause split-brain would leave two active keys); there is no unguarded `Timer` or `BackgroundService`, and nodes are NTP-synchronized. Two
+mechanics of that barrier are easy to get silently wrong. A PostgreSQL advisory lock is
+**session-level and bound to its connection**, so a transaction-pooling connection pooler
+in front of the database breaks it: behind one, the barrier must use the transaction-scoped
+form inside a single transaction instead. And the 64-bit lock-key space is **reserved and
+documented per purpose** (rotation, pruning, seeding, provisioning), because two unrelated
+jobs that happen to compute the same key would serialize against each other for no reason,
+which presents as an intermittent stall rather than as a lock bug. Clock synchronization is
+a requirement of the scheduler's clustering, not of the advisory lock, which is why the
+lock is the barrier rather than the other way round.
 - **IX Disposability:** graceful shutdown is SIGTERM then drain then a 30-second shutdown timeout, with a readiness flip to NotReady; because Kestrel begins draining the instant `ApplicationStopping` fires, a Kubernetes `preStop` sleep is paired so that `terminationGracePeriodSeconds` exceeds the preStop sleep plus the shutdown timeout, and liveness (`Predicate = _ => false`) never touches readiness. The reference Helm chart carries the multi-AZ knobs: a PodDisruptionBudget (`minAvailable >= 1`), topology-spread/anti-affinity by zone, controlled `rollingUpdate` timing, and resource requests/limits.
 - **XI Logs:** the app writes its event stream to stdout/stderr through the OTLP exporter and never opens or rotates a file inside the container; logging providers are registered in code gated by environment, not bound from `appsettings`, so a config edit cannot sneak a file sink into Production.
 

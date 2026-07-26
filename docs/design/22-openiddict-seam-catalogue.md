@@ -429,4 +429,4 @@ its own gaps.
   [01](01-foundations.md), and the roadmap statements carry the corpus's verification date
   rather than this repository's.
 
-[Prev: CI/CD and deployment](21-cicd-and-deployment.md) · [Index](README.md)
+[Prev: CI/CD and deployment](21-cicd-and-deployment.md) · [Index](README.md) · Next: [Configuration and client declaration](23-configuration-and-client-declaration.md)
