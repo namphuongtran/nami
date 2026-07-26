@@ -12,7 +12,7 @@ Transactional mail is the one delivery path the whole product depends on and the
 cross-doc audit (A04) flagged as the single real design hole: account confirmation,
 password reset, MFA-related mail, change-email tripwires, and the break-glass alert
 all flow through it. Because sign-in sets `SignIn.RequireConfirmedAccount = true`
-(the SSOT is 06 / the hardening baseline), the framework default (a no-op sender that
+(the SSOT is 08 / the hardening baseline), the framework default (a no-op sender that
 renders the link to the browser) means **nobody can log in** until a real sender
 exists. This design replaces the one-line placeholder task in the user-management
 plan ("SMTP/SendGrid abstraction") with the full subsystem: a cloud-agnostic port and
@@ -40,7 +40,7 @@ the reset/confirm UI pages (11).
 | ADR-0008 | Dead-letter and other email security events go on the `ISecurityEventSink` audit lane (append-only, hash-chained, delivery-guaranteed) |
 | ADR-0022 | Operational detail goes on the `ILogger` + OpenTelemetry diagnostic lane with PII redaction; the two lanes are never mixed |
 | ADR-0024 | Ports in `Nami.Identity.Abstractions`, relay/compose logic in core, provider SDKs confined to adapter packages; ArchUnitNET-enforced |
-| ADR-0013 | Change-email requires step-up (`acr` >= aal2) before initiate; enforced at the 06/endpoint layer, the composer is invoked only after the gate |
+| ADR-0013 | Change-email requires step-up (`acr` >= aal2) before initiate; enforced at the 08/endpoint layer, the composer is invoked only after the gate |
 | ADR-0040 | Polly `AddStandardResilienceHandler` on every provider call; the email anti-abuse throttle is the one deliberate fail-closed carve-out |
 | ADR-0015 | The break-glass alert email is the most-critical at-least-once flow and uses a priority lane that bypasses both limiters |
 | ADR-0042 / ADR-0038 | Throttle numbers are interim (owner: Product), tracked on the Pre-GA checklist |
@@ -307,7 +307,7 @@ Two limiters with different breach behavior, plus a deliberate fail-closed carve
   the row `Pending`); it never drops. Default-on, disable-able per adapter.
 - **Redis fail-closed carve-out.** The per-recipient cap is a *security* control and is
   never "cap disabled" on a Redis outage - the single deliberate exception to the
-  otherwise fail-open Redis-as-accelerator posture (ADR-0040 / 11 §6.9). On a Redis
+  otherwise fail-open Redis-as-accelerator posture (ADR-0040, and 19 for the capacity view). On a Redis
   outage it degrades to a per-instance in-process bucket plus an outbox-row-count
   counter; the cap stays enforced, accepting per-instance inaccuracy rather than
   switching it off.
@@ -457,7 +457,7 @@ owns only the *delivery* mechanics of two of those obligations:
 - **Verify the new address before the switch** via a ~1h change-email token sent to the
   new address; the old address remains the login until verification completes.
 
-The step-up gate (b) is enforced at the 06/endpoint layer, and the composer is invoked
+The step-up gate (b) is enforced at the 08/endpoint layer, and the composer is invoked
 only after it passes; the `SecurityStamp` rotation and refresh revocation (c) happen in
 06. This doc coordinates with, and does not duplicate, that flow.
 

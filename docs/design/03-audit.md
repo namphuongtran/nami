@@ -192,7 +192,7 @@ Named per ADR-0066 (a vocabulary, applied where it clarifies intent):
 ## Data model
 
 No new tables of its own beyond the `AuditLog` in [02-data](02-data.md). Forwarding
-follows the transactional-outbox pattern (the chassis of 07); its audit forward-queue
+follows the transactional-outbox pattern (the chassis of 10); its audit forward-queue
 table is a schema item to add in 02: ADR-0008 mandates the outbox forwarder but the
 corpus does not specify its DDL, so it is an open build-time item (below). The schema
 constraint this design depends on: all subject-bearing columns (`ActorSub`,

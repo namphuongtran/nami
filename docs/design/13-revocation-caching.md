@@ -88,7 +88,7 @@ The introspection result cache (~5 min, owned by 04) is the one caching TTL that
 directly against revocation freshness, so its value is reconciled against the revocation
 SLO rather than set independently.
 
-### Path c (referenced from 06)
+### Path c (referenced from 08)
 
 Force-logout deletes the session row from the shared `ITicketStore` (PostgreSQL); the
 row's absence *is* the revoked state, so the next request on any node fails cookie

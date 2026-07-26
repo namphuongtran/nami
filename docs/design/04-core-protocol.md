@@ -586,7 +586,7 @@ while the issuer is per request.
 Because Pool tenants share a pool-group signing key, **the signature is not a tenant
 boundary** at the resource server; isolation there is by issuer plus `tenant`-claim
 binding plus row-level security (ADR-0049; the resource-server side is 05 when written,
-and 14 for the sender-constrained variants). A client is looked up and authenticated
+and 06 for the sender-constrained variants). A client is looked up and authenticated
 **within the resolved tenant's store**, the Pool filter or the Silo connection, so a
 tenant-A client cannot authenticate at tenant B.
 

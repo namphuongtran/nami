@@ -98,13 +98,13 @@ round out parity. There is no API-Resource / Identity-Resource concept in the UI
 | Account/Logout | yes | end-session + single-logout fan-out | 04 / this doc |
 | Consent | yes | client branding, scope list, remember, approve/deny | 04 |
 | Home/Error | yes | workflow error surface | 04 |
-| Account/Create + ConfirmEmail | | register + confirm landing | 06 / 07 |
+| Account/Create + ConfirmEmail | | register + confirm landing | 08 / 10 |
 | Account/Forgot + ResetPassword | | reset request + landing | 07 |
 | Account/Manage (family) | | TOTP, recovery codes, password, email, profile | 06 |
 | Account/ExternalLogin | | callback + anti-takeover linking | 06 |
-| Account/StepUp | | re-auth / MFA challenge | 05 / 06 |
+| Account/StepUp | | re-auth / MFA challenge | 07 / 08 |
 | Account/AccessDenied | | authenticated-but-unauthorized | 04 |
-| Tenant/Switcher | | membership list, silent switch | 04 / 06 |
+| Tenant/Switcher | | membership list, silent switch | 04 / 08 |
 | Grants | | view / revoke persistent consent | 04 |
 | Device | | device-code user entry | 11 |
 
@@ -179,7 +179,7 @@ retries with backoff (attempt cap about five, total about ten minutes), and dead
 Interactive logout never blocks on the fan-out.
 
 "Log out everywhere" maps to the built `RevokeBySubjectAsync` (owned by 08 / revocation
-propagation 10) plus session revocation, never the single-token `/connect/revoke` endpoint.
+propagation 13) plus session revocation, never the single-token `/connect/revoke` endpoint.
 Force-logout is a ticket-store row removal, effective on the next request on any node with
 the 1-2 minute validation-interval backstop. First-party SPAs delegate logout to the BFF,
 which receives the back-channel token (BFF details out of scope). Post-v1 logout
@@ -311,7 +311,7 @@ sequenceDiagram
   actor U as User
   participant LO as /Account/Logout
   participant SS as Session store (02)
-  participant OB as Logout outbox (chassis from 07)
+  participant OB as Logout outbox (chassis from 10)
   participant RB as Fan-out relay
   participant RP as RP backchannel_logout_uri
 
@@ -449,7 +449,7 @@ the login, password-reset, device-verification, and signup surfaces (not always-
 disabled in Development); failures are scoped per source IP alongside per-account lockout,
 and the break-glass account is exempt. The provider mechanics and the risk thresholds are
 owned by ADR-0042 (deferred numbers), referenced here. The reset/resend endpoints keep the
-constant-time anti-enumeration contract from 07.
+constant-time anti-enumeration contract from 10.
 
 ## Error-state inventory
 

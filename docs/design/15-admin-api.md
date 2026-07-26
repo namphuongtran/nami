@@ -182,7 +182,7 @@ force-logout}`; lifecycle `POST /users/invite`, `POST /users/{id}/{disable|enabl
 `PasskeyDto`: `CredentialId`, `DeviceName?`, `CreatedAt`, `LastUsedAt?` (metadata only, never
 key material). Disable is `CanSignInAsync=false` + force-logout (not delete, and distinct
 from lock which auto-expires); offboard invokes the gated erasure saga (17). The lifecycle
-model itself is 06's.
+model itself is 08's.
 
 ### Roles
 
@@ -198,7 +198,7 @@ change → 400 `tenant_identifier_immutable`), `DELETE`/`suspend`/`resume`→pro
 `RequireInviteApproval`, `ETag`. `DelegatedAdminGrantDto`: `GrantId`, `GranteeUserId`,
 `RootTenantId`, `Capabilities[]` (from the catalog; a dangerous capability → proposal),
 `ValidFrom`, `ExpiresAt?`, `RevokedAt?`, `GrantedBy`, `ETag`. The provision/suspend/resume/
-delete saga **bodies** and their runtime semantics are 13's; this API is the entry point and
+delete saga **bodies** and their runtime semantics are 18's; this API is the entry point and
 the dual-control gate.
 
 ### Tenant branding
@@ -232,7 +232,7 @@ shared Pool store (below).
 `etag_mismatch` (409), `precondition_required` (428), `proposal_expired` (410),
 `validation_failed` (400), `tenant_identifier_immutable` (400), `tenant_suspended` (409).
 
-## Dual-control saga (the workflow; the gating rule is 05's)
+## Dual-control saga (the workflow; the gating rule is 07's)
 
 The destructive-action catalog and the gating rule (proposer ≠ approver, `request_hash =
 H(capability + target + params)`, single-use, step-up-gated, the `FullyConsistent` re-check)
@@ -261,7 +261,7 @@ and re-checks it `FullyConsistent` before execution; a changed target becomes
 `Failed(target_changed)`, **terminal and single-use**: the transaction sets `FailReason` and
 `FailDetail` (expected/observed ETag), emits `proposal.failed`, and enqueues the proposer
 notification in the same transaction via `IEmailDispatcher` on the `ControlPlaneDbContext`
-(07's control-plane outbox home). Recovery is a new proposal with a fresh `TargetETag` and a
+(10's control-plane outbox home). Recovery is a new proposal with a fresh `TargetETag` and a
 `PriorProposalId` link; a *transient* failure stays retry-able while the `TargetETag` matches
 (the ETag guard, not terminal-ness, blocks stale retry). The constructive
 `approve-user-invite` reuses the same saga (gated per-tenant by `RequireInviteApproval`).
@@ -321,7 +321,7 @@ when signing keys/JWKS/discovery are down); `EmergencyAccess:Enabled` default-of
 allow-list that returns 404 to hide it + an internal-network listener + a `BreakGlassAdmin`
 role; two sealed credentials (`PasswordHasher<T>`, PBKDF2 100k, dual-control unseal by two
 custodians, single-use, rotated after use); audit-before-`SignInAsync` fail-closed with the
-alert on 07's break-glass priority lane; the endpoint returns 401/403, not a redirect; boot
+alert on 10's break-glass priority lane; the endpoint returns 401/403, not a redirect; boot
 order is DB up → verify credential → direct session → repair keys → restore OIDC; a 90-day
 drill plus a post-mortem after every use. The policy parameters are an ISMS DP.01 ratification
 item (Pre-GA).

@@ -40,7 +40,7 @@ fan-out (11); and the core native-verify flows (04). It adds no database tables.
 | ADR-0042 | Device-flow `slow_down`/429 backoff and the PAR anti-flood ceiling |
 | ADR-0048 | A DPoP-bound token's introspection response carries `cnf.jkt` or returns `active:false` (enrich-or-inactive); introspection stays native |
 | ADR-0049 | Every advanced flow runs in the resolved tenant scope; the RS validates signature + issuer + audience + tenant, and `cnf` composes on top after per-tenant validation |
-| ADR-0013 / ADR-0019 (ref) | Step-up (producer 06 / enforcement 05 / UI 08) and back-channel logout (08/10) are referenced, not built here |
+| ADR-0013 / ADR-0019 (ref) | Step-up (producer 08 / enforcement 07 / UI 11) and back-channel logout (08/10) are referenced, not built here |
 | ADR-0056 / ADR-0064 (proposed) | The revisit triggers for the de-scoped items: a FAPI 2.0 message-signing tier (JAR/JARM/RAR) and an MCP AS-role resource-indicator policy layer |
 
 ## Flow support matrix
@@ -50,15 +50,15 @@ fan-out (11); and the core native-verify flows (04). It adds no database tables.
 | Auth code + PKCE, client credentials, refresh, `iss` (9207), Resource Indicators (8707), exact-match redirect_uri, introspection, revocation, end-session | native, verify + test | 04 (referenced) |
 | Device authorization (RFC 8628) | native grant + **built backoff hardening** | owned here |
 | PAR (RFC 9126) | native + **built anti-flood/enforcement hardening** | owned here |
-| Token exchange (RFC 8693) | native grant wire + **`act` logic built in 07**; **`may_act` de-scoped** as a security decision (ADR-0014) | grant here, logic 05 |
+| Token exchange (RFC 8693) | native grant wire + **`act` logic built in 07**; **`may_act` de-scoped** as a security decision (ADR-0014) | grant here, logic 07 |
 | mTLS-bound tokens (RFC 8705) | native (confidential/M2M) | 04 (referenced) |
 | **DPoP (RFC 9449)** | **built, both issuance and validation** | **owned here** |
-| Back-channel logout | built interim (front-channel is dead) | 08 / 10 (referenced) |
-| Step-up (`acr`/`amr`/`max_age`/`prompt`) | built | 06 / 05 / 08 (referenced) |
+| Back-channel logout | built interim (front-channel is dead) | 11 / 13 (referenced) |
+| Step-up (`acr`/`amr`/`max_age`/`prompt`) | built | 08 / 07 / 11 (referenced) |
 | JAR (RFC 9101) | de-scoped (revisit if FAPI) | this doc |
 | JARM, RAR (RFC 9396), EdDSA, front-channel logout / `check_session_iframe` | de-scoped | this doc |
 | CIBA | skipped | this doc |
-| Dynamic Client Registration (RFC 7591/7592) | roadmap-wait (OpenIddict 8.0); interim Admin CRUD | this doc / 12 |
+| Dynamic Client Registration (RFC 7591/7592) | roadmap-wait (OpenIddict 8.0); interim Admin CRUD | this doc / 15 |
 
 ## DPoP (RFC 9449): the core build
 

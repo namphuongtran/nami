@@ -19,7 +19,7 @@ the front-end security (antiforgery, CSP, no-token-in-browser, back-channel logo
 
 Out of scope, referenced not redefined: the API surface, DTOs, CRUD semantics, dual-control
 saga, RBAC, bootstrap, and break-glass ([Admin API](15-admin-api.md)); the step-up *enforcement*
-and the challenge *page mechanics* (05 / 08); the BFF package internals (ADR-0029 / the BFF
+and the challenge *page mechanics* (07 / 11); the BFF package internals (ADR-0029 / the BFF
 design). The end-user login/consent UI (11) is a different application.
 
 ## Decisions realized
@@ -50,7 +50,7 @@ package (which must not depend on the `Admin.*` assemblies).
 
 - **Stack.** ASP.NET Core MVC + Razor views, Bootstrap 5, **minimal JavaScript**: standard
   form POSTs with antiforgery, no SPA framework. Changing the theme or CSS never touches the
-  flow (the engine-decoupled principle from 08). A single `AdminApiClient` maps the API's
+  flow (the engine-decoupled principle from 11). A single `AdminApiClient` maps the API's
   ProblemDetails to UI errors and carries the ETag through edit round-trips.
 - **Layout and navigation.** One `_Layout` with a left nav grouped by area (Clients, Scopes,
   Grants/Tokens, Users, Roles, Tenants, Branding, Approvals, Audit, Sessions), a top bar with
@@ -72,7 +72,7 @@ package (which must not depend on the `Admin.*` assemblies).
   not *applied* to the console itself. The Branding
   screen has a client-side **live preview** that renders a sample login card from the entered
   design tokens (never executing tenant CSS). The CSP stays strict (no `unsafe-inline`;
-  CSS-variable-driven), reusing the `SecurityHeadersAttribute` posture from 08.
+  CSS-variable-driven), reusing the `SecurityHeadersAttribute` posture from 11.
 - **Accessibility and feedback.** Semantic HTML, labelled form controls, keyboard-navigable
   tables and dialogs; every result surfaces a correlation id for audit tracing; secrets and key
   material are never displayed (a newly created secret is shown once, not stored client-side).
@@ -92,7 +92,7 @@ package (which must not depend on the `Admin.*` assemblies).
 | Approval Inbox | proposals awaiting me / mine / history; diff + justification + `TargetETag`; **Approve = step-up**; Reject/Cancel | dual-control core |
 | Audit viewer | taxonomy filter; chain-verify badge; controlled export (small filtered = direct, bulk = dual-control) | |
 | Sessions | list / revoke server-side sessions | |
-| Account/StepUp | re-auth / MFA challenge landing | reuses 08's page |
+| Account/StepUp | re-auth / MFA challenge landing | reuses 11's page |
 
 There is no IdentityProvider screen in v1 (dynamic per-tenant external IdP is v2, ADR-0034),
 and no API-Resource/Identity-Resource screen (OpenIddict does not model them; audiences are
@@ -125,7 +125,7 @@ justification; the correlation id is shown for tracing.
   `access_token` appears in any response.
 - **Antiforgery** on every state-changing form POST (the server-rendered-form profile, distinct
   from the JS/SPA custom-header CSRF profile, ADR-0029).
-- **Strict CSP** (no `unsafe-inline`), `SecurityHeadersAttribute` reused from 08; open-redirect
+- **Strict CSP** (no `unsafe-inline`), `SecurityHeadersAttribute` reused from 11; open-redirect
   guard (`IsLocalUrl`/allow-list) on every `returnUrl`.
 - **No secret/key display;** a newly created secret is shown once and not persisted
   client-side; the live-preview never executes tenant-supplied CSS.
@@ -142,7 +142,7 @@ preview + a rejected http/private-IP logo; and a back-channel-logout that ends t
 
 - The tenant-provisioning and offboard/erasure flows the wizards drive have their **bodies** in
   13; the App only renders their status.
-- Localization of the admin console copy (shares the 08 i18n approach) is a build-time item.
+- Localization of the admin console copy (shares the 11 i18n approach) is a build-time item.
 - The BFF package split (`.Bff` / `.Bff.Yarp`) is finalized at M1 (ADR-0029/0027).
 - The concrete OIDC BFF token-management package (Apache-2.0, provider-agnostic) is pinned in
   the implementation plan, not this design doc (which stays vendor-neutral), and its current

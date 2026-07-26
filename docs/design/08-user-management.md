@@ -225,7 +225,7 @@ dependency (ADR-0026). The confirm/reset path integrates through Identity's gene
 `IEmailSender<TUser>` (the interface Identity infrastructure itself calls), never the
 legacy single-method `IEmailSender` (only scaffolded Razor calls that one); implementing
 only the legacy interface means confirm/reset mail silently never sends. The delivery
-mechanics are 07's.
+mechanics are 10's.
 
 ### Packaging
 

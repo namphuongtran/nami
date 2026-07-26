@@ -23,7 +23,15 @@ ROOT = Path(__file__).resolve().parents[2]
 DESIGN = ROOT / "docs" / "design"
 
 # Bare numeric pointers in prose: "(06)", "in 12", "detailed in 08", "17 and 18".
-POINTER = re.compile(r"\((\d{2})\)|\bin (\d{2})\b|\b(\d{2}) and (\d{2})\b")
+# Two shapes, because this layer uses both. The first revision of this script matched
+# only "in NN" and parenthesised numbers, reported zero, and was blind to "owned by 13",
+# which is the form that carried most of the stale pointers a renumber left behind. A
+# checker that stays green on the class it exists for is worse than no checker.
+PAREN = re.compile(r"\((\d{2})(?:\s+and\s+(\d{2}))?(?:,[^)]{0,60})?\)")
+BARE = re.compile(
+    r"\b(?:in|by|to|see|from|design|doc)\s+(\d{2})\b"
+    r"(?!\s*[-–]|\s*(?:percent|minutes?|seconds?|hours?|days?|weeks?|months?|ms\b|%))"
+)
 CODE_FENCE = re.compile(r"^\s*```")
 # Inside a fence, comment lines still carry real cross-references: this layer annotates
 # its DDL and C# with "mechanism in 15". Skipping whole fences hid two such pointers,
@@ -51,9 +59,10 @@ def audit(path: Path, titles: dict[str, str]) -> int:
             continue
         if in_code and not FENCE_COMMENT.match(line):
             continue
-        for m in POINTER.finditer(line):
-            for num in filter(None, m.groups()):
-                found.setdefault(num, []).append(lineno)
+        for pat in (PAREN, BARE):
+            for m in pat.finditer(line):
+                for num in filter(None, m.groups()):
+                    found.setdefault(num, []).append(lineno)
 
     self_num = path.name[:2]
     try:
@@ -78,9 +87,42 @@ def audit(path: Path, titles: dict[str, str]) -> int:
     return sum(1 for n in found if n not in titles)
 
 
+def exhaustive(path: Path) -> None:
+    """List every two-digit number with the word before it, classifying nothing.
+
+    The pattern above encodes which phrasings this layer happens to use, which is a
+    guess, and the guess has been wrong twice: the first revision missed "owned by 13",
+    the second missed "for 07", "from 08", and "are 07's". This mode makes no guess. It
+    is noisier and it is the one to run after a renumber.
+    """
+    pat = re.compile(r"(\S+)\s+(\d{2})\b")
+    in_code = False
+    for lineno, line in enumerate(path.read_text().split("\n"), 1):
+        if CODE_FENCE.match(line):
+            in_code = not in_code
+        for m in pat.finditer(line):
+            prev, num = m.group(1), m.group(2)
+            if not ("01" <= num <= "21"):
+                continue
+            start = max(0, m.start() - 38)
+            flag = "code" if in_code and not FENCE_COMMENT.match(line) else "    "
+            print(f"  {lineno:5} {flag} [{prev} {num}] ...{line[start:m.end() + 20]}")
+
+
 def main() -> int:
     titles = index_titles()
-    args = sys.argv[1:]
+    args = [a for a in sys.argv[1:] if a != "--exhaustive"]
+    if "--exhaustive" in sys.argv[1:]:
+        files = [Path(a) for a in args] if args else sorted(DESIGN.glob("[0-9][0-9]-*.md"))
+        for f in files:
+            print(f"\n{f.name}")
+            exhaustive(f)
+        print(
+            "\nEvery two-digit number in range, unclassified. Most are not pointers "
+            "(versions, counts, RFC sections, roadmap phases). Read them all anyway: "
+            "this mode exists because guessing the phrasing has failed twice."
+        )
+        return 0
     files = [Path(a) for a in args] if args else sorted(DESIGN.glob("[0-9][0-9]-*.md"))
     unresolved = sum(audit(f, titles) for f in files)
     print(
