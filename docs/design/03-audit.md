@@ -1,173 +1,275 @@
 ---
-status: reviewed
+status: draft
 created: 2026-07-18
-tags: [design, audit, security, observability]
+tags: [design, audit, security-events, hash-chain, outbox]
 ---
 
 # Audit subsystem (detailed design)
 
-## Purpose and scope
+> **Sits under:** [architecture: security architecture](../architecture/13-security-architecture.md)
+> (audit as a security control) and
+> [observability and monitoring](../architecture/16-observability-monitoring.md)
+> (the two-lane split). Those state the invariants; this document gives the interfaces, the
+> chain algorithm, the delivery mechanism, and the verify job.
+> **Implementer source of record:** this document. The `AuditLog` and outbox **schema** are
+> [02](02-data.md); the diagnostics lane is [19](19-observability-capacity-slo.md); the
+> erasure saga that drives crypto-shred is [17](17-erasure-and-data-subject-rights.md).
 
-The tamper-evident, delivery-guaranteed audit trail: the ports, the typed event
-catalog covering the negative paths, the hash-chain, the delivery model (critical
-events synchronous in-transaction, the rest through a durable outbox), forwarding
-to a write-once/SIEM destination, the periodic integrity job, and the strict
-separation from diagnostic logging. It is a cross-cutting subsystem rather than
-a stage of its own, and the components that emit into it need it already present: the
-startup hardening guard emits a security event when it refuses to serve a degraded
-configuration (ADR-0043), which happens before the application handles a single request,
-and the protocol path then emits token-reject and replay events. The sink and the chain
-are therefore a prerequisite of their emitters, not a later addition.
+Calling an audit trail "immutable" is an adjective, not a mechanism. This document is the
+mechanism. The starting point is a rejection: **`ILogger` is not an audit trail.** It is
+lossy by design, it is mutable, it has no delivery guarantee, and nobody writes a log line
+for the path that was denied. Audit is a first-class port, not a log level.
 
-In scope: the audit ports and their contract, hash-chain computation, the delivery
-guarantee, the outbox forwarder, the integrity job, PII/erasure reconciliation, and
-the two-lane invariant. Out of scope: the `AuditLog` and outbox **schema** (owned
-by [02-data](02-data.md)), the diagnostics lane (19, observability), the erasure
-saga itself (17), and the concrete SIEM product.
-
-## Decisions realized
+## 1. Decisions realized
 
 | Decision | What this design applies |
 |---|---|
-| ADR-0008 | First-class `ISecurityEventSink`/`IAuditSink`; typed catalog with failure/denial/error; append-only hash-chain; delivery guarantee; WORM/SIEM via outbox; integrity job |
-| ADR-0022 | Two lanes: audit is separate from `ILogger`/OpenTelemetry and never routes through it; joined only by a correlation id |
-| ADR-0016 | Reconcile the immutable chain with right-to-erasure via per-subject crypto-shred |
+| ADR-0008 | First-class `IAuditSink` and `ISecurityEventSink`; the typed catalog covering failure, denial, and error; the append-only keyed hash-chain; the delivery guarantee; forwarding to write-once storage through an outbox; the integrity job |
+| ADR-0022 | Two lanes: audit is separate from the diagnostics pipeline and never routes through it, joined only by a correlation id |
+| ADR-0016 | Reconciling an immutable chain with the right to erasure, through per-subject crypto-shred |
 | ADR-0006 | The audit destination is a cloud-agnostic port with per-target adapters |
+| ADR-0009 | The chain's HMAC key is resolved through the secret port, so the application holds it and the database does not |
 | ADR-0001 | Every event carries tenant context; the store is global and tenant-tagged |
+| ADR-0053 | The consent receipt as an immutable historical record, distinct from mutable authorization state |
+| ADR-0041 | The synchronous critical append is measured against the latency objective |
 
-## Component and interface design
+## 2. Purpose and scope
+
+In scope: the audit ports and their contract, the typed event catalog including the negative
+paths, hash-chain computation, the delivery model, the outbox forwarder, the integrity job,
+the erasure reconciliation, and the two-lane invariant.
+
+Out of scope: the `AuditLog` and outbox **schema**, owned by [02](02-data.md); the
+diagnostics lane, owned by [19](19-observability-capacity-slo.md); the erasure saga itself,
+owned by [17](17-erasure-and-data-subject-rights.md); and the choice of a concrete
+write-once or SIEM product.
+
+This subsystem is **a prerequisite of its own emitters**, which is why it is early rather
+than late. The start-up hardening guard emits a security event when it refuses to serve a
+degraded configuration (ADR-0043), and that happens before the application handles a single
+request. The protocol path then emits token-reject and replay events. A sink that arrived
+after them would be a sink that missed the first thing worth recording.
+
+## 3. Interfaces and contract
+
+Two ports, split by responsibility. Neither may swallow an exception.
 
 ```mermaid
-graph TB
-  subgraph seams[Emission seams]
-    oi[OpenIddict handlers, token and authorize]:::comp
-    sm[SignInManager, login and lockout]:::comp
-    adm[Admin application layer, privileged CRUD]:::comp
-    kr[Key rotation and erasure]:::comp
-  end
-  sink[ISecurityEventSink and IAuditSink<br/>append hash-chained]:::comp
-  store[(AuditLog<br/>append-only, hash-chain)]:::store
-  ob[Outbox forwarder]:::comp
-  worm[WORM / SIEM]:::ext
-
-  oi --> sink
-  sm --> sink
-  adm --> sink
-  kr --> sink
-  sink -->|critical, same transaction| store
-  sink -->|rest, at-least-once| ob
-  ob --> store
-  ob -->|forward and anchor| worm
-
-  classDef comp fill:#85bbf0,stroke:#5d82a8,color:#000000
-  classDef store fill:#438dd5,stroke:#2e6295,color:#ffffff
-  classDef ext fill:#999999,stroke:#6b6b6b,color:#ffffff
-  style seams fill:#f4f8fd,stroke:#c3d7ee
+classDiagram
+  class IAuditSink {
+    <<port>>
+    +AppendAsync(AuditEvent, CancellationToken) ValueTask~AuditChainEntry~
+  }
+  class ISecurityEventSink {
+    <<port>>
+    +AppendAsync(SecurityEvent, CancellationToken) ValueTask
+  }
+  class AuditEvent {
+    +string EventType
+    +string ActorSubCiphertext
+    +Guid TargetTenantId
+    +string PayloadCanonical
+    +Guid CorrelationId
+  }
+  class SecurityEvent {
+    +string EventType
+    +string Outcome
+    +string ActorSubCiphertext
+    +Guid TargetTenantId
+    +Guid CorrelationId
+  }
+  class AuditChainEntry {
+    +byte[] PrevHash
+    +byte[] RecordHash
+  }
+  IAuditSink ..> AuditEvent : appends
+  IAuditSink ..> AuditChainEntry : returns
+  ISecurityEventSink ..> SecurityEvent : appends
 ```
 
-### Ports (in `Nami.Identity.Abstractions`)
+* **`IAuditSink`** records the business trail: a client provisioned, consent granted, a role
+  assigned, a key rotated. It **returns the new chain entry**, which is what lets a caller
+  assert the append actually happened rather than assuming it.
+* **`ISecurityEventSink`** records security events: a login failure, a token reject, a replay,
+  degraded mode enabled, break-glass. `Outcome` is a field rather than part of `EventType`,
+  so a query for "every denial" does not depend on parsing names.
 
-OpenIddict ships no native security-event or audit sink, so this is a first-class
-build rather than a mapping onto `ILogger`. Two ports split by responsibility (ISP),
-both hash-chained and delivery-guaranteed:
+Both are cloud-agnostic ports (ADR-0006). The default adapter writes to `AuditLog` plus the
+outbox; per-target adapters cover an immutable log store or a SIEM.
 
-* **`IAuditSink`** records business audit (client provisioned, consent granted,
-  role assigned, key rotated). `AppendAsync(AuditEvent) -> AuditChainEntry` returns
-  the new chain entry and never swallows an exception.
-* **`ISecurityEventSink`** records security events (login failure, token reject,
-  replay detected, degraded-mode enabled, break-glass). It may forward to SIEM/SOC.
+**Three anti-patterns are forbidden, and each has been seen in the wild:**
 
-Both are cloud-agnostic ports (ADR-0006): the default adapter writes to `AuditLog`
-plus the outbox forwarder; per-target adapters cover an immutable log store or SIEM
-(Azure Log Analytics immutable, S3 Object Lock, Elastic, Splunk, or an OSS target).
+1. **Using the logger as the audit trail.** It is lossy, mutable, and undelivered.
+2. **Fire-and-forget.** An append whose failure nobody observes is not a guarantee.
+3. **Auditing after the business transaction commits, with no outbox and no retry.** This is
+   the subtle one: it looks correct, it passes every happy-path test, and it loses exactly
+   the records that matter, the ones written when something was already going wrong.
 
-### Emission seams
+`PayloadCanonical` is the canonical **TEXT** rendering, not the stored `jsonb`, for the
+reason in section 5.2.
 
-Events are emitted from OpenIddict event handlers (token/authorize, at an
-order-anchored position so every issue-token branch passes through), from
-`SignInManager` (login success/failure, lockout), from the admin Application layer
-(privileged CRUD and dual-control transitions), and from key rotation and erasure.
-The typed catalog covers success **and** the negative paths: `login_success`,
-`login_failure`, `lockout`, `token_issued`, `token_revoked`, `consent_grant`,
-`consent_revoke`, `refresh_reuse_detected`, `token_reject`, `admin_config_change`,
-`authz_decision`, `dual_control_approval`, `key_rotation`, `force_logout`,
-`mass_revoke`, `key_purge`, `erasure`, `degraded_mode_enabled`, `break_glass`,
-`client_auth_failure`, and `unhandled_exception`. Each event type has a fixed payload
-schema and feeds the abuse-alert rules (19). The consent receipt (`consent_grant`, with
-`consent_revoke` on revoke) carries a fixed payload: subject, `client_id`, tenant,
-scope set, purpose, legal basis, `policy_version_hash`, consent timestamp, UI locale, and
-method, as the immutable historical record, distinct from the mutable `Authorization`
-state (ADR-0053, 13). On erasure the saga appends a `subject.erased` tombstone (subject
-ref, erased fields, retained-under basis) as chained proof-of-erasure; the wider
-data-subject-rights event set (rectification, restriction, DSAR fulfilment) is owned by 17.
+## 4. Data and structure
 
-### Hash-chain
+No tables of its own beyond the `AuditLog` in [02](02-data.md). The audit forward-queue
+table is a schema item to add there: ADR-0008 mandates the forwarder but the corpus does not
+specify its DDL, so it is an open build-time item.
 
-Each record carries `RecordHash`, an HMAC/SHA-256 over the previous record's hash
-followed by a canonical TEXT serialization of the payload, that is
-`HMAC_k(PrevHash || canonical(fields))`, with the genesis `PrevHash` a
-32-byte zero. The operand order is **prev-first** and is fixed by ADR-0008: it is the
-standard hash-chain convention, so an independent verifier can reproduce the chain, and
-it must match the schema definition in [02-data](02-data.md) byte-for-byte or the
-verify-chain job will report false breaks. The canonical form is hashed separately
-because `jsonb` does not preserve input bytes. The HMAC key is resolved through
-`ISecretResolver` (ADR-0009) so the application, not a table editor, holds it, which is
-what makes the chain resistant to someone with database write access.
-Storage is append-only: INSERT grant only, with `REVOKE UPDATE/DELETE/TRUNCATE` plus a block trigger;
-because a superuser can still tamper with storage, the hash-chain plus an external
-WORM anchor is what actually provides tamper-evidence, not the grants alone.
+The schema constraint this design depends on: every subject-bearing column, `ActorSub`,
+`OnBehalfOfSubject`, `ApproverSub`, and the `ActorChainJson` delegation chain, is
+**ciphertext at write time**, so destroying a per-subject key removes the plaintext while
+leaving `RecordHash` stable (ADR-0016).
 
-### Delivery guarantee, performance, and no duplication
+That per-subject key is a data key held **only** in the separate `SubjectDek` vault ([02](02-data.md)):
+AES-256-GCM, generated lazily on a subject's first audit record carrying personal data,
+wrapped by the ADR-0006 keyring master key, and **never written to `AuditLog`, its backups,
+the SIEM, or write-once storage**, which hold ciphertext only. That separation is exactly
+what lets a crypto-shred reach the immutable copies: destroying the key renders every
+ciphertext copy unreadable, including replicas and write-once storage, **without deleting an
+append-only row** (Recital 66).
 
-Audit must be trustworthy without dragging the hot path. The synchronous portion is
-kept minimal and everything I/O-heavy runs in the background:
+The mechanism is an `IAuditChainScrubber` with three ordered modes, and the order is the
+design:
 
-* **Critical events** (a small, Security-ratified set: `token_issued`/`token_revoked`,
-  `admin_config_change`, `key_rotation`) are appended by a **single local INSERT
-  inside the action's already-open transaction**, so if the append fails the action
-  rolls back (fail-closed). The only hot-path cost is that one INSERT; there is
-  **never an external SIEM/WORM call on the request path**, and the critical set is
-  bounded and measured against the SLO (ADR-0041). Everything else carries no
-  synchronous audit cost.
-* **The rest** are enqueued in the action's transaction and relayed by a background
-  forwarder: at-least-once with **retry** (exponential backoff plus jitter, a bounded
-  attempt cap) and a **dead-letter** state that raises a security event and pages, so
-  a transient sink outage never loses an event and never creates a blind spot.
-  Fire-and-forget is forbidden.
-* **No duplicated delivery.** Each forwarded entry carries an idempotency key, so an
-  at-least-once retry produces no duplicate record at the destination (an idempotent
-  target makes delivery effectively-once), matching the shared outbox chassis (10),
-  which dedupes on a unique idempotency key. The `AuditLog` row is the single durable
-  record and the outbox is a transient forwarding queue keyed to the entry; whether
-  that row copies the payload (as the shared chassis does) or references the
-  `AuditLog` `EntryId` is an audit-specific build choice, not asserted here.
-* **Correct tenant.** The tenant is captured **at emission** (the request's resolved
-  tenant, or the target tenant of an admin action) and stored as `TargetTenantId`.
-  The audit store is global and tenant-tagged, so the background forwarder reads
-  globally and preserves each row's tag; it does **not** rely on an ambient tenant at
-  forward time, unlike the tenant-scoped email/logout outbox. A missing tag fails the
-  write rather than defaulting to a wrong tenant.
+| Mode | Status | What it does |
+|---|---|---|
+| **PII outside the chain** | the schema design target | an opaque `SubjectRef` plus a separately deletable mapping, so the chain never hashes personal data and erasure is a row delete in the mapping table |
+| **Crypto-shred** | the runtime default | the subject identifier is ciphertext; erasure destroys the key |
+| Anonymise in place | deferred, an opt-in stub that throws | never the default, because rewriting a hashed row is the one operation the chain exists to make detectable |
 
-These are elaborations within ADR-0008 (synchronous-critical plus outbox-for-the-rest,
-tenant-tagged), not a new decision; going fully asynchronous for the critical set
-would drop the fail-closed guarantee and would be an ADR-0008 change.
+The erasure saga that drives it is [17](17-erasure-and-data-subject-rights.md).
 
-### Integrity job and two-lane separation
+## 5. Behaviour
 
-A periodic integrity job re-walks the chain, asserts each `RecordHash`, and anchors
-a checkpoint hash into the WORM/SIEM destination. The **audit lane is separate from
-the diagnostics lane** (`ILogger` plus OpenTelemetry, 19): audit never routes
-through the telemetry pipeline, which lacks tamper-evidence and a delivery
-guarantee. The two are joined only by a correlation/trace id. An adapter that
-silently drops (for example an in-memory sink that discards on overflow) violates
-the delivery-guarantee contract and is a test failure, not an acceptable degrade.
+### 5.1 Emission seams and the catalog
+
+Events are emitted from protocol event handlers (token and authorize, at an **order-anchored**
+position so every issue-token branch passes through the sink), from the sign-in manager
+(login success and failure, lockout), from the admin application layer (privileged writes and
+dual-control transitions), and from key rotation and erasure. Emitting from a handler is what
+keeps coverage uniform; scattering log calls as pseudo-audit is what does not.
+
+The catalog covers success **and** the negative paths: `login_success`, `login_failure`,
+`lockout`, `token_issued`, `token_revoked`, `consent_grant`, `consent_revoke`,
+`refresh_reuse_detected`, `token_reject`, `admin_config_change`, `authz_decision`,
+`dual_control_approval`, `key_rotation`, `force_logout`, `mass_revoke`, `key_purge`,
+`erasure`, `degraded_mode_enabled`, `break_glass`, `client_auth_failure`, and
+`unhandled_exception`. Each has a fixed payload schema and feeds the abuse-alert rules
+([19](19-observability-capacity-slo.md)).
+
+Two entries in that list are there for reasons worth stating. `client_auth_failure` at the
+token endpoint is the credential-stuffing signal, and `unhandled_exception` covers the error
+category rather than only operational failure, so a crash is auditable rather than merely
+logged.
+
+The consent receipt (`consent_grant`, with `consent_revoke` on revocation) carries a fixed
+payload: subject, client, tenant, scope set, purpose, legal basis, policy version hash,
+consent timestamp, interface locale, and method. It is the immutable historical record, and
+it is deliberately distinct from the mutable authorization state (ADR-0053,
+[13](13-revocation-caching.md)). On erasure the saga appends a `subject.erased` tombstone
+carrying the subject reference, the erased fields, and the basis for anything retained, as
+chained proof of erasure; the wider data-subject-rights event set is
+[17](17-erasure-and-data-subject-rights.md).
+
+### 5.2 The hash chain
+
+```text
+RecordHash = HMAC_k( PrevHash || canonical(fields) )
+```
+
+Genesis `PrevHash` is 32 zero **bytes**, not a string. Three properties are load-bearing and
+each answers a different attack:
+
+* **Keyed, not bare.** An HMAC with an application-held key, rather than a plain digest, so
+  an attacker who can write to the database still cannot recompute a valid chain. The key is
+  resolved through `ISecretResolver` (ADR-0009), so the application holds it and a table
+  editor does not. ADR-0008 records this as an upgrade from an earlier bare form and calls
+  that form a real weakness rather than a notation shorthand.
+* **Prev-first operands.** `PrevHash`, then the canonical record. This is the standard
+  convention, so an independent verifier can reproduce the chain, and it must match the
+  schema definition in [02](02-data.md) byte for byte or the verify job reports false breaks.
+* **Canonical TEXT.** PostgreSQL `jsonb` does not preserve input byte order, so hashing the
+  stored column would produce a hash that depends on the database's internal representation.
+  The same canonicalisation is reused if a field is later scrubbed.
+
+Storage is append-only: an insert grant only, with update, delete, and truncate revoked, plus
+a blocking trigger as a backstop. **This does not stop a superuser, which is precisely why
+the chain exists**: grants prevent tampering by the application, and the chain plus an
+external anchor detect tampering by anyone else.
+
+### 5.3 Delivery, and what it costs the hot path
+
+Audit must be trustworthy without dragging the request path, so the synchronous portion is
+kept minimal and everything expensive runs behind it.
+
+* **Critical events**, a small Security-ratified set (`token_issued` and `token_revoked`,
+  `admin_config_change`, `key_rotation`), are appended by **one local insert inside the
+  action's already-open transaction**. If the append fails, the action rolls back: fail-closed.
+  The only hot-path cost is that insert, and there is **never an external call on the request
+  path**. The set is bounded and measured against the objective (ADR-0041).
+* **Everything else** is enqueued in the action's transaction and relayed by a background
+  forwarder: at-least-once with exponential backoff plus jitter, a bounded attempt cap, and a
+  **dead-letter** state that raises a security event and pages. A transient sink outage must
+  never become a blind spot.
+* **No duplicate delivery.** Each forwarded entry carries an idempotency key, so an
+  at-least-once retry produces no duplicate at the destination. The `AuditLog` row is the
+  single durable record and the outbox is a transient forwarding queue keyed to it; whether
+  that row copies the payload or references the entry identifier is an audit-specific build
+  choice, not asserted here.
+* **The tenant is captured at emission**, from the request's resolved tenant or the target
+  tenant of an admin action, and stored as `TargetTenantId`. The store is global and
+  tenant-tagged, so the forwarder reads globally and preserves each row's tag; it does **not**
+  rely on an ambient tenant at forward time, unlike the tenant-scoped mail and logout outbox.
+  A missing tag fails the write rather than defaulting to a wrong tenant.
+
+These are elaborations within ADR-0008, not a new decision. Going fully asynchronous for the
+critical set would drop the fail-closed guarantee and would require changing that ADR.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant H as Handler or admin action
+  participant Tx as DB transaction
+  participant AL as AuditLog
+  participant R as Outbox forwarder
+  participant W as Write-once store or SIEM
+  H->>Tx: begin, perform the action
+  H->>AL: append, chained to PrevHash
+  Note over AL: RecordHash is the keyed HMAC over PrevHash then the canonical payload
+  alt critical event
+    H->>Tx: commit action and audit together
+    Tx-->>H: an audit failure rolls the action back, fail-closed
+  else everything else
+    H->>AL: append and enqueue an outbox row in the same transaction
+    R->>AL: claim a pending row, SKIP LOCKED
+    R->>W: forward, at-least-once with an idempotency key
+    R->>AL: mark forwarded
+  end
+```
+
+The outbox row's own lifecycle, which is where the delivery guarantee actually lives:
+
+```mermaid
+stateDiagram-v2
+  [*] --> Pending : enqueued in the action's transaction
+  Pending --> InFlight : the relay claims it, SKIP LOCKED
+  InFlight --> Sent : the destination acknowledges
+  InFlight --> Pending : retry, with backoff and jitter
+  InFlight --> DeadLettered : the attempt cap is exhausted
+  DeadLettered --> [*] : raises a security event and pages, never a silent drop
+  Sent --> [*]
+```
+
+### 5.4 The integrity job and the two lanes
+
+A periodic job re-walks the chain, asserts each `RecordHash`, and **anchors a checkpoint hash**
+into the write-once destination, so external immutability backs the internal chain.
 
 ```mermaid
 sequenceDiagram
   autonumber
   participant J as Integrity job
   participant AL as AuditLog
-  participant W as WORM / SIEM
+  participant W as Write-once store or SIEM
   J->>AL: re-walk the chain in order
   J->>J: recompute and assert each RecordHash
   alt a link fails
@@ -177,172 +279,140 @@ sequenceDiagram
   end
 ```
 
-### Libraries
+**The audit lane is separate from the diagnostics lane** ([19](19-observability-capacity-slo.md)):
+audit never routes through the telemetry pipeline, which has neither tamper-evidence nor a
+delivery guarantee. The only link between them is a shared correlation and trace id. This is
+a hard invariant, not a preference.
 
-No new third-party dependency: the chain uses the BCL
-(`System.Security.Cryptography` HMAC/SHA-256), the store uses the EF/Npgsql stack
-of [02-data](02-data.md), and the optional SIEM/WORM adapters are per-cloud
-(permissive, selected by configuration like the other cloud ports, ADR-0006).
+It carries an obligation on **every** adapter, including test doubles: an implementation that
+silently drops, for instance an in-memory sink that discards on overflow, violates the
+delivery-guarantee contract and is a **test failure**, not an acceptable degradation. A
+substitute that weakens the contract is not a substitute.
 
-### Patterns applied
+## 6. Dependencies and wiring
 
-Named per ADR-0066 (a vocabulary, applied where it clarifies intent):
+No new third-party dependency. The chain uses the base class library's HMAC and SHA-256, the
+store uses the persistence stack of [02](02-data.md), and the optional write-once and SIEM
+adapters are per-target and selected by configuration like the other cloud ports (ADR-0006).
 
-* **Transactional Outbox** for delivery-guaranteed, at-least-once forwarding with
-  no blind spot.
-* **Adapter** for the cloud-agnostic sink (database default, SIEM/WORM per target).
-* **Append-only hash-chain** (ledger / Merkle-style) for tamper-evidence.
+| Library | Purpose | License |
+|---|---|---|
+| `System.Security.Cryptography` (BCL) | The keyed hash chain | MIT, part of the runtime |
+| EF Core and Npgsql | The append-only store and the outbox | MIT and a BSD-class licence |
+| Per-target write-once or SIEM adapters | Forwarding, selected by configuration | permissive, per ADR-0026 |
 
-## Data model
+> **Patterns applied** (ADR-0066). **Transactional Outbox** for delivery-guaranteed
+> at-least-once forwarding with no blind spot, the same chassis as mail and logout
+> ([10](10-email-notification.md)). **Adapter** for the cloud-agnostic sink. And an
+> **append-only hash chain**, which is the ledger pattern and is the only one of the three
+> that is load-bearing for security rather than for structure.
 
-No new tables of its own beyond the `AuditLog` in [02-data](02-data.md). Forwarding
-follows the transactional-outbox pattern (the chassis of 10); its audit forward-queue
-table is a schema item to add in 02: ADR-0008 mandates the outbox forwarder but the
-corpus does not specify its DDL, so it is an open build-time item (below). The schema
-constraint this design depends on: all subject-bearing columns (`ActorSub`,
-`OnBehalfOfSubject`, `ApproverSub`, and the `ActorChainJson` delegation chain) are
-ciphertext-at-write, so destroying a per-subject key removes the plaintext while
-keeping `RecordHash` stable (ADR-0016).
+## 7. Error handling, edge cases, invariants
 
-The per-subject key is a DEK held **only** in the separate `SubjectDek` vault (02):
-AES-256-GCM, generated lazily on a subject's first audit PII, wrapped by the ADR-0006
-keyring master key, and **never written to the `AuditLog`, its backup, SIEM, or WORM**
-(those hold ciphertext only). That separation is exactly what lets crypto-shred reach the
-immutable copies: destroying the DEK renders every ciphertext copy, including WORM and
-replicas, permanently unreadable without deleting an append-only row (Recital 66). The
-mechanism behind it is an `IAuditChainScrubber` with an ordered model: crypto-shred is the
-runtime default; **PII-outside-chain** (an opaque `SubjectRef` plus a separately deletable
-mapping) is the schema design target, applied wherever an event need not embed PII; and
-**anonymise-in-place** is a deferred, opt-in `NotImplemented` stub, never the default. The
-erasure saga that drives it is owned by 17.
-
-## Runtime flows
-
-### Critical event, synchronous in-transaction
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant H as OpenIddict handler or admin action
-  participant Tx as DB transaction
-  participant AL as AuditLog
-  H->>Tx: begin, perform the action
-  H->>AL: append critical event, chained to PrevHash
-  Note over AL: RecordHash is keyed HMAC over PrevHash then the canonical payload
-  H->>Tx: commit action and audit together
-  alt audit append fails
-    Tx-->>H: rollback, action fails closed
-  end
-```
-
-### Non-critical event, outbox and forwarder
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant A as Action
-  participant DB as AuditLog and outbox
-  participant R as Outbox forwarder
-  participant W as WORM / SIEM
-  A->>DB: append event, enqueue outbox row keyed to the entry, one transaction
-  A->>DB: commit
-  R->>DB: claim pending row, SKIP LOCKED
-  R->>W: forward, at-least-once with idempotency key
-  R->>DB: mark forwarded
-  Note over R,W: a periodic integrity job re-walks the chain and anchors a checkpoint hash
-```
-
-## Edge cases and failure modes
-
-* **Sink or store down**: critical events fail the action (fail-closed); the rest
-  stay durable in the outbox and are retried, so there is no blind spot.
-* **`jsonb` byte non-determinism**: the hash is over a canonical TEXT form, not the
-  stored `jsonb`.
-* **Privileged tampering**: append-only grants do not stop a superuser; the
-  hash-chain plus the external WORM anchor detect tampering after the fact.
-* **Erasure versus immutability**: crypto-shred destroys the per-subject key so the
-  identifiers become unreadable while `RecordHash` stays valid and the chain still
-  verifies; because events are forwarded as ciphertext, key destruction also renders
-  the immutable WORM/SIEM copy unreadable (WORM cannot be deleted from), and a
-  redaction-assurance check covers the SIEM forward lane (ADR-0016).
-* **Duplicate delivery**: the claim step (SKIP LOCKED) stops two forwarders sending
-  the same row, and the idempotency key lets the destination dedupe, so at-least-once
-  never yields a duplicate record.
-* **Exhausted retries**: after the bounded attempt cap the entry moves to a
-  dead-letter state that raises a security event and pages; it is never silently
-  dropped.
-* **Wrong tenant tag**: the tenant is captured at emission, not at forward time; a
-  background emitter must set the target tenant explicitly, and a missing tag fails
-  the write rather than defaulting.
-* **Ordering**: the chain order is the insert order; cross-lane correlation is by
-  the trace id, not by audit timestamps.
+* **Sink or store down**: critical events fail their action, fail-closed; the rest stay
+  durable in the outbox and retry, so there is no blind spot either way.
+* **`jsonb` byte non-determinism**: the hash is over a canonical TEXT form, never the stored
+  column.
+* **Privileged tampering**: append-only grants do not stop a superuser; the chain plus the
+  external anchor detect it after the fact.
+* **Erasure versus immutability**: crypto-shred destroys the per-subject key, so identifiers
+  become unreadable while `RecordHash` stays valid and the chain still verifies. Because
+  events are forwarded as ciphertext, key destruction also renders the immutable copy
+  unreadable, which matters because write-once storage cannot be deleted from. A
+  redaction-assurance check covers the forward lane (ADR-0016).
+* **Duplicate delivery**: the claim step stops two forwarders sending the same row, and the
+  idempotency key lets the destination deduplicate, so at-least-once never yields a duplicate.
+* **Exhausted retries**: the entry moves to dead-letter, raises a security event, and pages.
+  It is never silently dropped.
+* **Wrong tenant tag**: the tenant is captured at emission, not at forward time; a background
+  emitter sets the target tenant explicitly, and a missing tag fails the write.
+* **Ordering**: chain order is insert order. Cross-lane correlation is by trace id, never by
+  audit timestamps.
 * **Silo isolation**: a hard-isolated Silo tenant may use a separate audit store and a
-  separate SIEM destination; global-plane events (identity, membership) are audited at the
-  global tier (ADR-0008, ADR-0001).
+  separate SIEM destination; global-plane events such as identity and membership are audited
+  at the global tier (ADR-0008, ADR-0001).
 
-## Security considerations
+## 8. Security and multi-tenancy notes
 
-* Tamper-evidence is the point: append-only plus hash-chain plus an external WORM
-  anchor, with the HMAC key held outside the database (ADR-0009).
-* PII discipline: redact non-essential PII and never log raw secrets or tokens;
-  keep only the accountability identifiers, and store those as ciphertext so
-  erasure can crypto-shred them (ADR-0008, ADR-0016).
-* The two-lane invariant is a security control: routing audit through the
-  diagnostics pipeline would lose tamper-evidence and delivery, so it is forbidden
-  (ADR-0022).
-* Emission covers denials and failures, not just successes, so the trail supports
-  incident response and abuse detection.
+Tamper-evidence is the whole point, and it is three mechanisms rather than one: append-only
+storage, the keyed chain, and an external anchor, with the key held outside the database
+(ADR-0009). Any two of the three without the third leaves a gap.
 
-## Testing strategy
+Personal-data discipline: non-essential data is redacted rather than written, raw secrets and
+tokens are never recorded, and the accountability identifiers that cannot be dropped are
+stored as ciphertext so erasure can reach them (ADR-0008, ADR-0016).
 
-* **Integrity test**: tampering with a stored row is detected by the chain walk.
-* **Delivery tests**: a failed critical-event append rolls back its action;
-  the outbox relays at-least-once with no duplicate under two concurrent forwarders.
-* **LSP contract test**: an in-memory sink that silently drops fails the
+The two-lane invariant is itself a security control. Routing audit through the diagnostics
+pipeline would lose tamper-evidence and delivery in one move, which is why it is forbidden
+rather than discouraged (ADR-0022).
+
+Emission covers denials and failures, not only successes, because a trail that records only
+what worked is useless for incident response and for abuse detection alike.
+
+## 9. Testing
+
+* **Integrity**: tampering with a stored row is detected by the chain walk.
+* **Delivery**: a failed critical append rolls back its action; the outbox relays
+  at-least-once with no duplicate under two concurrent forwarders.
+* **Substitutability contract**: an in-memory sink that silently drops fails the
   delivery-guarantee contract.
-* **Negative-path coverage**: failure, denial, and error events are actually
-  emitted from the handlers and `SignInManager`.
-* **Erasure test**: after crypto-shred, the identifiers are unreadable and the
-  chain still verifies (ADR-0016).
-* **Two-lane independence**: with the telemetry collector blocked under load, the
-  audit outbox retains and relays every event, proving a diagnostics-lane outage
-  does not drop audit.
-* **No-duplicate test**: a forced retry delivers at-least-once but the idempotent
-  destination keeps a single record.
-* **Forward-adapter test**: the cloud-agnostic WORM/SIEM forward adapter delivers, and
-  a redaction-assurance scan asserts no PII of an erased subject remains on the SIEM
-  forward lane.
-* **Dead-letter test**: exhausting the retry cap moves the entry to dead-letter and
-  raises a security event.
-* **Tenant-tag test**: an event is tagged with the acting/target tenant, and a
+* **Negative-path coverage**: failure, denial, and error events are actually emitted from the
+  handlers and the sign-in manager.
+* **Erasure**: after a crypto-shred the identifiers are unreadable and the chain still
+  verifies.
+* **Two-lane independence**: with the telemetry collector blocked under load, the audit
+  outbox retains and relays every event, proving a diagnostics outage does not drop audit.
+* **No duplicate**: a forced retry delivers at-least-once but the idempotent destination keeps
+  one record.
+* **Forward adapter**: the cloud-agnostic adapter delivers, and a redaction-assurance scan
+  asserts no personal data of an erased subject remains on the forward lane.
+* **Dead letter**: exhausting the attempt cap moves the entry to dead-letter and raises a
+  security event.
+* **Tenant tag**: an event is tagged with the acting or target tenant, and a
   background-emitted event forwards under the correct tenant.
-* **Performance test**: the synchronous critical append adds one INSERT to the
-  action transaction and no external call, measured against the SLO (ADR-0041).
+* **Performance**: the synchronous critical append adds one insert to the action transaction
+  and no external call, measured against the objective (ADR-0041).
 
-## Open and build-time items
+## 10. Open and build-time items
 
-* DPO/Security ratify the minimum event catalog, the retention window (obligation-bound
-  per Art.17(3) and Recital 65, explicitly not "keep forever"), the PII-redaction policy,
-  and the concrete WORM/SIEM destination (ADR-0008, Pre-GA checklist).
-* The SIEM/WORM forward adapter asserts the destination region equals the tenant's declared
-  data residency (PII must not leave the declared region); recommended, pending DPO
-  ratification (ADR-0054).
-* The exact set of events that commit synchronously (the critical set) is a
-  Security ratification item.
-* Where the audit HMAC key lives and how it rotates is resolved through
-  `ISecretResolver` and confirmed at build (ADR-0009).
-* The SIEM/WORM adapter (and whether to ship more than one) is a build-time pick.
-* The audit forward-queue table (the outbox forwarder's storage) is a schema item to
-  add in 02; ADR-0008 mandates the forwarder but not its DDL.
+* **DPO and Security ratify** the minimum event catalog, the retention window (obligation-bound
+  under Article 17(3) and Recital 65, explicitly **not** "keep forever"), the redaction policy,
+  and the concrete write-once or SIEM destination (ADR-0008, and the pre-GA checklist).
+* **Data residency on the forward lane**: the adapter asserts that the destination region
+  equals the tenant's declared residency, so personal data does not leave it. Recommended,
+  pending DPO ratification (ADR-0054).
+* **The exact critical set** that commits synchronously is a Security ratification item.
+* **Where the audit HMAC key lives and how it rotates** resolves through `ISecretResolver`
+  and is confirmed at build (ADR-0009).
+* **The forward adapter**, and whether more than one ships, is a build-time pick.
+* **The audit forward-queue table** is a schema item to add in [02](02-data.md); ADR-0008
+  mandates the forwarder but not its DDL.
 
-## References
+## 11. Sources
 
-* Architecture overview: [components](../architecture/08-component-view.md) (the audit
-  subsystem and the two-lane split), [cross-cutting](../architecture/11-cross-cutting-concepts.md).
-* Design: [02-data](02-data.md) (the `AuditLog` and outbox schema).
-* ADRs: 0008 (audit subsystem), 0022 (two lanes), 0016 (erasure crypto-shred),
-  0006/0009 (cloud-agnostic sink and secret resolution), 0001 (tenant-tagged),
-  0041 (the SLO the synchronous critical append is measured against).
+* **ADRs:** 0008 (the owning decision), 0022 (two lanes), 0016 (erasure and crypto-shred),
+  0006 and 0009 (the cloud-agnostic sink and the key), 0001 (tenant tagging), 0053 (the
+  consent receipt), 0041 (the objective the synchronous append is measured against), 0043
+  (the start-up guard that is the first emitter), 0054 (residency on the forward lane).
+* **Architecture:** [security architecture](../architecture/13-security-architecture.md),
+  [observability and monitoring](../architecture/16-observability-monitoring.md),
+  [component view](../architecture/08-component-view.md),
+  [cross-cutting concepts](../architecture/11-cross-cutting-concepts.md).
+* **Design:** [02](02-data.md) (the schema and the subject-key vault),
+  [10](10-email-notification.md) (the outbox chassis this reuses),
+  [13](13-revocation-caching.md) (the mutable authorization state the receipt is distinct
+  from), [17](17-erasure-and-data-subject-rights.md) (the erasure saga),
+  [19](19-observability-capacity-slo.md) (the diagnostics lane and the alert rules).
+* Reconciled against the design corpus's audit subsystem design on 2026-07-27. That document
+  is one of the corpus's **originally written** designs rather than a digest of a root
+  document, so it was read as a primary source. The reconcile found **nothing to import**:
+  every one of its eleven sections is already covered here, and this document is broader on
+  the event catalog, the tenant-capture rule, the three-mode scrubber, the subject-key vault,
+  and the test set. Three shapes were adopted from it: the event field contracts as a class
+  diagram, the outbox row's state machine, and the third forbidden anti-pattern, auditing
+  after the business transaction commits with no outbox. On the chain formula the corpus
+  notes that its own decision record and one of its designs write a bare digest while another
+  recommends keying; ADR-0008 here already records that reconcile and adopts the keyed form.
 
 ---
 

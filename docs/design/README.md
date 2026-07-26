@@ -88,7 +88,7 @@ plan, not here.
 |---|---|---|---|
 | [01](01-foundations.md) | Foundations and solution structure | draft | 0024, 0027, 0065, 0075, 0044, 0026, 0030, 0031, 0006, 0009, 0025, 0021 |
 | [02](02-data.md) | Data tier and multi-tenancy | reviewed | 0001, 0018, 0036, 0037, 0049 |
-| [03](03-audit.md) | Audit subsystem | reviewed | 0008, 0022 |
+| [03](03-audit.md) | Audit subsystem | draft | 0008, 0022, 0016, 0006, 0009, 0001, 0053, 0041 |
 | [04](04-core-protocol.md) | Core protocol server | reviewed | 0004, 0005, 0014, 0048, 0049 |
 | [05](05-resource-server-validation.md) | Resource-server token validation | draft | 0049, 0033, 0005, 0004, 0048, 0001, 0037, 0009 |
 | [06](06-sender-constrained-tokens.md) | Sender-constrained tokens (DPoP and mTLS) | draft | 0014, 0005, 0021, 0024, 0049 |
