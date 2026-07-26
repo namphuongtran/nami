@@ -470,4 +470,4 @@ Named per ADR-0066:
 
 ---
 
-[Prev: Core protocol server](04-core-protocol.md) · [Index](README.md) · Next: [Authorization and delegated admin](07-authorization.md)
+[Prev: Core protocol server](04-core-protocol.md) · [Index](README.md) · Next: [Sender-constrained tokens](06-sender-constrained-tokens.md)

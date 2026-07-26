@@ -1,7 +1,7 @@
 ---
 status: draft
 created: 2026-07-23
-tags: [design, dpop, device-flow, par, token-exchange, advanced-flows, sender-constrained]
+tags: [design, device-flow, par, token-exchange, advanced-flows]
 ---
 
 # Advanced flows (detailed design)
@@ -10,21 +10,19 @@ tags: [design, dpop, device-flow, par, token-exchange, advanced-flows, sender-co
 
 The advanced OAuth/OIDC flows beyond the core protocol: what OpenIddict supports
 natively (wire and test), what Nami builds, and what is deliberately de-scoped, skipped,
-or waiting on the engine roadmap. Most of the matrix is native; the one substantial build
-is **DPoP** (RFC 9449), which OpenIddict 7.5 has on neither the issuance nor the
-validation side, so this design owns it end to end. The rest of the doc is the backend
-hardening for device flow and PAR, the token-exchange grant wiring, and the recorded
-de-scope/roadmap decisions.
+or waiting on the engine roadmap. Most of the matrix is native. The substantial build in
+this area is sender-constraint, and it has its own design now
+([06](06-sender-constrained-tokens.md)), so what remains here is the backend hardening for
+device flow and PAR, the token-exchange grant wiring, and the recorded de-scope and
+roadmap decisions.
 
-In scope (owned): DPoP issuance, validation, the replay cache, refresh binding-continuity,
-introspection `cnf.jkt` surfacing, and the discovery algorithm set; the device-flow
-polling backoff and DoS ceiling; the PAR per-client enforcement, `request_uri` lifetime,
-and anti-flood control; the token-exchange grant wiring; and the de-scope/roadmap
-decisions. This design **declares** the DPoP packages (`Nami.Identity.DPoP`,
-`Nami.Identity.Validation.DPoP`) and the `IDPoPReplayCache` port (names reserved in 01).
+In scope (owned): the device-flow polling backoff and DoS ceiling; the PAR per-client
+enforcement, `request_uri` lifetime, and anti-flood control; the token-exchange grant
+wiring; and the de-scope and roadmap decisions.
 
-Out of scope, referenced not redefined: sender-constrained **mTLS** (04 owns it in full;
-this design adds nothing but a pointer to the trusted-proxy ratification gate); the
+Out of scope, referenced not redefined: **both sender-constraint mechanisms**, DPoP and
+mTLS, with their handlers, replay cache, packages, and the `IDPoPReplayCache` port
+([06](06-sender-constrained-tokens.md), and 04 for the issuance-side wiring); the
 token-exchange **`act`**/initiator resolution and confused-deputy handling (07);
 **step-up** authentication, which the design corpus lists as its largest build but which is already
 allocated across the producer (08), the enforcement (07), and the UI (11), this design
@@ -35,10 +33,10 @@ fan-out (11); and the core native-verify flows (04). It adds no database tables.
 
 | Decision | What this design applies |
 |---|---|
-| ADR-0014 | The flow scope matrix: native-verify vs build vs de-scope vs skip vs roadmap-wait; DPoP built both sides for public clients, mTLS native for confidential/M2M |
-| ADR-0021 | DPoP is the archetypal build-interim seam (own permanently, no committed native); device/PAR/DPoP handler orders are pinned, contract-tested per bump, with decommission markers |
+| ADR-0014 | The flow scope matrix: native-verify versus build versus de-scope versus skip versus roadmap-wait. The sender-constraint half of that matrix is realized in 06 |
+| ADR-0021 | The device-flow and PAR handler orders are pinned and contract-tested per bump, with decommission markers; the archetypal build-interim seam is sender-constraint, in 06 |
 | ADR-0042 | Device-flow `slow_down`/429 backoff and the PAR anti-flood ceiling |
-| ADR-0048 | A DPoP-bound token's introspection response carries `cnf.jkt` or returns `active:false` (enrich-or-inactive); introspection stays native |
+| ADR-0048 | Introspection stays native; the enrich-or-inactive rule for a bound token is 06's |
 | ADR-0049 | Every advanced flow runs in the resolved tenant scope; the RS validates signature + issuer + audience + tenant, and `cnf` composes on top after per-tenant validation |
 | ADR-0013 / ADR-0019 (ref) | Step-up (producer 08 / enforcement 07 / UI 11) and back-channel logout (08/10) are referenced, not built here |
 | ADR-0056 / ADR-0064 (proposed) | The revisit triggers for the de-scoped items: a FAPI 2.0 message-signing tier (JAR/JARM/RAR) and an MCP AS-role resource-indicator policy layer |
@@ -51,8 +49,8 @@ fan-out (11); and the core native-verify flows (04). It adds no database tables.
 | Device authorization (RFC 8628) | native grant + **built backoff hardening** | owned here |
 | PAR (RFC 9126) | native + **built anti-flood/enforcement hardening** | owned here |
 | Token exchange (RFC 8693) | native grant wire + **`act` logic built in 07**; **`may_act` de-scoped** as a security decision (ADR-0014) | grant here, logic 07 |
-| mTLS-bound tokens (RFC 8705) | native (confidential/M2M) | 04 (referenced) |
-| **DPoP (RFC 9449)** | **built, both issuance and validation** | **owned here** |
+| mTLS-bound tokens (RFC 8705) | native (confidential and M2M) | 06, and 04 for the wiring |
+| **DPoP (RFC 9449)** | **built, both issuance and validation** | **06** |
 | Back-channel logout | built interim (front-channel is dead) | 11 / 13 (referenced) |
 | Step-up (`acr`/`amr`/`max_age`/`prompt`) | built | 08 / 07 / 11 (referenced) |
 | JAR (RFC 9101) | de-scoped (revisit if FAPI) | this doc |
@@ -60,136 +58,16 @@ fan-out (11); and the core native-verify flows (04). It adds no database tables.
 | CIBA | skipped | this doc |
 | Dynamic Client Registration (RFC 7591/7592) | roadmap-wait (OpenIddict 8.0); interim Admin CRUD | this doc / 15 |
 
-## DPoP (RFC 9449): the core build
+## DPoP and mTLS (owned by 06)
 
-OpenIddict 7.5 has no DPoP on either side (no `jkt`/`ath`/`htm`/`htu`/`dpop+jwt`
-constants; `CreateConfirmationClaim` stamps only `x5t#S256`; validation is Bearer-only and
-throws on a `jkt`), so both the issuance and validation handlers are built. This was
-de-risked with runnable spikes (A-1 issuance, A-3 validation; results in V18). What the spikes
-proved is the **shape**: the event/order selection and the nested-`cnf` emission at issuance,
-and the `SR.ID2196` throw plus its neutralization before the built-in at validation. The proof
-cryptography itself (signature, `htm`/`htu`/`ath`, thumbprint, `jti` replay) is standard code the
-spikes did **not** exercise (A-1 stamped a simulated `jkt` from a test header; A-3 did not run the
-proof crypto), deferred to integration tests (V18). It is a build-interim seam with a decommission
-marker: if the engine ships native DPoP, the handlers retire (ADR-0021, seams S6/S8/S9, S30).
-
-### RFC essentials
-
-The proof JWT carries a JOSE header `typ="dpop+jwt"`, an asymmetric `alg` (never `none`
-or a MAC), and a public `jwk` (never a private key); its payload has `jti` (at least
-96 bits of entropy), `htm`, `htu` (query and fragment stripped), `iat`, and `ath`
-(`base64url(SHA-256(access_token))`) when an access token is presented. The binding is
-`cnf.jkt = base64url(the RFC 7638 JWK SHA-256 thumbprint)`. At the resource, the scheme is
-`Authorization: DPoP <token>` (never `Bearer`), and a DPoP-bound token presented as
-`Bearer` **must be rejected** (`invalid_token`, RFC 9449 §7.2).
-
-### Issuance (order/shape spike-proven, A-1)
-
-A handler on **`ProcessSignInContext`** (the event where the access-token principal is
-built, not `ProcessAuthenticationContext`), registered `UseScopedHandler` and ordered
-`SetOrder(OpenIddictServerHandlers.PrepareAccessTokenPrincipal.Descriptor.Order + 1_000)`,
-that is, **after** `PrepareAccessTokenPrincipal`. It validates the proof (no `ath` at
-issuance, since there is no access token yet), computes the thumbprint, and stamps the
-confirmation on the **access-token** principal:
-`context.AccessTokenPrincipal.SetClaim(Claims.Confirmation, JsonElement{"jkt":thumb})`.
-Two spike-proven details are load-bearing: stamping on `context.Principal` *before* that
-handler is silently dropped (the access-token principal is already built), and the `cnf`
-must be a nested `JsonElement` (`"cnf":{"jkt":".."}`); a string value would
-double-serialize (issue #219) and a flattened `cnf.jkt` key is wrong. A request with no
-DPoP proof stamps nothing and issues a plain token (no half-bound token). Discovery
-advertises `dpop_signing_alg_values_supported` as the 9-algorithm set (RS/PS/ES ×
-256/384/512), emitted through the discovery handler (`HandleConfigurationRequestContext`;
-the discovery mechanism is owned by 04); the
-refresh token is bound for public clients (RFC 9449 §5). The order is anchored to a
-*named* descriptor, so it is ADR-0021-stable.
-
-### Validation (mechanism spike-proven, A-3)
-
-Two resource-side handlers. First, because the built-in
-`ExtractAccessTokenFromAuthorizationHeader` is Bearer-only, a sibling
-`ExtractDPoPAccessTokenFromAuthorizationHeader` ordered at `.Descriptor.Order - 1` accepts
-the `Authorization: DPoP <token>` scheme. Second, the built-in `ValidateProofOfPossession`
-handles only `x5t#S256` and **throws** `InvalidOperationException(SR.ID2196)` on a
-`jkt`-only `cnf` (a 500-class throw, *not* a `Reject`), so a custom handler ordered at
-`ValidateProofOfPossession.Descriptor.Order - 500` validates the proof and then
-neutralizes the `cnf` branch so the built-in does not throw. The full proof check is:
-`typ`/`alg`/`jwk` (no private key)/signature; `htm` exact; `htu` with query/fragment
-stripped, scheme and host compared case-insensitively, the path case-sensitively, and the
-default port normalized; `iat` within skew; `ath` equal to
-`base64url(SHA-256(access_token))`; the `jwk` thumbprint equal to `cnf.jkt`; the nonce if
-required; and the `jti` replay check. The validation pipeline does not emit
-`WWW-Authenticate: DPoP` natively (`AttachWwwAuthenticateHeader` hard-codes `Bearer`), so
-the handler writes those headers directly (the challenge carries `error` and an `algs` list
-of the supported signing algorithms, e.g. `ES256 PS256`) and suppresses the built-in Bearer one.
-
-**Which pipeline to anchor is a build-time determination, not an assumption.**
-`ValidateProofOfPossession` is a *server*-pipeline handler; a standalone resource server
-running `OpenIddict.Validation` alone does not run the server pipeline,
-so it anchors to the validation pipeline's own proof-of-possession handler, and only the
-co-host `UseLocalServer` path hits the `SR.ID2196` throw. The **co-host** path is
-spike-proven (A-3/V18 ran the real `OpenIddict.Validation` pipeline under `UseLocalServer`:
-`SR.ID2196` is thrown raw and neutralized by the custom handler at `Order - 500`); the
-**standalone** `OpenIddict.Validation` scheme wiring was not exercised (the per-tenant RS
-validation spike used the `TokenValidationParameters` layer, A-7/V27), so only the
-standalone anchor is confirmed at build time (a contract test per bump).
-
-### Replay cache
-
-The `jti` replay cache is `IDPoPReplayCache` (`AddAsync`/`ExistsAsync`, key
-`"DPoPReplay-jti-" + jti`) backed by a Redis `IDistributedCache`, with a TTL of the proof
-validity plus twice the applicable skew (2× the max applicable skew for the active
-validation mode: the client clock skew in iat mode, the server clock skew in nonce mode,
-not their sum). Unlike the general caches, this one is **fail-closed by necessity**: it
-is the authoritative L2 store (a replay set has no durable source to read through to), so
-if the Redis write cannot be confirmed the proof is rejected (`invalid_dpop_proof`), the
-same carve-out class as the email throttle. This is distinct from the distrusted-kid
-denylist (13), which is fail-closed but rebuildable from the database. The port lives in
-`Nami.Identity.Abstractions` (shared by the server and resource packages) and reuses the
-Redis wiring owned by 13 rather than re-wiring it. One consequence to state plainly: the
-`jti` check is a per-request, Redis-authoritative hit at the resource-server validation
-path **for DPoP-bound tokens only**: a deliberate proof-of-possession cost, not a
-regression of the core token path's no-mandatory-Redis property (13).
-
-### Introspection, refresh, nonce, and the fallback
-
-- **Introspection.** Native `cnf`-in-introspection covers only the mTLS `x5t#S256`, so a
-  resource server that introspects a DPoP-bound token must receive `cnf.jkt` in the
-  response. The invariant is **enrich-or-inactive**: the response carries `cnf.jkt` or it
-  returns `active:false`, never active-but-unbound (04 defers this build item here).
-- **Refresh continuity (RFC 9449 §5).** On a refresh of a bound token, a fresh proof
-  whose `jkt` equals the stored `cnf.jkt` is required; a mismatch or a missing proof is
-  rejected, and the same `cnf.jkt` is re-stamped on the rotated token.
-- **Nonce.** v1 starts iat-only (RFC-compliant, the common reference default); a server-issued nonce
-  (a data-protected timestamp) is phase 2. A missing/stale nonce returns 401 with
-  `WWW-Authenticate: DPoP error="use_dpop_nonce"` and a `DPoP-Nonce` header (400 with the
-  error in the body at the token endpoint).
-- **Fallback.** If issuance had proven infeasible on the pin, the recorded fallback is
-  mTLS-only with DPoP deferred, and a public client would then get no DPoP-shaped token at
-  all (never a half-bound one). The A-1 spike passed, so the fallback is not triggered.
-
-### Options, client contract, and the XSS caveat
-
-Options mirror the reference model: `ProofTokenValidityDuration` 1 minute, `ServerClockSkew`
-0, per-client `RequireDPoP` (default false), `DPoPValidationMode`
-(`Iat`/`Nonce`/`IatAndNonce`/`IatOrNonce`, default `Iat`), and `DPoPClockSkew` 5 minutes,
-with two separate skews (a client clock skew for the `iat` window, a server clock skew of
-0 for the nonce window). The proof validator follows the reference step order
-(header, signature, payload, freshness, replay). A SPA generates a non-extractable
-WebCrypto ECDSA P-256 key; a mobile app uses a hardware-backed key. The security caveat
-must be stated: a non-extractable key stops token *exfiltration* but not in-place XSS use
-(XSS can call `subtle.sign()` as a signing oracle, the "DPoP storage paradox"), so
-browser DPoP defends against replay from another host, not against XSS. **The real SPA
-mitigation is the BFF** (08 / the BFF design); native mobile, by contrast, uses DPoP
-directly with its hardware key.
-
-### Packaging
-
-The server-side handlers ship in `Nami.Identity.DPoP` (`.AddDPoP(...)`, depends on Core);
-the resource-side validation ships in `Nami.Identity.Validation.DPoP`
-(`.AddDPoPValidation(...)`, depends on `OpenIddict.Validation`, **not** Core, so a
-resource API need not pull the server package). `IDPoPReplayCache` sits in
-`Nami.Identity.Abstractions` so both share it. The package names are reserved in the
-foundations package graph (01); exact boundaries land at M1 (ADR-0027).
+Both sender-constraint mechanisms moved to [06](06-sender-constrained-tokens.md) when
+that design was written: the DPoP issuance and validation handlers with their order
+anchors, the replay cache and its fail-closed carve-out, the freshness modes and the
+nonce, the client key contract, the cross-site-scripting caveat and why the
+backend-for-frontend is the real mitigation, and the native mTLS binding. This design
+keeps only what the advanced flows themselves need: a sender-constrained token composes
+**after** per-tenant validation (05), and a resource server that introspects a bound
+token must receive its binding in the response or an inactive result (04, ADR-0048).
 
 ## Device flow (RFC 8628): backend hardening
 
@@ -241,12 +119,12 @@ design wires the grant and defers that logic to 07.
 
 ## mTLS (referenced)
 
-mTLS (RFC 8705) is the native sender-constrained mechanism for confidential and M2M
-clients and the counterpart to DPoP; 04 owns it in full (the native `cnf.x5t#S256` at
-issuance, the enable API, the certificate-forwarding order, and the `KnownProxies`
-anti-spoof allow-list). This design adds nothing to mTLS except to note that the
-trusted-proxy IP allow-list is a deferred Ops/Security ratification item (ADR-0014, Pre-GA
-checklist).
+mTLS (RFC 8705) is the native sender-constrained mechanism for confidential and
+machine-to-machine clients and the counterpart to DPoP. [06](06-sender-constrained-tokens.md)
+owns it alongside DPoP, and 04 owns the issuance-side wiring (the native `cnf.x5t#S256`, the
+enable API, the certificate-forwarding order, and the anti-spoof allow-list). This design
+adds nothing to mTLS except to note that the trusted-proxy address list is a deferred Ops
+and Security ratification item (ADR-0014, ADR-0073, Pre-GA checklist).
 
 ## De-scoped and roadmap-gated
 

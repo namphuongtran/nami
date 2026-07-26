@@ -117,7 +117,7 @@ contract test the consumer runs against their own implementation: deny-by-defaul
 destinations, a tamper-evident and delivery-guaranteed audit sink, a deny-by-default and
 consistency-carrying access check, and publish-before-sign with scope correctness
 (ADR-0075). The register there is closed, so adding a port to it is an amendment. Ports whose
-owning subsystem arrives later (`IEmailDispatcher` for 10, `IDPoPReplayCache` for 14,
+owning subsystem arrives later (`IEmailDispatcher` for 10, `IDPoPReplayCache` for 06,
 `IAttestationValidator` for 08) are declared with those packages, not in the Phase-01
 set.
 
