@@ -124,7 +124,7 @@ of the supported signing algorithms, e.g. `ES256 PS256`) and suppresses the buil
 
 **Which pipeline to anchor is a build-time determination, not an assumption.**
 `ValidateProofOfPossession` is a *server*-pipeline handler; a standalone resource server
-(`OpenIddict.Validation`, the `Validation.DPoP` package) does not run the server pipeline,
+running `OpenIddict.Validation` alone does not run the server pipeline,
 so it anchors to the validation pipeline's own proof-of-possession handler, and only the
 co-host `UseLocalServer` path hits the `SR.ID2196` throw. The **co-host** path is
 spike-proven (A-3/V18 ran the real `OpenIddict.Validation` pipeline under `UseLocalServer`:

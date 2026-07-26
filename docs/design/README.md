@@ -87,7 +87,7 @@ plan, not here.
 | [02](02-data.md) | Data tier and multi-tenancy | reviewed | 0001, 0018, 0036, 0037, 0049 |
 | [03](03-audit.md) | Audit subsystem | reviewed | 0008, 0022 |
 | [04](04-core-protocol.md) | Core protocol server | reviewed | 0004, 0005, 0014, 0048, 0049 |
-| 05 | Resource-server token validation | planned | 0049, 0005, 0004, 0001, 0033, 0009 |
+| [05](05-resource-server-validation.md) | Resource-server token validation | draft | 0049, 0033, 0005, 0004, 0048, 0001, 0037, 0009 |
 | 06 | Sender-constrained tokens (DPoP and mTLS) | planned | 0014, 0005 |
 | [07](07-authorization.md) | Authorization and delegated admin | reviewed | 0010, 0047, 0013 |
 | [08](08-user-management.md) | User management and authentication | reviewed | 0028, 0013, 0003, 0002 |
@@ -105,7 +105,7 @@ plan, not here.
 | [20](20-testing.md) | Testing | draft | 0060, 0062 |
 | [21](21-cicd-and-deployment.md) | CI/CD and deployment | draft | 0025, 0023, 0031, 0051 |
 
-The three `planned` rows are reserved numbers rather than gaps: each module exists
+The remaining `planned` rows are reserved numbers rather than gaps: each module exists
 in the design corpus and lands here when its turn comes. The ADR sets on those rows
 are the ones the corpus records for them, and are confirmed against this repository
 when the file is written. A `planned` row becomes a linked `draft`, then `reviewed`

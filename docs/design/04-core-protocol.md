@@ -852,4 +852,4 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
 
 ---
 
-[Prev: Audit subsystem](03-audit.md) · [Index](README.md) · Next: [Authorization and delegated admin](07-authorization.md)
+[Prev: Audit subsystem](03-audit.md) · [Index](README.md) · Next: [Resource-server token validation](05-resource-server-validation.md)
