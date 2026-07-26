@@ -319,4 +319,4 @@ ADR-0017); development may enable migrate-on-startup for convenience.
 
 ---
 
-[Index](README.md) · Next: [Data tier and multi-tenancy →](02-data.md)
+[Index](README.md) · Next: [Data tier](02-data.md)

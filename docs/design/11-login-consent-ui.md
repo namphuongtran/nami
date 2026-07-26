@@ -530,8 +530,8 @@ and all copy passes through localization.
   de-scope), ADR-0020 (admin-UI boundary), ADR-0034 (dynamic IdP v2), ADR-0010
   (delegated-admin approval boundary).
 - Design docs: [04 core protocol](04-core-protocol.md) (authorize/consent/logout,
-  `prompt=none`, revocation), [06 user management](06-user-management.md) (login/MFA/passkey/
-  federation, claims, sessions, change-email), [07 email](07-email-notification.md) (reset/
+  `prompt=none`, revocation), [06 user management](08-user-management.md) (login/MFA/passkey/
+  federation, claims, sessions, change-email), [07 email](10-email-notification.md) (reset/
   confirm anti-enumeration, tokens, i18n floor, outbox chassis), [03 audit](03-audit.md)
   (two lanes, `admin_config_change`), [02 data](02-data.md) (`TenantBranding`,
   `ServerSideSessions`, `Application.Properties`), [01 foundations](01-foundations.md)
@@ -539,3 +539,7 @@ and all copy passes through localization.
 - [Architecture](../architecture/README.md): containers (UI in the reference host),
   runtime views 1 (auth code) and 6 (BFF token custody).
 - [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
+
+---
+
+[Prev: Email and notification](10-email-notification.md) · [Index](README.md) · Next: [Key management and rotation](12-key-management.md)

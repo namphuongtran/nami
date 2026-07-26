@@ -51,7 +51,7 @@ restating it.
   subject and actor resolution, emitting the `act` chain, and rejecting the confused-deputy
   case. `may_act` is deliberately **not** issued, as a security decision rather than a scope
   one (ADR-0014, and the
-  [authorization design](../design/05-authorization.md)).
+  [authorization design](../design/07-authorization.md)).
 * **Back-channel logout.** A server-to-server logout notification, a signed `logout_token`,
   delivered to each relying party in the session. Built as an interim until the engine ships a
   native equivalent (ADR-0019).

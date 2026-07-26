@@ -13,7 +13,7 @@ managing clients, scopes, grants, users, roles, tenants, memberships, delegated-
 grants, sessions, and audit; the **dual-control saga** that makes destructive actions
 four-eyes and un-bypassable; the **first-admin bootstrap and admin break-glass**
 (ADR-0015); and how the API is documented (Scalar) and secured (it is a resource server of
-the IdP itself). The MVC Razor front end is a separate design ([Admin App](12-admin-app.md));
+the IdP itself). The MVC Razor front end is a separate design ([Admin App](16-admin-app.md));
 this doc is the backend it consumes.
 
 In scope (owned): the API surface and per-resource CRUD contracts; the data-access model
@@ -25,7 +25,7 @@ performance, availability).
 Out of scope, referenced not redefined: the authorization **decision** and the dual-control
 **gating rule** (05); the user lifecycle, force-logout, and sessions (06); the tenant and
 erasure saga **bodies** (13, entered here); the **schema** (02, the SSOT); the audit catalog
-(03); the numeric SLO table (14); the front end ([Admin App](12-admin-app.md)); and the
+(03); the numeric SLO table (14); the front end ([Admin App](16-admin-app.md)); and the
 **key**-compromise break-glass (09, distinct). Dynamic per-tenant external IdP management is
 **v2** (ADR-0034 / design 32), so there is no IdentityProvider CRUD in v1, external IdPs are
 static host-level configuration (06).
@@ -401,10 +401,10 @@ first-admin seed is idempotent and forces a change; Scalar performs a real OIDC 
 - ADRs: ADR-0020, ADR-0015, ADR-0010 / ADR-0047 (05), ADR-0029 (the App's BFF), ADR-0009 /
   ADR-0035, ADR-0008, ADR-0003, ADR-0019, ADR-0007 (distinct), ADR-0013, ADR-0021, ADR-0024 /
   ADR-0027, ADR-0034 (v2 dynamic IdP), ADR-0062 (ASVS).
-- Design docs: [Admin App](12-admin-app.md), [05 authorization](05-authorization.md) (the
-  decision and gating rule), [06 user management](06-user-management.md) (lifecycle, force-logout,
-  sessions), [07 email](07-email-notification.md) (proposal-failure notification), [10
-  revocation](10-revocation-caching.md) (force-logout / config cache), [02 data](02-data.md)
+- Design docs: [Admin App](16-admin-app.md), [05 authorization](07-authorization.md) (the
+  decision and gating rule), [06 user management](08-user-management.md) (lifecycle, force-logout,
+  sessions), [07 email](10-email-notification.md) (proposal-failure notification), [10
+  revocation](13-revocation-caching.md) (force-logout / config cache), [02 data](02-data.md)
   (`DualControlProposals`, `TenantBranding`), [03 audit](03-audit.md), [13 GDPR erasure and
   tenant provisioning] (saga bodies), [14 observability] (SLO table), [01
   foundations](01-foundations.md) (package graph).
@@ -414,3 +414,7 @@ first-admin seed is idempotent and forces a change; Scalar performs a real OIDC 
 - [Architecture](../architecture/README.md): containers (`Admin.Api`), domain (the `Proposal`
   aggregate), runtime views 2 (dual-control) and 9 (delegated cross-tenant).
 - [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
+
+---
+
+[Prev: Advanced flows](14-advanced-flows.md) · [Index](README.md) · Next: [Admin App](16-admin-app.md)

@@ -22,12 +22,12 @@ zero-downtime); the graceful-shutdown and HA knobs; the 12-factor invariants and
 enforcement; and the governance/repository files and docs/samples.
 
 Out of scope, referenced not redefined: the test taxonomy and the security/conformance
-gates ([15 testing](15-testing.md)); the migration fan-out, `SchemaVersionGate`, and
-expand/contract mechanism ([13 tenant lifecycle](13-tenant-lifecycle.md)); the load/SLO
-gate and canary ([14 observability](14-observability-capacity-slo.md)); the `/health/ready`
-and `/health/live` predicate ([01 foundations](01-foundations.md), [09](09-key-management.md));
-the DR restore drill and key break-glass runbook ([09](09-key-management.md)); and the
-dual-control proposal machinery ([12 Admin API](12-admin-api.md)).
+gates ([15 testing](20-testing.md)); the migration fan-out, `SchemaVersionGate`, and
+expand/contract mechanism ([13 tenant lifecycle](18-tenant-lifecycle.md)); the load/SLO
+gate and canary ([14 observability](19-observability-capacity-slo.md)); the `/health/ready`
+and `/health/live` predicate ([01 foundations](01-foundations.md), [09](12-key-management.md));
+the DR restore drill and key break-glass runbook ([09](12-key-management.md)); and the
+dual-control proposal machinery ([12 Admin API](15-admin-api.md)).
 
 ## Decisions realized
 
@@ -58,7 +58,7 @@ member.
 
 ### Quality gates (all must pass, or the release is blocked)
 
-1. Tests: unit, Testcontainers integration, and Playwright end-to-end ([15 testing](15-testing.md)).
+1. Tests: unit, Testcontainers integration, and Playwright end-to-end ([15 testing](20-testing.md)).
 2. `PublicApiAnalyzers`: zero errors, `Unshipped` promoted, no obsolete-and-remove in one version.
 3. Contract-regression on the current pins (and again when bumping OpenIddict/Finbuckle/EF/Npgsql), ADR-0021/0030.
 4. OpenID conformance on the reference host (Basic, Config, Form Post profiles).
@@ -70,8 +70,8 @@ These run alongside the foundational gates already owned by [01](01-foundations.
 (build, test, license-scan, `PublicApiAnalyzers`, ArchUnitNET, `dotnet format
 --verify-no-changes`, the docs guardrail), the "12-factor checks" gate (below), the
 dependency-scan (blocking) and secret-scan (gitleaks) and DAST scans, and the load/SLO
-gate that runs as [14](14-observability-capacity-slo.md)'s separate job. The migration
-`has-pending-model-changes` and linear-history checks are [13](13-tenant-lifecycle.md)'s.
+gate that runs as [14](19-observability-capacity-slo.md)'s separate job. The migration
+`has-pending-model-changes` and linear-history checks are [13](18-tenant-lifecycle.md)'s.
 
 ### Release supply chain (ADR-0051)
 
@@ -141,7 +141,7 @@ state backend and its encryption key are an Ops ratification.
 
 Migration runs as a pre-upgrade Job (or init container), never on startup. On the shared
 Pool database the per-tenant 503 gate does not apply, so **expand/contract**
-(parallel-change) is the sole coexistence mechanism ([13](13-tenant-lifecycle.md)): a
+(parallel-change) is the sole coexistence mechanism ([13](18-tenant-lifecycle.md)): a
 release adds only backward-compatible schema, and a CI additive-only rule fails the build
 on a `DROP`, a destructive `ALTER`, a rename, or a `NOT NULL` without a default in the
 same release; the destructive contract step is deferred to a later release. The ordered
@@ -149,7 +149,7 @@ deploy is expand-migration Job, then roll out the new pods, then verify, then (a
 release) contract, with a migrate-ok/rollout-failed runbook. A mixed-version
 rolling-deploy stays compatible because tokens, cookies, and JWE minted by release N
 validate on release N+1 (a shared Data-Protection keyring), which the compatibility test
-in [15 testing](15-testing.md) proves.
+in [15 testing](20-testing.md) proves.
 
 ### 12-factor invariants and enforcement (ADR-0031)
 
@@ -207,7 +207,7 @@ are real code built in CI. Examples use neutral tenant names (tenant A, tenant B
 ## Data touchpoints
 
 None. Deployment operates the schema owned by [02 data](02-data.md) through the migration
-model owned by [13 tenant lifecycle](13-tenant-lifecycle.md); this doc defines no tables.
+model owned by [13 tenant lifecycle](18-tenant-lifecycle.md); this doc defines no tables.
 
 ## Runtime flows
 
@@ -268,8 +268,8 @@ The deployment-facing tests are the health-probe and graceful-shutdown drain tes
 file-sink, HEALTHCHECK/non-root/env-config), the mixed-version rolling-deploy
 compatibility test, the additive-only migration CI rule, the container-scan gate, and a
 CI test that the `dotnet new` template scaffolds and builds. The DR restore drill and the
-key break-glass runbook test are owned by [09](09-key-management.md); the load/SLO gate,
-canary, collector-outage, and chaos suite are owned by [14](14-observability-capacity-slo.md).
+key break-glass runbook test are owned by [09](12-key-management.md); the load/SLO gate,
+canary, collector-outage, and chaos suite are owned by [14](19-observability-capacity-slo.md).
 
 ## Open and build-time items
 
@@ -280,9 +280,9 @@ canary, collector-outage, and chaos suite are owned by [14](14-observability-cap
 ## References
 
 - ADRs: ADR-0025 (local dev and first-run), ADR-0023 (OpenTofu IaC), ADR-0031 (12-factor baseline), ADR-0051 (release supply-chain integrity), ADR-0046 (dual-control publish), ADR-0045 (coordinated disclosure), ADR-0044 (SemVer and public-API stability), ADR-0026 (permissive dependencies, SBOM, license-scan), ADR-0021/ADR-0030 (contract-regression and version pins), ADR-0017 (no migrate-on-startup; migration model), ADR-0012 (key bootstrap), ADR-0015 (first-admin break-glass), ADR-0063/ADR-0070 (dev observability and TLS).
-- Design docs: [15 testing](15-testing.md) (the suites the pipeline runs), [13 tenant lifecycle](13-tenant-lifecycle.md) (migration fan-out and expand/contract), [14 observability](14-observability-capacity-slo.md) (load/SLO gate, canary), [01 foundations](01-foundations.md) (foundational CI gates, health endpoints), [09 key management](09-key-management.md) (DR drill, break-glass), [12 Admin API](12-admin-api.md) (dual-control).
+- Design docs: [15 testing](20-testing.md) (the suites the pipeline runs), [13 tenant lifecycle](18-tenant-lifecycle.md) (migration fan-out and expand/contract), [14 observability](19-observability-capacity-slo.md) (load/SLO gate, canary), [01 foundations](01-foundations.md) (foundational CI gates, health endpoints), [09 key management](12-key-management.md) (DR drill, break-glass), [12 Admin API](15-admin-api.md) (dual-control).
 - [Architecture](../architecture/README.md); [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 
 ---
 
-Previous: [15 Testing](15-testing.md) · [Index](README.md)
+[Prev: Testing](20-testing.md) · [Index](README.md)

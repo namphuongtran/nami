@@ -9,7 +9,7 @@ tags: [design, admin, ui, bff, razor, mvc, step-up]
 ## Purpose and scope
 
 The administration front end (`Nami.Identity.Admin.App`): an MVC Razor **BFF** that
-consumes the [Admin API](12-admin-api.md). It holds **no business logic** and never talks to
+consumes the [Admin API](15-admin-api.md). It holds **no business logic** and never talks to
 managers or the database directly; it renders screens, carries the user's session, and proxies
 to the API with a server-side token. The access token **never reaches the browser** (ADR-0029).
 
@@ -18,7 +18,7 @@ theming, accessibility); the screen inventory; the step-up UX; the error/UX conv
 the front-end security (antiforgery, CSP, no-token-in-browser, back-channel logout).
 
 Out of scope, referenced not redefined: the API surface, DTOs, CRUD semantics, dual-control
-saga, RBAC, bootstrap, and break-glass ([Admin API](12-admin-api.md)); the step-up *enforcement*
+saga, RBAC, bootstrap, and break-glass ([Admin API](15-admin-api.md)); the step-up *enforcement*
 and the challenge *page mechanics* (05 / 08); the BFF package internals (ADR-0029 / the BFF
 design). The end-user login/consent UI (08) is a different application.
 
@@ -152,10 +152,14 @@ preview + a rejected http/private-IP logo; and a back-channel-logout that ends t
 
 - ADRs: ADR-0020 (admin architecture), ADR-0029 (BFF), ADR-0003 (sessions), ADR-0019
   (back-channel logout), ADR-0013 (step-up, referenced).
-- Design docs: [Admin API](12-admin-api.md) (the backend it consumes), [08 login/consent/logout
-  UI](08-login-consent-ui.md) (the `SecurityHeadersAttribute`, step-up page, open-redirect
-  guard, i18n), [05 authorization](05-authorization.md) (step-up enforcement), [13 GDPR erasure
+- Design docs: [Admin API](15-admin-api.md) (the backend it consumes), [08 login/consent/logout
+  UI](11-login-consent-ui.md) (the `SecurityHeadersAttribute`, step-up page, open-redirect
+  guard, i18n), [05 authorization](07-authorization.md) (step-up enforcement), [13 GDPR erasure
   and tenant provisioning] (the saga bodies the wizards drive).
 - [Architecture](../architecture/README.md): containers (`Admin.App`), runtime view 2
   (dual-control with step-up).
 - [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
+
+---
+
+[Prev: Admin API](15-admin-api.md) · [Index](README.md) · Next: [Erasure and data-subject rights](17-erasure-and-data-subject-rights.md)

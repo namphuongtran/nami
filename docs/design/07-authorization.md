@@ -374,4 +374,4 @@ production gate:
 
 ---
 
-[← Prev: Core protocol server](04-core-protocol.md) · [Index](README.md) · Next: [User management and authentication →](06-user-management.md)
+[Prev: Core protocol server](04-core-protocol.md) · [Index](README.md) · Next: [User management and authentication](08-user-management.md)

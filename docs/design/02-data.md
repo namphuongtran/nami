@@ -600,4 +600,4 @@ sequenceDiagram
 
 ---
 
-[← Prev: Foundations](01-foundations.md) · [Index](README.md) · Next: [Audit subsystem →](03-audit.md)
+[Prev: Foundations](01-foundations.md) · [Index](README.md) · Next: [Audit subsystem](03-audit.md)

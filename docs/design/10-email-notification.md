@@ -542,10 +542,14 @@ Pre-GA checklist (ADR-0008) is where they land.
   (abuse/throttle numbers), ADR-0028 / ADR-0037 (packaging, PostgreSQL DDL).
 - Design docs: [02 data tier](02-data.md) (schema SSOT for `OutboxEmail` /
   `SuppressionEntry`), [03 audit](03-audit.md) (two lanes, security events), [06 user
-  management](06-user-management.md) (change-email flow, `RequireConfirmedAccount`), [01
+  management](08-user-management.md) (change-email flow, `RequireConfirmedAccount`), [01
   foundations](01-foundations.md) (ports catalog, `Cloud:Provider` selector, package
   graph).
 - [Architecture](../architecture/README.md): components view (email subsystem),
   runtime view 8 (transactional email outbox).
 - [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md) (throttle numbers;
   suppression hash/TTL; audit minimum catalog).
+
+---
+
+[Prev: User management and authentication](08-user-management.md) · [Index](README.md) · Next: [Login, consent, and logout UI](11-login-consent-ui.md)

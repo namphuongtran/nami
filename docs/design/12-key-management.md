@@ -417,3 +417,7 @@ cache). The JWKS-availability SLO is 99.99%; the full numeric SLO table is owned
 - Verification: the A-2 no-restart-rotation spike (V19) and the NIST cryptoperiod
   primary-source check (V16).
 - [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
+
+---
+
+[Prev: Login, consent, and logout UI](11-login-consent-ui.md) · [Index](README.md) · Next: [Revocation propagation and caching](13-revocation-caching.md)

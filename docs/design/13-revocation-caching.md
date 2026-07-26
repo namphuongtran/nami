@@ -267,8 +267,8 @@ replace or alter the internal per-path enforcement in this design, and v1 stays 
   ADR-0068 (v2 Shared Signals, proposed).
 - Design docs: [04 core protocol](04-core-protocol.md) (revocation endpoint,
   entry-validation, `AccessTokenType`, introspection cache, 15-min TTL), [06 user
-  management](06-user-management.md) (sessions, force-logout, `ValidationInterval`), [09
-  key management](09-key-management.md) (break-glass trigger, RS validation-key set), [02
+  management](08-user-management.md) (sessions, force-logout, `ValidationInterval`), [09
+  key management](12-key-management.md) (break-glass trigger, RS validation-key set), [02
   data](02-data.md) (`SigningKeys.RevokedAt`, `ServerSideSessions`), [01 foundations]
   (01-foundations.md) (Redis / cache wiring), [03 audit](03-audit.md) (event catalog).
 - [Architecture](../architecture/README.md): runtime view 4 (cross-node revocation),
@@ -276,3 +276,7 @@ replace or alter the internal per-path enforcement in this design, and v1 stays 
 - Verification: the cross-node revocation research (R15); the `AutomaticRefreshInterval`
   floor check (CAT-2 FLAG-6).
 - [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
+
+---
+
+[Prev: Key management and rotation](12-key-management.md) · [Index](README.md) · Next: [Advanced flows](14-advanced-flows.md)

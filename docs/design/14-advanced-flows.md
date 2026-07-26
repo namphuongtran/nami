@@ -400,14 +400,18 @@ sequenceDiagram
   (device-code JWE, referenced), ADR-0033 (shared-key isolation, referenced), and the
   proposed ADR-0056 (FAPI 2.0) / ADR-0064 (MCP AS-role) for de-scope revisit.
 - Design docs: [04 core protocol](04-core-protocol.md) (mTLS, PAR endpoint, device grant,
-  introspection, discovery, the pipeline seam), [05 authorization](05-authorization.md)
-  (token-exchange `act`, step-up enforcement), [06 user management](06-user-management.md)
-  (the acr/amr/auth_time producer), [08 login/consent/logout UI](08-login-consent-ui.md)
+  introspection, discovery, the pipeline seam), [05 authorization](07-authorization.md)
+  (token-exchange `act`, step-up enforcement), [06 user management](08-user-management.md)
+  (the acr/amr/auth_time producer), [08 login/consent/logout UI](11-login-consent-ui.md)
   (device and step-up pages, back-channel fan-out), [10 revocation and caching]
-  (10-revocation-caching.md) (the Redis wiring, the fail-closed discipline).
+  (13-revocation-caching.md) (the Redis wiring, the fail-closed discipline).
 - [Architecture](../architecture/README.md): runtime view 5 (DPoP), the protocol-core
   components (DPoP handlers), the Redis container role.
 - Verification: the A-1 issuance and A-3 validation spikes and their results (V18); the
   RS-side per-tenant validation spike (V27); the DPoP research (R16).
 - [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md) (trusted-proxy mTLS
   IP list).
+
+---
+
+[Prev: Revocation propagation and caching](13-revocation-caching.md) · [Index](README.md) · Next: [Admin API](15-admin-api.md)

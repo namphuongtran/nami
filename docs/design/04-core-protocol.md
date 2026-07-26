@@ -534,4 +534,4 @@ cover the refresh-rotation and consent flows this design details.
 
 ---
 
-[← Prev: Audit subsystem](03-audit.md) · [Index](README.md) · Next: [Authorization and delegated admin →](05-authorization.md)
+[Prev: Audit subsystem](03-audit.md) · [Index](README.md) · Next: [Authorization and delegated admin](07-authorization.md)
