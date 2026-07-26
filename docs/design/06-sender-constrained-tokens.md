@@ -263,13 +263,30 @@ a different node.
 
 The proof-freshness mode is one of `Iat`, `Nonce`, `IatAndNonce`, or `IatOrNonce`. v1 ships
 `Iat`, which is RFC-compliant and the simplest thing that works. There are **two distinct
-skews** and conflating them is a bug: a client clock skew of a few minutes for the `iat`
-window, and a server clock skew of zero for the nonce window.
+skews** and conflating them is a bug: a **client clock skew of 5 minutes** for the `iat`
+window, and a **server clock skew of zero** for the nonce window.
+
+The proof validity window is **not one number**. It is about **60 seconds at the token
+endpoint** and **5 to 10 seconds at a resource API**, because the token endpoint is reached
+once per exchange while an API is reached continuously, so the same window buys far more
+replay opportunity there. A single global value is the easy mistake and it is wrong in
+whichever direction it is set.
 
 A server-issued nonce is a later addition that defends against proofs generated in advance.
-The resource server answers `401` with a `use_dpop_nonce` error and a nonce header; the
-token endpoint answers `400` with the same error in the body plus the header; the client
-retries with the nonce, and the server rotates it on success.
+The resource server answers `401` with a `use_dpop_nonce` error and a **`DPoP-Nonce`**
+response header carrying an opaque value; the token endpoint answers `400` with the same
+error in the body plus the same header; the client retries with the `nonce` claim, and the
+server rotates the nonce through `DPoP-Nonce` on a `200`.
+
+**Requiring DPoP is a per-client property, not a server-wide switch**, and it defaults to
+**off**. A deployment turns the handlers on globally and then raises the requirement client
+by client, because a tenant will have public clients that need DPoP alongside
+machine-to-machine clients already bound by mTLS, and one global flag cannot express that.
+
+The advertised algorithm set is the **nine asymmetric JOSE algorithms**, RS256/384/512,
+PS256/384/512, and ES256/384/512, published in `dpop_signing_alg_values_supported` in
+discovery. The set is asymmetric-only by construction: an HMAC proof would require the
+resource to hold the client's key, which is the property DPoP exists to avoid.
 
 The validator is staged so each stage can be overridden and tested alone: header, then
 signature, then payload, then freshness, then replay.
@@ -323,14 +340,19 @@ a version bump that moves the built-in handlers fails the build rather than prod
 **Set by this design**, following `Nami:Section:Key` with the `Nami__Section__Key`
 environment form (ADR-0065):
 
-| Key | Purpose |
-|---|---|
-| `Nami:DPoP:Enabled` | Whether the DPoP handlers are registered at all |
-| `Nami:DPoP:ValidationMode` | `Iat`, `Nonce`, `IatAndNonce`, or `IatOrNonce`; v1 default `Iat` |
-| `Nami:DPoP:ClientClockSkewSeconds` | The `iat` acceptance window |
-| `Nami:DPoP:ProofValiditySeconds` | Shorter at a resource API than at the token endpoint |
-| `Nami:DPoP:RequireNonce` | The later hardening step |
-| `Nami:Mtls:Enabled` | Whether certificate-bound access tokens are issued |
+| Key | Purpose | Default |
+|---|---|---|
+| `Nami:DPoP:Enabled` | Whether the DPoP handlers are registered at all | `false` |
+| `Nami:DPoP:ValidationMode` | `Iat`, `Nonce`, `IatAndNonce`, or `IatOrNonce` | `Iat` |
+| `Nami:DPoP:ClientClockSkewSeconds` | The `iat` acceptance window | `300` (5 minutes) |
+| `Nami:DPoP:ServerClockSkewSeconds` | The nonce window, deliberately not the client skew | `0` |
+| `Nami:DPoP:ProofValiditySeconds` | At the token endpoint | `60` |
+| `Nami:DPoP:ResourceProofValiditySeconds` | At a resource API, an order of magnitude shorter | `10` |
+| `Nami:DPoP:RequireNonce` | The later hardening step | `false` |
+| `Nami:Mtls:Enabled` | Whether certificate-bound access tokens are issued | `false` |
+
+Requiring DPoP of a **particular client** is not in this table on purpose: it is a property
+of the client record, not of the host, for the reason given in section 5.
 
 ### Key libraries and licenses
 

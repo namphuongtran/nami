@@ -207,7 +207,7 @@ reaches no token.
 
 | Claim | JSON shape | Destination | Producer | Consumer |
 |---|---|---|---|---|
-| `memberships` | array of `{tid, name?, roles?}`, `tid` required; capped at about 10 entries, and over the cap truncated, setting `memberships_truncated` (ADR-0005) | id_token only, because an access token is single-tenant | This design, from the `Memberships` store (07) | The tenant switcher (11) and integrators; on truncation the full list comes from the self-service membership endpoint (08), never from a larger token |
+| `memberships` | array of `{tid, name?, roles?}` where `tid` is required and `name` and `roles` are optional; capped at about 10 entries, and over the cap **truncated to 10** with **`memberships_truncated: true`** set alongside it (ADR-0005) | id_token only, because an access token is single-tenant | This design, from the `Memberships` store (07) | The tenant switcher (11) and integrators; on `memberships_truncated=true` the full list comes from the self-service membership endpoint (08), never from a larger token |
 | `acr` | single string, `urn:nami.identity:aal1`/`aal2`/`aal3`, with `0` meaning below aal1 and not for a valuable resource | id_token and access_token | `ComputeAcr`, recomputed per token request (08, ADR-0013) | Step-up at a resource server (05) and the Admin `AcrRequirement` (15) |
 | `amr` | array, RFC 8176 values `pwd`, `otp`, `mfa`, `hwk`, `swk` | id_token | Stamped at sign-in via `SignInWithClaimsAsync` (08) | Informational only |
 | `auth_time` | JSON **number**, a NumberDate, via the `long` overload | id_token and access_token | This design, from `AuthenticationProperties.IssuedUtc` | `max_age` and step-up freshness |

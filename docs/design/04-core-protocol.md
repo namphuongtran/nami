@@ -675,7 +675,14 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
 
 * **The wrong-API trap.** Introspection, revocation, and device authorization are fully
   handled; adding a controller reinvents and probably weakens `ValidateAuthorizedParty`.
-  The per-tenant issuer must be inferred, never a static `SetIssuer`.
+  The per-tenant issuer must be inferred, never a static `SetIssuer`. **Per-tenant server
+  options were considered and rejected**: `PostConfigurePerTenant<OpenIddictServerOptions>`
+  exists (verified in `Finbuckle.MultiTenant` 10.0.5, which carries both
+  `ConfigurePerTenant` and `PostConfigurePerTenant`), but it is not needed here, because
+  `PathBase` middleware already yields the right issuer for the path-addressed case and the
+  engine infers the rest. Recording the rejection matters more than the mechanism: an
+  implementer who reaches for per-tenant options is solving a problem the middleware
+  already solved, and will pay for it with an options cache per tenant.
   `EnableTokenEntryValidation` and `EnableAuthorizationEntryValidation` are on the
   `.AddValidation` builder, not `.AddServer`.
 * **Reuse leeway is 30 seconds, not 15.** Below the network-timeout band a legitimate

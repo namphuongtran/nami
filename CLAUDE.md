@@ -108,10 +108,25 @@ later reader cannot tell the two apart.
   to start where the link opens matches same-directory links and silently passes every
   `../other-layer/` one. State what a screen does *not* match, in the screen, or its zero
   will be read as absence.
+- **Never edit a document to silence a checker.** This is the rule the deleted `scripts/review/`
+  screens were removed for breaking: a keyword check flagged a correct citation, and the
+  response was to drop `: true` from the claim value `memberships_truncated: true` so the
+  check would pass. The document became less implementable to make a tool quieter. If a
+  checker is wrong, fix the checker or record the finding as legitimate; if neither is cheap,
+  delete the checker. A tool that bends the evidence it exists to protect is worse than none.
 - **A false positive in a checker is a defect in the checker**, not noise to work
   around, and the same holds for a claim that survives only because nobody checked it.
   A checker that stays green on the bug it was written for is worse than none, because it
   converts an unchecked claim into a confident one.
+- **Read the corpus root document, not its digest.** The design corpus has two layers: the
+  numbered root documents `01` to `34`, and the `DD/` folder that summarizes them. The
+  implementable detail lives in the root: `DD/` carries about 1400 lines of fenced code and
+  the root documents carry about 2500, and `DD-24` contains **none** of the DPoP defaults
+  that root `24-design-dpop.md` states. Reading `DD/` first and treating it as sufficient
+  silently drops values (a proof-validity window, a per-client flag, an advertised algorithm
+  set). `DD/` is an index of what exists and which decisions apply; the root document is the
+  source. Where the two disagree, follow the pointer to whichever document the corpus itself
+  names as owner and verify there, since the corpus contradicts itself in places.
 
 ## Non-negotiable content rules
 
