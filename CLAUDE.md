@@ -127,6 +127,19 @@ later reader cannot tell the two apart.
   set). `DD/` is an index of what exists and which decisions apply; the root document is the
   source. Where the two disagree, follow the pointer to whichever document the corpus itself
   names as owner and verify there, since the corpus contradicts itself in places.
+- **The corpus states its own reading order; follow it.** Its `CLAUDE.md` defines a **five-part
+  bundle** per phase, "phase-doc + mini-spec + ADR + verification V-file + register entry",
+  and warns that a phase's information is spread across all five. It also sets a strict
+  layering: root `01`-`31` are the implementer source (`01`-`09` phases, `10`-`16`
+  cross-cutting, `17`-`31` mini-specs), `adr/` holds the decisions with `decisions/` as their
+  MADR conversion, `PRODUCTION-READINESS-REGISTER.md` tracks open items by bucket (A spike,
+  B test, C ratify, D pick), and **`knowledge-based/` is evidence, not an implementer
+  source**. Two things are easy to miss and both matter: spike-proven reference code is
+  **embedded in the mini-specs** (and runnable under `spike-harness/`), and
+  **`reference/openiddict-source/` holds 23 files of OpenIddict 7.5.0 upstream source**,
+  checked in precisely so a claim can be read at source. The local NuGet cache carries only
+  7.4.0, so that tree is the only offline way to verify a 7.5.0 default. Use it: it settled
+  `RefreshTokenReuseLeeway`'s 30-second default on first use.
 
 ## Non-negotiable content rules
 
