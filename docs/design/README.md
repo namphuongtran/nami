@@ -109,5 +109,7 @@ The three `planned` rows are reserved numbers rather than gaps: each module exis
 in the design corpus and lands here when its turn comes. The ADR sets on those rows
 are the ones the corpus records for them, and are confirmed against this repository
 when the file is written. A `planned` row becomes a linked `draft`, then `reviewed`
-once approved. The file number is the dependency order in which designs are
-produced, so inserting a module renumbers the tail, which is a deliberate act.
+once approved. The file number is the reading order defined above, and designs are also
+authored in that order because a later document leans on an earlier one; it is **not** the
+order in which the code gets built, which is the separate axis described above. Inserting
+a module renumbers the tail, which is a deliberate act.

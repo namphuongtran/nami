@@ -12,9 +12,12 @@ The tamper-evident, delivery-guaranteed audit trail: the ports, the typed event
 catalog covering the negative paths, the hash-chain, the delivery model (critical
 events synchronous in-transaction, the rest through a durable outbox), forwarding
 to a write-once/SIEM destination, the periodic integrity job, and the strict
-separation from diagnostic logging. It is a cross-cutting subsystem: the first
-security event this lane must accept is emitted by the core protocol, so the sink and the
-chain have to exist before token issuance does, whatever order the rest is built in.
+separation from diagnostic logging. It is a cross-cutting subsystem rather than
+a stage of its own, and the components that emit into it need it already present: the
+startup hardening guard emits a security event when it refuses to serve a degraded
+configuration (ADR-0043), which happens before the application handles a single request,
+and the protocol path then emits token-reject and replay events. The sink and the chain
+are therefore a prerequisite of their emitters, not a later addition.
 
 In scope: the audit ports and their contract, hash-chain computation, the delivery
 guarantee, the outbox forwarder, the integrity job, PII/erasure reconciliation, and
