@@ -254,11 +254,14 @@ this view deliberately stops at the mechanism.
 * **Supply chain**: release artifacts are signed with keyless provenance attestation, and
   dependencies are permissive-OSS only enforced by a CI license scan (ADR-0051, ADR-0026).
 * **The verification baseline is OWASP ASVS**, self-verified and mapped to tests, with L2 as
-  the floor and L3 on the key, token, dual-control, and tenant-isolation paths. **A formal
-  third-party audit or penetration test is deliberately deferred**, not scheduled: it is
-  valuable but premature for a pre-alpha project, and it can be added later without changing
-  the baseline. Self-assessment being weaker than an external audit is an accepted, recorded
-  trade-off (ADR-0062).
+  the floor and L3 on the key, token, dual-control, and tenant-isolation paths. Buying that
+  assurance instead, as a paid assessment or a certification, is deferred as premature for a
+  pre-alpha project and can be added later without changing the baseline. **An independent
+  penetration test is a separate matter and is a pre-GA gate**, owned by Security, scoped to
+  the protocol endpoints, the admin surface, tenant isolation including the Pool shared-keyset
+  case, and the break-glass paths, run on pre-production against synthetic data. Self-assessment
+  being weaker than an external assessment is an accepted, recorded trade-off, and the
+  penetration test is what bounds it (ADR-0062).
 
 ### The two kinds of hardening invariant, which is worth separating
 
@@ -322,12 +325,13 @@ A short list, not the threat model. Each row names the control rather than the i
   four-boundary trust diagram, the three-layer isolation framing with the signature caveat as
   its centrepiece, the token and key protection inventories, the administration controls, the
   audit posture, the abuse-resistance reasoning, and the selected-threat table. **One claim
-  was corrected and it is a consequential one:** the corpus lists "an independent security
-  review before production" alongside the conformance suite, but ADR-0062 **deliberately
-  defers** a third-party audit or penetration test as valuable yet premature for a pre-alpha
-  project, and records self-assessment's weakness as an accepted trade-off. Importing the
-  corpus sentence would have created a release gate that no decision imposes and that the
-  owning ADR explicitly declined. Two claims were made more precise from our own records
+  was rejected on 2026-07-25 and then reinstated on 2026-07-26, and the reversal is the point:**
+  the corpus lists "an independent security review before production" alongside the conformance
+  suite. That was first dropped as a gate no decision imposed, reading ADR-0062's deferral of a
+  paid assessment as covering a penetration test too. It did not; ADR-0062 had bundled two
+  questions and answered only one. The corpus was right, ADR-0062 was corrected, and the gate is
+  now stated above. The lesson recorded with it is that a corpus claim contradicting an ADR is
+  evidence the ADR may be wrong, not only evidence the corpus is. Two claims were made more precise from our own records
   rather than copied: the corpus gives runtime key rights as get, unwrap, and wrap, where
   ADR-0009 also permits sign where the store signs and additionally forbids set; and the
   corpus says the session is regenerated on privilege change, where the design is more

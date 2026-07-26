@@ -63,6 +63,33 @@ added when the solution lands (see the comment at the end of `.github/workflows/
 - Confirm granularity and status with the user before drafting; prefer one focused
   ADR per decision over grab-bag documents.
 
+## Evidence rule (non-negotiable, applies to every layer)
+
+**Never write a claim you have not read at its source, and never infer one from a
+title, a filename, or a neighbouring document.** This rule is absolute and outranks
+fluency: an unsourced sentence that reads well is worse than an omission, because a
+later reader cannot tell the two apart.
+
+- **Quote before you assert.** Before writing that a document says X, open it and
+  read the line. Citing `ADR-NNNN` for a fact means that fact is *in* `ADR-NNNN`,
+  not merely adjacent to its subject. Attribution is part of the claim: a true fact
+  with the wrong owner is a defect, and it has been the single most common defect in
+  this repository.
+- **Show the evidence before making the change.** When reconciling, contradicting, or
+  correcting anything, present both sides with file and line before editing. The user
+  decides on evidence, not on a summary.
+- **Count what you counted.** Never write "the second time", "three sources agree",
+  "every X" unless you have enumerated them. Say "in `file:line`" instead of a tally
+  you did not run.
+- **Where this repo says more than its source, name the real source.** An addition
+  that improves on the corpus still needs a verifiable origin. Inventing support for
+  a correct-sounding claim is the worst failure mode available here.
+- **Say "not verified" out loud.** Uncertainty is reportable and cheap; a fabricated
+  citation is neither. If a fact cannot be sourced, either leave it out or mark it
+  explicitly as an open item.
+- **A false positive in a checker is a defect in the checker**, not noise to work
+  around, and the same holds for a claim that survives only because nobody checked it.
+
 ## Non-negotiable content rules
 
 These are legal/OSS constraints and the CI guardrail + local hook enforce parts of them:

@@ -98,12 +98,14 @@ here.
   key custody and break-glass custody, drill cadence, and the on-call roster.
 * **Product (S7).** The release gate, the adoption plan, and the licensing terms.
 
-**One thing this list deliberately does not contain is an external security audit.** The
-verification baseline is self-assessed against OWASP ASVS, with L2 as the floor and L3 on the
-key, token, dual-control, and isolation paths, and a formal third-party audit or penetration
-test is **deliberately deferred** as valuable but premature, with self-assessment's weakness
-recorded as an accepted trade-off (ADR-0062). Listing a penetration-test gate here would create
-a release blocker that no decision imposes.
+**Two adjacent things are deliberately not the same gate.** The verification **baseline** is
+self-assessed against OWASP ASVS, with L2 as the floor and L3 on the key, token, dual-control,
+and isolation paths; buying that assurance instead, as a paid assessment or a certification, is
+deferred as premature, and self-assessment's weakness is a recorded trade-off. An **independent
+penetration test is a gate**, owned by Security (ADR-0062), scoped to the protocol endpoints,
+the admin surface, tenant isolation including the Pool shared-keyset case, and the break-glass
+paths. What is gated is that the test was run and its findings ratified or accepted, not that a
+report was published, which is a separate Product question.
 
 **No statement anywhere in this architecture asserts a compliance verdict.** That is reserved
 to S6, and saying so is itself part of the architecture rather than a disclaimer.
@@ -123,13 +125,17 @@ to S6, and saying so is itself part of the architecture rather than a disclaimer
 * Reconciled against the design corpus's stakeholders view on 2026-07-26. Taken from it: the
   nine-stakeholder set, the twelve concerns traced to drivers, and the correspondence table,
   which is the part that makes an architecture description checkable rather than decorative.
-  **One item was corrected, and it is the same error found twice before in this migration:**
-  the corpus lists a "pen-test gate" under Security ratification and a "published security
-  audit" under Product, where ADR-0062 defers a third-party audit deliberately. That is the
-  third appearance of an external-audit gate the owning decision declines, after the security
-  and requirements views, so it is called out here rather than quietly dropped. Its open-item
-  bucket taxonomy is that project's register convention and maps here onto the pre-GA
-  checklist.
+  **One item was taken from the corpus after this view first got it wrong, which is worth
+  recording rather than silently fixing.** The corpus lists a "pen-test gate" under Security
+  ratification and a "published security audit" under Product. This view originally rejected
+  both, reading ADR-0062's deferral of a paid assessment as also declining a penetration test.
+  It does not: ADR-0062 was answering what standard the product is held to, and its wording
+  bundled two different questions. The corpus is the more correct side here and specifies the
+  gate in detail elsewhere, with an explicit scope and rules of engagement. ADR-0062 was
+  corrected on 2026-07-26 and the checklist row added. **The Product half was not taken**:
+  publishing a report is a launch-communications choice, not a security gate, and nothing
+  decides it. Its open-item bucket taxonomy is that project's register convention and maps
+  here onto the pre-GA checklist.
 
 ---
 

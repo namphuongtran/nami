@@ -29,6 +29,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 - ☐ Trusted-proxy IP list for mTLS (with Ops) ([ADR-0014](adr/0014-advanced-protocol-scope.md))
 - ☐ Change-event publishing (v2): per-consumer bus access control; whether configuring the broker connection is an IAM-class change requiring dual-control; thin-versus-fat payload for PII minimization ([ADR-0071](adr/0071-identity-change-event-publishing.md))
 - ☐ OWASP ASVS 5.0 Level 2 self-assessment coverage complete (L3 for key/token/dual-control/tenant-isolation), API Security Top 10 mapped ([ADR-0062](adr/0062-owasp-asvs-security-baseline.md))
+- ☐ Independent penetration test: scope and rules of engagement agreed, a third party engaged, the test run against pre-production on synthetic data, and the findings ratified or accepted as risks. Scope covers the protocol endpoints, the admin API and admin application, tenant isolation (cross-tenant plus Pool shared keyset), and the break-glass paths; volumetric denial of service is out of scope ([ADR-0062](adr/0062-owasp-asvs-security-baseline.md), with [ADR-0033](adr/0033-key-scope-isolation-model.md), [ADR-0049](adr/0049-resource-server-per-tenant-validation.md), [ADR-0007](adr/0007-key-compromise-break-glass-runbook.md), [ADR-0015](adr/0015-admin-break-glass-and-first-admin-bootstrap.md))
 
 ## Ops
 
