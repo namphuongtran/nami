@@ -56,11 +56,19 @@ the token table, it is a different event.
 ### Fail-open is the rule and there is exactly one carve-out
 
 This is worth stating precisely, because the natural summary of it is wrong. **Ordinary
-performance caches fail open. Security checks fail closed. Those are both the rule.** The
-single deliberate **carve-out** is the per-recipient email anti-abuse throttle: it is an
-abuse control that would ordinarily follow the fail-open cache rule, and instead it degrades
-to a per-instance in-process bucket rather than switching off, accepting per-instance
-approximation over an unlimited cap (ADR-0040 parameter D).
+performance caches fail open. The diagnostic telemetry path fails open. Security checks fail
+closed. All three are the rule.** The single deliberate **carve-out** is the per-recipient
+email anti-abuse throttle: it is an abuse control that would ordinarily follow the fail-open
+cache rule, and instead it degrades to a per-instance in-process bucket rather than switching
+off, accepting per-instance approximation over an unlimited cap (ADR-0040 parameter D).
+
+The telemetry path is a separate category rather than a cache because its reason differs: a
+cache fails open because the durable store behind it still has the answer, while telemetry
+fails open because **losing an observation is always cheaper than failing a request**. Keeping
+them apart matters, since the cache rule as originally written named caches, and the telemetry
+export path was therefore in no category at all until ADR-0040 parameter E was added on
+2026-07-26. The audit lane is the counterpart and is in none of the fail-open categories: it is
+delivery-guaranteed and never drops (ADR-0008).
 
 The distrusted-key set and the DPoP proof-replay set are therefore **not** carve-outs. They
 are fail-closed **by the general rule**, being security checks rather than performance

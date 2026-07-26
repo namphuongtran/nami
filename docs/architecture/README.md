@@ -37,7 +37,7 @@ authoritative source, and where it disagrees with one of them, this layer is the
 Read top to bottom for the full picture, or jump to the view that answers your
 question. Each topic is one file.
 
-**The file number is the reading order.** Files run `01` to `23` with no gaps.
+**The file number is the reading order.** Files run `01` to `24` with no gaps.
 
 ### The problem (arc42 sections 1 to 3)
 
@@ -81,7 +81,7 @@ question. Each topic is one file.
 | File | Topic | Covers |
 |---|---|---|
 | [`../adr/README.md`](../adr/README.md) | The ADR corpus | Every decision of record, with context and rationale |
-| [18-decisions-index](18-decisions-index.md) | The **reverse** index: which views cite each decision | Generated ADR-to-view map, the measured cross-cutting set, the one decision no view cites, and the eight load-bearing claims with no owning ADR |
+| [18-decisions-index](18-decisions-index.md) | The **reverse** index: which views cite each decision | Generated ADR-to-view map, the measured cross-cutting set, the one decision no view cites, and the eight load-bearing claims found with no owning ADR, three of which are still open |
 | [19-evolution-and-extensions](19-evolution-and-extensions.md) | What attaches after v1, and what v1 pays for it | Three accepted-but-unbuilt features, six proposed demand-driven extensions, kill switch by composition |
 
 ### Quality and risk (arc42 sections 10 and 11)

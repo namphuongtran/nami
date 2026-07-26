@@ -46,9 +46,10 @@ one pipeline with a severity field.**
 
 * **Diagnostics** is `ILogger` plus OpenTelemetry over OTLP for all three signals, with
   Serilog deliberately dropped, and PII redacted at the framework level (ADR-0022). It is
-  **lossy and must never block**, which ADR-0022 does not itself fix: that invariant and its
-  test live in the observability design, and ADR-0022 states explicitly that its own scope is
-  the emission stack rather than what is built on it.
+  **lossy and must never block**, which ADR-0022 deliberately does not fix, since its own
+  stated scope is the emission stack rather than what is built on it. The invariant is
+  classified instead as a failure posture, alongside caches and security checks, in
+  ADR-0040 parameter E.
 * **Audit** is the security-event sink: append-only, hash-chained, delivery-guaranteed. It
   **never** travels through the diagnostics pipeline and is **never** dropped (ADR-0008).
 
@@ -87,14 +88,21 @@ bounded ones: grant type, token type, scheme, result, error type, policy.
 
 Per-tenant or per-user investigation therefore goes through **exemplars** and the traces and
 logs they point at, never through a tag. The SDK's default per-metric cardinality limit is
-2000, and individual metrics are tightened further with a view whose instrument-name selector
-must match the emitted name **exactly**, because a mismatched selector silently matches
-nothing and turns the cap into a no-op. A test asserts the view is actually attached, which is
-the only way to tell a live cap from a no-op one. **This rule has no owning ADR**: ADR-0022
-fixes the emission stack and says so, while the cardinality rule, its exact-match requirement,
-and the attachment test are stated only in the observability design. It is carried here
-because a no-op cap reads as protection, and recorded as an ADR candidate rather than
-presented as settled.
+2000, with measurements beyond it folded into an overflow point rather than dropped silently,
+and individual metrics are tightened further with a view. A test asserts the view is actually
+attached, because a view whose selector matches no instrument configures nothing and this
+project could not confirm from the SDK's documentation that such a view reports anything: an
+unattached cap is indistinguishable from an attached one by reading the configuration, and it
+reads as protection.
+
+**ADR-0077 owns this**, and owns it as a data-protection rule at least as much as a capacity
+one. The dimensions are **allow-listed rather than deny-listed**, because the failure mode is a
+field nobody thought of. The reason the privacy framing leads: a metric backend sits outside
+every mechanism this project built for personal data, so an identifier that becomes a
+dimension escapes the audit lane's retention (ADR-0008), crypto-shred (ADR-0016), and any
+data-subject erasure request (ADR-0053) at once. It is a separate control from the opt-in
+phone-home telemetry rule (ADR-0032), which governs a different signal to a different
+destination.
 
 ## 3. Burn-rate alerting, and why not latency alerting
 
@@ -160,12 +168,13 @@ cluster. Its end-to-end latency feeds the SLO gate, and it complements rather th
 the internal readiness probe (ADR-0041).
 
 **OTLP backpressure is lossy, not blocking, and this is an invariant rather than a tuning
-choice.** A slow or absent collector must never add latency to a token request. The exporter
-uses a bounded queue that **drops when full** instead of blocking or growing, the export has a
-bounded timeout, failures are swallowed off the request thread, and logging falls back to
-stdout. **A collector-outage load test proves p99 on the token endpoint is unchanged while the
-collector is blocked**, which is what turns the invariant from an intention into a tested
-property. The audit lane is the exact opposite and does not drop (ADR-0008).
+choice** (ADR-0040 parameter E). A slow or absent collector must never add latency to a token
+request. The exporter uses a bounded queue that **drops when full** instead of blocking or
+growing, the export has a bounded timeout, failures are swallowed off the request thread, and
+logging falls back to stdout (ADR-0031). **A collector-outage load test proves p99 on the token
+endpoint is unchanged while the collector is blocked**, which is what turns the invariant from
+an intention into a tested property. The audit lane is the exact opposite and does not drop
+(ADR-0008).
 
 ## 5. Health endpoints
 
@@ -189,10 +198,15 @@ dependency: nothing Nami ships carries them (ADR-0063, ADR-0026).
   redaction, and its explicit scope boundary: it fixes the emission stack, not what is built
   on it), ADR-0008 (the audit lane that never drops and never travels through diagnostics),
   ADR-0021 (the decommission marker on the custom meter).
-* **Owned by the observability design rather than by any ADR**, and flagged rather than
-  attributed upward: the meter inventory, the lossy-not-blocking export invariant with its
-  collector-outage proof, and the high-cardinality rule including the exact-match view
-  selector and the attachment test. Each is an ADR candidate.
+* **Three claims this view once carried as ownerless were resolved on 2026-07-26, and two of
+  the three had owners already.** The **instrument names** are a stable public contract under
+  ADR-0044 section G and follow the `nami.`-rooted scheme of ADR-0065; only the *inventory*,
+  meaning which instruments exist, is design-owned, and that is a catalogue rather than a
+  decision. The **lossy-not-blocking export invariant** and its collector-outage proof were a
+  classification gap rather than a missing decision, and are now ADR-0040 parameter E. The
+  **cardinality and tag rule**, including the per-metric cap and the attachment test, was the
+  only real decision of the three and is now ADR-0077. Recorded here because misattributing
+  ownership is the same defect as having none.
 * ADR-0041 (burn-rate tiers and windows, the automatic freeze, the runbook-per-page-alert CI
   gate, the deduplication key, the external canary, and the SLO as a release gate), ADR-0040
   (the rate-limiting meter as the way load shedding is observed).

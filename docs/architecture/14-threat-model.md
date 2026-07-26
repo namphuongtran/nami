@@ -127,7 +127,7 @@ flowchart LR
 | I2 | Cross-tenant write or mis-stamp | A4 | A write-side check on the policy; a mismatched write raises; no ambient tenant fails closed (ADR-0001) | **Critical** |
 | I3 | Row-level security silently disabled | A4 | The application role must be non-superuser and non-bypassing, **because a superuser bypasses the policy entirely** | **Critical**, and it is a **deployment** control rather than a code one, so it is an Ops ratification item |
 | I4 | Personal data leaked into a token | A3 | The minimal claim set (ADR-0005), and **deny-by-default claim destinations** so a claim is emitted only where declared, binding on any replacement adapter and carrying a contract test (ADR-0075) | Medium. The residual moved from "no decision owns this control" to "the consumer must choose to run the test", because Nami cannot execute a check inside someone else's build |
-| I5 | Personal data leaked into telemetry | A3 | Framework-level redaction on the diagnostics lane (ADR-0022), plus the high-cardinality prohibition, which is a personal-data rule as much as a cardinality one: no tenant, subject, session, proof identifier, or address as a metric tag, with exemplars for investigation instead | High. **The cardinality rule is design-owned and no ADR contains it**, so this row's second control is an ADR candidate |
+| I5 | Personal data leaked into telemetry | A3 | Framework-level redaction on the diagnostics lane (ADR-0022), plus an **allow-listed metric tag set** with exemplars as the sanctioned drill-down and a test proving the per-metric cap is attached (ADR-0077) | Medium. The remaining exposure is a dimension added outside the allow-list, which is a reviewable act rather than an unowned rule. **Why this row is High-impact if it fires:** a metric backend sits outside the audit retention, crypto-shred, and erasure paths, so an identifier that reaches it escapes every data-protection mechanism at once |
 | I6 | Personal data on the event bus (v2) | A3 | Thin events by default; a richer payload is opt-in and ratified; a single stream with a tenant identifier and consumer-side filtering (ADR-0071) | Medium. Data-protection ratification item |
 | I7 | Signing-key material exfiltrated | A1 | Keys never leave the store into logs, chat, or configuration; encrypted at rest; rotation exposes no bytes; runtime rights exclude purge, delete, and set (ADR-0009, ADR-0011) | **Critical.** Residual is store custody, a Security ratification item |
 | I8 | Over-exposure through discovery or JWKS | A1 | Public keys only, on fully-handled endpoints with no custom controller, and key scope fixed per deployment (ADR-0033, ADR-0048) | Low |
@@ -197,9 +197,10 @@ argument for why that checklist is a release gate rather than paperwork.
 * ADR-0022, ADR-0040, ADR-0042, ADR-0031, ADR-0002, and ADR-0034 (telemetry cardinality as a
   privacy rule, the two distinct overload controls and the partition-key caveat, lockout
   weaponisation, pruning off the request path, and federated linking).
-* **Two controls in these tables are design-owned with no ADR**, and both are flagged in place
-  rather than attributed upward: the telemetry cardinality rule behind I5, and the exclusion of
-  `may_act` behind E5. Both join the ADR candidates that row I4 also belongs to.
+* **Two controls in these tables were design-owned with no ADR when this view was written.**
+  The telemetry cardinality rule behind I5 became **ADR-0077** on 2026-07-26, framed there as a
+  data-protection rule rather than a capacity one, which is the framing this row had argued for.
+  The exclusion of `may_act` behind E5 is still unowned and remains an ADR candidate.
 * [13-security-architecture](13-security-architecture.md) states the controls; this view states
   the threats and the residual. [23-risks-and-technical-debt](23-risks-and-technical-debt.md)
   carries the accepted risks these rows feed.

@@ -61,7 +61,7 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0013](../adr/0013-mfa-assurance-and-step-up.md) | Make MFA the producer of acr/amr/auth_time and enforce step-u... | 01, 08, 09, 14, 24 |
 | [0014](../adr/0014-advanced-protocol-scope.md) | Build both mTLS and DPoP sender-constrained tokens, and delib... | 01, 05, 07, 09, 10, 13, 14, 17, 19, 21, 22, 24 |
 | [0015](../adr/0015-admin-break-glass-and-first-admin-bootstrap.md) | Provide an OIDC-independent admin break-glass path and a one-... | 01, 04, 10, 13, 14, 17, 24 |
-| [0016](../adr/0016-right-to-erasure.md) | Reconcile GDPR right-to-erasure with the immutable audit chai... | 01, 02, 03, 05, 09, 11, 12, 13, 15, 20, 22, 23, 24 |
+| [0016](../adr/0016-right-to-erasure.md) | Reconcile GDPR right-to-erasure with the immutable audit chai... | 01, 02, 03, 05, 09, 11, 12, 13, 15, 16, 18, 20, 22, 23, 24 |
 | [0017](../adr/0017-tenant-provisioning-and-silo-migration.md) | Orchestrate the tenant lifecycle with build-artifact migratio... | 01, 09, 10, 12, 15, 17, 20, 24 |
 | [0018](../adr/0018-dbcontext-pooling-for-pool-mode.md) | Register the Pool-mode OpenIddict DbContext non-pooled in v1,... | 03, 07, 08, 09, 10, 11, 12, 21, 22, 23 |
 | [0019](../adr/0019-single-logout-strategy.md) | Achieve single logout with an interim back-channel logout on... | 01, 03, 04, 07, 08, 09, 12, 17, 19, 23, 24 |
@@ -77,7 +77,7 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0029](../adr/0029-bff.md) | Build a Nami.Identity.Bff package by composing OSS-permissive... | 01, 03, 07, 08, 09, 13, 24 |
 | [0030](../adr/0030-dotnet-version-upgrade.md) | Upgrade .NET on an LTS-to-LTS cadence, with multi-target pack... | 03, 11, 17 |
 | [0031](../adr/0031-twelve-factor-baseline.md) | Adopt the 12-factor (and 15-factor) methodology as the operat... | 01, 03, 05, 07, 08, 09, 10, 14, 16, 17, 18, 20, 21, 22, 23 |
-| [0032](../adr/0032-usage-visibility-and-licensing-posture.md) | Gain usage visibility through free registration and opt-in te... | 10 |
+| [0032](../adr/0032-usage-visibility-and-licensing-posture.md) | Gain usage visibility through free registration and opt-in te... | 10, 16 |
 | [0033](../adr/0033-key-scope-isolation-model.md) | Align key-scope isolation to the tenant tier with one keyset... | 01, 02, 03, 04, 05, 06, 09, 11, 12, 13, 14, 23, 24 |
 | [0034](../adr/0034-dynamic-external-idp.md) | Open dynamic per-tenant external IdP federation as a v2 self-... | 01, 03, 04, 05, 08, 14, 19 |
 | [0035](../adr/0035-self-service-client-registration.md) | Offer self-service client registration through the authentica... | 01, 03, 05, 17, 19, 23 |
@@ -85,11 +85,11 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0037](../adr/0037-database-engine-postgresql.md) | Use PostgreSQL as the sole database engine | 01, 03, 05, 07, 08, 09, 10, 11, 12, 13, 14, 15, 18, 21, 24 |
 | [0038](../adr/0038-email-notification-subsystem.md) | Build email delivery as a first-class, cloud-agnostic subsyst... | 01, 04, 07, 08, 09, 11, 12, 13 |
 | [0039](../adr/0039-revocation-propagation-and-cache-coherence.md) | Achieve cross-node revocation freshness per-path, with no bac... | 01, 03, 05, 07, 09, 10, 11, 12, 13, 15, 17, 18, 19, 20, 21, 22, 24 |
-| [0040](../adr/0040-resiliency-and-overload-protection.md) | Standardize a resiliency and overload-protection posture: one... | 01, 03, 04, 07, 10, 11, 13, 14, 16, 17, 18, 21, 22, 24 |
+| [0040](../adr/0040-resiliency-and-overload-protection.md) | Standardize a resiliency and overload-protection posture: one... | 01, 03, 04, 07, 10, 11, 13, 14, 16, 17, 18, 21, 22, 23, 24 |
 | [0041](../adr/0041-nfr-targets-and-slo-release-gate.md) | Adopt self-load-tested NFR targets and make the SLO a formal... | 01, 03, 05, 10, 11, 16, 17, 18, 20, 21, 22, 23, 24 |
 | [0042](../adr/0042-abuse-and-bot-defense.md) | Add a layered anti-automation and abuse-defense posture beyon... | 03, 04, 10, 11, 13, 14, 16, 17 |
 | [0043](../adr/0043-security-hardening-invariants-startup-check.md) | Enforce security hardening invariants with a fail-fast startu... | 03, 08, 11, 13, 14 |
-| [0044](../adr/0044-public-api-stability-and-semver.md) | Treat the public API as a versioned seam governed by an analy... | 02, 03 |
+| [0044](../adr/0044-public-api-stability-and-semver.md) | Treat the public API as a versioned seam governed by an analy... | 02, 03, 16, 18 |
 | [0045](../adr/0045-security-disclosure-and-cve-policy.md) | Handle security vulnerabilities through private coordinated d... | 18 |
 | [0046](../adr/0046-governance-and-contribution-model.md) | Adopt an ADR-driven, DCO-based OSS governance and contributio... | 10, 11 |
 | [0047](../adr/0047-authorization-decision-engine.md) | Compute authorization with a DB-first engine behind a consist... | 08, 09, 14 |
@@ -98,7 +98,7 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0050](../adr/0050-per-client-cors-policy.md) | Provide per-client CORS through a custom policy provider, not... | 11, 13 |
 | [0051](../adr/0051-release-supply-chain-integrity.md) | Sign and attest release artifacts with keyless provenance for... | 10, 11, 13, 17 |
 | [0052](../adr/0052-ergonomic-config-layer.md) | Build an ergonomic, fail-closed configuration layer for decla... | 01, 10, 17, 18 |
-| [0053](../adr/0053-data-subject-rights-suite.md) | Build the data-subject-rights suite (access, portability, rec... | 01, 03, 09, 11, 13, 20 |
+| [0053](../adr/0053-data-subject-rights-suite.md) | Build the data-subject-rights suite (access, portability, rec... | 01, 03, 09, 11, 13, 16, 20 |
 | [0054](../adr/0054-cross-border-transfer-and-data-residency.md) | Make data residency and cross-border personal-data transfer f... | 01, 03, 09, 11, 12, 13, 15, 20 |
 | [0055](../adr/0055-saml-ws-federation-support.md) | Support SAML 2.0 and WS-Federation through a demand-driven fe... | 01, 19 |
 | [0056](../adr/0056-fapi-2-conformance.md) | Support FAPI 2.0 high-assurance profiles through a demand-dri... | 01, 19 |
@@ -110,7 +110,7 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0062](../adr/0062-owasp-asvs-security-baseline.md) | Adopt OWASP ASVS as the security-verification baseline | 02, 03, 11, 13, 20 |
 | [0063](../adr/0063-observability-backend-and-dev-visualization.md) | Keep the observability backend operator-chosen and run a self... | 11, 16 |
 | [0064](../adr/0064-mcp-authorization-server-support.md) | Support Nami as the OAuth authorization server for MCP servers | 01, 19 |
-| [0065](../adr/0065-coding-and-naming-conventions.md) | Adopt the Microsoft naming and C# coding conventions as an en... | 07, 09, 10, 12, 24 |
+| [0065](../adr/0065-coding-and-naming-conventions.md) | Adopt the Microsoft naming and C# coding conventions as an en... | 07, 09, 10, 12, 16, 18, 24 |
 | [0066](../adr/0066-design-patterns-vocabulary-and-pragmatic-use.md) | Adopt design patterns as a shared vocabulary applied pragmati... | 03 |
 | [0067](../adr/0067-ai-assisted-development-governance.md) | Adopt an AI-assisted development policy: human-accountable, d... | 11, 17 |
 | [0068](../adr/0068-continuous-access-evaluation-shared-signals.md) | Support continuous access evaluation via the OpenID Shared Si... | 01, 19 |
@@ -122,37 +122,44 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0074](../adr/0074-database-ha-and-cache-durability.md) | Adopt a primary-plus-standby PostgreSQL topology with automat... | 05, 09, 10, 11, 12, 13, 14, 16, 17, 18, 20, 21, 22 |
 | [0075](../adr/0075-security-sensitive-port-invariants.md) | Treat security-sensitive ports as carrying non-weakenable inv... | 08, 09, 13, 14, 18, 23, 24 |
 | [0076](../adr/0076-application-transport-security.md) | Decide the application's own transport security: HSTS policy, the... | 03, 13, 18, 23 |
+| [0077](../adr/0077-metric-cardinality-and-telemetry-privacy.md) | Bound metric cardinality with an allow-listed tag set, and keep... | 14, 16, 18, 23 |
 
 ## 3. What the shape of that table says
 
 Two readings are worth stating, because both were computed rather than assumed.
 
-**The genuinely cross-cutting decisions are not the ones a reader would guess.** Across the 24
-views, by view count they are ADR-0008 (18 views), then ADR-0001 and ADR-0039 at 17, ADR-0011 at
-16, and ADR-0006, ADR-0031, ADR-0037, and ADR-0049 at 15 each. The audit chain, tenancy,
-revocation freshness, and key material reach almost everywhere. Notably **ADR-0039 is far more
-cross-cutting than its title suggests**: "revocation propagation" reads as one subsystem, but its
-per-path freshness model turns up in seventeen views, including context, data, runtime, security,
-performance, reliability, schema, observability, and operations, because almost every other
-decision eventually has to say how fast a change of mind takes effect.
+**These figures exclude this page.** Section 2's table counts any mention, including the ones in
+this analysis, so a decision named here would gain a view by being described as narrow. The
+numbers below are therefore computed over the **other 23 views**, which is also the more honest
+measure: it counts views that depend on a decision rather than views that mention it. Recompute
+them with the same exclusion whenever section 2 is regenerated, and never regenerate one without
+the other.
 
-**Exactly one ADR is cited by a single view, and that one is really a zero.** ADR-0045, on
-coordinated vulnerability disclosure and CVE issuance, appears only in this page's own
-`Sources`, which under the caveat in section 1 is a self-mention rather than a view that depends
-on it. The honest reading is that the zero is **correct**: a disclosure process is governance
-rather than architecture, so it has no structural or operational view to land in. It is
-reachable through the governance row of
+**The genuinely cross-cutting decisions are not the ones a reader would guess.** ADR-0008 leads
+at 17 views, then ADR-0001 and ADR-0039 at 16, ADR-0011 at 15, and six at 14: ADR-0006,
+ADR-0016, ADR-0031, ADR-0037, ADR-0040, and ADR-0049. The audit chain, tenancy, revocation
+freshness, key material, the erasure mechanism, and the failure-posture classification reach
+almost everywhere. Naming them here is safe under the exclusion above, which is the reason for
+it. Notably **ADR-0039 is far more cross-cutting than its
+title suggests**: "revocation propagation" reads as one subsystem, but its per-path freshness
+model turns up in sixteen views, including context, data, runtime, security, performance,
+reliability, schema, observability, and operations, because almost every other decision
+eventually has to say how fast a change of mind takes effect.
+
+**One decision is cited by no view at all: ADR-0045**, on coordinated vulnerability disclosure
+and CVE issuance. The honest reading is that the zero is **correct**: a disclosure process is
+governance rather than architecture, so it has no structural or operational view to land in. It
+is reachable through the governance row of
 [11-cross-cutting-concepts](11-cross-cutting-concepts.md), which is where decisions that are
 substance without a view belong. Recorded explicitly so the zero reads as a finding rather than
 an oversight.
 
-Seventeen decisions sit at two views, and that tail is unremarkable on inspection: the six
-demand-driven extensions, named where scope is set
+Three sit at a single view and are genuinely narrow rather than under-covered: the record format
+itself, the design-patterns vocabulary, and local-development TLS. Thirteen sit at two, and that
+tail is unremarkable: it is mostly the six demand-driven extensions, named where scope is set
 ([01-introduction-scope](01-introduction-scope.md)) and where their triggers are recorded
 ([19-evolution-and-extensions](19-evolution-and-extensions.md)), which is exactly the footprint
-a recorded-but-uncommitted option should have, plus the deliberately narrow ones such as the
-usage-visibility posture, local-development TLS, the infrastructure-as-code tool, public-API
-versioning, and the design-patterns vocabulary.
+a recorded-but-uncommitted option should have.
 
 ## 4. Decisions that are not yet closed
 
@@ -169,22 +176,18 @@ They are enumerated rather than counted, because an earlier revision of this pag
 count as six and was wrong: two more were found later while writing the threat model, and a
 number nobody can check is exactly the kind of claim this repository has learned not to write.
 
-**Six remain open.**
+**Three remain open.**
 
 | # | Claim with no owning ADR | Recorded in |
 |---|---|---|
-| 1 | The **meter inventory**: which metrics exist at all | [16-observability-monitoring](16-observability-monitoring.md) |
-| 2 | **Telemetry export is lossy, never blocking**, with the collector-outage proof that shows it | [16-observability-monitoring](16-observability-monitoring.md) |
-| 3 | The **high-cardinality prohibition** and its enforcement: no tenant, subject, session, proof identifier, or address as a metric tag, with the exact-match view selector and the attachment test. It is a personal-data rule as much as a cardinality one | [16-observability-monitoring](16-observability-monitoring.md), [14-threat-model](14-threat-model.md) row I5 |
-| 4 | The **periodic restore-verify probe**, which is what distinguishes a backup that exists from one that restores | [22-reliability-backup-dr](22-reliability-backup-dr.md) |
-| 5 | A **crypto-path throughput gate in CI**, separate from the SLO gate ADR-0041 owns | [21-performance-scalability](21-performance-scalability.md) |
-| 6 | The **exclusion of `may_act`**, the delegation claim: no ADR in this repository contains the term | [14-threat-model](14-threat-model.md) row E5 |
+| 1 | The **periodic restore-verify probe**, which is what distinguishes a backup that exists from one that restores | [22-reliability-backup-dr](22-reliability-backup-dr.md) |
+| 2 | A **crypto-path throughput gate in CI**, separate from the SLO gate ADR-0041 owns | [21-performance-scalability](21-performance-scalability.md) |
+| 3 | The **exclusion of `may_act`**, the delegation claim: no ADR in this repository contains the term | [14-threat-model](14-threat-model.md) row E5 |
 
-Items 1, 2, and 3 share an owner in the observability design and may resolve as one ADR rather
-than three; items 4 and 5 are more likely amendments to ADR-0074 or ADR-0006 and to ADR-0041
-than new decisions. That is a judgement to make when they are drafted, not here.
+Items 1 and 2 are more likely amendments to ADR-0074 or ADR-0006 and to ADR-0041 than new
+decisions. That is a judgement to make when they are drafted, not here.
 
-**Two are closed, and how each closed is the useful part.**
+**Five are closed, and how each closed is the useful part.**
 
 **ADR-0075**, the deny-by-default claim-destination rule, 2026-07-26. Investigating it showed
 the rule itself needed no decision: it is OpenIddict's documented behaviour, and ADR-0052
@@ -201,10 +204,22 @@ paths and to supply a general-purpose default rather than a policy on that one. 
 up a second gap found in passing: OpenIddict's `DisableTransportSecurityRequirement` was
 forbidden only in a deployment design note and by no decision.
 
-The lesson from both, for the remaining six: **ask what decision is actually missing before
-assuming it is the claim as written.** In the first case the claim was true but needed no
-decision; in the second the claim was right and the framework default was the wrong answer to
-it.
+**ADR-0077 and ADR-0040 parameter E**, the three observability claims, 2026-07-26. Taken as a
+cluster because they shared a home in the observability design, they turned out to be three
+different things. The **meter inventory** was not ownerless at all: the names are a stable
+contract under ADR-0044 section G and follow ADR-0065's scheme, leaving only a catalogue that
+is not a decision. The **lossy-not-blocking export** was a **classification** gap: ADR-0040's
+policy named caches and security checks, the telemetry path is neither, so it sat in no
+category; ADR-0040 was edited directly to add it as a third posture. Only the **tag and
+cardinality rule** was a decision, and it was mislabelled: filed as a capacity concern, it is
+at least as much a data-protection one, because a metric backend is outside the reach of the
+audit retention, crypto-shred, and erasure this project built.
+
+The lesson from all three, for the remaining three: **ask what decision is actually missing
+before assuming it is the claim as written.** So far one claim needed no decision because the
+engine already had the behaviour, one needed one the framework default could not supply, two
+already had owners nobody had checked for, and one needed a classification rather than a
+decision. **Only three of the five produced a new ADR.**
 
 ## 5. Decisions whose feature is not built
 

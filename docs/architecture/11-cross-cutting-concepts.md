@@ -44,10 +44,13 @@ view.
    key, so isolation rests on issuer and audience and the `tenant` claim, never on the
    signature. Dropping it re-opens cross-tenant token acceptance
    ([13-security-architecture](13-security-architecture.md) section 2, ADR-0033, ADR-0049).
-2. **Fail-open is the rule for performance caches, fail-closed is the rule for security
-   checks, and there is exactly one carve-out.** The carve-out is the email anti-abuse
+2. **Every subsystem is classified into one of three failure postures, and there is exactly
+   one carve-out.** Performance caches fail open, the diagnostic telemetry path fails open for
+   a different reason, and security checks fail closed. The carve-out is the email anti-abuse
    throttle (ADR-0038). The distrusted-key set (ADR-0039) and the proof-replay set are **not**
-   exceptions; they follow the rule
+   exceptions; they follow the rule. What the classification exists to prevent is a subsystem
+   sitting in **none** of the three, which is where the telemetry export path was until
+   ADR-0040 parameter E was added
    ([22-reliability-backup-dr](22-reliability-backup-dr.md) section 2, ADR-0040).
 3. **This layer never introduces a decision.** Where a view found a load-bearing claim with no
    owner, the resolution was a new ADR rather than an assertion here, which is how ADR-0072,
