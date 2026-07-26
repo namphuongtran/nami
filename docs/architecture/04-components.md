@@ -74,7 +74,8 @@ graph TB
   number, so the offset survives the engine renumbering its own handlers, and a
   pipeline-snapshot test pins the resulting order so a bump that reorders handlers fails CI
   instead of production (ADR-0021).
-* **Claims are deny-by-default.** `IClaimsProfileService` is the single choke-point, and
+* **Claims are deny-by-default** (a design-owned rule with no owning ADR).
+  `IClaimsProfileService` is the single choke-point, and
   nothing reaches a token unless explicitly declared for a destination, so a stray claim
   cannot leak into an access token (ADR-0005). Consent is persisted through the
   authorization manager, which is what makes silent renew with `prompt=none` possible.
@@ -374,7 +375,7 @@ a composition boundary whose seam is configuration (ADR-0029).
 
 * ADR-0021 and ADR-0024 (the handler pipeline, order anchoring, the pass-through versus
   fully-handled endpoint set as a pinned contract, the flat host, and ports only at real
-  seams), ADR-0005 (deny-by-default claims and the separate encryption-credential
+  seams), ADR-0005 (the minimal claim set and the separate encryption-credential
   lifecycle), ADR-0043 (the degraded-mode startup invariant).
 * ADR-0001, ADR-0037, and ADR-0049 (two-layer tenant isolation, the row-level-security
   backstop and its de-privileged role, `SET LOCAL` inside the transaction, and the

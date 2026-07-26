@@ -93,8 +93,10 @@ The three layers are not redundant restatements: each covers a path the others d
   authorization-code, and device-code artifacts keep encryption, because those are sensitive
   in a way an access token given to a resource server is not (ADR-0005).
 * **Because the access token is readable by anyone holding it, the minimal claim set is
-  mandatory rather than a preference**, and claims are deny-by-default by destination
-  (ADR-0005).
+  mandatory rather than a preference** (ADR-0005). Which token each claim rides in is a
+  separate control: a single choke-point emits a claim only where explicitly declared,
+  **deny-by-default**. That rule is fixed in the core-protocol design and **no ADR owns it**,
+  which is recorded here rather than attributed upward.
 * **PKCE is `S256` only.** `plain` is actively removed from the advertised methods rather than
   left at the engine default, because leaving it advertised re-opens a downgrade (ADR-0043).
 * **Sender-constrained tokens** are mTLS natively and DPoP as a build, with a nested `cnf.jkt`
@@ -221,6 +223,12 @@ this view deliberately stops at the mechanism.
   Forwarded headers are honoured only from trusted proxies, because a wrong scheme defeats
   cookie invariants, a wrong client address collapses per-IP limiting into one global bucket,
   and an unvalidated forwarded host reaches host-based tenant resolution (ADR-0073).
+* **Forwarded-header processing runs early, and specifically before strict transport
+  security**, because everything downstream that reads the scheme or the client address reads
+  it after this point. Put it after HSTS and the request still looks like plain HTTP when the
+  transport-security decision is made, so the protection is applied against the wrong facts.
+  The forwarded host is validated against known-good values rather than trusted as received
+  (ADR-0073).
 * **Rate limiting and load shedding coexist and are not the same control** (ADR-0040).
 * **IP rate limiting plus per-account lockout are explicitly not enough** for an
   internet-facing provider, and the reasoning is why the extra controls exist: a botnet stuffs
@@ -278,7 +286,7 @@ A short list, not the threat model. Each row names the control rather than the i
 | Autonomous destructive administration | Dual-control saga, and no app-only token can reach the admin API (ADR-0020) |
 | Signing-key compromise | Break-glass distrust fail-closed plus rotation inside five minutes (ADR-0007) |
 | Session fixation | A new session identifier at primary authentication, rotating on step-up (ADR-0003) |
-| Claim leakage | Deny-by-default claim destinations (ADR-0005) |
+| Claim leakage | Deny-by-default claim destinations, plus the minimal claim set (ADR-0005 for minimisation; the destination rule is design-owned with no ADR) |
 | Account enumeration | Uniform response **and** uniform latency, with the throttle after the response (ADR-0038) |
 | Lockout used as denial of service | Per-source failure scoping beside per-account lockout, plus a distinct alert (ADR-0042) |
 
@@ -287,8 +295,8 @@ A short list, not the threat model. Each row names the control rather than the i
 * ADR-0001, ADR-0037, ADR-0033, and ADR-0049 (the three isolation layers, the shared
   pool-group keyset as an accepted risk, and the token-layer binding that compensates for it,
   with spikes A-4 and A-7 as the evidence).
-* ADR-0005 (the plain signed access token, the mandatory minimal claim set, deny-by-default
-  destinations, the asymmetric-signing rule, and the encryption retention floor of roughly
+* ADR-0005 (the plain signed access token, the mandatory minimal claim set, the
+  asymmetric-signing rule, and the encryption retention floor of roughly
   the 8-hour ceiling plus margin), ADR-0004 (refresh posture and the engine's sibling
   revoke), ADR-0014 (sender-constrained tokens as a build, with the replay set's check-then-add behaviour owned by the advanced-flows design and its no-durable-source property by ADR-0074), ADR-0039 (the
   15-minute residual and the reference-token alternative), ADR-0048 (native introspection and

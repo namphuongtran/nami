@@ -45,8 +45,10 @@ graph LR
 one pipeline with a severity field.**
 
 * **Diagnostics** is `ILogger` plus OpenTelemetry over OTLP for all three signals, with
-  Serilog deliberately dropped, and PII redacted at the framework level. It is **lossy and
-  must never block** (ADR-0022).
+  Serilog deliberately dropped, and PII redacted at the framework level (ADR-0022). It is
+  **lossy and must never block**, which ADR-0022 does not itself fix: that invariant and its
+  test live in the observability design, and ADR-0022 states explicitly that its own scope is
+  the emission stack rather than what is built on it.
 * **Audit** is the security-event sink: append-only, hash-chained, delivery-guaranteed. It
   **never** travels through the diagnostics pipeline and is **never** dropped (ADR-0008).
 
@@ -59,7 +61,8 @@ thing it cannot be.
 The protocol engine emits **no** telemetry of its own (no activity source, no meter; the
 upstream request is open), so the shape is built-in meters where they exist plus a custom
 meter that gap-fills inside our own handlers. That custom meter carries a **decommission
-marker**: it retires if the engine ships native instrumentation (ADR-0021, ADR-0022).
+marker**: it retires if the engine ships native instrumentation (ADR-0021). The meter
+inventory itself is fixed in the observability design, not in an ADR.
 
 * **Built-in**: HTTP server request duration and active requests for the rate-errors-duration
   view, the framework's authentication, authorization, and **rate-limiting** meters (ADR-0040, which is
@@ -87,7 +90,11 @@ logs they point at, never through a tag. The SDK's default per-metric cardinalit
 2000, and individual metrics are tightened further with a view whose instrument-name selector
 must match the emitted name **exactly**, because a mismatched selector silently matches
 nothing and turns the cap into a no-op. A test asserts the view is actually attached, which is
-the only way to tell a live cap from a no-op one (ADR-0022).
+the only way to tell a live cap from a no-op one. **This rule has no owning ADR**: ADR-0022
+fixes the emission stack and says so, while the cardinality rule, its exact-match requirement,
+and the attachment test are stated only in the observability design. It is carried here
+because a no-op cap reads as protection, and recorded as an ADR candidate rather than
+presented as settled.
 
 ## 3. Burn-rate alerting, and why not latency alerting
 
@@ -158,7 +165,7 @@ uses a bounded queue that **drops when full** instead of blocking or growing, th
 bounded timeout, failures are swallowed off the request thread, and logging falls back to
 stdout. **A collector-outage load test proves p99 on the token endpoint is unchanged while the
 collector is blocked**, which is what turns the invariant from an intention into a tested
-property. The audit lane is the exact opposite and does not drop (ADR-0022, ADR-0008).
+property. The audit lane is the exact opposite and does not drop (ADR-0008).
 
 ## 5. Health endpoints
 
@@ -179,10 +186,13 @@ dependency: nothing Nami ships carries them (ADR-0063, ADR-0026).
 ## Sources
 
 * ADR-0022 (the two-lane split, `ILogger` plus OpenTelemetry with Serilog dropped, framework
-  redaction, the built-in and custom meter inventory, the high-cardinality rule with exemplars
-  as the alternative, and lossy-not-blocking export), ADR-0008 (the audit lane that never
-  drops and never travels through diagnostics), ADR-0021 (the decommission marker on the
-  custom meter).
+  redaction, and its explicit scope boundary: it fixes the emission stack, not what is built
+  on it), ADR-0008 (the audit lane that never drops and never travels through diagnostics),
+  ADR-0021 (the decommission marker on the custom meter).
+* **Owned by the observability design rather than by any ADR**, and flagged rather than
+  attributed upward: the meter inventory, the lossy-not-blocking export invariant with its
+  collector-outage proof, and the high-cardinality rule including the exact-match view
+  selector and the attachment test. Each is an ADR candidate.
 * ADR-0041 (burn-rate tiers and windows, the automatic freeze, the runbook-per-page-alert CI
   gate, the deduplication key, the external canary, and the SLO as a release gate), ADR-0040
   (the rate-limiting meter as the way load shedding is observed).

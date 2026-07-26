@@ -238,7 +238,7 @@ ADR-0066).
   4.1), ADR-0030 (runtime), ADR-0021 (engine pinning and the seam catalogue),
   ADR-0037 and ADR-0018 (database engine, row-level security, pooling), ADR-0036
   (primary keys and the ordering exception), ADR-0005 (signing baseline and
-  deny-by-default claims), ADR-0008 (the keyed audit hash-chain), ADR-0022 (logging
+  the minimal claim set), ADR-0008 (the keyed audit hash-chain), ADR-0022 (logging
   and observability, and the two-lane split), ADR-0023 (infrastructure as code).
 * ADR-0041 (the NFR targets, the SLO release gate, and the error-budget formula, the
   authority for section 3), ADR-0006 (per-store RTO and RPO, cloud-agnostic key

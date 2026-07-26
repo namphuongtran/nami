@@ -25,7 +25,7 @@ the token table, it is a different event.
 | # | Measure | Detail |
 |---|---|---|
 | HA1 | Multi-instance, multi-zone | At least two replicas spread across at least two zones, stateless with no sticky session, so losing a zone leaves the service up (ADR-0031, ADR-0072) |
-| HA2 | Keys-loaded readiness | `/health/ready` gates on an active signing key, an encryption key, and a data-protection unprotect that compares the active `kid` to the expected **persisted** `kid`. A pod takes traffic only once it can sign correctly (ADR-0012) |
+| HA2 | Keys-loaded readiness | `/health/ready` gates on an active signing key, an encryption key, and a data-protection unprotect that compares the active `kid` to the expected **persisted** `kid`. A pod takes traffic only once it can sign correctly. The gate and the comparison are ADR-0031; ADR-0012 owns the silent-regeneration failure that makes a bare round trip insufficient |
 | HA3 | Graceful shutdown with a readiness flip | On SIGTERM readiness flips NotReady, a `preStop` sleep lets the load balancer drain, and only then does Kestrel stop accepting. Liveness never probes readiness, or the platform would kill a pod mid-drain (ADR-0031) |
 | HA4 | Database high availability | Primary plus streaming-replication standby plus automatic failover plus write-ahead-log archiving, with **no failover product mandated**. The standby is a failover target, not a read replica (ADR-0074) |
 | HA5 | Pooler high availability where used | A transaction-mode pooler is conditional on Silo scale, but where deployed it is on the hot path, so at least two instances with failover, and its failover is drilled rather than assumed (ADR-0074 parameter D, ADR-0018) |
