@@ -86,7 +86,7 @@ plan, not here.
 
 | # | Design | Status | Realizes (primary ADRs) |
 |---|---|---|---|
-| [01](01-foundations.md) | Foundations and solution structure | reviewed | 0024, 0027, 0052, 0065 |
+| [01](01-foundations.md) | Foundations and solution structure | draft | 0024, 0027, 0065, 0075, 0044, 0026, 0030, 0031, 0006, 0009, 0025, 0021 |
 | [02](02-data.md) | Data tier and multi-tenancy | reviewed | 0001, 0018, 0036, 0037, 0049 |
 | [03](03-audit.md) | Audit subsystem | reviewed | 0008, 0022 |
 | [04](04-core-protocol.md) | Core protocol server | reviewed | 0004, 0005, 0014, 0048, 0049 |
