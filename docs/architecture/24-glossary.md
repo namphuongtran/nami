@@ -49,7 +49,8 @@ restating it.
 * **Device flow.** The device authorization grant (RFC 8628) for input-constrained devices.
 * **Token exchange.** RFC 8693. The grant is native, but the delegation logic is Nami's own:
   subject and actor resolution, emitting the `act` chain, and rejecting the confused-deputy
-  case. `may_act` is deliberately **not** issued (ADR-0014, and the
+  case. `may_act` is deliberately **not** issued, as a security decision rather than a scope
+  one (ADR-0014, and the
   [authorization design](../design/05-authorization.md)).
 * **Back-channel logout.** A server-to-server logout notification, a signed `logout_token`,
   delivered to each relying party in the session. Built as an interim until the engine ships a

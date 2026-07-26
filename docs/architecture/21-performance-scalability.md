@@ -170,13 +170,17 @@ single source of truth rather than loosening one file (ADR-0041).
   requires it" and ADR-0018 makes the per-tenant pool-size cap the primary rule with the
   pooler as one response; this is the same over-claim already corrected in the container and
   deployment views, and the corpus is its origin.
-* **One corpus item deliberately not carried:** the corpus specifies a **second** CI gate, a
-  crypto-path throughput floor on the signing and encryption path alongside the latency gate.
-  It is a reasonable regression detector, but ADR-0041 defines the gate and this layer never
-  adds to a decision. Recorded as a candidate for ADR-0041 rather than asserted here. Its
-  stated rationale ("crypto is the hotspot") also needs reconciling with this view's own
-  finding that signing CPU is not the binding constraint, which is a further reason it belongs
-  in a decision rather than in a diagram.
+* **One corpus item, taken to a decision and rejected there, 2026-07-26:** the corpus
+  specifies a **second** CI gate, a crypto-path throughput floor alongside the latency gate.
+  This view recorded it as a candidate rather than adopting it, both because ADR-0041 defines
+  the gate set and because its stated rationale, that crypto is the hotspot, contradicts this
+  view's own finding that signing CPU is not the binding constraint. **ADR-0041 considered and
+  rejected it.** The reasoning is worth reading rather than the verdict: the originating
+  rationale is wrong, but a **different** argument for the gate survives the correction, since
+  ADR-0041's gate is a system threshold under test load and would not catch an algorithm or
+  library change that made signing an order of magnitude slower without breaching p99. It is
+  rejected anyway, on flaky-micro-benchmark grounds, and the surviving argument is recorded so
+  it can be reopened if the capacity model ever shows the crypto path becoming load-bearing.
 
 ---
 

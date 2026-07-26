@@ -150,7 +150,7 @@ flowchart LR
 | E2 | An application-only token performing administration | A4 | The actor requirement rejects it at runtime, **and** no client-credentials client is ever granted the admin scope at issuance. Two controls, because one is a misconfiguration away from being the only one (ADR-0020) | High |
 | E3 | Self-approval defeating dual control | A2 | Proposer must differ from approver, single-use and bound to a request hash, itself step-up gated (ADR-0020) | Medium |
 | E4 | Step-up bypassed | A3 | Assurance is **recomputed per token request** from the methods used and session age rather than stored, so an aged session drops out of the higher level even when the method history still shows it (ADR-0013) | Medium |
-| E5 | Confused deputy on token exchange | A4 | Authority is the server-side grant on the resolved initiator, never a service identity, and the actor claim carries identity rather than authority (ADR-0010); the exchange grant is native while the resolution logic is ours (ADR-0014). Classification runs **before** the check, and a self-issued cross-tenant call missing the actor claim is rejected rather than falling back to the subject. **`may_act` is never issued**, a rule stated only in the authorization design and in no ADR | High |
+| E5 | Confused deputy on token exchange | A4 | Authority is the server-side grant on the resolved initiator, never a service identity, and the actor claim carries identity rather than authority (ADR-0010); the exchange grant is native while the resolution logic is ours (ADR-0014). Classification runs **before** the check, and a self-issued cross-tenant call missing the actor claim is rejected rather than falling back to the subject. **`may_act` is never issued** (ADR-0014), because delegation authority baked into a token would be stale and un-revocable, which is the property the whole model rejects | High |
 | E6 | A bypass-capable database role granted too widely (v2) | A4 | Granted only to the relay and never to the request path; isolation still holds because every event carries a tenant identifier (ADR-0071) | High. Role-grant scope is an Ops ratification item |
 
 ## 9. Two attack trees worth walking
@@ -200,7 +200,10 @@ argument for why that checklist is a release gate rather than paperwork.
 * **Two controls in these tables were design-owned with no ADR when this view was written.**
   The telemetry cardinality rule behind I5 became **ADR-0077** on 2026-07-26, framed there as a
   data-protection rule rather than a capacity one, which is the framing this row had argued for.
-  The exclusion of `may_act` behind E5 is still unowned and remains an ADR candidate.
+  The exclusion of `may_act` behind E5 became part of **ADR-0014** on the same day, added to
+  its de-scope list with the note that this one is a security decision rather than a scope one:
+  unlike the other de-scopes there, demand would not reopen it, only a change to the
+  authorization model would.
 * [13-security-architecture](13-security-architecture.md) states the controls; this view states
   the threats and the residual. [23-risks-and-technical-debt](23-risks-and-technical-debt.md)
   carries the accepted risks these rows feed.

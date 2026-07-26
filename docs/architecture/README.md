@@ -81,7 +81,7 @@ question. Each topic is one file.
 | File | Topic | Covers |
 |---|---|---|
 | [`../adr/README.md`](../adr/README.md) | The ADR corpus | Every decision of record, with context and rationale |
-| [18-decisions-index](18-decisions-index.md) | The **reverse** index: which views cite each decision | Generated ADR-to-view map, the measured cross-cutting set, the one decision no view cites, and the eight load-bearing claims found with no owning ADR, three of which are still open |
+| [18-decisions-index](18-decisions-index.md) | The **reverse** index: which views cite each decision | Generated ADR-to-view map, the measured cross-cutting set, the one decision no view cites, and the eight load-bearing claims found with no owning ADR, all now resolved, with what each resolution turned out to be |
 | [19-evolution-and-extensions](19-evolution-and-extensions.md) | What attaches after v1, and what v1 pays for it | Three accepted-but-unbuilt features, six proposed demand-driven extensions, kill switch by composition |
 
 ### Quality and risk (arc42 sections 10 and 11)

@@ -35,7 +35,7 @@ design**, not a plan.
 | R7 | **Back-channel logout is an interim build**, and front-channel logout is dead under third-party-cookie blocking | M | M | Built now on the session store that already exists, with a decommission marker for the native equivalent. A relying party without a back-channel endpoint degrades to bounded logout at the access-token lifetime, which is a **stated parity boundary** (ADR-0019) | Maintainers |
 | R8 | **Human ratification is not done.** Several parameters and verdicts are a named owner's call | H | M | Ratification runs **in parallel with the build** and gates production, not the build. Consolidated as one release gate (the [checklist](../PRE-GA-RATIFICATION-CHECKLIST.md)) | All named owners |
 | R9 | **Acceptance evidence needs running code.** The load, conformance, recovery-drill, and cross-tenant negative gates cannot close before there is something to run | H | M | Wired as CI gates that land with the code they test; the SLO gate and the cross-tenant negative gate are must-pass (ADR-0041, ADR-0060, ADR-0001) | Maintainers |
-| R10 | **Three load-bearing claims still have no owning decision**, of eight surfaced by writing and auditing this layer | M | M | Each is recorded **in place** in the view that carries it, and all are enumerated in [18-decisions-index](18-decisions-index.md) section 4 so the set is checkable rather than counted. Five are resolved, and the resolution rate is the finding: five claims produced **three** new ADRs, because two already had owners nobody had checked for and one needed a classification rather than a decision | Maintainers |
+| R10 | **Eight load-bearing claims had no owning decision**, surfaced by writing and auditing this layer. **All eight are now resolved** | L | M | The resolution shape is the finding rather than the count: eight claims produced **three** new ADRs (ADR-0075, ADR-0076, ADR-0077), four direct edits to existing decisions, and one correction where an owner already existed. The full table is in [18-decisions-index](18-decisions-index.md) section 4. The residual risk is not zero, because the same audit would run differently on a later version of the layer, which is why R10 stays on the register rather than being deleted | Maintainers |
 
 R10 is this repository's own finding rather than an inherited one, and it is a risk in the
 precise sense: nothing is wrong today, and the exposure is that a control with no decision
@@ -96,10 +96,12 @@ emergency work, which is the entire reason the analysis was written down.
   no corpus counterpart. R10 read "six" until 2026-07-26; two further claims were found while
   writing the threat model and the count was never revisited, so the set is now enumerated in
   the decisions index and referenced from here rather than counted twice. Eight were found and
-  three remain, all five resolutions dated 2026-07-26: ADR-0075 (claim destinations, as a
-  port-invariant question), ADR-0076 (application transport security), ADR-0077 (metric tags,
-  as a data-protection question), plus ADR-0040 parameter E for the telemetry failure posture
-  and a correction where instrument naming turned out already owned.
+  all eight resolved on 2026-07-26: three new ADRs (ADR-0075 claim destinations as a
+  port-invariant question, ADR-0076 application transport security, ADR-0077 metric tags as a
+  data-protection question), four direct edits (ADR-0040 parameter E for the telemetry failure
+  posture, ADR-0006 for the restore-verify probe, ADR-0041 recording a **rejected** gate, and
+  ADR-0014 for the `may_act` exclusion), and one correction where instrument naming turned out
+  already owned by ADR-0044 and ADR-0065.
 
 ---
 

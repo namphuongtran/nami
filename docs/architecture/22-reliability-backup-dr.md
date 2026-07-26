@@ -191,11 +191,18 @@ the observability and delivery designs, and their pass criterion is SLO impact u
   ADR-0041 (the availability target that motivates the topology, the alert pipeline, and the
   SLO-impact-under-fault criterion the chaos and mixed-version gates are measured against),
   ADR-0060 (the test strategy those gates live in).
-* **One corpus item deliberately not carried:** the corpus monitoring table includes a
-  weekly restore-verify probe. It is a sound control, but ADR-0074 parameter F defines the
-  monitoring set as archiving lag, backup age, replication lag, and a disconnected standby,
-  and this layer never adds to a decision. Recorded as a candidate for ADR-0074 or ADR-0006
-  rather than asserted here.
+* **One corpus item, first not carried and then adopted, 2026-07-26:** the corpus monitoring
+  table includes a weekly restore-verify probe, which this view recorded as a candidate because
+  ADR-0074 parameter F defines the monitoring set as archiving lag, backup age, replication lag,
+  and a disconnected standby, and this layer never adds to a decision. Investigating it found
+  the gap is sharper than "add a probe": ADR-0006 already decides continuous monitoring, which
+  catches a backup that **stopped**, and a quarterly drill, which catches a backup that **cannot
+  be restored**. A backup that runs on schedule and produces an unrestorable artifact falls
+  between them, keeps a fresh age, raises nothing, and surfaces up to a **quarter** later.
+  **ADR-0006 now owns the probe** as an explicitly shallower control than the drill, on a weekly
+  starting cadence, whose own silence is itself an alert. ADR-0074 was the wrong candidate home:
+  its parameter F builds on ADR-0006's monitoring rather than replacing it, and its own
+  "deliberately not decided here" leaves the continuous-monitoring requirement there.
 * Reconciled against the design corpus's reliability view on 2026-07-25. Taken from it: the
   high-availability measure table, the per-store recovery table with its reasoning about what
   each loss actually means, the restore-both requirement, the crypto-shred-versus-backup

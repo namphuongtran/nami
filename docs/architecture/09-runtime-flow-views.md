@@ -704,7 +704,7 @@ and `may_act` in section 4.4 as an **optional** way to authorize delegation whil
 explicitly permitting other means. Nami's other means is the live, time-bound, revocable
 server-side grant, so `may_act` is neither emitted, stored, nor validated: baking
 delegation authority into a token is precisely the stale, un-revocable authority this
-model rejects. The emitted chain is `act` alone, nested to carry the chain from the current
+model rejects (ADR-0014). The emitted chain is `act` alone, nested to carry the chain from the current
 actor to the prior one. Initiator classification runs **first**, so a delegation token whose `sub` is the
 *target* is never mistaken for the actor: same-tenant non-delegation takes `sub`;
 Entra on-behalf-of (RFC 7523, which never carries `act`) resolves the initiator from
