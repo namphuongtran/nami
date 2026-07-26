@@ -35,8 +35,9 @@ restating it.
 * **Claim destination.** Which token a given claim rides in: access token, ID token, both, or
   neither. Nami routes every claim through a single choke-point that is **deny-by-default**, so
   a claim is emitted only where explicitly declared. Distinct from **claim minimisation**, which
-  is about which claims exist at all (ADR-0005). The destination rule is fixed in the
-  [core-protocol design](../design/04-core-protocol.md) and currently has no owning ADR.
+  is about which claims exist at all (ADR-0005). The destination rule is elaborated in the
+  [core-protocol design](../design/04-core-protocol.md) and decided by ADR-0075, which also
+  makes it binding on a replacement adapter rather than only on the shipped one.
 * **acr, amr, auth_time.** The assurance claims: the authentication context class, the methods
   used (RFC 8176), and when authentication happened. They are what step-up is evaluated against
   (ADR-0013).

@@ -73,8 +73,9 @@ so removing `plain` is an **active step**, not a default, and omitting that step
 re-opens a downgrade. The authorization code is single-use. The access token is a
 **plain signed JWT** (`at+jwt`, `DisableAccessTokenEncryption`, ADR-0005), which is why
 the minimal claim set is mandatory rather than a preference: anyone holding the token
-can read it. Claims are deny-by-default by destination, a rule the core-protocol design owns
-and no ADR does. Every issuance writes one
+can read it. Claims are deny-by-default by destination, and because the port enforcing it is
+replaceable, that is a binding invariant on any adapter rather than a property of the shipped
+one (ADR-0075). Every issuance writes one
 operational-store row, which makes this the hot **write** path, not just the hot read
 path. The edge hop is assumed rather than shipped, and forwarded headers are honoured
 only from trusted proxies (ADR-0073).

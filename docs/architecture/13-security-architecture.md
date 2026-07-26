@@ -289,7 +289,7 @@ A short list, not the threat model. Each row names the control rather than the i
 | Autonomous destructive administration | Dual-control saga, and no app-only token can reach the admin API (ADR-0020) |
 | Signing-key compromise | Break-glass distrust fail-closed plus rotation inside five minutes (ADR-0007) |
 | Session fixation | A new session identifier at primary authentication, rotating on step-up (ADR-0003) |
-| Claim leakage | Deny-by-default claim destinations, plus the minimal claim set (ADR-0005 for minimisation; the destination rule is design-owned with no ADR) |
+| Claim leakage | Deny-by-default claim destinations, plus the minimal claim set (ADR-0005 for minimisation, ADR-0075 for the destination rule and for its being non-weakenable by a replacement adapter) |
 | Account enumeration | Uniform response **and** uniform latency, with the throttle after the response (ADR-0038) |
 | Lockout used as denial of service | Per-source failure scoping beside per-account lockout, plus a distinct alert (ADR-0042) |
 

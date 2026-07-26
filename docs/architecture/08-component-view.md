@@ -74,10 +74,12 @@ graph TB
   number, so the offset survives the engine renumbering its own handlers, and a
   pipeline-snapshot test pins the resulting order so a bump that reorders handlers fails CI
   instead of production (ADR-0021).
-* **Claims are deny-by-default** (a design-owned rule with no owning ADR).
-  `IClaimsProfileService` is the single choke-point, and
+* **Claims are deny-by-default.** `IClaimsProfileService` is the single choke-point, and
   nothing reaches a token unless explicitly declared for a destination, so a stray claim
-  cannot leak into an access token (ADR-0005). Consent is persisted through the
+  cannot leak into an access token (ADR-0005 for which claims exist, ADR-0075 for the
+  destination rule). Because the port is replaceable, that rule is a **binding invariant on
+  any adapter**, not a property of this implementation, and it carries a contract test a
+  consumer runs against their own (ADR-0075). Consent is persisted through the
   authorization manager, which is what makes silent renew with `prompt=none` possible.
 * **Degraded mode is forbidden** in any token-issuing environment, enforced as a fail-fast
   startup invariant that also emits a security event (ADR-0043).

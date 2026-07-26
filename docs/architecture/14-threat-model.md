@@ -126,7 +126,7 @@ flowchart LR
 | I1 | Cross-tenant read through query, include, bulk, or raw SQL | A4 | Two layers: the tenant stamp and query filter, then **forced** row-level security, which is the only guard on the bulk and raw paths. The engine's tenant column is **text**, so an unset variable fails closed by non-match; `uuid` tenant columns instead cast with `NULLIF` so an unset variable fails closed rather than **throwing** (ADR-0001, ADR-0037, ADR-0071) | **Critical.** Core is spike-proven. Residual: **every new `uuid`-tenant table must join the cast list**, which is why that list is a single authority in the data design |
 | I2 | Cross-tenant write or mis-stamp | A4 | A write-side check on the policy; a mismatched write raises; no ambient tenant fails closed (ADR-0001) | **Critical** |
 | I3 | Row-level security silently disabled | A4 | The application role must be non-superuser and non-bypassing, **because a superuser bypasses the policy entirely** | **Critical**, and it is a **deployment** control rather than a code one, so it is an Ops ratification item |
-| I4 | Personal data leaked into a token | A3 | The minimal claim set, and **deny-by-default claim destinations** so a claim is emitted only where declared (ADR-0005) | High. **The destination rule currently has no owning ADR**, which is recorded as a candidate: this row is exactly why that matters |
+| I4 | Personal data leaked into a token | A3 | The minimal claim set (ADR-0005), and **deny-by-default claim destinations** so a claim is emitted only where declared, binding on any replacement adapter and carrying a contract test (ADR-0075) | Medium. The residual moved from "no decision owns this control" to "the consumer must choose to run the test", because Nami cannot execute a check inside someone else's build |
 | I5 | Personal data leaked into telemetry | A3 | Framework-level redaction on the diagnostics lane (ADR-0022), plus the high-cardinality prohibition, which is a personal-data rule as much as a cardinality one: no tenant, subject, session, proof identifier, or address as a metric tag, with exemplars for investigation instead | High. **The cardinality rule is design-owned and no ADR contains it**, so this row's second control is an ADR candidate |
 | I6 | Personal data on the event bus (v2) | A3 | Thin events by default; a richer payload is opt-in and ratified; a single stream with a tenant identifier and consumer-side filtering (ADR-0071) | Medium. Data-protection ratification item |
 | I7 | Signing-key material exfiltrated | A1 | Keys never leave the store into logs, chat, or configuration; encrypted at rest; rotation exposes no bytes; runtime rights exclude purge, delete, and set (ADR-0009, ADR-0011) | **Critical.** Residual is store custody, a Security ratification item |
@@ -214,8 +214,9 @@ argument for why that checklist is a release gate rather than paperwork.
   are overwhelmingly deployment and custody acts rather than code, which follows from the
   corpus's own rows but is not drawn out there, and which is the strongest available argument
   for the ratification checklist being a gate. The corpus threat model also independently
-  attributes the deny-by-default destination rule to a design document rather than a decision,
-  which is the third corroboration of that finding and the reason row I4 says so explicitly.
+  attributed the deny-by-default destination rule to a design document rather than a decision.
+  That corroboration is what drove the rule to a decision of its own on 2026-07-26: ADR-0075
+  now owns it, and row I4 records the smaller residual that remains.
 
 ---
 
