@@ -248,9 +248,14 @@ this view deliberately stops at the mechanism.
   session identifier is minted at primary authentication and the pre-login handle is
   discarded, and the identifier rotates again on step-up (ADR-0003).
 * CORS is **per-client through a policy provider**, not one static global policy (ADR-0050).
-  Security headers, a content-security policy, and a TLS floor apply at the edge and in the
-  application; note that application-side strict-transport-security and the TLS floor are
-  recorded as owned by no ADR (ADR-0073).
+  Security headers, a content-security policy, and a TLS floor apply at the edge (ADR-0073) and
+  in the application (ADR-0076). The application emits its own strict-transport-security header
+  rather than relying on the edge to, with a one-year `max-age` and with `includeSubDomains` and
+  `preload` left **off and owned by the operator**, because both reach domains Nami does not own.
+  Where the application terminates TLS itself, a startup assertion rejects any explicitly
+  configured protocol below TLS 1.2 rather than pinning a protocol list that a future version
+  would break. Disabling OpenIddict's transport-security requirement is forbidden outside
+  Development.
 * **Supply chain**: release artifacts are signed with keyless provenance attestation, and
   dependencies are permissive-OSS only enforced by a CI license scan (ADR-0051, ADR-0026).
 * **The verification baseline is OWASP ASVS**, self-verified and mapped to tests, with L2 as

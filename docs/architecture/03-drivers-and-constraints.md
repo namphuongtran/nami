@@ -273,8 +273,10 @@ ADR-0066).
   been written the same day precisely because an infrastructure assumption that
   load-bearing should not sit in the architecture layer without a decision behind it. That
   ADR also independently verified the forwarded-header behaviour it depends on, and
-  deliberately records one remaining gap: the application's own transport-security settings
-  (HSTS parameters and the Kestrel TLS floor) are still not fixed by any ADR.
+  deliberately recorded one remaining gap rather than filling it silently: the application's
+  own transport-security settings, meaning the HSTS parameters and the Kestrel TLS floor.
+  **ADR-0076 closed that gap on 2026-07-26**, and the pattern is worth noting: naming an
+  omission as an omission is what made it findable.
 
 ---
 

@@ -86,3 +86,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0073](0073-edge-posture-and-forwarded-headers.md) | Assume an L7 edge in front of the deployment, define the direct-to-internet fallback, and process forwarded headers only from trusted proxies | accepted |
 | [0074](0074-database-ha-and-cache-durability.md) | Adopt a primary-plus-standby PostgreSQL topology with automatic failover, keep read replicas an optional non-v1 lever, and never depend on Redis durability | accepted |
 | [0075](0075-security-sensitive-port-invariants.md) | Treat security-sensitive ports as carrying non-weakenable invariants, verified by a contract test the consumer runs | accepted |
+| [0076](0076-application-transport-security.md) | Decide the application's own transport security: HSTS policy, the Kestrel TLS floor, and the transport-requirement guard | accepted |

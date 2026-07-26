@@ -42,8 +42,13 @@ Chosen option: "A fail-fast startup self-check". At startup the application runs
 | jwe-enc-cbc | encryption credential content-encoding is `A256CBC-HS512`; RSA1_5 key-management is banned | **recorded here** (only `A256CBC-HS512` is reachable via OpenIddict's standard API, source-verified; RSA1_5 is Bleichenbacher-weak) |
 | core-cookie-attributes | the core SSO/session and correlation/nonce cookies carry `Secure`, `HttpOnly`, a pinned `SameSite`, and a `__Host-`/`__Secure-` prefix, reconciled with `response_mode=form_post` so `SameSite` does not block the POST-back | **recorded here** (backstop against cookie-weakening drift) |
 | no-degraded-mode-in-prod | OpenIddict degraded mode is forbidden in token-issuing (Staging/Production) environments; the guard fails fast and emits a security event | **recorded here** |
+| hsts-enabled-outside-dev | the HSTS middleware is registered and `max-age` is at least the product default, outside Development | enforces ADR-0076 |
+| tls-floor | where the application terminates TLS itself, no explicitly configured protocol below TLS 1.2 is permitted | enforces ADR-0076 |
+| transport-security-required | OpenIddict's `DisableTransportSecurityRequirement` is off outside Development | enforces ADR-0076 |
 
-The invariants split into two kinds. Some are the executable enforcement of a decision owned elsewhere (PKCE mandatory, no implicit, rolling refresh under ADR-0004, asymmetric-only signing under ADR-0005). The rest are hardening parameters that had no prior ADR home and are fixed by this ADR: S256-only PKCE, the JWE `A256CBC-HS512`/no-RSA1_5 pinning, the cookie-attribute set, and the no-degraded-mode-in-production guard. A test asserts that the self-check runs at startup and fails fast when any invariant is violated.
+The invariants split into two kinds. Some are the executable enforcement of a decision owned elsewhere (PKCE mandatory, no implicit, rolling refresh under ADR-0004, asymmetric-only signing under ADR-0005, and the three transport rows under ADR-0076). The rest are hardening parameters that had no prior ADR home and are fixed by this ADR: S256-only PKCE, the JWE `A256CBC-HS512`/no-RSA1_5 pinning, the cookie-attribute set, and the no-degraded-mode-in-production guard. A test asserts that the self-check runs at startup and fails fast when any invariant is violated.
+
+**Transport rows added 2026-07-26.** ADR-0073 recorded that this check covered PKCE, signing, JWE, cookies, and degraded mode but **not transport**, and left the gap open rather than filling it silently. ADR-0076 closed it, and its three invariants are enforced here so the application still has one place where it refuses to serve rather than two.
 
 ### Consequences
 

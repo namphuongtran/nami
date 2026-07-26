@@ -72,12 +72,12 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0024](../adr/0024-architecture-style.md) | Adopt a hexagonal shell (dependency rule plus ports/adapters)... | 03, 05, 06, 07, 08, 10, 12 |
 | [0025](../adr/0025-local-development-and-first-run.md) | Run locally with docker-compose dependencies, multi-stage Doc... | 03, 07, 10, 15, 17 |
 | [0026](../adr/0026-dependency-license-policy.md) | Restrict dependencies to permissive OSS licenses, enforced by... | 03, 05, 11, 13, 16 |
-| [0027](../adr/0027-packaging-and-distribution.md) | Distribute Nami as a hybrid NuGet meta-package plus a referen... | 01, 03, 07, 08, 10, 17 |
+| [0027](../adr/0027-packaging-and-distribution.md) | Distribute Nami as a hybrid NuGet meta-package plus a referen... | 01, 03, 07, 08, 10, 17, 18 |
 | [0028](../adr/0028-user-management.md) | Build user management on ASP.NET Core Identity with native pa... | 01, 04, 07, 08, 12, 17 |
 | [0029](../adr/0029-bff.md) | Build a Nami.Identity.Bff package by composing OSS-permissive... | 01, 03, 07, 08, 09, 13, 24 |
 | [0030](../adr/0030-dotnet-version-upgrade.md) | Upgrade .NET on an LTS-to-LTS cadence, with multi-target pack... | 03, 11, 17 |
 | [0031](../adr/0031-twelve-factor-baseline.md) | Adopt the 12-factor (and 15-factor) methodology as the operat... | 01, 03, 05, 07, 08, 09, 10, 14, 16, 17, 18, 20, 21, 22, 23 |
-| [0032](../adr/0032-usage-visibility-and-licensing-posture.md) | Gain usage visibility through free registration and opt-in te... | 10, 18 |
+| [0032](../adr/0032-usage-visibility-and-licensing-posture.md) | Gain usage visibility through free registration and opt-in te... | 10 |
 | [0033](../adr/0033-key-scope-isolation-model.md) | Align key-scope isolation to the tenant tier with one keyset... | 01, 02, 03, 04, 05, 06, 09, 11, 12, 13, 14, 23, 24 |
 | [0034](../adr/0034-dynamic-external-idp.md) | Open dynamic per-tenant external IdP federation as a v2 self-... | 01, 03, 04, 05, 08, 14, 19 |
 | [0035](../adr/0035-self-service-client-registration.md) | Offer self-service client registration through the authentica... | 01, 03, 05, 17, 19, 23 |
@@ -111,16 +111,17 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0063](../adr/0063-observability-backend-and-dev-visualization.md) | Keep the observability backend operator-chosen and run a self... | 11, 16 |
 | [0064](../adr/0064-mcp-authorization-server-support.md) | Support Nami as the OAuth authorization server for MCP servers | 01, 19 |
 | [0065](../adr/0065-coding-and-naming-conventions.md) | Adopt the Microsoft naming and C# coding conventions as an en... | 07, 09, 10, 12, 24 |
-| [0066](../adr/0066-design-patterns-vocabulary-and-pragmatic-use.md) | Adopt design patterns as a shared vocabulary applied pragmati... | 03, 18 |
+| [0066](../adr/0066-design-patterns-vocabulary-and-pragmatic-use.md) | Adopt design patterns as a shared vocabulary applied pragmati... | 03 |
 | [0067](../adr/0067-ai-assisted-development-governance.md) | Adopt an AI-assisted development policy: human-accountable, d... | 11, 17 |
 | [0068](../adr/0068-continuous-access-evaluation-shared-signals.md) | Support continuous access evaluation via the OpenID Shared Si... | 01, 19 |
 | [0069](../adr/0069-verifiable-credentials-openid4vc.md) | Support issuing Verifiable Credentials via OpenID4VC (Nami as... | 01, 19 |
-| [0070](../adr/0070-local-development-tls.md) | Serve HTTPS in local development with a locally-trusted cert... | 10, 18 |
+| [0070](../adr/0070-local-development-tls.md) | Serve HTTPS in local development with a locally-trusted cert... | 10 |
 | [0071](../adr/0071-identity-change-event-publishing.md) | Publish identity change events outward through a transactiona... | 01, 03, 04, 05, 07, 08, 09, 14, 15, 19, 24 |
 | [0072](../adr/0072-ui-rendering-stack.md) | Render the human-facing UI as server-rendered Razor with no c... | 01, 07, 08, 11, 21, 22 |
 | [0073](../adr/0073-edge-posture-and-forwarded-headers.md) | Assume an L7 edge in front of the deployment, define the dire... | 03, 04, 07, 09, 10, 11, 13, 17, 18, 21 |
 | [0074](../adr/0074-database-ha-and-cache-durability.md) | Adopt a primary-plus-standby PostgreSQL topology with automat... | 05, 09, 10, 11, 12, 13, 14, 16, 17, 18, 20, 21, 22 |
 | [0075](../adr/0075-security-sensitive-port-invariants.md) | Treat security-sensitive ports as carrying non-weakenable inv... | 08, 09, 13, 14, 18, 23, 24 |
+| [0076](../adr/0076-application-transport-security.md) | Decide the application's own transport security: HSTS policy, the... | 03, 13, 18, 23 |
 
 ## 3. What the shape of that table says
 
@@ -168,30 +169,42 @@ They are enumerated rather than counted, because an earlier revision of this pag
 count as six and was wrong: two more were found later while writing the threat model, and a
 number nobody can check is exactly the kind of claim this repository has learned not to write.
 
-**Seven remain open.**
+**Six remain open.**
 
 | # | Claim with no owning ADR | Recorded in |
 |---|---|---|
-| 1 | The **application-side strict-transport-security and TLS floor**, which ADR-0073 assumes at the edge rather than decides in the application | [13-security-architecture](13-security-architecture.md) section 7 |
-| 2 | The **meter inventory**: which metrics exist at all | [16-observability-monitoring](16-observability-monitoring.md) |
-| 3 | **Telemetry export is lossy, never blocking**, with the collector-outage proof that shows it | [16-observability-monitoring](16-observability-monitoring.md) |
-| 4 | The **high-cardinality prohibition** and its enforcement: no tenant, subject, session, proof identifier, or address as a metric tag, with the exact-match view selector and the attachment test. It is a personal-data rule as much as a cardinality one | [16-observability-monitoring](16-observability-monitoring.md), [14-threat-model](14-threat-model.md) row I5 |
-| 5 | The **periodic restore-verify probe**, which is what distinguishes a backup that exists from one that restores | [22-reliability-backup-dr](22-reliability-backup-dr.md) |
-| 6 | A **crypto-path throughput gate in CI**, separate from the SLO gate ADR-0041 owns | [21-performance-scalability](21-performance-scalability.md) |
-| 7 | The **exclusion of `may_act`**, the delegation claim: no ADR in this repository contains the term | [14-threat-model](14-threat-model.md) row E5 |
+| 1 | The **meter inventory**: which metrics exist at all | [16-observability-monitoring](16-observability-monitoring.md) |
+| 2 | **Telemetry export is lossy, never blocking**, with the collector-outage proof that shows it | [16-observability-monitoring](16-observability-monitoring.md) |
+| 3 | The **high-cardinality prohibition** and its enforcement: no tenant, subject, session, proof identifier, or address as a metric tag, with the exact-match view selector and the attachment test. It is a personal-data rule as much as a cardinality one | [16-observability-monitoring](16-observability-monitoring.md), [14-threat-model](14-threat-model.md) row I5 |
+| 4 | The **periodic restore-verify probe**, which is what distinguishes a backup that exists from one that restores | [22-reliability-backup-dr](22-reliability-backup-dr.md) |
+| 5 | A **crypto-path throughput gate in CI**, separate from the SLO gate ADR-0041 owns | [21-performance-scalability](21-performance-scalability.md) |
+| 6 | The **exclusion of `may_act`**, the delegation claim: no ADR in this repository contains the term | [14-threat-model](14-threat-model.md) row E5 |
 
-Items 2, 3, and 4 share an owner in the observability design and may resolve as one ADR rather
-than three; items 5 and 6 are more likely amendments to ADR-0074 or ADR-0006 and to ADR-0041
+Items 1, 2, and 3 share an owner in the observability design and may resolve as one ADR rather
+than three; items 4 and 5 are more likely amendments to ADR-0074 or ADR-0006 and to ADR-0041
 than new decisions. That is a judgement to make when they are drafted, not here.
 
-**One is closed, and how it closed is the useful part.** The deny-by-default claim-destination
-rule became **ADR-0075** on 2026-07-26. Investigating it showed the rule itself needed no
-decision: it is OpenIddict's documented behaviour, and ADR-0052 already recorded that posture.
-What needed one was that the port enforcing it, `IClaimsProfileService`, is **replaceable**, so
-the engine's safe default protects the shipped adapter and not a consumer's. Three other ports
-turned out to have the same shape, which is why one ADR covers four rows instead of four ADRs
-covering one each. The lesson for the remaining seven: **ask what decision is actually missing
-before assuming it is the claim as written.**
+**Two are closed, and how each closed is the useful part.**
+
+**ADR-0075**, the deny-by-default claim-destination rule, 2026-07-26. Investigating it showed
+the rule itself needed no decision: it is OpenIddict's documented behaviour, and ADR-0052
+already recorded that posture. What needed one was that the port enforcing it,
+`IClaimsProfileService`, is **replaceable**, so the engine's safe default protects the shipped
+adapter and not a consumer's. Three other ports turned out to have the same shape, which is why
+one ADR covers four rows instead of four ADRs covering one each.
+
+**ADR-0076**, the application-side transport security, 2026-07-26. This one was already named as
+an omission inside ADR-0073, which recorded the gap rather than adopting settings silently, and
+two of that ADR's own parameters depended on it. The obvious objection, that the framework
+template already emits `UseHsts`, turned out to hold on only one of ADR-0027's two distribution
+paths and to supply a general-purpose default rather than a policy on that one. It also picked
+up a second gap found in passing: OpenIddict's `DisableTransportSecurityRequirement` was
+forbidden only in a deployment design note and by no decision.
+
+The lesson from both, for the remaining six: **ask what decision is actually missing before
+assuming it is the claim as written.** In the first case the claim was true but needed no
+decision; in the second the claim was right and the framework default was the wrong answer to
+it.
 
 ## 5. Decisions whose feature is not built
 
