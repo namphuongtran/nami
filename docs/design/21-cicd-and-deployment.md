@@ -112,8 +112,11 @@ A `make dev-up` wraps the sequence.
 
 ### The reference host, image, and template
 
-The deployable is `Nami.Identity.Host` with a dual/tri-role entrypoint (`serve`,
-`migrate`, and an `export` of configuration). Configuration is environment-first
+The deployable is `Nami.Identity.Host` with a **four-mode** entrypoint: `serve` runs the
+host, `migrate` applies the migration bundle and exits, `export` dumps the declarative
+configuration without secrets or keys, and `prune` bulk-deletes expired tokens and
+authorizations. `prune` is a mode rather than a hosted service inside `serve` because
+ADR-0031 keeps bulk work off the request-serving path. Configuration is environment-first
 (`Nami__ConnectionString` and `Nami__Issuer` are required; multi-tenancy, admin, key
 store, and the OTLP endpoint are optional), and no secret or certificate is baked into
 the image. The image is multi-stage: an SDK `build` stage and a chiseled, non-root

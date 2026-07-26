@@ -50,8 +50,9 @@ graph TB
   mt[Nami.Identity.MultiTenant<br/>Finbuckle Pool/Silo + resolver]:::adapter
   keys[Nami.Identity.Keys<br/>key-store port, rotation skeleton]:::adapter
   otel[Nami.Identity.OpenTelemetry<br/>OTLP meters, traces, logs]:::adapter
-  cloud[Cloud adapters<br/>KeyVault.Azure, Aws, Gcp, Vault]:::adapter
-  host[Nami.Identity<br/>meta-package + reference host, composition root]:::host
+  cloud[Nami.Identity.Keys.Azure / .Aws / .Gcp / .Vault<br/>cloud key and secret adapters]:::adapter
+  meta[Nami.Identity<br/>meta-package, the thing you add]:::host
+  host[Nami.Identity.Host<br/>reference application, IsPackable false, the thing that runs]:::host
 
   core --> abs
   ef --> core
@@ -59,10 +60,11 @@ graph TB
   keys --> core
   otel --> core
   cloud --> abs
-  host --> core
-  host --> ef
-  host --> keys
-  host --> otel
+  meta --> core
+  meta --> ef
+  meta --> keys
+  meta --> otel
+  host --> meta
 
   classDef center fill:#08427b,stroke:#052e56,color:#ffffff
   classDef core fill:#1168bd,stroke:#0b4884,color:#ffffff
@@ -75,15 +77,33 @@ on nothing; `Core` depends only on `Abstractions` plus OpenIddict; adapters depe
 on `Core`/`Abstractions` plus their own SDK; the host composes everything. `Core`
 must not reference any adapter, EF provider, or cloud SDK.
 
-Ratified names (ADR-0065): `Nami.Identity` (meta-package and reference host),
-`Core`, `Abstractions`, `Users`, `Bff` (+`.Bff.Yarp`), `Admin.Api`, `Admin.App`,
-`Contracts`, `Admin.Contracts`. The finer split shown above (`EntityFrameworkCore`,
-`MultiTenant`, `Keys`, `OpenTelemetry`, `Validation`, and the cloud adapters) is
-the granular sub-package split ADR-0027 sanctions; the exact boundaries and names
-are finalized at M1. The corpus name `Nami.Identity.Server` for the host is
-superseded by `Nami.Identity` (ADR-0025/0027); the corpus's later
-`Nami.Identity.Host` name was likewise not ratified, so there is no `.Server` or
-`.Host` project. Phase-later packages (`Users`, `DPoP`, `Bff`, `Validation`,
+**Packages and applications are different things, and ADR-0065 splits them on purpose.**
+The ratified **packages** are `Nami.Identity` (the meta-package), `Core`, `Abstractions`,
+`Users`, `Keys` (+ `.Keys.Azure`, `.Keys.Aws`, `.Keys.Gcp`, `.Keys.Vault`),
+`OpenTelemetry`, `Validation`, `Bff` (+ `.Bff.Yarp`), `Contracts`, and
+`Admin.Contracts`. The ratified **applications**, which set `IsPackable=false` and ship as
+container images rather than on NuGet, are **`Nami.Identity.Host`** (the runnable reference
+identity host, ADR-0027), `Admin.Api`, and `Admin.App`.
+
+That split is the point, not bookkeeping: `Nami.Identity` is **the thing you add** and
+`Nami.Identity.Host` is **the thing that runs** (ADR-0065). Conflating them makes both
+stories ambiguous, because a meta-package is by construction an empty project carrying only
+references while a host carries an entry point, configuration, a Dockerfile, and health
+endpoints. It also makes the end-to-end suites meaningful, since they exercise the host that
+actually ships (ADR-0060) rather than one a test project assembled for itself. The host's
+entrypoint has **four modes**, `serve`, `migrate`, `export`, and `prune`, the last because
+ADR-0031 keeps bulk pruning off the request-serving path.
+
+The cloud adapters are named after **the port they adapt**, `.Keys.Azure` and its siblings,
+not after one vendor's product name: only one of those providers has a product called Key
+Vault, so naming the family after it would be wrong for three of the four and redundant for
+the fourth (ADR-0065). The corpus uses the vendor-product form, and that form is rejected
+here.
+
+The finer split shown above (`EntityFrameworkCore`, `MultiTenant`, and the rest) is
+the granular sub-package split ADR-0027 sanctions; the exact boundaries beyond the ADR-0065
+set are finalized at M1. The corpus name `Nami.Identity.Server` for the host is superseded
+by `Nami.Identity.Host`. Phase-later packages (`Users`, `DPoP`, `Bff`, `Validation`,
 `Admin.*`, the email adapters `Email.Smtp`/`.SendGrid`/`.Ses`/`.Acs`, the ReBAC
 adapters `AccessControl.OpenFga`/`.SpiceDb`, and the resource-side `Validation.DPoP`)
 are scaffolded when their phase arrives.
