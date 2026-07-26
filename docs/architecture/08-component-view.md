@@ -8,7 +8,7 @@ tags: [architecture, c4, components]
 
 > **Part of:** the [Software Architecture Document](README.md), structural views. C4 Level 3.
 
-This view opens the containers from [03-containers](03-containers.md) into their major
+This view opens the containers from [07-container-view](07-container-view.md) into their major
 internal components. It stops **above code**: no class shapes, method signatures, or field
 types, which belong to the [detailed designs](../design/README.md).
 
@@ -110,7 +110,7 @@ graph TB
 
 Isolation is **two layers, and both are needed** (ADR-0001, ADR-0037, ADR-0049), and the
 change-tracker path carries a registration constraint of its own (ADR-0018, see
-[03-containers](03-containers.md)):
+[07-container-view](07-container-view.md)):
 
 * **Layer 1** covers the change-tracker path: it auto-stamps `TenantId` on insert, applies a
   named query filter on read, and **throws on a mismatch or an unset tenant**, so no ambient
@@ -414,4 +414,4 @@ a composition boundary whose seam is configuration (ADR-0029).
 
 ---
 
-[Prev: Containers](03-containers.md) · [Index](README.md) · Next: [Data](05-data.md)
+[Prev: Container view](07-container-view.md) · [Index](README.md) · Next: [Runtime flow views](09-runtime-flow-views.md)

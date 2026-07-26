@@ -33,14 +33,14 @@ whose detail is spread over 72 ADRs and 18 detailed designs. It answers, at the
 architecture altitude:
 
 * What is the system, who uses it, and what does it depend on?
-  ([01-context](01-context.md), [02-domain](02-domain.md))
+  ([04-system-context](04-system-context.md), [06-domain-model](06-domain-model.md))
 * What are its deployable parts, and how do they communicate?
-  ([03-containers](03-containers.md), [04-components](04-components.md))
-* How do the important flows run at runtime? ([06-runtime-views](06-runtime-views.md))
-* How is data structured, stored, and isolated? ([05-data](05-data.md))
+  ([07-container-view](07-container-view.md), [08-component-view](08-component-view.md))
+* How do the important flows run at runtime? ([09-runtime-flow-views](09-runtime-flow-views.md))
+* How is data structured, stored, and isolated? ([12-data-architecture](12-data-architecture.md))
 * What forces and hard constraints shape it?
-  ([00b-drivers-and-constraints](00b-drivers-and-constraints.md))
-* Which concerns cut across every container? ([07-cross-cutting](07-cross-cutting.md))
+  ([03-drivers-and-constraints](03-drivers-and-constraints.md))
+* Which concerns cut across every container? ([11-cross-cutting-concepts](11-cross-cutting-concepts.md))
 * Why were the load-bearing decisions made? ([the ADR corpus](../adr/README.md))
 
 It is **not** an implementation task list and **not** a replacement for the detailed
@@ -50,11 +50,11 @@ designs. It points into them.
 
 | Audience | Primary entry point |
 |---|---|
-| New contributors and reviewers | This file, then [01-context](01-context.md) and [03-containers](03-containers.md) |
-| Architects | The full set, especially [03-containers](03-containers.md), [04-components](04-components.md), and [the ADR corpus](../adr/README.md) |
-| Operations and SRE | [08-deployment](08-deployment.md), [07-cross-cutting](07-cross-cutting.md) |
-| Security, DPO, and Legal | [07-cross-cutting](07-cross-cutting.md) and the [pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md); compliance verdicts remain theirs to make |
-| Integrators building relying-party apps | [01-context](01-context.md), then [`docs/design/`](../design/README.md) |
+| New contributors and reviewers | This file, then [04-system-context](04-system-context.md) and [07-container-view](07-container-view.md) |
+| Architects | The full set, especially [07-container-view](07-container-view.md), [08-component-view](08-component-view.md), and [the ADR corpus](../adr/README.md) |
+| Operations and SRE | [10-deployment-infrastructure](10-deployment-infrastructure.md), [11-cross-cutting-concepts](11-cross-cutting-concepts.md) |
+| Security, DPO, and Legal | [11-cross-cutting-concepts](11-cross-cutting-concepts.md) and the [pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md); compliance verdicts remain theirs to make |
+| Integrators building relying-party apps | [04-system-context](04-system-context.md), then [`docs/design/`](../design/README.md) |
 
 ## 3. Scope
 
@@ -191,3 +191,7 @@ restating it.
   name-placeholder convention that do not hold in this repository; those were
   corrected rather than transcribed, and the corpus's out-of-scope list carried one
   item with no decision of record here, which was dropped rather than asserted.
+
+---
+
+[Index](README.md) · Next: [Stakeholders and concerns](02-stakeholders-and-concerns.md)

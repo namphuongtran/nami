@@ -10,7 +10,7 @@ tags: [architecture, c4, context]
 
 Nami as a single box: the people who use it and the external systems it depends on or
 serves, with no internal structure. Internal decomposition starts in
-[03-containers](03-containers.md).
+[07-container-view](07-container-view.md).
 
 ```mermaid
 graph TB
@@ -152,4 +152,4 @@ security rather than by having its own per-tenant deployment.
 
 ---
 
-[Index](README.md) · Next: [Domain](02-domain.md)
+[Prev: Drivers and constraints](03-drivers-and-constraints.md) · [Index](README.md) · Next: [Solution strategy](05-solution-strategy.md)

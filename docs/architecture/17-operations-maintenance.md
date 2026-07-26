@@ -12,8 +12,8 @@ tags: [architecture, operations, runbooks, break-glass, upgrades]
 How the system is run and kept healthy over time: runbooks, the background jobs an operator
 has to reason about, key operations, the two break-glass paths, and the upgrade cadence. What
 breaks and what it costs to recover is
-[13-reliability-backup-and-dr](13-reliability-backup-and-dr.md); what is measured and alerted
-is the observability view; where it all runs is [08-deployment](08-deployment.md).
+[22-reliability-backup-dr](22-reliability-backup-dr.md); what is measured and alerted
+is the observability view; where it all runs is [10-deployment-infrastructure](10-deployment-infrastructure.md).
 
 ## 1. Runbooks, with the linkage enforced rather than encouraged
 
@@ -41,7 +41,7 @@ The runbook contents live with Ops; what this view fixes is the set and its trig
 ## 2. Background jobs an operator has to reason about
 
 The pattern each job uses is fixed by ADR-0031 and summarised in
-[03-containers](03-containers.md). What matters operationally is narrower:
+[07-container-view](07-container-view.md). What matters operationally is narrower:
 
 **Clustering prevents a double run. It does not prevent a dead run.** A clustered scheduler
 guarantees that exactly one replica's trigger fires; it guarantees nothing about the trigger
@@ -230,4 +230,4 @@ Operations-facing items awaiting ratification before production, tracked in the
 
 ---
 
-[Prev: Observability and monitoring](15-observability-and-monitoring.md) · [Index](README.md) · Next: [Decisions index](17-decisions-index.md)
+[Prev: Observability and monitoring](16-observability-monitoring.md) · [Index](README.md) · Next: [Decisions index](18-decisions-index.md)

@@ -333,8 +333,8 @@ sequenceDiagram
 
 ## References
 
-* Architecture overview: [components](../architecture/04-components.md) (the audit
-  subsystem and the two-lane split), [cross-cutting](../architecture/07-cross-cutting.md).
+* Architecture overview: [components](../architecture/08-component-view.md) (the audit
+  subsystem and the two-lane split), [cross-cutting](../architecture/11-cross-cutting-concepts.md).
 * Design: [02-data](02-data.md) (the `AuditLog` and outbox schema).
 * ADRs: 0008 (audit subsystem), 0022 (two lanes), 0016 (erasure crypto-shred),
   0006/0009 (cloud-agnostic sink and secret resolution), 0001 (tenant-tagged),

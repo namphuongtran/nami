@@ -363,8 +363,8 @@ production gate:
 
 ## References
 
-* Architecture overview: [components](../architecture/04-components.md) (the
-  authorization engine), [runtime views](../architecture/06-runtime-views.md).
+* Architecture overview: [components](../architecture/08-component-view.md) (the
+  authorization engine), [runtime views](../architecture/09-runtime-flow-views.md).
 * Design: [02-data](02-data.md) (the membership/grant/closure schema),
   [04-core-protocol](04-core-protocol.md) (coarse roles and `act` in the token),
   [03-audit](03-audit.md) (provenance records).

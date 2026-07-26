@@ -479,8 +479,8 @@ stateDiagram-v2
 
 ## References
 
-* Architecture overview: [components](../architecture/04-components.md) (user
-  management, sessions, external login), [runtime views](../architecture/06-runtime-views.md).
+* Architecture overview: [components](../architecture/08-component-view.md) (user
+  management, sessions, external login), [runtime views](../architecture/09-runtime-flow-views.md).
 * Design: [02-data](02-data.md) (Identity, passkeys, sessions, membership schema),
   [04-core-protocol](04-core-protocol.md) (the claims choke-point and token issuance),
   [05-authorization](05-authorization.md) (step-up enforcement, dual-control),

@@ -10,9 +10,9 @@ tags: [architecture, reliability, availability, backup, disaster-recovery]
 > views.
 
 How the architecture behaves when something breaks, and what it costs to get back. The
-topology this operates on is [08-deployment](08-deployment.md); what is watched and alerted
+topology this operates on is [10-deployment-infrastructure](10-deployment-infrastructure.md); what is watched and alerted
 is the observability view; the day-to-day procedures are
-[16-operations-and-maintenance](16-operations-and-maintenance.md).
+[17-operations-maintenance](17-operations-maintenance.md).
 
 Two framing points shape everything below. Identity is a **hard dependency of every
 application that trusts it**, so its availability target is higher than that of the services
@@ -205,4 +205,4 @@ the observability and delivery designs, and their pass criterion is SLO impact u
 
 ---
 
-[Prev: Performance and scalability](12-performance-and-scalability.md) · [Index](README.md) · Next: [Schema migration and evolution](14-schema-migration-and-evolution.md)
+[Prev: Performance and scalability](21-performance-scalability.md) · [Index](README.md) · Next: [Risks and technical debt](23-risks-and-technical-debt.md)

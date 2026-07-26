@@ -12,10 +12,20 @@ provider for .NET, built on OpenIddict 7.5 and .NET 10, released under Apache-2.
 **Notation:** the [C4 model](https://c4model.com) at Levels 1 to 3, plus supporting
 sequence, ER, and deployment diagrams, all rendered as Mermaid.
 
-**Structure:** an arc42-flavored, ISO/IEC/IEEE 42010-conformant architecture
-description: structural views (C4), quality and operational views, a decisions
-index, and supporting views (stakeholders and concerns, risks and technical debt,
-threat model, glossary).
+**Structure:** the chapter sequence follows the **arc42** template's twelve sections,
+one topic per file. Where arc42 keeps a single chapter this layer splits it, most
+visibly its crosscutting-concepts chapter, which here is seven files because data,
+security, threats, schema evolution, observability, and operations each need room.
+One chapter, evolution and extensions, has no arc42 counterpart and is placed after
+the decisions index. From ISO/IEC/IEEE 42010 this layer takes the
+stakeholder-concern-correspondence structure, which is
+[02-stakeholders-and-concerns](02-stakeholders-and-concerns.md); no normative claim is
+made beyond that structure.
+
+> arc42 is by Dr. Gernot Starke and Dr. Peter Hruschka, [arc42.org](https://arc42.org),
+> licensed CC BY-SA 4.0. Only the section sequence is used here: no arc42 text,
+> explanation, or diagram is reproduced, and the chapter set is adapted as described
+> above. Verified at source on 2026-07-26.
 
 This folder is the **architecture layer** of the repository. It gives the decisions
 in [`docs/adr/`](../adr/README.md) and the detail in [`docs/design/`](../design/README.md)
@@ -27,63 +37,79 @@ authoritative source, and where it disagrees with one of them, this layer is the
 Read top to bottom for the full picture, or jump to the view that answers your
 question. Each topic is one file.
 
-### Structural views (what the system is)
+**The file number is the reading order.** Files run `01` to `23` with no gaps.
 
-| File | Topic | C4 / diagram |
+### The problem (arc42 sections 1 to 3)
+
+| File | Topic | Diagram |
 |---|---|---|
-| [00a-introduction-and-scope](00a-introduction-and-scope.md) | Introduction, scope, and what is deliberately out of it | - |
-| [00b-drivers-and-constraints](00b-drivers-and-constraints.md) | Architecture drivers, quality targets, and hard constraints | - |
-| [01-context](01-context.md) | System context: actors and external systems | C4 L1 |
-| [02-domain](02-domain.md) | Bounded contexts and the ubiquitous language | - |
-| [03-containers](03-containers.md) | Host processes, package graph, and datastores | C4 L2 |
-| [04-components](04-components.md) | The IdP core internals and its subsystems | C4 L3 |
-| [05-data](05-data.md) | Logical data model and database topology | ER + flow |
-| [06-runtime-views](06-runtime-views.md) | Sixteen key end-to-end sequences, each with the invariants it must preserve | Sequence |
-| [08-deployment](08-deployment.md) | Topology, HA, and the edge | Deployment |
-| [09-stakeholders-and-concerns](09-stakeholders-and-concerns.md) | Who has a stake, what they care about, and where it is answered | Correspondence table |
+| [01-introduction-scope](01-introduction-scope.md) | Introduction, scope, and what is deliberately out of it | - |
+| [02-stakeholders-and-concerns](02-stakeholders-and-concerns.md) | Who has a stake, what they care about, and where it is answered | Correspondence table |
+| [03-drivers-and-constraints](03-drivers-and-constraints.md) | Architecture drivers, quality targets, and hard constraints | - |
+| [04-system-context](04-system-context.md) | System context: actors and external systems | C4 L1 |
 
-### Quality and operational views (how the system behaves)
+### The answer in short (arc42 section 4)
+
+| File | Topic | Diagram |
+|---|---|---|
+| [05-solution-strategy](05-solution-strategy.md) | The seven decisions that determined everything downstream, what each one buys, and what was deliberately not chosen | - |
+
+### The structure (arc42 sections 5 to 7)
+
+| File | Topic | Diagram |
+|---|---|---|
+| [06-domain-model](06-domain-model.md) | Bounded contexts and the ubiquitous language | - |
+| [07-container-view](07-container-view.md) | Host processes, package graph, and datastores | C4 L2 |
+| [08-component-view](08-component-view.md) | The IdP core internals and its subsystems | C4 L3 |
+| [09-runtime-flow-views](09-runtime-flow-views.md) | Sixteen key end-to-end sequences, each with the invariants it must preserve | Sequence |
+| [10-deployment-infrastructure](10-deployment-infrastructure.md) | Topology, HA, and the edge | Deployment |
+
+### Cross-cutting concepts (arc42 section 8, split into seven)
 
 | File | Topic | Covers |
 |---|---|---|
-| [07-cross-cutting](07-cross-cutting.md) | Concerns that span every container | Tenancy, security, observability, configuration |
-| [10-nfr-catalogue](10-nfr-catalogue.md) | What must be true, with a way to measure it | Quality-attribute targets, the SLO and error budget, ratification status |
-| [11-security-architecture](11-security-architecture.md) | The primary quality attribute, given its own view | Trust boundaries, the three isolation layers, token and key protection, administration controls, audit, abuse resistance |
-| [12-performance-and-scalability](12-performance-and-scalability.md) | How the throughput and latency attributes are met | Capacity model, bottleneck ordering, sizing, overload controls, the load-test gate |
-| [13-reliability-backup-and-dr](13-reliability-backup-and-dr.md) | Behaviour under failure, and the cost of getting back | High availability, resiliency, per-store recovery objectives, backup, DR drills |
-| [14-schema-migration-and-evolution](14-schema-migration-and-evolution.md) | How the schema and the tenant fleet change safely | Migration as a build artifact, the traffic gate, expand-and-contract, the tenant lifecycle |
-| [15-observability-and-monitoring](15-observability-and-monitoring.md) | How it is seen, and how objectives become alerts | The two lanes, metrics and cardinality control, burn-rate alerting, the canary |
-| [16-operations-and-maintenance](16-operations-and-maintenance.md) | Running it and keeping it healthy | Runbooks, background jobs, key operations, the two break-glass paths, upgrade cadence |
+| [11-cross-cutting-concepts](11-cross-cutting-concepts.md) | The index into the six that follow, plus the invariants that reappear everywhere | Tenancy, security, observability, configuration |
+| [12-data-architecture](12-data-architecture.md) | Logical data model and database topology | ER diagram, the four contexts, row-level security |
+| [13-security-architecture](13-security-architecture.md) | The primary quality attribute, given its own view | Trust boundaries, the three isolation layers, token and key protection, administration controls, audit, abuse resistance |
+| [14-threat-model](14-threat-model.md) | The threats those controls answer, and the residual | STRIDE across five boundaries, two attack trees, and where the residual actually lives |
+| [15-schema-migration-evolution](15-schema-migration-evolution.md) | How the schema and the tenant fleet change safely | Migration as a build artifact, the traffic gate, expand-and-contract, the tenant lifecycle |
+| [16-observability-monitoring](16-observability-monitoring.md) | How it is seen, and how objectives become alerts | The two lanes, metrics and cardinality control, burn-rate alerting, the canary |
+| [17-operations-maintenance](17-operations-maintenance.md) | Running it and keeping it healthy | Runbooks, background jobs, key operations, the two break-glass paths, upgrade cadence |
 
-### Decisions and evolution
+### Decisions and where they go next (arc42 section 9, plus one chapter arc42 has no slot for)
 
 | File | Topic | Covers |
 |---|---|---|
 | [`../adr/README.md`](../adr/README.md) | The ADR corpus | Every decision of record, with context and rationale |
-| [17-decisions-index](17-decisions-index.md) | The **reverse** index: which views cite each decision | Generated ADR-to-view map, the measured cross-cutting set, and the one decision no view cites |
-| [18-v2-evolution](18-v2-evolution.md) | Where the architecture goes after v1, and what v1 pays for it | Three accepted-but-unbuilt features, six proposed demand-driven extensions, kill-switch by composition |
-| [19-risks-and-technical-debt](19-risks-and-technical-debt.md) | Known risks and deliberate debt, kept apart from things that are neither | Risk register with designed responses, three debt items, and what only looks like debt |
-| [20-threat-model](20-threat-model.md) | The threats the security controls answer, and the residual | STRIDE across five boundaries, two attack trees, and where the residual actually lives |
+| [18-decisions-index](18-decisions-index.md) | The **reverse** index: which views cite each decision | Generated ADR-to-view map, the measured cross-cutting set, the one decision no view cites, and the eight load-bearing claims with no owning ADR |
+| [19-evolution-and-extensions](19-evolution-and-extensions.md) | What attaches after v1, and what v1 pays for it | Three accepted-but-unbuilt features, six proposed demand-driven extensions, kill switch by composition |
 
-> Every view listed here exists. The vocabulary shared across all three layers is
-> [`docs/GLOSSARY.md`](../GLOSSARY.md), and the release gate the deferred
-> ratifications roll up to is the
+### Quality and risk (arc42 sections 10 and 11)
+
+| File | Topic | Covers |
+|---|---|---|
+| [20-nfr-catalogue](20-nfr-catalogue.md) | What must be true, with a way to measure it | Quality-attribute targets, the SLO and error budget, ratification status |
+| [21-performance-scalability](21-performance-scalability.md) | How the throughput and latency attributes are met | Capacity model, bottleneck ordering, sizing, overload controls, the load-test gate |
+| [22-reliability-backup-dr](22-reliability-backup-dr.md) | Behaviour under failure, and the cost of getting back | High availability, resiliency, per-store recovery objectives, backup, DR drills |
+| [23-risks-and-technical-debt](23-risks-and-technical-debt.md) | Known risks and deliberate debt, kept apart from things that are neither | Risk register with designed responses, three debt items, and what only looks like debt |
+
+> Every view listed here exists. **arc42 section 12, the glossary, is
+> [`docs/GLOSSARY.md`](../GLOSSARY.md)**, kept one level up because it serves the
+> decisions and the detailed designs as well as this layer. The release gate the
+> deferred ratifications roll up to is the
 > [Pre-GA Ratification Checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
-
-Numbering is stable: a file keeps its number once other documents link to it, so
-the reading order above is set by this index rather than by the filenames.
 
 ## 2. C4 legend
 
 The SAD uses four abstraction levels of the C4 model and stops at Level 3:
 
-- **Level 1, System Context** ([01-context](01-context.md)): Nami as one box, with
+- **Level 1, System Context** ([04-system-context](04-system-context.md)): Nami as one box, with
   the people and external systems it interacts with. Audience: everyone.
-- **Level 2, Container** ([03-containers](03-containers.md)): the separately
+- **Level 2, Container** ([07-container-view](07-container-view.md)): the separately
   deployable or runnable units (the IdP host, Admin API, Admin App and BFF,
   databases, cache, message broker) and how they communicate. Audience: architects
   and operators.
-- **Level 3, Component** ([04-components](04-components.md)): the major building
+- **Level 3, Component** ([08-component-view](08-component-view.md)): the major building
   blocks inside the important containers (protocol pipeline, tenant resolution,
   key-rotation service, admin security module, outbox relay). Audience: developers.
 - **Level 4, Code** is deliberately **out of scope** for this layer. Class-level and
@@ -194,4 +220,4 @@ standards bodies, and packages appear only for factual identification.
 
 ---
 
-Next: [Introduction and scope](00a-introduction-and-scope.md)
+Next: [Introduction and scope](01-introduction-scope.md)

@@ -8,7 +8,7 @@ tags: [architecture, threat-model, stride, security]
 
 > **Part of:** the [Software Architecture Document](README.md), supporting views.
 
-[11-security-architecture](11-security-architecture.md) states the controls Nami **chose**.
+[13-security-architecture](13-security-architecture.md) states the controls Nami **chose**.
 This view enumerates the **threats those controls answer**, element by element, and names the
 residual where a control is a deployment or ratification act rather than code.
 
@@ -168,7 +168,7 @@ logs, chat, or configuration: prohibited by the never-leave-the-store rule, whic
 because it is the only control that covers exfiltration paths no code sees. During rotation:
 the overlap window exposes no bytes. And the blast radius is the honest part: a Silo tenant is
 isolated, while **a Pool keyset compromise reaches every tenant in that pool group**, which is
-the accepted risk of [19-risks-and-technical-debt](19-risks-and-technical-debt.md) R1.
+the accepted risk of [23-risks-and-technical-debt](23-risks-and-technical-debt.md) R1.
 
 ## 10. Where the residual actually lives
 
@@ -200,8 +200,8 @@ argument for why that checklist is a release gate rather than paperwork.
 * **Two controls in these tables are design-owned with no ADR**, and both are flagged in place
   rather than attributed upward: the telemetry cardinality rule behind I5, and the exclusion of
   `may_act` behind E5. Both join the ADR candidates that row I4 also belongs to.
-* [11-security-architecture](11-security-architecture.md) states the controls; this view states
-  the threats and the residual. [19-risks-and-technical-debt](19-risks-and-technical-debt.md)
+* [13-security-architecture](13-security-architecture.md) states the controls; this view states
+  the threats and the residual. [23-risks-and-technical-debt](23-risks-and-technical-debt.md)
   carries the accepted risks these rows feed.
 * Reconciled against the design corpus's threat model on 2026-07-26. Taken from it: the STRIDE
   structure, the boundary decomposition, the asset list, most threat rows, both attack trees,
@@ -219,4 +219,4 @@ argument for why that checklist is a release gate rather than paperwork.
 
 ---
 
-[Prev: Risks and technical debt](19-risks-and-technical-debt.md) · [Index](README.md)
+[Prev: Security architecture](13-security-architecture.md) · [Index](README.md) · Next: [Schema migration and evolution](15-schema-migration-evolution.md)

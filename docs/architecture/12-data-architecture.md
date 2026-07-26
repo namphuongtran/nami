@@ -430,7 +430,7 @@ tenant. Layer 2 exists because layer 1 is bypassed by the bulk, raw, and
 de-privileged role because a superuser bypasses row-level security, and the tenant setting is
 applied with `SET LOCAL` inside the request transaction so it is pooling-safe. The `NULLIF`
 cast rule for `uuid`-typed tenant columns is in
-[04-components section 2](04-components.md).
+[08-component-view section 2](08-component-view.md).
 
 **Pool versus Silo** is recorded per tenant in the registry. Pool shares one database and
 discriminates by `TenantId` plus row-level security, keeping the connection count low, and is
@@ -489,7 +489,7 @@ never depends on, the distrusted-key set is rebuilt from the key store rather th
 empty, and the proof-replay set has no durable source, so losing it opens a bounded replay
 window. Per-store recovery objectives, backup, and continuous monitoring stay with ADR-0006;
 failover behaviour and deployment topology are elaborated in
-[08-deployment](08-deployment.md).
+[10-deployment-infrastructure](10-deployment-infrastructure.md).
 
 ## Sources
 
@@ -537,4 +537,4 @@ failover behaviour and deployment topology are elaborated in
 
 ---
 
-[Prev: Components](04-components.md) · [Index](README.md) · Next: [Runtime views](06-runtime-views.md)
+[Prev: Cross-cutting concepts](11-cross-cutting-concepts.md) · [Index](README.md) · Next: [Security architecture](13-security-architecture.md)

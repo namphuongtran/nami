@@ -591,8 +591,8 @@ sequenceDiagram
 
 ## References
 
-* Architecture overview: [components](../architecture/04-components.md),
-  [data view](../architecture/05-data.md), [cross-cutting](../architecture/07-cross-cutting.md).
+* Architecture overview: [components](../architecture/08-component-view.md),
+  [data view](../architecture/12-data-architecture.md), [cross-cutting](../architecture/11-cross-cutting-concepts.md).
 * Design: [01-foundations](01-foundations.md).
 * ADRs: 0001 (tenancy), 0037 (engine), 0036 (keys), 0018 (pooling), 0049 (RS
   validation), 0008 (audit), 0003 (sessions), 0010 (delegated admin), 0017

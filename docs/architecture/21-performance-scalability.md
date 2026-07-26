@@ -10,7 +10,7 @@ tags: [architecture, performance, scalability, capacity]
 > views.
 
 How the architecture meets the throughput, latency, and scalability attributes of
-[10-nfr-catalogue](10-nfr-catalogue.md). The standing caveat carries over: the
+[20-nfr-catalogue](20-nfr-catalogue.md). The standing caveat carries over: the
 10k-concurrent-user goal is an architecture target proven by our own load test, and the
 enforced gate is the SLO rather than any throughput figure (ADR-0041).
 
@@ -180,4 +180,4 @@ single source of truth rather than loosening one file (ADR-0041).
 
 ---
 
-[Prev: Security architecture](11-security-architecture.md) · [Index](README.md) · Next: [Reliability, backup, and DR](13-reliability-backup-and-dr.md)
+[Prev: Quality attributes](20-nfr-catalogue.md) · [Index](README.md) · Next: [Reliability, backup, and DR](22-reliability-backup-dr.md)

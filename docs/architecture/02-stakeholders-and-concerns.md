@@ -11,12 +11,12 @@ tags: [architecture, stakeholders, concerns, iso-42010]
 
 This view makes the ISO/IEC/IEEE 42010 core explicit: **who** has a stake, **what** each cares
 about, and **where** that concern is answered. It complements
-[00b-drivers-and-constraints](00b-drivers-and-constraints.md), which states the forces, by
+[03-drivers-and-constraints](03-drivers-and-constraints.md), which states the forces, by
 naming the people those forces come from.
 
 It sits here on purpose. The views before it say **what the system is**; the views after it say
 **how it behaves and how well**. This is the hinge: it names the concerns, and
-[10-nfr-catalogue](10-nfr-catalogue.md) is those same concerns made measurable.
+[20-nfr-catalogue](20-nfr-catalogue.md) is those same concerns made measurable.
 
 ## 1. Stakeholders
 
@@ -69,15 +69,15 @@ weight without purpose.
 
 | Stakeholder | Concerns | Answered in |
 |---|---|---|
-| S1 End users | C1, C5, C6, C11 | [06-runtime-views](06-runtime-views.md) views 1, 12, 14 and 10; [11-security-architecture](11-security-architecture.md) sections 2 and 6 |
-| S2 Tenant administrators | C1, C9 | [11-security-architecture](11-security-architecture.md) sections 2 and 5; [06-runtime-views](06-runtime-views.md) views 2 and 9 |
-| S3 Client developers | C10, C1, C5 | [01-context](01-context.md) (the obligation on a resource server); [06-runtime-views](06-runtime-views.md) views 1, 5, 11; [03-containers](03-containers.md) (the package graph they consume) |
-| S4 Operations | C2, C3, C4, C12 | [12-performance-and-scalability](12-performance-and-scalability.md), [13-reliability-backup-and-dr](13-reliability-backup-and-dr.md), [15-observability-and-monitoring](15-observability-and-monitoring.md), [16-operations-and-maintenance](16-operations-and-maintenance.md) |
-| S5 Security | C1, C2, C6, C9 | [11-security-architecture](11-security-architecture.md) throughout; [20-threat-model](20-threat-model.md) for the threats those controls answer |
-| S6 Data protection and Legal | C6, C11 | [11-security-architecture](11-security-architecture.md) section 6; [06-runtime-views](06-runtime-views.md) view 10. **Verdicts reserved to S6** |
-| S7 Product | C10, C8 | [18-v2-evolution](18-v2-evolution.md); [08-deployment](08-deployment.md) section 4 (the three onboarding paths) |
-| S8 Maintainers | C8, C10 | [04-components](04-components.md) (the seams); [16-operations-and-maintenance](16-operations-and-maintenance.md) section 5 (the upgrade cadence); [14-schema-migration-and-evolution](14-schema-migration-and-evolution.md) |
-| S9 Auditors | C6 | [11-security-architecture](11-security-architecture.md) section 6; [05-data](05-data.md) (the chain's storage) |
+| S1 End users | C1, C5, C6, C11 | [09-runtime-flow-views](09-runtime-flow-views.md) views 1, 12, 14 and 10; [13-security-architecture](13-security-architecture.md) sections 2 and 6 |
+| S2 Tenant administrators | C1, C9 | [13-security-architecture](13-security-architecture.md) sections 2 and 5; [09-runtime-flow-views](09-runtime-flow-views.md) views 2 and 9 |
+| S3 Client developers | C10, C1, C5 | [04-system-context](04-system-context.md) (the obligation on a resource server); [09-runtime-flow-views](09-runtime-flow-views.md) views 1, 5, 11; [07-container-view](07-container-view.md) (the package graph they consume) |
+| S4 Operations | C2, C3, C4, C12 | [21-performance-scalability](21-performance-scalability.md), [22-reliability-backup-dr](22-reliability-backup-dr.md), [16-observability-monitoring](16-observability-monitoring.md), [17-operations-maintenance](17-operations-maintenance.md) |
+| S5 Security | C1, C2, C6, C9 | [13-security-architecture](13-security-architecture.md) throughout; [14-threat-model](14-threat-model.md) for the threats those controls answer |
+| S6 Data protection and Legal | C6, C11 | [13-security-architecture](13-security-architecture.md) section 6; [09-runtime-flow-views](09-runtime-flow-views.md) view 10. **Verdicts reserved to S6** |
+| S7 Product | C10, C8 | [19-evolution-and-extensions](19-evolution-and-extensions.md); [10-deployment-infrastructure](10-deployment-infrastructure.md) section 4 (the three onboarding paths) |
+| S8 Maintainers | C8, C10 | [08-component-view](08-component-view.md) (the seams); [17-operations-maintenance](17-operations-maintenance.md) section 5 (the upgrade cadence); [15-schema-migration-evolution](15-schema-migration-evolution.md) |
+| S9 Auditors | C6 | [13-security-architecture](13-security-architecture.md) section 6; [12-data-architecture](12-data-architecture.md) (the chain's storage) |
 
 ## 4. Who signs off before production, and on what
 
@@ -117,7 +117,7 @@ to S6, and saying so is itself part of the architecture rather than a disclaimer
   ADR-0016 (the erasure-versus-audit tension named as a tension), ADR-0033 (the accepted risk
   Security ratifies), ADR-0062 (the self-assessed baseline and the deliberately deferred
   external audit), ADR-0021 and ADR-0044 (the conformance and stable-contract concern).
-* [00b-drivers-and-constraints](00b-drivers-and-constraints.md) for drivers D1 to D8, which
+* [03-drivers-and-constraints](03-drivers-and-constraints.md) for drivers D1 to D8, which
   every concern above traces to; the
   [Pre-GA Ratification Checklist](../PRE-GA-RATIFICATION-CHECKLIST.md) for the sign-off items.
 * ISO/IEC/IEEE 42010 supplies the structure (stakeholders, concerns, correspondence). No
@@ -139,4 +139,4 @@ to S6, and saying so is itself part of the architecture rather than a disclaimer
 
 ---
 
-[Prev: Deployment](08-deployment.md) · [Index](README.md) · Next: [Quality attributes](10-nfr-catalogue.md)
+[Prev: Introduction and scope](01-introduction-scope.md) · [Index](README.md) · Next: [Drivers and constraints](03-drivers-and-constraints.md)

@@ -425,10 +425,10 @@ sequenceDiagram
   Note over Eng: logout everywhere is the separate RevokeBySubjectAsync
 ```
 
-The architecture overview's [runtime view 1](../architecture/06-runtime-views.md#1-authorization-code-with-pkce-and-tenant-resolution)
+The architecture overview's [runtime view 1](../architecture/09-runtime-flow-views.md#1-authorization-code-with-pkce-and-tenant-resolution)
 is the high-level version of the issuance flow above; its
-[view 11](../architecture/06-runtime-views.md#11-refresh-token-rotation-with-reuse-detection)
-and [view 12](../architecture/06-runtime-views.md#12-consent-persistence-and-silent-reuse)
+[view 11](../architecture/09-runtime-flow-views.md#11-refresh-token-rotation-with-reuse-detection)
+and [view 12](../architecture/09-runtime-flow-views.md#12-consent-persistence-and-silent-reuse)
 cover the refresh-rotation and consent flows this design details.
 
 ## Edge cases and failure modes
@@ -523,8 +523,8 @@ cover the refresh-rotation and consent flows this design details.
 
 ## References
 
-* Architecture overview: [components](../architecture/04-components.md),
-  [runtime views](../architecture/06-runtime-views.md).
+* Architecture overview: [components](../architecture/08-component-view.md),
+  [runtime views](../architecture/09-runtime-flow-views.md).
 * Design: [02-data](02-data.md) (OpenIddict entities and property anchors),
   [03-audit](03-audit.md) (the reuse-detection audit event).
 * ADRs: 0004 (refresh), 0005 (encryption lifecycle and plain access token), 0048

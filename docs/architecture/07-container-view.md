@@ -8,9 +8,9 @@ tags: [architecture, c4, containers]
 
 > **Part of:** the [Software Architecture Document](README.md), structural views. C4 Level 2.
 
-This view opens the system box from [01-context](01-context.md) into the units that
+This view opens the system box from [04-system-context](04-system-context.md) into the units that
 **run**, and how they communicate. Internal decomposition of the important containers is
-in [04-components](04-components.md); the logical data model is in [05-data](05-data.md).
+in [08-component-view](08-component-view.md); the logical data model is in [12-data-architecture](12-data-architecture.md).
 
 A note on vocabulary: Nami ships as a **NuGet package graph** (ADR-0027), so most
 projects are libraries rather than deployables. Only things that run appear as containers
@@ -116,7 +116,7 @@ record), separated by **tenant scope** rather
 than merely by concern. This topology is fixed and changing it requires a superseding ADR
 (ADR-0001). They may share one cluster or be split onto separate tiers, since the
 operational store wants a high-write tier; placement and HA are in
-[08-deployment](08-deployment.md).
+[10-deployment-infrastructure](10-deployment-infrastructure.md).
 
 | Store (DbContext) | Scope | Contents | Why separate |
 |---|---|---|---|
@@ -277,4 +277,4 @@ database-backed store, so the product runs with no cloud dependency at all (ADR-
 
 ---
 
-[Prev: Domain](02-domain.md) · [Index](README.md) · Next: [Components (C4 L3)](04-components.md)
+[Prev: Domain model](06-domain-model.md) · [Index](README.md) · Next: [Component view](08-component-view.md)

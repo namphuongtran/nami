@@ -9,8 +9,8 @@ tags: [architecture, runtime, sequences, invariants]
 > **Part of:** the [Software Architecture Document](README.md), structural views.
 
 Sixteen end-to-end flows showing how the containers of
-[03-containers](03-containers.md) and the components of
-[04-components](04-components.md) collaborate at runtime. Each flow is chosen because
+[07-container-view](07-container-view.md) and the components of
+[08-component-view](08-component-view.md) collaborate at runtime. Each flow is chosen because
 it exercises a decision that shapes the architecture, and each is followed by an
 **Invariants** paragraph: the properties the flow must preserve, which is the part a
 diagram cannot carry. Where an invariant is stated here, it is because dropping it
@@ -871,4 +871,4 @@ sequence adds little above the component view. They are listed so the omission i
 
 ---
 
-[Prev: Data](05-data.md) · [Index](README.md) · Next: [Cross-cutting](07-cross-cutting.md)
+[Prev: Component view](08-component-view.md) · [Index](README.md) · Next: [Deployment and infrastructure](10-deployment-infrastructure.md)

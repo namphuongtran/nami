@@ -1,18 +1,23 @@
 ---
 status: reviewed
 created: 2026-07-26
-tags: [architecture, evolution, v2, roadmap]
+tags: [architecture, evolution, extensions, roadmap]
 ---
 
-# Evolution beyond v1
+# Evolution and extensions
 
 > **Part of:** the [Software Architecture Document](README.md), decisions and evolution.
 
 Where the architecture goes after v1, and, just as importantly, **what v1 costs today for
 each of those futures**. The answer is meant to be "almost nothing", and this view exists to
 make that checkable rather than asserted.
+[05-solution-strategy](05-solution-strategy.md) states **why** the attach mechanism is
+composition; this view is the **catalogue** of what attaches.
 
-There are **two tiers**, and confusing them is the main risk this view guards against.
+There are **two tiers**, and confusing them is the main risk this view guards against. The
+view is deliberately not named after a release: only the first tier has one, and even there
+the two features are scoped to different releases, while the second tier is demand-driven and
+belongs to no release at all.
 
 | Tier | What it means | Count | Status |
 |---|---|---|---|
@@ -178,4 +183,4 @@ ecosystem evidence gathered for the first is precisely why the second is not yet
 
 ---
 
-[Prev: Decisions index](17-decisions-index.md) · [Index](README.md) · Next: [Risks and technical debt](19-risks-and-technical-debt.md)
+[Prev: Decisions index](18-decisions-index.md) · [Index](README.md) · Next: [Quality attributes](20-nfr-catalogue.md)

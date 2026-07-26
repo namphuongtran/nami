@@ -39,8 +39,8 @@ a commercial product. The load-bearing goals:
 
 | # | Driver | Why it is architecturally significant | Primary response |
 |---|---|---|---|
-| D1 | Strong tenant isolation | A cross-tenant leak is the worst failure mode an identity system has | Pool and Silo tiers, per-tenant issuer, forced row-level security as a backstop, tenant-aligned key scope (ADR-0001, ADR-0033, ADR-0037, ADR-0049); see [05-data](05-data.md) |
-| D2 | No-downtime key rotation | Signing keys must rotate without a restart and without breaking in-flight tokens | An options-reload seam, an overlap and retention window, a database key store (ADR-0011, ADR-0012); see [06-runtime-views](06-runtime-views.md) |
+| D1 | Strong tenant isolation | A cross-tenant leak is the worst failure mode an identity system has | Pool and Silo tiers, per-tenant issuer, forced row-level security as a backstop, tenant-aligned key scope (ADR-0001, ADR-0033, ADR-0037, ADR-0049); see [12-data-architecture](12-data-architecture.md) |
+| D2 | No-downtime key rotation | Signing keys must rotate without a restart and without breaking in-flight tokens | An options-reload seam, an overlap and retention window, a database key store (ADR-0011, ADR-0012); see [09-runtime-flow-views](09-runtime-flow-views.md) |
 | D3 | Scale to roughly 10k concurrent users | Hot paths must not serialize on the identity provider or its database | Stateless nodes, self-contained JWT by default, short token lifetimes, externalized state, pooled connections (ADR-0041, ADR-0018, ADR-0039) |
 | D4 | High availability | Identity is a hard dependency of every downstream application, so it must hold a higher target than they do | Multi-instance and multi-zone, replication with failover, graceful shutdown (ADR-0006, ADR-0041) |
 | D5 | Revocation and logout freshness | Tokens, sessions, and admin grants must be revocable within a bounded, stated window | A per-path freshness model with a backplane only where a path needs one, back-channel single logout (ADR-0039, ADR-0019, ADR-0003) |
@@ -275,3 +275,7 @@ ADR-0066).
   ADR also independently verified the forwarded-header behaviour it depends on, and
   deliberately records one remaining gap: the application's own transport-security settings
   (HSTS parameters and the Kestrel TLS floor) are still not fixed by any ADR.
+
+---
+
+[Prev: Stakeholders and concerns](02-stakeholders-and-concerns.md) · [Index](README.md) · Next: [System context](04-system-context.md)

@@ -306,8 +306,8 @@ ADR-0017); development may enable migrate-on-startup for convenience.
 
 ## References
 
-* Architecture overview: [containers](../architecture/03-containers.md),
-  [components](../architecture/04-components.md).
+* Architecture overview: [containers](../architecture/07-container-view.md),
+  [components](../architecture/08-component-view.md).
 * ADRs: 0024 (style), 0027 (packaging), 0065 (naming), 0052 (config), 0044 (API),
   0026 (licenses), 0030 (.NET cadence), 0031/0032 (12-factor/config keys),
   0006/0009 (ports), 0025 (dev/first-run), 0018 (pooling), 0021 (version seam).

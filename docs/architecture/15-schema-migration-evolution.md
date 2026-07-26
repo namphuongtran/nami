@@ -11,7 +11,7 @@ tags: [architecture, migration, schema-evolution, tenant-lifecycle]
 
 How the schema evolves across a multi-context, multi-tenant fleet without downtime and
 without two versions of the code meeting a schema neither expects. This is the evolvability
-attribute of [10-nfr-catalogue](10-nfr-catalogue.md). It also covers the **tenant data
+attribute of [20-nfr-catalogue](20-nfr-catalogue.md). It also covers the **tenant data
 lifecycle**, because provisioning, suspension, renaming, and deprovisioning are schema and
 data operations rather than administrative metadata changes.
 
@@ -25,7 +25,7 @@ data operations rather than administrative metadata changes.
   convention (ADR-0025, ADR-0017).
 * **Four contexts, four histories.** Each DbContext keeps its own migrations-history table in
   its own schema, so the four can share one database without colliding
-  ([05-data](05-data.md), ADR-0001).
+  ([12-data-architecture](12-data-architecture.md), ADR-0001).
 * **A Silo fleet is an operational fan-out, not an ORM feature.** The ORM migrates one context
   against one connection string; there is no "migrate every tenant database". An orchestrator
   applies migrations per Silo tenant, which is why rollout order, halt-on-error, and per-tenant
@@ -109,7 +109,7 @@ authoritative list).
 | **Provisioning** | Being set up. `Enabled` flips true **only after** the readiness gate: schema version matches, keys load, and the certificate is ready. A partial failure leaves it disabled for retry and **never half-live** | Being created |
 | **Suspension** | A temporary, resumable hold on a **live** tenant. Token and authorize requests are rejected, discovery returns **503 rather than 404**, sessions are force-revoked, and outstanding JWTs remain valid until expiry, bounded by the 15-minute access lifetime (ADR-0039). Dual-controlled in both directions and audited | **Kept, untouched** |
 | **Deprovision** | End of life: an ordered destructive saga | Escrow, then destroy |
-| **Erasure** | Removal of a subject's personal data on request, which is **per subject rather than per tenant** | See [11-security-architecture](11-security-architecture.md) |
+| **Erasure** | Removal of a subject's personal data on request, which is **per subject rather than per tenant** | See [13-security-architecture](13-security-architecture.md) |
 
 Suspension and deprovision both set the same flag, which is exactly why they are named
 separately: one is reversible and keeps everything, the other destroys. Treating them as one
@@ -174,4 +174,4 @@ tenant is enabled (ADR-0054, ADR-0017).
 
 ---
 
-[Prev: Reliability, backup, and DR](13-reliability-backup-and-dr.md) · [Index](README.md) · Next: [Observability and monitoring](15-observability-and-monitoring.md)
+[Prev: Threat model](14-threat-model.md) · [Index](README.md) · Next: [Observability and monitoring](16-observability-monitoring.md)

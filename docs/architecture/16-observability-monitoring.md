@@ -10,8 +10,8 @@ tags: [architecture, observability, telemetry, alerting, slo]
 > views.
 
 How the running system is observed, and how the objectives of
-[10-nfr-catalogue](10-nfr-catalogue.md) become alerts and release gates. The operational
-response to what is seen here is [16-operations-and-maintenance](16-operations-and-maintenance.md).
+[20-nfr-catalogue](20-nfr-catalogue.md) become alerts and release gates. The operational
+response to what is seen here is [17-operations-maintenance](17-operations-maintenance.md).
 
 ## 1. Two lanes that never mix
 
@@ -215,4 +215,4 @@ dependency: nothing Nami ships carries them (ADR-0063, ADR-0026).
 
 ---
 
-[Prev: Schema migration and evolution](14-schema-migration-and-evolution.md) · [Index](README.md) · Next: [Operations and maintenance](16-operations-and-maintenance.md)
+[Prev: Schema migration and evolution](15-schema-migration-evolution.md) · [Index](README.md) · Next: [Operations and maintenance](17-operations-maintenance.md)

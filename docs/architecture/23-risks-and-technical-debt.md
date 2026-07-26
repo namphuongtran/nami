@@ -35,7 +35,7 @@ design**, not a plan.
 | R7 | **Back-channel logout is an interim build**, and front-channel logout is dead under third-party-cookie blocking | M | M | Built now on the session store that already exists, with a decommission marker for the native equivalent. A relying party without a back-channel endpoint degrades to bounded logout at the access-token lifetime, which is a **stated parity boundary** (ADR-0019) | Maintainers |
 | R8 | **Human ratification is not done.** Several parameters and verdicts are a named owner's call | H | M | Ratification runs **in parallel with the build** and gates production, not the build. Consolidated as one release gate (the [checklist](../PRE-GA-RATIFICATION-CHECKLIST.md)) | All named owners |
 | R9 | **Acceptance evidence needs running code.** The load, conformance, recovery-drill, and cross-tenant negative gates cannot close before there is something to run | H | M | Wired as CI gates that land with the code they test; the SLO gate and the cross-tenant negative gate are must-pass (ADR-0041, ADR-0060, ADR-0001) | Maintainers |
-| R10 | **Eight load-bearing claims have no owning decision**, surfaced by writing and auditing this layer | M | M | Each is recorded **in place** in the view that carries it, marked as a candidate rather than presented as settled, and all eight are enumerated in [17-decisions-index](17-decisions-index.md) section 4 so the set is checkable rather than counted. The most consequential is the deny-by-default claim-destination rule, which this architecture names as its control against claim leakage in a High-rated threat row | Maintainers |
+| R10 | **Eight load-bearing claims have no owning decision**, surfaced by writing and auditing this layer | M | M | Each is recorded **in place** in the view that carries it, marked as a candidate rather than presented as settled, and all eight are enumerated in [18-decisions-index](18-decisions-index.md) section 4 so the set is checkable rather than counted. The most consequential is the deny-by-default claim-destination rule, which this architecture names as its control against claim leakage in a High-rated threat row | Maintainers |
 
 R10 is this repository's own finding rather than an inherited one, and it is a risk in the
 precise sense: nothing is wrong today, and the exposure is that a control with no decision
@@ -66,7 +66,7 @@ decided on and would imply the current choice is a compromise.
 **The de-scoped protocol surface is not debt either.** Several capabilities are deliberately out
 of v1 scope: the message-signing tier, decoupled authentication, per-call active-user validation,
 and front-channel logout, each with a recorded decision. Six more are `proposed` with an explicit
-revisit trigger rather than simply absent (see [18-v2-evolution](18-v2-evolution.md)). A decision
+revisit trigger rather than simply absent (see [19-evolution-and-extensions](19-evolution-and-extensions.md)). A decision
 not to build is not a debt, and the difference matters: debt accrues, whereas a recorded
 non-decision waits without cost. If demand appears, these become planned work rather than
 emergency work, which is the entire reason the analysis was written down.
@@ -99,4 +99,4 @@ emergency work, which is the entire reason the analysis was written down.
 
 ---
 
-[Prev: v2 evolution](18-v2-evolution.md) · [Index](README.md) · Next: [Threat model](20-threat-model.md)
+[Prev: Reliability, backup, and DR](22-reliability-backup-dr.md) · [Index](README.md)

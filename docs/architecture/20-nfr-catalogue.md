@@ -11,11 +11,11 @@ tags: [architecture, nfr, quality-attributes, slo]
 
 This is the **requirements** view: what must be true, with a measurable target and a way to
 measure it. It deliberately does not say *how*. The how lives in
-[12-performance-and-scalability](12-performance-and-scalability.md),
-[13-reliability-backup-and-dr](13-reliability-backup-and-dr.md), the security and
-observability views, and [16-operations-and-maintenance](16-operations-and-maintenance.md).
+[21-performance-scalability](21-performance-scalability.md),
+[22-reliability-backup-dr](22-reliability-backup-dr.md), the security and
+observability views, and [17-operations-maintenance](17-operations-maintenance.md).
 The drivers behind these attributes are in
-[00b-drivers-and-constraints](00b-drivers-and-constraints.md).
+[03-drivers-and-constraints](03-drivers-and-constraints.md).
 
 ## 1. The standing caveat, and why it is first
 
@@ -32,18 +32,18 @@ ratified, and the gate uses the ratified figures rather than these.
 
 | # | Attribute | Target | How measured | How it is met |
 |---|---|---|---|---|
-| N1 | Token-endpoint latency | p95 < 200 ms, p99 < 500 ms (interim) | Load-test threshold, enforced in CI | [12](12-performance-and-scalability.md) |
-| N2 | Local validation latency | p99 < 50 ms, no network hop (interim) | Instrumentation | [12](12-performance-and-scalability.md) |
-| N3 | Throughput | Whatever the load test establishes at the 10k-user workload mix; not a fixed figure | Load test | [12](12-performance-and-scalability.md) |
-| N4 | Availability, token and authorize | **99.9% or 99.95%, and the choice between them is unratified** (see below) | SLO monitor over a trailing window | [13](13-reliability-backup-and-dr.md) |
-| N5 | JWKS availability | Held **higher** than the service's own, around 99.99% | SLO monitor | [13](13-reliability-backup-and-dr.md) |
-| N6 | Scalability | Horizontal and stateless, with no session affinity | Scale-out load test | [12](12-performance-and-scalability.md) |
-| N7 | Recovery | Bound **per store**, never one global figure, with the keyring strictest | DR drill plus continuous monitoring | [13](13-reliability-backup-and-dr.md), ADR-0006, ADR-0074 |
-| N8 | Configuration propagation | The engine's entity cache is per-request, so it needs no backplane; any added configuration cache is within 30 s cross-node | Synthetic canary | [12](12-performance-and-scalability.md), ADR-0039 |
+| N1 | Token-endpoint latency | p95 < 200 ms, p99 < 500 ms (interim) | Load-test threshold, enforced in CI | [12](21-performance-scalability.md) |
+| N2 | Local validation latency | p99 < 50 ms, no network hop (interim) | Instrumentation | [12](21-performance-scalability.md) |
+| N3 | Throughput | Whatever the load test establishes at the 10k-user workload mix; not a fixed figure | Load test | [12](21-performance-scalability.md) |
+| N4 | Availability, token and authorize | **99.9% or 99.95%, and the choice between them is unratified** (see below) | SLO monitor over a trailing window | [13](22-reliability-backup-dr.md) |
+| N5 | JWKS availability | Held **higher** than the service's own, around 99.99% | SLO monitor | [13](22-reliability-backup-dr.md) |
+| N6 | Scalability | Horizontal and stateless, with no session affinity | Scale-out load test | [12](21-performance-scalability.md) |
+| N7 | Recovery | Bound **per store**, never one global figure, with the keyring strictest | DR drill plus continuous monitoring | [13](22-reliability-backup-dr.md), ADR-0006, ADR-0074 |
+| N8 | Configuration propagation | The engine's entity cache is per-request, so it needs no backplane; any added configuration cache is within 30 s cross-node | Synthetic canary | [12](21-performance-scalability.md), ADR-0039 |
 | N9 | Revocation freshness | Per path, not one number: reference token immediate, a self-contained JWT until expiry at the 15-minute access TTL (ADR-0004), force-logout within the 1-to-2-minute validation interval (ADR-0003), key break-glass within 60 s, configuration within 30 s | Synthetic canary and tests | ADR-0039, runtime view 4 |
 | N10 | Protocol security | Conforms to the OAuth 2.0 security best current practice, and passes a conformance suite | Audit plus conformance suite | Security view, ADR-0062 |
-| N11 | Tenant isolation | No cross-tenant read, write, or token acceptance | Cross-tenant negative tests as a permanent acceptance criterion, plus spikes A-4 and A-7 | [05-data](05-data.md), ADR-0001, ADR-0049 |
-| N12 | Operability | Key rotation with no restart (ADR-0011), graceful shutdown, and readiness gated on keys loaded (ADR-0031) | Contract-regression and chaos tests | [16](16-operations-and-maintenance.md) |
+| N11 | Tenant isolation | No cross-tenant read, write, or token acceptance | Cross-tenant negative tests as a permanent acceptance criterion, plus spikes A-4 and A-7 | [12-data-architecture](12-data-architecture.md), ADR-0001, ADR-0049 |
+| N12 | Operability | Key rotation with no restart (ADR-0011), graceful shutdown, and readiness gated on keys loaded (ADR-0031) | Contract-regression and chaos tests | [16](17-operations-maintenance.md) |
 | N13 | Evolvability | Additive schema evolution through expand-and-contract; a pinned-version contract regression on every engine bump | CI, including a pending-model-changes check and pipeline snapshots | ADR-0017, ADR-0021 |
 | N14 | Data-protection posture | Erasure, retention, and audit are **designed for**, and **no compliance verdict is asserted** | Data-protection-owner and Legal ratification | ADR-0016, ADR-0053, ADR-0054 |
 
@@ -124,4 +124,4 @@ work converts them into an engineering decision.
 
 ---
 
-[Prev: Stakeholders and concerns](09-stakeholders-and-concerns.md) · [Index](README.md) · Next: [Security architecture](11-security-architecture.md)
+[Prev: Evolution and extensions](19-evolution-and-extensions.md) · [Index](README.md) · Next: [Performance and scalability](21-performance-scalability.md)

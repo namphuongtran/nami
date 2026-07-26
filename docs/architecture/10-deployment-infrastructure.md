@@ -8,12 +8,12 @@ tags: [architecture, deployment, infrastructure, kubernetes]
 
 > **Part of:** the [Software Architecture Document](README.md), structural views.
 
-Where the containers of [03-containers](03-containers.md) actually run: the reference
+Where the containers of [07-container-view](07-container-view.md) actually run: the reference
 topology, the cloud-agnostic adapter model, the image and its run modes, the
 infrastructure-versus-application split, and the knobs without which "multi-zone" is a
 claim rather than a property. Behaviour **under failure** (failover, recovery objectives,
-backup) is [13-reliability-backup-and-dr](13-reliability-backup-and-dr.md); running it day
-to day is [16-operations-and-maintenance](16-operations-and-maintenance.md).
+backup) is [22-reliability-backup-dr](22-reliability-backup-dr.md); running it day
+to day is [17-operations-maintenance](17-operations-maintenance.md).
 
 ## 1. Reference topology
 
@@ -82,7 +82,7 @@ Three things in that picture are deliberate and easy to get wrong.
 * **The application tier is identical in every zone.** Background work is not a separate
   pod: key rotation and the delivery relays run **in-process on every replica**, made safe
   by clustered scheduling and by `SKIP LOCKED` respectively (ADR-0031, and
-  [03-containers](03-containers.md) for which pattern applies to which job). The one
+  [07-container-view](07-container-view.md) for which pattern applies to which job). The one
   exception is the prune invocation, drawn as its own Job. This matters here because a
   reader who deploys "a background runner pod" from an older reading would create a
   process that the scheduler does not expect and that no readiness probe covers.
@@ -286,4 +286,4 @@ behind a terminating proxy, trusted on both the browser and back-channel sides (
 
 ---
 
-[Prev: Cross-cutting](07-cross-cutting.md) · [Index](README.md) · Next: [Stakeholders and concerns](09-stakeholders-and-concerns.md)
+[Prev: Runtime flow views](09-runtime-flow-views.md) · [Index](README.md) · Next: [Cross-cutting concepts](11-cross-cutting-concepts.md)

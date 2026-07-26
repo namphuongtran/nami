@@ -72,7 +72,7 @@ layered and, critically, **does not rest on the signature**.
   non-bypassing role as the backstop for the bulk and raw-SQL paths the filter cannot see.
   The tenant variable is set with `SET LOCAL` inside a per-request transaction so it is
   pooling-safe. **No ambient tenant fails closed**, proven by spike A-4 (ADR-0001, ADR-0037,
-  and [05-data](05-data.md)).
+  and [12-data-architecture](12-data-architecture.md)).
 * **Token layer, and this is the one that surprises people.** Because Pool tenants share a
   pool-group signing key, **a valid signature does not prove the tenant** (ADR-0033). A
   resource server must therefore bind on issuer and audience, and on the `tenant` claim where
@@ -129,7 +129,7 @@ The three layers are not redundant restatements: each covers a path the others d
 * Signing key material is stored **encrypted at rest**, wrapped by the data-protection
   keyring, and a uniqueness constraint on the active state per use makes **two simultaneous
   active signers impossible at the schema level** rather than by convention, which is also why
-  cold-start seeding needs no distributed lock (ADR-0012, and [05-data](05-data.md)).
+  cold-start seeding needs no distributed lock (ADR-0012, and [12-data-architecture](12-data-architecture.md)).
 * **Rotation bounds the cryptoperiod without an availability cost**, which is what makes a
   short cryptoperiod affordable: keys rotate in process with a publish-before-sign window and
   an overlap during which the retired key still validates, so rotating more often never costs
@@ -150,7 +150,7 @@ The three layers are not redundant restatements: each covers a path the others d
   image; cloud access uses workload identity with no static secret (ADR-0009).
 * The keyring lives on a durable store **independent of Redis**, and disaster recovery
   restores the signing keys, the keyring, **and** the root certificate together (ADR-0006,
-  ADR-0012, and [13-reliability-backup-and-dr](13-reliability-backup-and-dr.md)).
+  ADR-0012, and [22-reliability-backup-dr](22-reliability-backup-dr.md)).
 * **Degraded mode is forbidden in any token-issuing environment**, enforced by the startup
   self-check rather than left to deployment discipline (ADR-0043).
 
@@ -178,12 +178,12 @@ The three layers are not redundant restatements: each covers a path the others d
   status: the key-compromise trigger is dual-controlled by an accepted decision, while whether
   unsealing admin break-glass needs a second approver is unratified and only **split custody**
   of the credential is fixed. See
-  [16-operations-and-maintenance](16-operations-and-maintenance.md) (ADR-0007, ADR-0015).
+  [17-operations-maintenance](17-operations-maintenance.md) (ADR-0007, ADR-0015).
 
 ## 6. Audit, tamper-evidence, and data-protection mechanisms
 
 The audit lane is the tamper-evident one and never travels through diagnostics
-(see [15-observability-and-monitoring](15-observability-and-monitoring.md)).
+(see [16-observability-monitoring](16-observability-monitoring.md)).
 
 **Its first property is coverage, not cryptography: the audit trail records the negative
 paths, failures, denials, and errors.** That is the property ordinary logging tends to miss,
@@ -339,4 +339,4 @@ A short list, not the threat model. Each row names the control rather than the i
 
 ---
 
-[Prev: Quality attributes](10-nfr-catalogue.md) · [Index](README.md) · Next: [Performance and scalability](12-performance-and-scalability.md)
+[Prev: Data architecture](12-data-architecture.md) · [Index](README.md) · Next: [Threat model](14-threat-model.md)

@@ -54,7 +54,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 - ☐ Security disclosure window plus `security@` contact plus PGP key ([ADR-0045](adr/0045-security-disclosure-and-cve-policy.md))
 - ☐ DCO versus CLA; self-govern versus software-foundation membership ([ADR-0046](adr/0046-governance-and-contribution-model.md))
 - ☐ AI-contribution IP/DCO approach confirmed for the distribution model (with the IP-lawyer review) ([ADR-0067](adr/0067-ai-assisted-development-governance.md))
-- ☐ **One IP-lawyer review of the public docs before public launch** (standing recommendation)
+- ☐ **One IP-lawyer review of the public docs before public launch** (standing recommendation). In scope, among the rest: the architecture layer follows the **arc42** template's chapter sequence and credits it in [`docs/architecture/README.md`](architecture/README.md). arc42 is CC BY-SA 4.0, whose ShareAlike term attaches to adaptations of the licensed material; this repository reproduces none of arc42's text, explanations, or diagrams and adapts the chapter set, so the position taken is that the documents are not adaptations and remain Apache-2.0 with the credit given as attribution. That position is worth one lawyer's confirmation, not a redesign
 
 ---
 
