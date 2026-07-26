@@ -230,4 +230,4 @@ Operations-facing items awaiting ratification before production, tracked in the
 
 ---
 
-[Prev: Observability and monitoring](15-observability-and-monitoring.md) · [Index](README.md)
+[Prev: Observability and monitoring](15-observability-and-monitoring.md) · [Index](README.md) · Next: [Decisions index](17-decisions-index.md)

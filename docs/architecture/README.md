@@ -59,8 +59,10 @@ question. Each topic is one file.
 | File | Topic | Covers |
 |---|---|---|
 | [`../adr/README.md`](../adr/README.md) | The ADR corpus | Every decision of record, with context and rationale |
+| [17-decisions-index](17-decisions-index.md) | The **reverse** index: which views cite each decision | Generated ADR-to-view map, the measured cross-cutting set, and the one decision no view cites |
+| [18-v2-evolution](18-v2-evolution.md) | Where the architecture goes after v1, and what v1 pays for it | Three accepted-but-unbuilt features, six proposed demand-driven extensions, kill-switch by composition |
 
-> The decisions index and v2 evolution view, and the supporting views
+> The supporting views
 > (stakeholders and concerns, risks and technical debt, threat model, glossary)
 > are being added in sequence. This index gains a row in the same change that adds
 > the file, so what is listed here always exists.
