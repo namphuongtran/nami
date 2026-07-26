@@ -104,7 +104,7 @@ implementations land in their owning phases.
 | `ISecurityEventSink` | Security events (login failure, token reject, replay, degraded-mode) | EF hash-chain sink | 0008 |
 | `ITenantStore` | Tenant registry and tier routing | Control-plane EF store | 0001 |
 | `IClaimsProfileService` | Deny-by-default claim destinations | Core (Phase 03) | **0075** (the destination rule), 0005 (the minimal claim set it carries) |
-| `ICheckAccess` | Authorization decision port | DB-first (Phase 05) | 0047, 0010, **0075** |
+| `ICheckAccess` | Authorization decision port | DB-first (Phase 06) | 0047, 0010, **0075** |
 
 The `IAuditSink`/`ISecurityEventSink` split (ISP) is the tamper-evident audit lane, both
 hash-chained and delivery-guaranteed; it is the separate lane of the two-lane model and

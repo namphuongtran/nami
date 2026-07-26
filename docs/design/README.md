@@ -28,6 +28,34 @@ section ordering are used: no standard text is reproduced.
 > no ADR covers, it is raised as an ADR (or a Pre-GA checklist entry), never
 > settled silently inside a design doc. Section 10 is where those are flagged.
 
+## Two numbering axes, and how to tell them apart
+
+Design documents are numbered `01` to `21`, and that number is the **reading order** of
+this layer. Several documents also cite a **`Phase NN`**, which is a different axis
+entirely: the **build order** of the design corpus this layer was reconciled from, which
+has nine phases.
+
+| Phase | Scope | Phase | Scope |
+|---|---|---|---|
+| 01 | Foundations | 06 | Admin, and the net-new security module |
+| 02 | Database | 07 | Advanced flows |
+| 03 | Core protocol | 08 | Keys and rotation |
+| 04 | Users and MFA | 09 | Testing and deployment, running from day one |
+| 05 | UI and consent | | |
+
+**The two axes coincide for 01 and 02 by accident and diverge from 03 onward.** The
+core-protocol design is document `04` and Phase `03`; the document numbered `03` is the
+audit subsystem. So notation is the only reliable signal: a bare number, as in `(04)` or
+"detailed in 04", is a **document in this layer**, while `Phase 04` is a **corpus build
+phase**. They are never interchangeable, and a sentence that mixes them ("it is Phase 03
+and rests on the data tier (02)") is using both deliberately.
+
+Nothing in this repository schedules those phases, and the corpus roadmap is not part of
+the published documentation, so a `Phase NN` reference is build-order context and
+provenance rather than a plan this project commits to. Nami's own delivery marker is
+**`M1`**, the point at which application source lands under `src/`; a finer milestone
+breakdown would be a decision and would get an ADR rather than appearing here.
+
 ## The eleven sections
 
 | # | Section | What belongs in it |

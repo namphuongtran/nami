@@ -12,8 +12,9 @@ The tamper-evident, delivery-guaranteed audit trail: the ports, the typed event
 catalog covering the negative paths, the hash-chain, the delivery model (critical
 events synchronous in-transaction, the rest through a durable outbox), forwarding
 to a write-once/SIEM destination, the periodic integrity job, and the strict
-separation from diagnostic logging. It is a cross-cutting subsystem that emits from
-Phase 03 onward.
+separation from diagnostic logging. It is a cross-cutting subsystem: the first
+security event this lane must accept is emitted by the core protocol, so the sink and the
+chain have to exist before token issuance does, whatever order the rest is built in.
 
 In scope: the audit ports and their contract, hash-chain computation, the delivery
 guarantee, the outbox forwarder, the integrity job, PII/erasure reconciliation, and
