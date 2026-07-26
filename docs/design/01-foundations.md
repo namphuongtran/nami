@@ -96,22 +96,27 @@ implementations land in their owning phases.
 | Port | Purpose | Default adapter | Owning ADR |
 |---|---|---|---|
 | `ISigningCredentialSource` | Supply the signing credential | Database (`SigningKeys`) | 0006, 0011 |
-| `ISigningKeyStore` | The rotation key store (distinct from the credential source) | Database (`SigningKeys`) | 0011, 0006 |
+| `ISigningKeyStore` | The rotation key store (distinct from the credential source) | Database (`SigningKeys`) | 0011, 0006, **0075** |
 | `IEncryptionCredentialSource` | Supply the encryption credential | Database | 0005, 0006 |
 | `ISecretResolver` | Resolve secrets/connection strings | Environment / database | 0009 |
 | `IDataProtectionKeyStore` | Back the Data Protection keyring | Database | 0006 |
-| `IAuditSink` | Business audit-trail (client provisioned, consent granted, role assigned, key rotated) | EF hash-chain sink | 0008 |
+| `IAuditSink` | Business audit-trail (client provisioned, consent granted, role assigned, key rotated) | EF hash-chain sink | 0008, **0075** |
 | `ISecurityEventSink` | Security events (login failure, token reject, replay, degraded-mode) | EF hash-chain sink | 0008 |
 | `ITenantStore` | Tenant registry and tier routing | Control-plane EF store | 0001 |
-| `IClaimsProfileService` | Deny-by-default claim destinations | Core (Phase 03) | 0005 |
-| `ICheckAccess` | Authorization decision port | DB-first (Phase 05) | 0047, 0010 |
+| `IClaimsProfileService` | Deny-by-default claim destinations | Core (Phase 03) | **0075** (the destination rule), 0005 (the minimal claim set it carries) |
+| `ICheckAccess` | Authorization decision port | DB-first (Phase 05) | 0047, 0010, **0075** |
 
 The `IAuditSink`/`ISecurityEventSink` split (ISP) is the tamper-evident audit lane, both
 hash-chained and delivery-guaranteed; it is the separate lane of the two-lane model and
 never routes through the diagnostics pipeline (ADR-0008/0022, detailed in 03).
 
 Ports are the strictest public surface (ADR-0044): a shipped port is extended only
-by a default interface method or an `IXxxV2`, never a bare added member. Ports whose
+by a default interface method or an `IXxxV2`, never a bare added member. **Four of them
+carry a security invariant that a replacement adapter may not weaken**, verified by a
+contract test the consumer runs against their own implementation: deny-by-default
+destinations, a tamper-evident and delivery-guaranteed audit sink, a deny-by-default and
+consistency-carrying access check, and publish-before-sign with scope correctness
+(ADR-0075). The register there is closed, so adding a port to it is an amendment. Ports whose
 owning subsystem arrives later (`IEmailDispatcher` for 07, `IDPoPReplayCache` for 11,
 `IAttestationValidator` for 06) are declared with those packages, not in the Phase-01
 set.

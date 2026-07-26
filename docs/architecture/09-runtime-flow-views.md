@@ -700,11 +700,13 @@ delegation-versus-impersonation, the confused-deputy rejection, and the Entra
 on-behalf-of exemption are **Nami's own code**, because the engine's exchange handler has
 no `act` logic. **`may_act` is deliberately not issued**: RFC 8693 puts `act` in section
 4.1 as the carrier expressing that delegation occurred and identifying the acting party,
-and `may_act` in section 4.4 as an **optional** way to authorize delegation while
-explicitly permitting other means. Nami's other means is the live, time-bound, revocable
-server-side grant, so `may_act` is neither emitted, stored, nor validated: baking
-delegation authority into a token is precisely the stale, un-revocable authority this
-model rejects (ADR-0014). The emitted chain is `act` alone, nested to carry the chain from the current
+and defines `may_act` in section 4.4 in permissive terms, with **no RFC 2119 requirement
+keyword in the section at all**, so nothing in the specification requires an authorization
+server to issue or consult it. The specification does not say other means are permitted
+either, so the choice rests on Nami's own model rather than on spec permission: a live,
+time-bound, revocable server-side grant. `may_act` is therefore neither emitted, stored,
+nor validated, because baking delegation authority into a token is precisely the stale,
+un-revocable authority this model rejects (ADR-0014). The emitted chain is `act` alone, nested to carry the chain from the current
 actor to the prior one. Initiator classification runs **first**, so a delegation token whose `sub` is the
 *target* is never mistaken for the actor: same-tenant non-delegation takes `sub`;
 Entra on-behalf-of (RFC 7523, which never carries `act`) resolves the initiator from

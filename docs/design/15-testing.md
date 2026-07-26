@@ -89,9 +89,15 @@ rolling refresh with reuse detection is on (that is, `DisableRollingRefreshToken
 false); there is no symmetric signing key (asymmetric only); the PKCE code-challenge
 methods exclude `plain` (S256 only); the JWE content-encryption is
 `Aes256CbcHmacSha512` (A256CBC-HS512, the algorithm OpenIddict supports through its
-standard API, not A256GCM) with `RSA1_5` key-management forbidden; and the core cookies
-carry `Secure`, `HttpOnly`, a pinned `SameSite`, and the `__Host-` prefix. It does **not**
-assert access-token encryption, which is intentionally off by design (ADR-0005).
+standard API, not A256GCM) with `RSA1_5` key-management forbidden; the core cookies
+carry `Secure`, `HttpOnly`, a pinned `SameSite`, and the `__Host-` prefix; OpenIddict
+degraded mode is off in any token-issuing environment; the HSTS middleware is registered
+with at least the product `max-age` outside Development; no explicitly configured TLS
+protocol below 1.2 is permitted where the application terminates TLS itself; and
+`DisableTransportSecurityRequirement` is off outside Development (the last three from
+ADR-0076). Eleven in total, and the list here is a restatement: **ADR-0043's table is the
+one to diff against**, since this enumeration has already fallen behind it once. It does
+**not** assert access-token encryption, which is intentionally off by design (ADR-0005).
 
 ### The security-test catalogue (ADR-0062)
 

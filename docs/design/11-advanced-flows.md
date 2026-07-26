@@ -50,7 +50,7 @@ fan-out (08); and the core native-verify flows (04). It adds no database tables.
 | Auth code + PKCE, client credentials, refresh, `iss` (9207), Resource Indicators (8707), exact-match redirect_uri, introspection, revocation, end-session | native, verify + test | 04 (referenced) |
 | Device authorization (RFC 8628) | native grant + **built backoff hardening** | owned here |
 | PAR (RFC 9126) | native + **built anti-flood/enforcement hardening** | owned here |
-| Token exchange (RFC 8693) | native grant wire + **`act` logic built in 05** | grant here, logic 05 |
+| Token exchange (RFC 8693) | native grant wire + **`act` logic built in 05**; **`may_act` de-scoped** as a security decision (ADR-0014) | grant here, logic 05 |
 | mTLS-bound tokens (RFC 8705) | native (confidential/M2M) | 04 (referenced) |
 | **DPoP (RFC 9449)** | **built, both issuance and validation** | **owned here** |
 | Back-channel logout | built interim (front-channel is dead) | 08 / 10 (referenced) |
