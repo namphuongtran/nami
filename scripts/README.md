@@ -81,3 +81,27 @@ with the suspicious pairs first.
 python3 scripts/review/citation-keyword-screen.py            # whole design layer
 python3 scripts/review/citation-keyword-screen.py docs/design/05-resource-server-validation.md
 ```
+
+## review/horizontal-drift-screen.py (review aid, not a gate)
+
+Reports where the same load-bearing fact is stated with two different values in two
+documents. Vertical checks cannot see this: each statement resolves against its own
+decision, and only comparing documents to each other shows the disagreement. Every
+instance found by hand in this repository was of that shape, including the audit hash
+chain stated prev-first in eight places and fields-first in one, and the uuid-tenant-column
+list counted as five in one layer and four in another.
+
+The register of facts is hand-written on purpose. A generic extractor produces more noise
+than anyone reads, and an unread report is worse than none. When a review finds drift, the
+fix is two changes: the drift, and the register entry that would have caught it.
+
+Two limitations worth knowing, both discovered by the screen misreporting itself. It
+matches over blank-line-separated blocks rather than lines, because the first version
+matched line by line and this layer wraps prose, so any fact spanning a wrap was invisible
+and the screen reported agreement it had not checked. And proximity matching produces false
+positives: a list of error codes will pair the wrong status with the wrong code. Read each
+report.
+
+```bash
+python3 scripts/review/horizontal-drift-screen.py
+```
