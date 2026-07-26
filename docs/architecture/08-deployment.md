@@ -286,4 +286,4 @@ behind a terminating proxy, trusted on both the browser and back-channel sides (
 
 ---
 
-[Prev: Cross-cutting](07-cross-cutting.md) · [Index](README.md) · Next: [Quality attributes](10-nfr-catalogue.md)
+[Prev: Cross-cutting](07-cross-cutting.md) · [Index](README.md) · Next: [Stakeholders and concerns](09-stakeholders-and-concerns.md)

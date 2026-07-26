@@ -178,4 +178,4 @@ ecosystem evidence gathered for the first is precisely why the second is not yet
 
 ---
 
-[Prev: Decisions index](17-decisions-index.md) · [Index](README.md)
+[Prev: Decisions index](17-decisions-index.md) · [Index](README.md) · Next: [Risks and technical debt](19-risks-and-technical-debt.md)

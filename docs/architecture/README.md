@@ -40,6 +40,7 @@ question. Each topic is one file.
 | [05-data](05-data.md) | Logical data model and database topology | ER + flow |
 | [06-runtime-views](06-runtime-views.md) | Sixteen key end-to-end sequences, each with the invariants it must preserve | Sequence |
 | [08-deployment](08-deployment.md) | Topology, HA, and the edge | Deployment |
+| [09-stakeholders-and-concerns](09-stakeholders-and-concerns.md) | Who has a stake, what they care about, and where it is answered | Correspondence table |
 
 ### Quality and operational views (how the system behaves)
 
@@ -61,11 +62,13 @@ question. Each topic is one file.
 | [`../adr/README.md`](../adr/README.md) | The ADR corpus | Every decision of record, with context and rationale |
 | [17-decisions-index](17-decisions-index.md) | The **reverse** index: which views cite each decision | Generated ADR-to-view map, the measured cross-cutting set, and the one decision no view cites |
 | [18-v2-evolution](18-v2-evolution.md) | Where the architecture goes after v1, and what v1 pays for it | Three accepted-but-unbuilt features, six proposed demand-driven extensions, kill-switch by composition |
+| [19-risks-and-technical-debt](19-risks-and-technical-debt.md) | Known risks and deliberate debt, kept apart from things that are neither | Risk register with designed responses, three debt items, and what only looks like debt |
+| [20-threat-model](20-threat-model.md) | The threats the security controls answer, and the residual | STRIDE across five boundaries, two attack trees, and where the residual actually lives |
 
-> The supporting views
-> (stakeholders and concerns, risks and technical debt, threat model, glossary)
-> are being added in sequence. This index gains a row in the same change that adds
-> the file, so what is listed here always exists.
+> Every view listed here exists. The vocabulary shared across all three layers is
+> [`docs/GLOSSARY.md`](../GLOSSARY.md), and the release gate the deferred
+> ratifications roll up to is the
+> [Pre-GA Ratification Checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 
 Numbering is stable: a file keeps its number once other documents link to it, so
 the reading order above is set by this index rather than by the filenames.
