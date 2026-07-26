@@ -140,16 +140,20 @@ globs. Preserve that portability if you edit it. The local hook
 ## Docs layout and the KB boundary
 
 - `docs/adr/`, settled decisions (MADR). One decision → one ADR.
-- `docs/architecture/`, the SAD: the coherent picture across views. **23 files, `01` to
-  `23`, no gaps, in the arc42 template's chapter sequence** (problem, solution strategy,
-  C4 L1-L3 and runtime and deployment, seven cross-cutting files, decisions, quality,
-  risks; arc42's section 12 glossary is `docs/GLOSSARY.md`, one level up, because it
-  also serves the ADRs and the designs). arc42 is CC BY-SA 4.0 and is credited in
+- `docs/architecture/`, the SAD: the coherent picture across views. **24 files, `01` to
+  `24`, no gaps, covering the arc42 template's twelve sections in order** (problem,
+  solution strategy, C4 L1-L3 plus runtime and deployment, seven cross-cutting files,
+  decisions, quality, risks, glossary). arc42 is CC BY-SA 4.0 and is credited in
   `docs/architecture/README.md`: only the section sequence is used, no arc42 text is
   reproduced. It **never** introduces a decision; it synthesizes the ADRs and points
   into the designs, and it is the bug when it disagrees with either. **The file number
   is the reading order**, so inserting a chapter means renumbering the tail and
   rewriting every link, which is a deliberate act, not a casual one.
+- `docs/architecture/24-glossary.md` is arc42 section 12 and defines vocabulary for
+  **all three layers**, not only for the architecture. It lives inside that folder
+  because arc42 puts the glossary in the architecture document; an entry names the
+  document of record rather than owning the term, so defining `stack of record` there
+  leaves ADR-0061 the authority. Do not narrow its scope to architecture terms.
 - `docs/design/`, per-feature detailed designs, the authority for implementation detail.
 - `docs/kb/notes/`, a lesson, how-something-works, or gotcha that is **not** a decision.
 - `docs/kb/research/`, deeper investigation, usually preceding an ADR, linking to it.

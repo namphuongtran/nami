@@ -99,4 +99,4 @@ emergency work, which is the entire reason the analysis was written down.
 
 ---
 
-[Prev: Reliability, backup, and DR](22-reliability-backup-dr.md) · [Index](README.md)
+[Prev: Reliability, backup, and DR](22-reliability-backup-dr.md) · [Index](README.md) · Next: [Glossary](24-glossary.md)

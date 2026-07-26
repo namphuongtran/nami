@@ -93,11 +93,21 @@ question. Each topic is one file.
 | [22-reliability-backup-dr](22-reliability-backup-dr.md) | Behaviour under failure, and the cost of getting back | High availability, resiliency, per-store recovery objectives, backup, DR drills |
 | [23-risks-and-technical-debt](23-risks-and-technical-debt.md) | Known risks and deliberate debt, kept apart from things that are neither | Risk register with designed responses, three debt items, and what only looks like debt |
 
-> Every view listed here exists. **arc42 section 12, the glossary, is
-> [`docs/GLOSSARY.md`](../GLOSSARY.md)**, kept one level up because it serves the
-> decisions and the detailed designs as well as this layer. The release gate the
-> deferred ratifications roll up to is the
-> [Pre-GA Ratification Checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
+### Vocabulary (arc42 section 12)
+
+| File | Topic | Covers |
+|---|---|---|
+| [24-glossary](24-glossary.md) | Domain, protocol, and project-convention terms | Definitions that point at the document of record rather than restating it |
+
+> **The glossary lives here but is not this layer's property.** Its vocabulary is
+> measurably used across all three layers, and for several terms more heavily outside
+> this one: `seam catalogue` and `verification record` each appear in seven ADRs. It
+> sits here because arc42 places the glossary in the architecture document, and because
+> an entry **names the document of record rather than owning the term**, so a definition
+> of `stack of record` here leaves ADR-0061 the authority. Measured on 2026-07-26.
+
+Every view listed above exists. The release gate the deferred ratifications roll up to
+is the [Pre-GA Ratification Checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 
 ## 2. C4 legend
 

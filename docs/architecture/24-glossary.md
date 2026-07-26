@@ -1,7 +1,15 @@
+---
+status: reviewed
+created: 2026-07-26
+tags: [architecture, glossary, arc42]
+---
+
 # Glossary
 
-Terms used across the [architecture](architecture/README.md), the
-[detailed designs](design/README.md), and the [decision records](adr/README.md). Where a term
+> **Part of:** the [Software Architecture Document](README.md), arc42 section 12.
+
+Terms used across the [architecture](README.md), the
+[detailed designs](../design/README.md), and the [decision records](../adr/README.md). Where a term
 is normative, the specification is named. Where a term is a convention of this project rather
 than of the wider ecosystem, that is said explicitly, because those are the ones a newcomer
 cannot look up.
@@ -28,7 +36,7 @@ restating it.
   neither. Nami routes every claim through a single choke-point that is **deny-by-default**, so
   a claim is emitted only where explicitly declared. Distinct from **claim minimisation**, which
   is about which claims exist at all (ADR-0005). The destination rule is fixed in the
-  [core-protocol design](design/04-core-protocol.md) and currently has no owning ADR.
+  [core-protocol design](../design/04-core-protocol.md) and currently has no owning ADR.
 * **acr, amr, auth_time.** The assurance claims: the authentication context class, the methods
   used (RFC 8176), and when authentication happened. They are what step-up is evaluated against
   (ADR-0013).
@@ -41,7 +49,7 @@ restating it.
 * **Token exchange.** RFC 8693. The grant is native, but the delegation logic is Nami's own:
   subject and actor resolution, emitting the `act` chain, and rejecting the confused-deputy
   case. `may_act` is deliberately **not** issued (ADR-0014, and the
-  [authorization design](design/05-authorization.md)).
+  [authorization design](../design/05-authorization.md)).
 * **Back-channel logout.** A server-to-server logout notification, a signed `logout_token`,
   delivered to each relying party in the session. Built as an interim until the engine ships a
   native equivalent (ADR-0019).
@@ -176,7 +184,7 @@ restating it.
   that the markers and the table agree (ADR-0061).
 * **Pre-GA ratification.** A decision whose mechanism is built while a number, policy, or
   sign-off is a named owner's call. Consolidated as one release gate rather than scattered
-  (see the [checklist](PRE-GA-RATIFICATION-CHECKLIST.md)).
+  (see the [checklist](../PRE-GA-RATIFICATION-CHECKLIST.md)).
 * **Naming.** Assemblies sit under `Nami.Identity.*`; configuration keys are `Nami:Section:Key`
   with `Nami__Section__Key` as the environment form and a short `NAMI_X` alias (ADR-0065).
 * **The authority order.** Decision records bind, detailed designs are the authority for
@@ -198,3 +206,7 @@ restating it.
   minimisation, which are different controls with different failure modes; and it defines
   break-glass as one term, where the two paths are unrelated and conflating them is an
   operational risk.
+
+---
+
+[Prev: Risks and technical debt](23-risks-and-technical-debt.md) · [Index](README.md)
