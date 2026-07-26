@@ -109,7 +109,7 @@ The three layers are not redundant restatements: each covers a path the others d
   exception to the fail-open cache policy (ADR-0040), and the set is **authoritative with no
   durable source to read through to**, which is why losing it is a bounded replay window
   rather than a cache miss (ADR-0074; the check-then-add behaviour is fixed in the
-  advanced-flows design rather than in ADR-0014, which scopes DPoP as a build).
+  sender-constrained-tokens design rather than in ADR-0014, which scopes DPoP as a build).
 * **A short access lifetime bounds what revocation cannot reach.** Fifteen minutes is the
   window a revoked-but-unexpired JWT survives, and a client needing instant revocation is
   issued a reference token instead, which forces its resource server onto introspection
@@ -306,7 +306,7 @@ A short list, not the threat model. Each row names the control rather than the i
 * ADR-0005 (the plain signed access token, the mandatory minimal claim set, the
   asymmetric-signing rule, and the encryption retention floor of roughly
   the 8-hour ceiling plus margin), ADR-0004 (refresh posture and the engine's sibling
-  revoke), ADR-0014 (sender-constrained tokens as a build, with the replay set's check-then-add behaviour owned by the advanced-flows design and its no-durable-source property by ADR-0074), ADR-0039 (the
+  revoke), ADR-0014 (sender-constrained tokens as a build, with the replay set's check-then-add behaviour owned by the sender-constrained-tokens design and its no-durable-source property by ADR-0074), ADR-0039 (the
   15-minute residual and the reference-token alternative), ADR-0048 (native introspection and
   revocation, and the controller not to write), ADR-0009 (machine-to-machine authentication,
   least-privilege key rights with no purge at runtime, and secrets never in an image).

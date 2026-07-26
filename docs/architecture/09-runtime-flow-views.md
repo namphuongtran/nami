@@ -777,12 +777,12 @@ sequence adds little above the component view. They are listed so the omission i
 
 | Flow | Why not here | Where it lives |
 |---|---|---|
-| End-user step-up authentication | `max_age` / `prompt` / `acr_values` to an MFA challenge, then updated `acr` / `amr`. Its architectural content is the assurance model, not the sequence | ADR-0013 for the model, [05-authorization](../design/07-authorization.md) for the gate, [08-login-consent-ui](../design/11-login-consent-ui.md) for the sequence. Flow 2 shows the admin-side challenge |
-| Device authorization | Server-enforced `interval` and `slow_down` polling backoff with a 429 ceiling. Native grant, no distributed interaction | [11-advanced-flows](../design/14-advanced-flows.md), ADR-0014 |
-| Pushed authorization request | Native, enabled per client. The architectural content is the `request_uri` lifetime (shortened to 5 to 600 seconds) and the per-client anti-flood cap | [11-advanced-flows](../design/14-advanced-flows.md), ADR-0014 |
+| End-user step-up authentication | `max_age` / `prompt` / `acr_values` to an MFA challenge, then updated `acr` / `amr`. Its architectural content is the assurance model, not the sequence | ADR-0013 for the model, [07-authorization](../design/07-authorization.md) for the gate, [11-login-consent-ui](../design/11-login-consent-ui.md) for the sequence. Flow 2 shows the admin-side challenge |
+| Device authorization | Server-enforced `interval` and `slow_down` polling backoff with a 429 ceiling. Native grant, no distributed interaction | [14-advanced-flows](../design/14-advanced-flows.md), ADR-0014 |
+| Pushed authorization request | Native, enabled per client. The architectural content is the `request_uri` lifetime (shortened to 5 to 600 seconds) and the per-client anti-flood cap | [14-advanced-flows](../design/14-advanced-flows.md), ADR-0014 |
 | mTLS sender constraint | The native counterpart to flow 5. Its risk is the certificate-forwarding order and the trusted-proxy allow-list, which is edge posture rather than a sequence | [04-core-protocol](../design/04-core-protocol.md), ADR-0014, ADR-0073 |
-| Silo migration fan-out | Ordered ring rollout with a per-tenant 503 traffic gate. An operational rollout, drawn where the schema lives | [02-data](../design/02-data.md), [13-tenant-lifecycle](../design/18-tenant-lifecycle.md), ADR-0017 |
-| Tenant deprovision and re-home | The ordered inverse of flow 7, plus key escrow-then-destroy and old-scope invisibility checks | ADR-0017, [13-tenant-lifecycle](../design/18-tenant-lifecycle.md) |
+| Silo migration fan-out | Ordered ring rollout with a per-tenant 503 traffic gate. An operational rollout, drawn where the schema lives | [02-data](../design/02-data.md), [18-tenant-lifecycle](../design/18-tenant-lifecycle.md), ADR-0017 |
+| Tenant deprovision and re-home | The ordered inverse of flow 7, plus key escrow-then-destroy and old-scope invisibility checks | ADR-0017, [18-tenant-lifecycle](../design/18-tenant-lifecycle.md) |
 
 ## Sources
 
@@ -791,26 +791,26 @@ sequence adds little above the component view. They are listed so the omission i
   headers), and [04-core-protocol](../design/04-core-protocol.md) for the `S256`-only
   discovery override.
 * Flow 2: ADR-0020 (dual control enforced server-side, app-only tokens rejected),
-  ADR-0013 (the assurance producer), [05-authorization](../design/07-authorization.md)
+  ADR-0013 (the assurance producer), [07-authorization](../design/07-authorization.md)
   (`RequireActor`, the `request_hash` binding, the `max(client, scope, runtime)` rule),
-  and [12-admin-api](../design/15-admin-api.md) (the 72-hour proposal expiry and the
+  and [15-admin-api](../design/15-admin-api.md) (the 72-hour proposal expiry and the
   `TargetETag` guard).
 * Flow 3: ADR-0011 (the custom options monitor, the 90/14/14 shape, the local-validation
   fix, spike A-2 / V19 / T3c / T3d), ADR-0007 (five-minute break-glass ejection),
   ADR-0021 (the 9.K6 contract-regression gate), ADR-0031 (exactly one clustered runner),
   ADR-0012 (the readiness `kid` assertion and the silent-keyring-regeneration failure it
-  guards), and [09-key-management](../design/12-key-management.md) (the default values,
+  guards), and [12-key-management](../design/12-key-management.md) (the default values,
   the 12-hour client JWKS refresh, the `X509SecurityKey` ordering invariant, and the
   `KeyRotationHostedService` name).
 * Flow 4: ADR-0039 (the per-path freshness model and each bound), ADR-0003 (the
   validation-interval backstop), ADR-0074 (the distrusted-key rebuild invariant), ADR-0021
   (the pinned dependency floor under the refresh interval), and
-  [10-revocation-caching](../design/13-revocation-caching.md) (the per-path sequence this
+  [13-revocation-caching](../design/13-revocation-caching.md) (the per-path sequence this
   view adopts).
 * Flow 5: ADR-0014 (DPoP as a build, spikes A-1 and A-3), ADR-0048 (introspection
   surfacing `cnf.jkt`, V14-3), ADR-0049 and ADR-0033 (per-tenant validation first),
   ADR-0074 (the replay set as authoritative with no durable source), and
-  [11-advanced-flows](../design/14-advanced-flows.md) (the `ath` asymmetry and refresh
+  [14-advanced-flows](../design/14-advanced-flows.md) (the `ath` asymmetry and refresh
   binding).
 * Flow 6: ADR-0029 (the composed BFF, the two anti-forgery profiles, the allow-listed
   proxy), ADR-0020 (the admin app as the second consumer), ADR-0003 (the session cookie
@@ -823,7 +823,7 @@ sequence adds little above the component view. They are listed so the omission i
   ADR-0008 (the dead-letter security event).
 * Flow 9: ADR-0010 (initiator-based authority, `IsInheritable`, the additive v1 grant
   model, the `re_delegate` gate), ADR-0047 (the `ICheckAccess` consistency-carrying
-  port), [05-authorization](../design/07-authorization.md) (the scoped handler, the
+  port), [07-authorization](../design/07-authorization.md) (the scoped handler, the
   `TenantTarget` source, the live-check rule).
 * Flow 10: ADR-0016 (the ordered saga, chain-over-commitments, the separate key vault,
   the verification step), ADR-0008 (the chain), ADR-0053 and ADR-0054 (the wider
@@ -833,7 +833,7 @@ sequence adds little above the component view. They are listed so the omission i
   the prune reconciliation), ADR-0003 (the matching absolute session limit).
 * Flow 12: ADR-0004 (`SetAuthorizationId`, the deliberately unbounded consent lifetime),
   ADR-0019 (tenant-switch as a top-level redirect), ADR-0053 (the consent receipt),
-  [08-login-consent-ui](../design/11-login-consent-ui.md) (the consent page and receipt
+  [11-login-consent-ui](../design/11-login-consent-ui.md) (the consent page and receipt
   emission).
 * Flow 13: ADR-0001 (two-layer isolation, spike A-4 / V25 / T13 / T14), ADR-0037 (the
   `FORCE` policy and the de-privileged role), ADR-0018 (pooling and the `SET LOCAL`
@@ -843,14 +843,14 @@ sequence adds little above the component view. They are listed so the omission i
   bounded-logout fallback), ADR-0003 (the participating-clients registry and the
   `logout_token` hygiene notes), ADR-0005 (signed and not encrypted),
   ADR-0021 (the decommission marker),
-  [08-login-consent-ui](../design/11-login-consent-ui.md) (intent storage, fresh minting,
+  [11-login-consent-ui](../design/11-login-consent-ui.md) (intent storage, fresh minting,
   the retry envelope), [04-core-protocol](../design/04-core-protocol.md) (the advertised
   metadata and `sid` in `claims_supported`).
 * Flow 15: ADR-0014 (the native grant with Nami-owned `act` resolution), ADR-0010
   (delegation carried by `act`, not impersonation),
-  [05-authorization](../design/07-authorization.md) (the three-way initiator
+  [07-authorization](../design/07-authorization.md) (the three-way initiator
   classification and the `may_act` exclusion),
-  [11-advanced-flows](../design/14-advanced-flows.md) (the grant wiring boundary).
+  [14-advanced-flows](../design/14-advanced-flows.md) (the grant wiring boundary).
 * Naming: ADR-0065 (the host and assembly names used as participant labels throughout).
 * Flow 16: ADR-0071 (the outbox, the `seq` column, `SKIP LOCKED`, CloudEvents, the
   single-stream topology, the kill switch, spike A-9 and its three findings), ADR-0036
@@ -867,7 +867,7 @@ sequence adds little above the component view. They are listed so the omission i
   deliberately keeping the `Authorization`; the logout outbox is shown there enqueuing a
   minted `logout_token` when the design stores delivery **intent** and mints fresh at
   send; token exchange is shown there emitting `may_act` when
-  [05-authorization](../design/07-authorization.md) excludes it deliberately; and its key
+  [07-authorization](../design/07-authorization.md) excludes it deliberately; and its key
   rotation collapses announce and promote into one step, eliding the propagation window
   that makes the overlap safe. One defect on **our** side was found the same way and
   fixed here: flow 4 previously described session revocation as instant, when ADR-0039

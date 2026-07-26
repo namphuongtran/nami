@@ -96,6 +96,18 @@ later reader cannot tell the two apart.
   written in text is a citation with no link checker behind it. After any renumber, re-read
   each numeric pointer against the index and confirm the *topic* matches, since a pointer
   to a file that exists but is the wrong one passes every mechanical check.
+- **A document number is layer-scoped, so the same digits name different documents.** `21`
+  is performance-and-scalability in `docs/architecture/` and CI/CD-and-deployment in
+  `docs/design/`. A bare number is therefore only readable inside its own layer, and a
+  cross-layer reference has to be judged against its target's *directory*, not its digits.
+  Two consequences, both already paid for: a reader who crosses layers mis-resolves the
+  number, and a checker that assumes one layer reports clean on the other. Prefer the
+  slug form for cross-layer links, and note that a slug label encodes the number twice,
+  so it goes stale twice.
+- **A checker's anchor is part of its coverage claim.** A pattern that requires the target
+  to start where the link opens matches same-directory links and silently passes every
+  `../other-layer/` one. State what a screen does *not* match, in the screen, or its zero
+  will be read as absence.
 - **A false positive in a checker is a defect in the checker**, not noise to work
   around, and the same holds for a claim that survives only because nobody checked it.
   A checker that stays green on the bug it was written for is worse than none, because it

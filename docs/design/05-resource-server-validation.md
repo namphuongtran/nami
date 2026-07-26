@@ -432,7 +432,8 @@ Named per ADR-0066:
 * Design: [02](02-data.md) for the tenant registry and the row-level-security mechanism,
   [04](04-core-protocol.md) for the issuing side and the introspection server,
   [12](12-key-management.md) for rotation, [13](13-revocation-caching.md) for propagation
-  and the distrusted-key set, [14](14-advanced-flows.md) for sender-constraint internals,
+  and the distrusted-key set, [06](06-sender-constrained-tokens.md) for sender-constraint
+  internals,
   and [08](08-user-management.md) for the `acr` and `amr` producer.
 * ADRs: 0049 (this design's owning decision), 0033 (the shared keyset it mitigates), 0005,
   0004, 0048, 0001, 0037, 0009, 0014, 0021, 0043, 0061, 0065, 0066.

@@ -110,11 +110,20 @@ def exhaustive(path: Path) -> None:
             print(f"  {lineno:5} {flag} [{prev} {num}] ...{line[start:m.end() + 20]}")
 
 
-LABEL_LINK = re.compile(r"\[\s*(\d{2})\b[^\]]*\]\((\d{2})-[^)]*\.md\)")
+# A numbered label, "[13]" or "[13-revocation-caching]" or "[13 revocation]", followed by
+# a target that may sit in this directory or in a sibling layer via "../<layer>/".
+# The first revision anchored the target to the start of the parenthesis, so it matched
+# only same-directory links and silently passed every cross-layer one. Seventeen stale
+# labels lived in that blind spot, and the report said zero. The lesson is the same one
+# this file already records twice: a screen's coverage is itself an unverified claim.
+LABEL_LINK = re.compile(
+    r"\[\s*(\d{2})(-[a-z0-9-]+)?\b[^\]]*\]"
+    r"\((?:\.\./([a-z-]+)/)?(\d{2})-([a-z0-9-]+)\.md\)"
+)
 
 
 def label_mismatches() -> int:
-    """Report links whose visible label number disagrees with the file it points at.
+    """Report links whose visible label disagrees with the file it points at.
 
     This is the one genuinely mechanical check here, and it is the only defect class in
     this batch that was invisible to every other screen: a renumber rewrites link
@@ -122,17 +131,29 @@ def label_mismatches() -> int:
     resolves, passes the broken-link sweep, and lies to the reader. 108 of these survived
     two renumbers, nine of them in the architecture layer from a renumber a batch earlier.
     The target is authoritative because it resolves, so a mismatch is always the label.
+
+    Both halves of a label are checked. A slug label encodes the number twice over, once
+    as a digit and once as a name, which makes it likelier to go stale, not safer.
+
+    Numbers are layer-scoped, so the same digits name different documents in different
+    layers: 21 is performance-and-scalability in the architecture and CI/CD-and-deployment
+    in the design. A cross-layer link therefore has to be judged against its target's
+    directory, which is why the layer is captured and printed.
     """
     files = subprocess.run(
         ["git", "ls-files", "*.md"], cwd=ROOT, capture_output=True, text=True, check=True
     ).stdout.split()
     bad = 0
     for rel in files:
+        own_layer = rel.split("/")[1] if rel.startswith("docs/") else ""
         for lineno, line in enumerate((ROOT / rel).read_text().split("\n"), 1):
             for m in LABEL_LINK.finditer(line):
-                if m.group(1) != m.group(2):
-                    print(f"  MISMATCH {rel}:{lineno}  label {m.group(1)} points at {m.group(2)}")
-                    bad += 1
+                lnum, lslug, xlayer, tnum, tslug = m.groups()
+                if lnum == tnum and not (lslug and lslug[1:] != tslug):
+                    continue
+                where = f"{xlayer or own_layer}/{tnum}-{tslug}"
+                print(f"  MISMATCH {rel}:{lineno}  label [{lnum}{lslug or ''}] points at {where}")
+                bad += 1
     print(f"  label-versus-target mismatches: {bad}")
     return bad
 

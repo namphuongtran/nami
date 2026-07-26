@@ -85,9 +85,12 @@ REGISTER: list[tuple[str, str, str, str]] = [
     ),
     (
         "step-up challenge status", "401",
-        r"(401|403)[^.]{0,40}?insufficient_user_authentication"
-        r"|insufficient_user_authentication[^.]{0,40}?(401|403)",
-        "RFC 9470: a 401, never a 403",
+        r"(401|403)[^.,]{0,40}?insufficient_user_authentication"
+        r"|insufficient_user_authentication[^.,]{0,40}?(401|403)",
+        "RFC 9470: a 401, never a 403. The window excludes commas: with [^.] it spanned "
+        "one entry of a problem-code list into the next and read the neighbour's status, "
+        "reporting drift in a document that was right. A false positive is a defect here, "
+        "because a screen nobody trusts is a screen nobody reads",
     ),
     (
         "schema-version gate status", "503",
