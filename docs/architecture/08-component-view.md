@@ -31,7 +31,7 @@ graph TB
   subgraph SRV[Identity host]
     direction TB
     mw[Tenant resolution middleware<br/>runs before authentication]:::comp
-    ctrl[Thin endpoint controllers<br/>authorize, token, userinfo, device, logout]:::comp
+    ctrl[Thin endpoint controllers<br/>authorize, token, userinfo,<br/>end-session, end-user verification]:::comp
     pipe[Handler pipeline<br/>extract, validate, handle, apply]:::comp
     prof[IClaimsProfileService<br/>builds claims, deny-by-default destinations]:::comp
     int[Consent and interaction<br/>persisted authorization for silent renew]:::comp
@@ -60,10 +60,12 @@ graph TB
 ```
 
 * **Pass-through and fully-handled endpoints are not the same thing, and confusing them is
-  the most common error in this codebase.** Only `authorize`, `token`, `userinfo`, `device`,
-  and `logout` are **pass-through**: the engine hands control to a controller which supplies
-  the principal. Discovery, JWKS, introspection, and revocation are **fully handled** by the
-  engine: no controller, no hand-rolled owner check, nothing to implement. Writing a
+  the most common error in this codebase.** Only `authorize`, `token`, `userinfo`,
+  `end-session`, and `end-user verification` are **pass-through**: the engine hands control to
+  a controller which supplies the principal. Discovery, JWKS, introspection, revocation, and
+  the `device authorization` endpoint are **fully handled** by the engine: no controller, no
+  hand-rolled owner check, nothing to implement. The two halves of the device flow therefore
+  sit on opposite sides of the split, which is where this distinction is easiest to get wrong. Writing a
   controller for a fully-handled endpoint duplicates or subverts logic the engine already
   owns correctly. The endpoint-by-endpoint table is in the
   [core-protocol design](../design/04-core-protocol.md), and the split is pinned by a

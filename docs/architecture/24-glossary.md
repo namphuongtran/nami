@@ -28,9 +28,12 @@ restating it.
   refresh, authorization-code, and device-code artifacts stay encrypted (ADR-0005).
 * **Pass-through versus fully-handled endpoint.** A distinction of the protocol engine, and
   **the most common source of error in this codebase**. A *pass-through* endpoint (authorize,
-  token, userinfo, device, logout) hands off to code you write that supplies the user and
-  claims. A *fully-handled* endpoint (discovery, JWKS, introspection, revocation) is completed
-  by the engine with no controller. Writing a controller for a fully-handled endpoint
+  token, userinfo, end-session, end-user verification) hands off to code you write that
+  supplies the user and claims. A *fully-handled* endpoint (discovery, JWKS, introspection,
+  revocation, device authorization) is completed by the engine with no controller. Membership
+  is not a judgement call: the engine exposes a pass-through option for the first set and for
+  nothing else, so the **device authorization** endpoint is fully handled while the **end-user
+  verification** endpoint that completes the same flow is pass-through. Writing a controller for a fully-handled endpoint
   reimplements a correct mechanism and usually weakens it (ADR-0048).
 * **Claim destination.** Which token a given claim rides in: access token, ID token, both, or
   neither. Nami routes every claim through a single choke-point that is **deny-by-default**, so
