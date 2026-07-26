@@ -98,6 +98,26 @@ REGISTER: list[tuple[str, str, str, str]] = [
         "503 with Retry-After, never 404, or relying parties drop cached discovery",
     ),
     (
+        "amr external value", "absent",
+        r"8176[^.]{0,140}?`(external)`",
+        "RFC 8176 defines no external amr value, so a federated sign-in records the factor "
+        "the provider used and names the provider in idp. Expected value 'absent' is "
+        "deliberately unmatchable: this is a tripwire, and any hit is the corpus's value "
+        "coming back in. The window requires the backticked value next to the RFC number "
+        "because a looser one matched the words 'external federation' in a scope sentence, "
+        "which states nothing about amr at all",
+    ),
+    # NOT registered, deliberately: which ADR owns the IClaimsProfileService choke-point.
+    # Two designs mis-cited ADR-0005 for it (ADR-0075 owns it and says so: ADR-0005 owns
+    # which claims exist, a different question from which token each rides in). A drift
+    # entry for it was written and removed, because attribution is not proximity and every
+    # proximity pattern tried flagged the corrected text by grabbing the ADR number from
+    # the neighbouring table cell. The citation-keyword screen is the right tool and does
+    # catch it: ADR-0005 mentions IClaimsProfileService zero times, ADR-0075 four times.
+    # The reason the defect survived is not a missing check but an unrun one, since that
+    # screen was written after this design was merged and was never run backwards over
+    # already-merged files.
+    (
         "corpus build phases", "nine",
         r"which\s+has (three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d+) phases",
         "the roadmap's phase-to-doc table lists 01 to 09",

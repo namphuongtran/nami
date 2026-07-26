@@ -203,8 +203,9 @@ each is gated by its scope. The id_token also carries the `memberships` list, si
 at about ten entries with a `memberships_truncated` flag and a self-service full-list
 endpoint, and `sid` for back-channel-logout correlation.
 
-Adding a first-party claim means editing **both** this switch and the claims contract
-that the federation design owns, in the same change. The regression test asserts an
+Adding a first-party claim means editing **both** this switch and the canonical claims
+contract that the federation design ([09](09-federation-and-claims-profile.md)) owns, in
+the same change. The regression test asserts an
 undeclared claim never reaches any token, so a claim added in only one place fails the
 build rather than leaking.
 

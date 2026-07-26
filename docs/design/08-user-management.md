@@ -10,8 +10,7 @@ tags: [design, identity, passkeys, mfa, federation, sessions]
 
 The identity store and the human-authentication surface built on ASP.NET Core
 Identity: the global user model, passkeys/WebAuthn and MFA, the assurance producer
-(`acr`/`amr`/`auth_time`) and the canonical claims contract, server-side sessions,
-handler-based external federation with anti-takeover linking, the credential
+(`acr`/`amr`/`auth_time`), server-side sessions, the credential
 hardening baseline, self-service (including change-email hardening), and the user
 lifecycle. It is Phase 04 and produces what the protocol engine (04) and
 authorization (07) consume.
@@ -30,7 +29,7 @@ SSOT).
 | ADR-0013 | Produce `acr` (recomputed per token-request), `amr` (RFC 8176 array), `auth_time` (JSON number); step-up is enforced in 07 |
 | ADR-0003 | Server-side session store (`ITicketStore`): `sid` lifecycle, inactivity 1h / absolute 8h, concurrent-session cap, revoke-denies-authorize/refresh |
 | ADR-0002 | Handler-based external login into the global identity; `(provider, sub)` anti-takeover linking; external-claim allow-list; SSRF; RFC 9207 `iss` |
-| ADR-0005 / ADR-0001 | One `IClaimsProfileService` choke-point (shared with 04); global identity, tenant via membership |
+| ADR-0075 / ADR-0005 / ADR-0001 | The `IClaimsProfileService` choke-point and its deny-by-default destinations are ADR-0075's invariant; ADR-0005 sets which claims exist and how small they stay; global identity with tenant via membership is ADR-0001 |
 | ADR-0008 / ADR-0016 / ADR-0009 | Audit provenance on every lifecycle transition; offboard invokes the gated erasure saga; external secrets in the secret store |
 
 ## Component and interface design
@@ -43,10 +42,11 @@ identity); tenant belonging is a `Membership`, never a user-per-tenant (ADR-0001
 `IdentityDbContext` (02), with default token providers. OpenIddict owns the
 protocol; Identity owns the user store entirely.
 
-### The assurance producer and the claims contract
+### The assurance producer
 
-OpenIddict has no `IProfileService`, so a single `IClaimsProfileService` (the
-choke-point shared with 04) is where session claims are produced: `acr` is
+OpenIddict has no profile-service equivalent, so a single `IClaimsProfileService` (the
+choke-point owned by 04, with the claim contract in 09) is where session claims are
+produced: `acr` is
 **recomputed per token-request** from `amr` plus session age, with the aal2 predicate
 requiring `amr` to include `mfa`, `otp`, `hwk`, or `swk` (so a passkey-only login is
 not mis-scored as aal1) and an aal2 freshness window of about 12 hours with 30-minute
@@ -54,27 +54,19 @@ inactivity (NIST), capped by the 8h absolute session ceiling (ADR-0013) so an ag
 session downgrades; `amr` is stamped at sign-in via
 `SignInWithClaimsAsync(user, isPersistent, [amr claims])` and `auth_time` is sourced from
 `AuthenticationProperties.IssuedUtc`, emitted as a JSON
-number (the `long` overload, not a string). This is the canonical claims contract
-(the SSOT other docs reference):
+number (the `long` overload, not a string).
 
-| Claim | Shape | Destination | Consumer |
-|---|---|---|---|
-| `memberships` | JSON array of `{tid, name?, roles?}`, capped ~10 with a `memberships_truncated` flag | id_token | tenant-switcher UI, integrators (full list via self-service when truncated) |
-| `acr` | single string `urn:nami.identity:aal1`/`aal2`/`aal3` (`0` = below-aal1, not for valuable resources) | id_token + access_token | step-up (07), Admin `AcrRequirement` |
-| `amr` | JSON array (RFC 8176): `pwd`, `otp`, `mfa`, `hwk`, `swk` (never `passkey`; a federated login records the underlying factor) | id_token | informational (gate on `acr`+`auth_time`, not `amr`) |
-| `auth_time` | JSON number | id_token + access_token | `max_age`/step-up freshness |
-| `idp` | string: external scheme or `local` | id_token | RP and tenant/membership decisions |
-| `sid` | string session id | id_token + `logout_token` | back-channel logout correlation |
-| `tenant` | single string tenant id | access_token | resource-server tenant isolation |
-
-`acr`/`auth_time` go to both tokens so a resource server can enforce RFC 9470;
-`amr` can be absent on a silent refresh, so it is informational only. A federated login
-records the underlying factor (`pwd`, `otp`) rather than a synthetic `external` value:
-RFC 8176 defines no `external` `amr`, so emitting it would be non-conformant. This is a
-deliberate divergence from the corpus (which named `external`), corrected to the RFC. OpenIddict 7.5
-does not emit `sid` natively, so `IClaimsProfileService` sets it explicitly to the
-session `sid` (id_token destination); without it a relying party can only log out by
-`sub`, killing all of the user's sessions.
+The **shape and destination** of each of those claims is the canonical claims contract,
+which [09](09-federation-and-claims-profile.md) owns: its seven claims have five
+different producers, so the table lives in a neutral document rather than in whichever
+producer happened to be written first. What belongs here is the producer side. `acr` and
+`auth_time` reach both tokens so a resource server can enforce RFC 9470; `amr` reaches
+only the id_token, because it can be absent on a silent refresh and a resource server
+gating on it would fail closed at random. A federated login stamps the factor the
+provider actually used (`pwd`, `otp`) rather than a synthetic `external` value, since
+RFC 8176 defines none. OpenIddict 7.5 does not emit `sid` natively, so it is set
+explicitly to the session `sid`; without it a relying party can only log out by `sub`,
+killing every session the person has rather than the one that ended.
 
 ### Passkeys and assurance level
 
@@ -483,12 +475,15 @@ stateDiagram-v2
   management, sessions, external login), [runtime views](../architecture/09-runtime-flow-views.md).
 * Design: [02-data](02-data.md) (Identity, passkeys, sessions, membership schema),
   [04-core-protocol](04-core-protocol.md) (the claims choke-point and token issuance),
+  [09-federation-and-claims-profile](09-federation-and-claims-profile.md) (the canonical
+  claims contract these claims are shaped by, and the federation path itself),
   [07-authorization](07-authorization.md) (step-up enforcement, dual-control),
   [03-audit](03-audit.md) (transition provenance).
 * ADRs: 0028 (user management), 0013 (MFA/assurance producer), 0003 (sessions), 0002
-  (federation), 0005 (claims choke-point), 0001 (global identity/membership), 0008
+  (federation), 0075 (the choke-point's deny-by-default destinations), 0005 (which claims
+  exist and the minimal token), 0001 (global identity/membership), 0008
   (audit), 0016 (offboard/erasure), 0009 (secret store), 0042 (abuse/lockout).
 
 ---
 
-[Prev: Authorization and delegated admin](07-authorization.md) · [Index](README.md) · Next: [Email and notification](10-email-notification.md)
+[Prev: Authorization and delegated admin](07-authorization.md) · [Index](README.md) · Next: [Federation and the claims profile](09-federation-and-claims-profile.md)

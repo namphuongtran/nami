@@ -91,7 +91,7 @@ plan, not here.
 | [06](06-sender-constrained-tokens.md) | Sender-constrained tokens (DPoP and mTLS) | draft | 0014, 0005, 0021, 0024, 0049 |
 | [07](07-authorization.md) | Authorization and delegated admin | reviewed | 0010, 0047, 0013 |
 | [08](08-user-management.md) | User management and authentication | reviewed | 0028, 0013, 0003, 0002 |
-| 09 | Federation and the claims profile | planned | 0002, 0005, 0001, 0009 |
+| [09](09-federation-and-claims-profile.md) | Federation and the claims profile | draft | 0002, 0075, 0005, 0001, 0013, 0019, 0009, 0034 |
 | [10](10-email-notification.md) | Email and notification subsystem | draft | 0038 |
 | [11](11-login-consent-ui.md) | Login, consent, and logout UI | draft | 0019, 0004, 0003, 0002, 0013 |
 | [12](12-key-management.md) | Key management and rotation | draft | 0005, 0006, 0007, 0011, 0012, 0033 |
@@ -105,11 +105,13 @@ plan, not here.
 | [20](20-testing.md) | Testing | draft | 0060, 0062 |
 | [21](21-cicd-and-deployment.md) | CI/CD and deployment | draft | 0025, 0023, 0031, 0051 |
 
-The remaining `planned` rows are reserved numbers rather than gaps: each module exists
-in the design corpus and lands here when its turn comes. The ADR sets on those rows
-are the ones the corpus records for them, and are confirmed against this repository
-when the file is written. A `planned` row becomes a linked `draft`, then `reviewed`
-once approved. The file number is the reading order defined above, and designs are also
+Every number is now a written document; the last reserved `planned` row was filled by
+`09`. A row's ADR set starts from what the design corpus records for that module and is
+**confirmed against this repository when the file is written**, which has in practice
+meant it grows: `09` arrived with four ADRs recorded against it and needed eight, because
+the corpus attributed the claim choke-point to the wrong decision and had no equivalent of
+ADR-0075. A row moves `draft` to `reviewed` once approved. The file number is the reading
+order defined above, and designs are also
 authored in that order because a later document leans on an earlier one; it is **not** the
 order in which the code gets built, which is the separate axis described above. Inserting
 a module renumbers the tail, which is a deliberate act.

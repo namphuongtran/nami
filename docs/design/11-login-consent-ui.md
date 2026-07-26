@@ -22,8 +22,8 @@ it renders:
 - **Protocol** (authorize / consent / end-session pass-through, `prompt=none` errors,
   single-token revocation) to the core protocol server (04).
 - **Auth backend** (the `SignInManager` / `UserManager` calls, server-side sessions,
-  external federation, the claims contract, the change-email flow and policy) to user
-  management (08).
+  the change-email flow and policy) to user management (08), and **external federation
+  with the canonical claims contract** to (09).
 - **Email landing pages** (reset / confirm anti-enumeration timing, per-purpose token
   lifespans, the `en`-floor i18n chain) to the email subsystem (10).
 - **Audit** to (03), **step-up enforcement and dual-control** to (07), and the **schema**

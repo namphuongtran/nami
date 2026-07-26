@@ -78,7 +78,7 @@ flowchart LR
 | B2 | App tier to data tier | The application runs under a **de-privileged** role and row-level security is enforced at this crossing, not above it |
 | B3 | **Tenant to tenant** | The sharpest one, because it is **logical rather than physical**: in Pool mode one database and one host serve many tenants, so the boundary exists only as the tenant claim, the per-tenant issuer, the query filter, and row-level security. Nothing physical will catch a mistake here |
 | B4 | Control plane to data plane | Privileged mutation through the admin surface versus the token and authorize hot path |
-| B5 | To external parties (v2) | Outbound federation and outbound events, where trust ends |
+| B5 | To external parties | Outbound federation and outbound events, where trust ends. **Federation crosses it in v1**, because the static host-level external-IdP set ships in v1 (ADR-0002); what is v2 is per-tenant self-service federation (ADR-0034) and outbound identity events |
 
 ## 2. Assets
 
@@ -100,7 +100,7 @@ flowchart LR
 | S2 | Client impersonation with a stolen identifier | A2, A6 | Confidential clients authenticate; public clients require PKCE; sender-constrained tokens bind to a key or certificate (ADR-0009, ADR-0014) | High. Residual is secret hygiene at the client |
 | S3 | Replay of a captured proof or token | A2 | Proof replay set, checked and inserted cross-node, fail-closed; a bound token presented as a bare Bearer is rejected (ADR-0014) | High. Residual is a bounded window if the replay set is lost without durability (ADR-0074) |
 | S4 | A token minted for one tenant accepted as another | A4, A2 | **Issuer and tenant binding, never the signature**, because a Pool keyset is shared (ADR-0033, ADR-0049) | **Critical.** Proven rather than argued by spike A-7 |
-| S5 | Account takeover through external-IdP linking (v2) | A3 | Federated linking policy and issuer verification on the authorization response (ADR-0002, ADR-0034) | Medium. Linking policy is a Security ratification item |
+| S5 | Account takeover through external-IdP linking | A3 | Linking keyed on `(provider, subject)` with an unverified email never a join key, plus issuer verification on the authorization response and correlation state bound to the initiating scheme (ADR-0002 in v1, tightened for per-tenant providers by ADR-0034) | Medium. **This is a v1 threat**: ADR-0002 ships the linking rule as a binding v1 requirement with a v1 test obligation. Linking policy is a Security ratification item |
 
 ## 4. Tampering
 

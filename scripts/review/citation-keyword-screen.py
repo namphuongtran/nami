@@ -32,10 +32,13 @@ DESIGN = ROOT / "docs" / "design"
 ADR_REF = re.compile(r"ADR-(\d{4})")
 TICKED = re.compile(r"`([^`]+)`")
 # Identifiers too generic to carry information about whether the pairing is right.
+# Entries MUST be lowercase: the membership test lowercases the candidate, so a mixed-case
+# entry can never match. "vX.Y.Z" and "CONTRIBUTING.md" sat here for a batch doing nothing,
+# and both kept showing up in the report they were added to suppress.
 NOISE = {
     "true", "false", "null", "text", "uuid", "jsonb", "bytea", "int", "boolean",
     "timestamptz", "src/", "public", "draft", "reviewed", "planned", "at+jwt",
-    "nami.", "vX.Y.Z", "CONTRIBUTING.md", "README.md", "main", "true.", "false.",
+    "nami.", "vx.y.z", "contributing.md", "readme.md", "main", "true.", "false.",
 }
 
 
@@ -44,11 +47,86 @@ def adr_text(number: str) -> str | None:
     return hits[0].read_text() if hits else None
 
 
+def split_outside_code(line: str) -> list[str]:
+    """Split on sentence punctuation, but never inside a backticked span.
+
+    Splitting blindly broke on a claim value that contains a colon,
+    `memberships_truncated: true`, because the split landed inside the code span and left
+    the fragment with an odd number of backticks. The identifier regex then paired the
+    wrong backticks and reported half a table row as an "identifier", flagging a citation
+    that was correct. A false positive is a defect in the checker, and this was its cause.
+    """
+    parts, buf, in_code = [], [], False
+    i = 0
+    while i < len(line):
+        ch = line[i]
+        if ch == "`":
+            in_code = not in_code
+            buf.append(ch)
+        elif not in_code and ch == "|":
+            # A table cell is its own claim. Treating a whole row as one unit paired an
+            # ADR cited in one cell with identifiers named in another, which is a real
+            # mis-pairing report about a correct document.
+            parts.append("".join(buf))
+            buf = []
+        elif not in_code and ch in ".;:" and i + 1 < len(line) and line[i + 1].isspace():
+            buf.append(ch)
+            parts.append("".join(buf))
+            buf = []
+            while i + 1 < len(line) and line[i + 1].isspace():
+                i += 1
+        else:
+            buf.append(ch)
+        i += 1
+    if buf:
+        parts.append("".join(buf))
+    return parts
+
+
+def blocks(text: str) -> list[tuple[int, str]]:
+    """Blank-line-separated blocks, newlines flattened, keeping the first line number.
+
+    Reading line by line was the first version and it was wrong for the same reason the
+    drift screen's first version was: this layer wraps prose at about 88 characters, so a
+    backticked identifier can open on one line and close on the next. The line-wise reader
+    then saw an odd number of backticks and paired the wrong ones, reporting the prose
+    *between* two code spans as an identifier. Blocks make a wrapped span whole again.
+
+    A fenced block is **not** a block in this sense. Joining a DDL statement or a mermaid
+    diagram into one unit produced identifiers hundreds of characters long, which is noise
+    that buries the real findings. Inside a fence each line stands alone instead, so an
+    `// ADR-0013` comment next to a claim name is still checked while the diagram is not.
+    """
+    out: list[tuple[int, str]] = []
+    start, buf, in_fence = 1, [], False
+    for lineno, line in enumerate(text.split("\n"), 1):
+        if line.lstrip().startswith("```"):
+            if buf:
+                out.append((start, " ".join(buf)))
+                buf = []
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            if line.strip():
+                out.append((lineno, line.strip()))
+            continue
+        if line.strip():
+            if not buf:
+                start = lineno
+            buf.append(line.strip())
+        elif buf:
+            out.append((start, " ".join(buf)))
+            buf = []
+    if buf:
+        out.append((start, " ".join(buf)))
+    return out
+
+
 def sentences(text: str) -> list[tuple[int, str]]:
     """Split into sentence-ish units keeping a line number, good enough for prose."""
     out: list[tuple[int, str]] = []
-    for lineno, line in enumerate(text.split("\n"), 1):
-        for part in re.split(r"(?<=[.;:])\s+", line):
+    for lineno, block in blocks(text):
+        for part in split_outside_code(block):
             if part.strip():
                 out.append((lineno, part))
     return out

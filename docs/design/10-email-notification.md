@@ -552,4 +552,4 @@ Pre-GA checklist (ADR-0008) is where they land.
 
 ---
 
-[Prev: User management and authentication](08-user-management.md) · [Index](README.md) · Next: [Login, consent, and logout UI](11-login-consent-ui.md)
+[Prev: Federation and the claims profile](09-federation-and-claims-profile.md) · [Index](README.md) · Next: [Login, consent, and logout UI](11-login-consent-ui.md)
