@@ -27,9 +27,9 @@ i18n, bounce/complaint suppression and webhook ingestion, per-purpose token life
 and the delivery slice of change-email.
 
 Out of scope: the schema (02 is the SSOT for `OutboxEmail` and `SuppressionEntry`; this
-doc references it and owns behavior only), the change-email *flow and policy* (06), the
-step-up *enforcement* that gates change-email (05), the audit sink internals (03), and
-the reset/confirm UI pages (08).
+doc references it and owns behavior only), the change-email *flow and policy* (08), the
+step-up *enforcement* that gates change-email (07), the audit sink internals (03), and
+the reset/confirm UI pages (11).
 
 ## Decisions realized
 
@@ -52,7 +52,7 @@ the reset/confirm UI pages (08).
 | Fact | Consequence |
 |---|---|
 | Two different interfaces exist: the legacy `IEmailSender` (one method, called only by scaffolded Razor) and `IEmailSender<TUser>` (8.0+, three methods, called by Identity infrastructure for confirm/reset) | Implement `IEmailSender<TUser>` as the integration point (it carries `TUser`, so branding/i18n can key off tenant and locale); implementing only the legacy one means confirm/reset never send |
-| `IEmailSender<TUser>` exposes `SendConfirmationLinkAsync`, `SendPasswordResetCodeAsync`, `SendPasswordResetLinkAsync`; we do not map `MapIdentityApi` on the authorization-server host (decision recorded in 06 / user-management) | Reset uses the **link-style** path with a self-minted token; the `MapIdentityApi` reset-code path does not exist on this host |
+| `IEmailSender<TUser>` exposes `SendConfirmationLinkAsync`, `SendPasswordResetCodeAsync`, `SendPasswordResetLinkAsync`; we do not map `MapIdentityApi` on the authorization-server host (decision recorded in 08 / user-management) | Reset uses the **link-style** path with a self-minted token; the `MapIdentityApi` reset-code path does not exist on this host |
 | The default (no sender registered) is a no-op that renders the link to the browser (test only) | A real adapter is mandatory; `DisplayConfirmAccountLink = false` in production |
 | Tokens come from `DataProtectorTokenProvider`; `DataProtectionTokenProviderOptions.TokenLifespan` defaults to one day | One day is too long for a security flow; subclass per purpose (below), never change the global default |
 | Data-protection tokens contain `+`, `/`, `=` that corrupt in a URL | `WebEncoders.Base64UrlEncode` on mint and `Base64UrlDecode` on consume; this is the most common "invalid token" bug |
@@ -445,7 +445,7 @@ single-use).
 ## Change-email: the delivery slice
 
 The change-email flow, policy, and its four-branch test are owned by the user-management
-design (06): step-up (`acr` >= aal2) before initiate, verify the new address before the
+design (08): step-up (`acr` >= aal2) before initiate, verify the new address before the
 switch takes effect, and on completion rotate the `SecurityStamp` (so the 1-2 minute
 `ValidationInterval` forces re-login) and revoke the refresh-token family. This subsystem
 owns only the *delivery* mechanics of two of those obligations:

@@ -18,7 +18,7 @@ In scope: project graph and references, the ports catalog, composition and the
 fluent builder, the configuration layer, versioning and package management, health
 and first-run, and the CI gate set. Out of scope (owned by later designs): the
 concrete schema and tenancy internals (02), the protocol wiring (04), and key
-rotation internals (09); this doc creates their homes and seams.
+rotation internals (12); this doc creates their homes and seams.
 
 ## Decisions realized
 

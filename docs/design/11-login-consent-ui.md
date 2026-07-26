@@ -23,10 +23,10 @@ it renders:
   single-token revocation) to the core protocol server (04).
 - **Auth backend** (the `SignInManager` / `UserManager` calls, server-side sessions,
   external federation, the claims contract, the change-email flow and policy) to user
-  management (06).
+  management (08).
 - **Email landing pages** (reset / confirm anti-enumeration timing, per-purpose token
-  lifespans, the `en`-floor i18n chain) to the email subsystem (07).
-- **Audit** to (03), **step-up enforcement and dual-control** to (05), and the **schema**
+  lifespans, the `en`-floor i18n chain) to the email subsystem (10).
+- **Audit** to (03), **step-up enforcement and dual-control** to (07), and the **schema**
   (`TenantBranding`, `ServerSideSessions`, the OpenIddict `Application`) to (02, the SSOT).
 
 In scope: the interaction service, the page catalog, consent/grants UI, the single-logout
@@ -123,14 +123,14 @@ external provider redirects straight through); and a client display ("sign in to
 «AppName»") from `IOpenIddictApplicationManager.FindByClientIdAsync` then
 `GetDisplayNameAsync`, with the external-provider list from `IAuthenticationSchemeProvider`.
 
-Two backend contracts the page must honor (owned by 06): sign-in stamps `amr` via
+Two backend contracts the page must honor (owned by 08): sign-in stamps `amr` via
 `SignInWithClaimsAsync(user, isPersistent, [amr=pwd/otp/mfa])` with `auth_time` from
 `IssuedUtc`; and at the anonymous-to-authenticated primary auth the page mints a **new
 `sid`** and a new ticket-store row, discarding the pre-login session key (session-fixation
 defense). The external-button enumeration is the single v1-to-v2 touch point for dynamic
 per-tenant IdPs: v1 shows the static host-level set, and when v2 lands exactly one
 call-site routes through `IExternalProviderQuery.GetForTenantAsync` (the seam is
-deliberately not planted in v1, doc 32 / ADR-0034).
+deliberately not planted in v1, ADR-0034).
 
 ### Consent and grants
 
@@ -155,11 +155,11 @@ periodic re-consent. On grant the page emits a hash-chained **consent receipt** 
 the audit sink (subject, client, tenant, scope set, purpose, legal basis, policy-version
 hash, timestamp, locale, method) and `consent.revoked` on revoke (ADR-0053 §F); the
 receipt schema and consent-policy-version governance are owned by the data-subject-rights
-design (13) and its ADR, referenced here, not defined here.
+design (17) and its ADR, referenced here, not defined here.
 
 Client branding on the consent (and login) screen reads the client display name from the
 native `DisplayName` descriptor field and the `logo_uri` / `client_uri` from
-`Application.Properties` (the same JSON-dict mechanism used for `cors_origins`, doc 03 /
+`Application.Properties` (the same JSON-dict mechanism used for `cors_origins`, 04 /
 13); no new client column is introduced, and the exact read path is confirmed against 02.
 The logo URL is validated https-only with a mixed-content / SSRF guard on render. Scope
 display metadata (DisplayName, Description, Emphasize, Required, Checked) comes from
@@ -171,14 +171,14 @@ Front-channel iframe logout is dropped as a dead dependency (third-party-cookie 
 V11); end-session is a top-level redirect. The logout page invokes the backend (cookie
 sign-out, OIDC end-session, server-side session revoke) and initiates the **back-channel
 fan-out**, which this design owns. The fan-out reuses the shared outbox chassis from the
-email design (07): it stores delivery *intent* (`sid`, `sub`, `client_id`, `backchannel_logout_uri`)
+email design (10): it stores delivery *intent* (`sid`, `sub`, `client_id`, `backchannel_logout_uri`)
 over the `SessionParticipatingClients` rows, mints a fresh `logout_token` on each send
 (`typ=logout+jwt`, the `backchannel-logout` events member, `sub` and/or `sid`, `iat`,
 `jti` replay guard, no `nonce`, `exp` under about two minutes), claims with `SKIP LOCKED`,
 retries with backoff (attempt cap about five, total about ten minutes), and dead-letters.
 Interactive logout never blocks on the fan-out.
 
-"Log out everywhere" maps to the built `RevokeBySubjectAsync` (owned by 06 / revocation
+"Log out everywhere" maps to the built `RevokeBySubjectAsync` (owned by 08 / revocation
 propagation 10) plus session revocation, never the single-token `/connect/revoke` endpoint.
 Force-logout is a ticket-store row removal, effective on the next request on any node with
 the 1-2 minute validation-interval backstop. First-party SPAs delegate logout to the BFF,
@@ -228,13 +228,13 @@ distinct checkboxes** (remember-me = `isPersistent`, remember-this-machine =
 from the `otpauth://` provisioning URI then `VerifyTwoFactorTokenAsync` then
 `SetTwoFactorEnabledAsync`), recovery codes (`GenerateNewTwoFactorRecoveryCodesAsync`,
 display-once, regenerate), change-password, change-email, and profile edit. Change-email
-enforces the four-branch hardening whose flow is owned by 06 (step-up before initiate,
+enforces the four-branch hardening whose flow is owned by 08 (step-up before initiate,
 notify the old address with a no-token tripwire, verify the new address before the switch,
 rotate the security stamp on completion); the UI enforces the branches and defers the
 flow. Self-service uses custom endpoints; `MapIdentityApi` is deliberately not mapped.
 
 The **reset / confirm** pages preserve the constant-time anti-enumeration contract owned
-by 07, Base64Url-decode the token, land on the per-purpose lifespans (reset about 1h), and
+by 10, Base64Url-decode the token, land on the per-purpose lifespans (reset about 1h), and
 render explicit success versus expired/invalid states with a request-new link.
 
 ### Key libraries and patterns
@@ -281,7 +281,7 @@ sequenceDiagram
   actor U as User
   participant AZ as authorize (pass-through)
   participant LG as /Account/Login
-  participant SM as SignInManager (06)
+  participant SM as SignInManager (08)
   participant CO as /Consent
 
   U->>AZ: GET /connect/authorize
@@ -386,7 +386,7 @@ Accept/Deny, Logout, 2FA, Register) via `@Html.AntiForgeryToken()` plus
 machine-to-machine OAuth endpoints (`/connect/token`, and the authorize entry) carry
 `[IgnoreAntiforgeryToken]` and must not have antiforgery. This server-rendered-form profile
 is distinct from OAuth-layer state/PKCE CSRF and from the BFF's JS/SPA CSRF profile (custom
-header plus strict CORS, doc 30 / ADR-0029). The reference `velusia.cs` shows exactly this
+header plus strict CORS, ADR-0029). The reference `velusia.cs` shows exactly this
 split (`[ValidateAntiForgeryToken]` on Accept/Deny/Logout, `[IgnoreAntiforgeryToken]` on
 token/authorize).
 
@@ -401,7 +401,7 @@ The correlation cookie is `SameSite=None` because the external callback is a cro
 POST/redirect; the SSO cookie stays `Lax` because it still transmits on a top-level POST
 navigation. This reconciles with `response_mode=form_post` (a cross-site POST-back needs
 `SameSite=None; Secure` on any cookie read in that request). The invariant is enforced by
-the fail-fast `core-cookie-attributes` startup self-check (09) and an OWASP ASVS L2 V3 test
+the fail-fast `core-cookie-attributes` startup self-check (12) and an OWASP ASVS L2 V3 test
 (which also asserts the `sid` is reissued after primary auth), per ADR-0043 / ADR-0062.
 
 ### Open-redirect guard
@@ -425,7 +425,7 @@ Two branding tiers must not be conflated: tenant-level (Login/Logout/StepUp show
 tenant's IdP this is, resolved by host/path from `TenantBranding`) and client-level
 (Consent shows which app is asking, from the OpenIddict `Application`). A default Bootstrap
 5 theme ships so a deployment runs out of the box. Consumers restyle without forking core
-through three override points (doc 28 §5.3bis): config-level (logo/color/name via
+through three override points (adopted from the design corpus's packaging document): config-level (logo/color/name via
 config/env), Razor **view-override** (a consumer `_Layout` or view wins over the default by
 `RazorViewEngine` precedence), and a `wwwroot/theme/` assets folder. A branding change is
 an `admin_config_change` security event committed synchronously in the same transaction
@@ -437,7 +437,7 @@ https-only with SSRF and mixed-content guards.
 Culture is resolved from `Accept-Language` (`RequestLocalizationMiddleware`) with a
 per-tenant default-culture override, and an explicit user culture cookie wins over both.
 All Razor pages use `.resx` plus `IStringLocalizer<T>` (no hard-coded strings; validation
-messages localized too). The fallback chain is the same as the email subsystem (07):
+messages localized too). The fallback chain is the same as the email subsystem (10):
 requested culture then neutral culture then the `en` floor that always renders, warning
 once on a missing key. The UI and email render the same language within one flow. Supported
 cultures are configuration-driven per deployment; RTL is out of scope for v1.
@@ -518,7 +518,7 @@ and all copy passes through localization.
 - **Deferred to other docs:** the CSP policy values (hardening phase); the consent-receipt
   schema (13 / ADR-0053).
 - **Deferred to v2:** dynamic per-tenant IdP (the single login call-site through
-  `IExternalProviderQuery`, doc 32 / ADR-0034); logout extensibility (ADR-0019).
+  `IExternalProviderQuery`, ADR-0034); logout extensibility (ADR-0019).
 
 ## References
 

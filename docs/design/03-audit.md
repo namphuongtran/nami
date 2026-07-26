@@ -18,8 +18,8 @@ Phase 03 onward.
 In scope: the audit ports and their contract, hash-chain computation, the delivery
 guarantee, the outbox forwarder, the integrity job, PII/erasure reconciliation, and
 the two-lane invariant. Out of scope: the `AuditLog` and outbox **schema** (owned
-by [02-data](02-data.md)), the diagnostics lane (14, observability), the erasure
-saga itself (13), and the concrete SIEM product.
+by [02-data](02-data.md)), the diagnostics lane (19, observability), the erasure
+saga itself (17), and the concrete SIEM product.
 
 ## Decisions realized
 
@@ -89,13 +89,13 @@ The typed catalog covers success **and** the negative paths: `login_success`,
 `authz_decision`, `dual_control_approval`, `key_rotation`, `force_logout`,
 `mass_revoke`, `key_purge`, `erasure`, `degraded_mode_enabled`, `break_glass`,
 `client_auth_failure`, and `unhandled_exception`. Each event type has a fixed payload
-schema and feeds the abuse-alert rules (14). The consent receipt (`consent_grant`, with
+schema and feeds the abuse-alert rules (19). The consent receipt (`consent_grant`, with
 `consent_revoke` on revoke) carries a fixed payload: subject, `client_id`, tenant,
 scope set, purpose, legal basis, `policy_version_hash`, consent timestamp, UI locale, and
 method, as the immutable historical record, distinct from the mutable `Authorization`
 state (ADR-0053, 13). On erasure the saga appends a `subject.erased` tombstone (subject
 ref, erased fields, retained-under basis) as chained proof-of-erasure; the wider
-data-subject-rights event set (rectification, restriction, DSAR fulfilment) is owned by 13.
+data-subject-rights event set (rectification, restriction, DSAR fulfilment) is owned by 17.
 
 ### Hash-chain
 
@@ -132,7 +132,7 @@ kept minimal and everything I/O-heavy runs in the background:
   Fire-and-forget is forbidden.
 * **No duplicated delivery.** Each forwarded entry carries an idempotency key, so an
   at-least-once retry produces no duplicate record at the destination (an idempotent
-  target makes delivery effectively-once), matching the shared outbox chassis (07),
+  target makes delivery effectively-once), matching the shared outbox chassis (10),
   which dedupes on a unique idempotency key. The `AuditLog` row is the single durable
   record and the outbox is a transient forwarding queue keyed to the entry; whether
   that row copies the payload (as the shared chassis does) or references the
@@ -152,7 +152,7 @@ would drop the fail-closed guarantee and would be an ADR-0008 change.
 
 A periodic integrity job re-walks the chain, asserts each `RecordHash`, and anchors
 a checkpoint hash into the WORM/SIEM destination. The **audit lane is separate from
-the diagnostics lane** (`ILogger` plus OpenTelemetry, doc 14): audit never routes
+the diagnostics lane** (`ILogger` plus OpenTelemetry, 19): audit never routes
 through the telemetry pipeline, which lacks tamper-evidence and a delivery
 guarantee. The two are joined only by a correlation/trace id. An adapter that
 silently drops (for example an in-memory sink that discards on overflow) violates
@@ -210,7 +210,7 @@ mechanism behind it is an `IAuditChainScrubber` with an ordered model: crypto-sh
 runtime default; **PII-outside-chain** (an opaque `SubjectRef` plus a separately deletable
 mapping) is the schema design target, applied wherever an event need not embed PII; and
 **anonymise-in-place** is a deferred, opt-in `NotImplemented` stub, never the default. The
-erasure saga that drives it is owned by 13.
+erasure saga that drives it is owned by 17.
 
 ## Runtime flows
 

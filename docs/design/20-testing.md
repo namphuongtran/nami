@@ -180,7 +180,7 @@ flowchart TD
   C --> G
   S --> G
   G -->|no| X["fail the build"]:::bad
-  G -->|yes| M["mergeable; load/SLO gate runs separately (14)"]:::port
+  G -->|yes| M["mergeable; load/SLO gate runs separately (19)"]:::port
   classDef ok fill:#d5e8d4,stroke:#82b366,color:#000000;
   classDef bad fill:#f8cecc,stroke:#b85450,color:#000000;
   classDef port fill:#dae8fc,stroke:#6c8ebf,color:#000000;
@@ -216,7 +216,7 @@ separate job), and that the taxonomy is reconciled to the real test projects at 
 
 ## References
 
-- ADRs: ADR-0060 (testing strategy), ADR-0062 (OWASP ASVS baseline), ADR-0058 (Separation of Concerns), ADR-0021/ADR-0030 (contract-regression per bump), ADR-0024 (architecture tests), ADR-0025 (Testcontainers/e2e/CI), ADR-0041 (load/SLO gate, owned by 14), ADR-0049 (tenant-isolation binding), ADR-0026 (permissive dependencies), ADR-0014 (FAPI de-scope).
+- ADRs: ADR-0060 (testing strategy), ADR-0062 (OWASP ASVS baseline), ADR-0058 (Separation of Concerns), ADR-0021/ADR-0030 (contract-regression per bump), ADR-0024 (architecture tests), ADR-0025 (Testcontainers/e2e/CI), ADR-0041 (load/SLO gate, owned by 19), ADR-0049 (tenant-isolation binding), ADR-0026 (permissive dependencies), ADR-0014 (FAPI de-scope).
 - Design docs: [15 CI/CD and deployment](21-cicd-and-deployment.md) (the pipeline that runs these suites), [14 observability](19-observability-capacity-slo.md) (load/SLO gate, canary, chaos), [13 tenant lifecycle](18-tenant-lifecycle.md) (migration CI checks), [01 foundations](01-foundations.md) (the foundational CI gates), and the feature docs cited in the acceptance-test catalog.
 - [Architecture](../architecture/README.md); [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 

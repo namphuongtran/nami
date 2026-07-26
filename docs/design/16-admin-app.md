@@ -20,7 +20,7 @@ the front-end security (antiforgery, CSP, no-token-in-browser, back-channel logo
 Out of scope, referenced not redefined: the API surface, DTOs, CRUD semantics, dual-control
 saga, RBAC, bootstrap, and break-glass ([Admin API](15-admin-api.md)); the step-up *enforcement*
 and the challenge *page mechanics* (05 / 08); the BFF package internals (ADR-0029 / the BFF
-design). The end-user login/consent UI (08) is a different application.
+design). The end-user login/consent UI (11) is a different application.
 
 ## Decisions realized
 
@@ -85,9 +85,9 @@ package (which must not depend on the `Admin.*` assemblies).
 | Clients (Applications) | list/search per tenant; grouped-checkbox Permissions form; secret-rollover wizard (parallel keys, no downtime); CORS-origins editor | hardest screen |
 | Scopes | CRUD + resources/audience | |
 | Grants and Tokens | list by subject/client; single revoke; revoke-all → proposal | |
-| Users | CRUD, lock/unlock, reset; **force-logout**; lifecycle **Invite** (+ pending-approval state), **Disable/Enable**, **Offboard** (dual-control, irreversible warning); **Passkeys panel** (metadata + remove-confirm) | lifecycle in 06 |
+| Users | CRUD, lock/unlock, reset; **force-logout**; lifecycle **Invite** (+ pending-approval state), **Disable/Enable**, **Offboard** (dual-control, irreversible warning); **Passkeys panel** (metadata + remove-confirm) | lifecycle in 08 |
 | Roles | CRUD + claims | |
-| Tenants | registry; provision wizard (→ proposal, per-step status); **Suspend/Resume** (→ proposal, semantics warning); `Identifier` read-only post-provision; Memberships editor; Delegated-admin grant picker (capability + subtree + expiry; dangerous → proposal warning) | bodies in 13 |
+| Tenants | registry; provision wizard (→ proposal, per-step status); **Suspend/Resume** (→ proposal, semantics warning); `Identifier` read-only post-provision; Memberships editor; Delegated-admin grant picker (capability + subtree + expiry; dangerous → proposal warning) | bodies in 18 |
 | Branding | design-token form (colors/fonts), https-only logo URL (ProblemDetails validation), live preview | |
 | Approval Inbox | proposals awaiting me / mine / history; diff + justification + `TargetETag`; **Approve = step-up**; Reject/Cancel | dual-control core |
 | Audit viewer | taxonomy filter; chain-verify badge; controlled export (small filtered = direct, bulk = dual-control) | |

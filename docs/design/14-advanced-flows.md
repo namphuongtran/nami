@@ -25,11 +25,11 @@ decisions. This design **declares** the DPoP packages (`Nami.Identity.DPoP`,
 
 Out of scope, referenced not redefined: sender-constrained **mTLS** (04 owns it in full;
 this design adds nothing but a pointer to the trusted-proxy ratification gate); the
-token-exchange **`act`**/initiator resolution and confused-deputy handling (05);
-**step-up** authentication, which doc 07 lists as its largest build but which is already
-allocated across the producer (06), the enforcement (05), and the UI (08), this design
+token-exchange **`act`**/initiator resolution and confused-deputy handling (07);
+**step-up** authentication, which the design corpus lists as its largest build but which is already
+allocated across the producer (08), the enforcement (07), and the UI (11), this design
 owns **none** of it; the device and step-up **UI** pages and the back-channel logout
-fan-out (08); and the core native-verify flows (04). It adds no database tables.
+fan-out (11); and the core native-verify flows (04). It adds no database tables.
 
 ## Decisions realized
 
@@ -50,7 +50,7 @@ fan-out (08); and the core native-verify flows (04). It adds no database tables.
 | Auth code + PKCE, client credentials, refresh, `iss` (9207), Resource Indicators (8707), exact-match redirect_uri, introspection, revocation, end-session | native, verify + test | 04 (referenced) |
 | Device authorization (RFC 8628) | native grant + **built backoff hardening** | owned here |
 | PAR (RFC 9126) | native + **built anti-flood/enforcement hardening** | owned here |
-| Token exchange (RFC 8693) | native grant wire + **`act` logic built in 05**; **`may_act` de-scoped** as a security decision (ADR-0014) | grant here, logic 05 |
+| Token exchange (RFC 8693) | native grant wire + **`act` logic built in 07**; **`may_act` de-scoped** as a security decision (ADR-0014) | grant here, logic 05 |
 | mTLS-bound tokens (RFC 8705) | native (confidential/M2M) | 04 (referenced) |
 | **DPoP (RFC 9449)** | **built, both issuance and validation** | **owned here** |
 | Back-channel logout | built interim (front-channel is dead) | 08 / 10 (referenced) |
@@ -143,12 +143,12 @@ not their sum). Unlike the general caches, this one is **fail-closed by necessit
 is the authoritative L2 store (a replay set has no durable source to read through to), so
 if the Redis write cannot be confirmed the proof is rejected (`invalid_dpop_proof`), the
 same carve-out class as the email throttle. This is distinct from the distrusted-kid
-denylist (10), which is fail-closed but rebuildable from the database. The port lives in
+denylist (13), which is fail-closed but rebuildable from the database. The port lives in
 `Nami.Identity.Abstractions` (shared by the server and resource packages) and reuses the
-Redis wiring owned by 10 rather than re-wiring it. One consequence to state plainly: the
+Redis wiring owned by 13 rather than re-wiring it. One consequence to state plainly: the
 `jti` check is a per-request, Redis-authoritative hit at the resource-server validation
 path **for DPoP-bound tokens only**: a deliberate proof-of-possession cost, not a
-regression of the core token path's no-mandatory-Redis property (10).
+regression of the core token path's no-mandatory-Redis property (13).
 
 ### Introspection, refresh, nonce, and the fallback
 
@@ -199,7 +199,7 @@ default and a 10-minute lifetime, native `authorization_pending`/`expired_token`
 verification endpoint needs its `Enable*EndpointPassthrough` (the exact builder method name,
 inferred by analogy with the other `Enable*EndpointPassthrough` methods as
 `EnableEndUserVerificationEndpointPassthrough`, is not confirmed in the checked-in reference
-tree, verify on pin, contract-tested per bump, ADR-0021) or the approval page (08) never runs. The gap this design closes: OpenIddict emits **no `interval`** and
+tree, verify on pin, contract-tested per bump, ADR-0021) or the approval page (11) never runs. The gap this design closes: OpenIddict emits **no `interval`** and
 **never returns `slow_down`**, so a client falls back to 5-second polling with no
 server-enforced backoff and no rate limit on unauthenticated device-code polling. The
 hardening is layered:
@@ -236,8 +236,8 @@ breach (the same 429 mechanism as the device endpoint).
 (`subject_token` required, `actor_token` paired, token types in the allowed set). The
 authority logic, `act` emission, subject/actor resolution, delegation-versus-impersonation,
 the confused-deputy rejection, and the Entra-OBO exemption, is **not native** (the engine's
-exchange handler has no `act` logic) and is owned by the authorization design (05). This
-design wires the grant and defers that logic to 05.
+exchange handler has no `act` logic) and is owned by the authorization design (07). This
+design wires the grant and defers that logic to 07.
 
 ## mTLS (referenced)
 
@@ -279,7 +279,7 @@ bugs: immediate single-logout is available only to BFF and back-channel-register
 non-BFF SPA's session is bounded at the access-token TTL, and such SPAs are recommended to
 adopt the BFF); and dynamic per-tenant external IdP federation is deferred post-v1, gated
 on a "no-restart-scheme" feasibility spike (v1 supports multi-tenant identities but not
-per-tenant runtime federation; ADR-0034 / design 32).
+per-tenant runtime federation; ADR-0034; the v2 dynamic-provider design is not in this layer yet).
 
 ## Data touchpoints
 

@@ -32,8 +32,8 @@ versus fail-closed discipline; and the Redis/FusionCache wiring.
 Out of scope, referenced not redefined: the revocation endpoint, entry-validation flags,
 per-client `AccessTokenType`, the introspection result cache, and the 15-minute access TTL
 (04); server-side sessions, `ITicketStore` force-logout, `ValidationInterval`, and the
-session side of `RevokeBySubjectAsync` (06); the key-break-glass trigger and the RS
-validation-key set (09); and the schema (02).
+session side of `RevokeBySubjectAsync` (08); the key-break-glass trigger and the RS
+validation-key set (12); and the schema (02).
 
 ## Decisions realized
 
@@ -83,7 +83,7 @@ is the separate built `RevokeBySubjectAsync`, and family-revoke by `Authorizatio
 native and must not be double-called. `EnableTokenEntryValidation` and
 `EnableAuthorizationEntryValidation` (on `.AddValidation()`) make token and grant checks
 DB-direct, so a revoke on node A is seen by node B on its next validation with no lag; the
-cost is one DB read per validation, measured on the hot path in the capacity design (22).
+cost is one DB read per validation, measured on the hot path in the capacity design (19).
 The introspection result cache (~5 min, owned by 04) is the one caching TTL that trades
 directly against revocation freshness, so its value is reconciled against the revocation
 SLO rather than set independently.
@@ -116,7 +116,7 @@ change-token, un-registering the cert, and evicting JWKS, and references this mo
 The set is **not persisted**: it is Redis-only and rebuildable from `SigningKeys.RevokedAt`
 (02), so this design adds no table. The JWKS/discovery output cache (`AddOutputCache` with
 a Redis backplane, tag-evicted on rotation) is owned here as well; local self-validation
-drops a revoked key through the key-management design's live `IConfigurationManager` (09),
+drops a revoked key through the key-management design's live `IConfigurationManager` (12),
 not through this set.
 
 ### Path f: the config-cache backplane (owned here)
@@ -139,7 +139,7 @@ tenant under the Finbuckle ambient context.
   through to the durable store at higher latency, never a 5xx); security checks fail closed.
   The distrusted-kid set is fail-closed under this general rule, not as a special
   carve-out (the one deliberate carve-out in the resiliency posture is the email throttle,
-  ADR-0038, which is not part of this design). Note the DPoP `jti` replay cache (11) is a
+  ADR-0038, which is not part of this design). Note the DPoP `jti` replay cache (14) is a
   different pattern again: Redis is its **authoritative L2 store** (a replay set has no DB
   backstop to read through to), so it is fail-closed by necessity, not an accelerator in
   front of a durable source.
@@ -255,9 +255,9 @@ replace or alter the internal per-path enforcement in this design, and v1 stays 
   SLO numeric table and error-budget policy (Product/Ops, ADR-0041, Pre-GA checklist).
 - **Break-glass automation sign-off:** the multi-node cache-evict automation designed here
   has its operational sign-off (and the authorized-personnel list) deferred to
-  ADR-0007 (Security, Pre-GA checklist), also flagged in 09.
+  ADR-0007 (Security, Pre-GA checklist), also flagged in 12.
 - **Deferred to v2:** the Shared-Signals/CAEP transmitter and the backend event-bus
-  (ADR-0068 proposed, design 34).
+  (ADR-0068 proposed; the v2 change-event design is not in this layer yet).
 
 ## References
 

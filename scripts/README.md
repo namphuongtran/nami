@@ -44,3 +44,21 @@ line that matched only because of an allowed identifier passes, and a line that 
 carries a genuine mention still blocks. Allowlist entries are matched
 **case-sensitively**: write package identifiers in their canonical casing, which is
 also what the license scan needs.
+
+## review/design-pointer-audit.py (review aid, not a gate)
+
+The detailed-design layer cites sibling documents by bare number in prose ("DPoP
+internals (06)", "owned by 13"). No link checker sees those, so a renumber leaves them
+pointing at documents that still exist and are now the wrong ones. This script dumps
+every such pointer next to the title it resolves to, for a human to read.
+
+It is deliberately **not** part of `check-adrs.sh`. Whether `(06)` should have been
+`(14)` depends on the topic, not the number, so a gate here would pass on exactly the
+bug it was written for and turn an unchecked claim into a confident one. The one
+mechanical thing it does report is a pointer to a number with no row in the design
+index, which is always an error.
+
+```bash
+python3 scripts/review/design-pointer-audit.py            # whole layer
+python3 scripts/review/design-pointer-audit.py docs/design/04-core-protocol.md
+```

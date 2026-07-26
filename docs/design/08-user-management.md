@@ -14,12 +14,12 @@ Identity: the global user model, passkeys/WebAuthn and MFA, the assurance produc
 handler-based external federation with anti-takeover linking, the credential
 hardening baseline, self-service (including change-email hardening), and the user
 lifecycle. It is Phase 04 and produces what the protocol engine (04) and
-authorization (05) consume.
+authorization (07) consume.
 
 In scope: the Identity store, passkeys/MFA/assurance, sessions, federation, claims
 production, credential hardening, self-service, and lifecycle. Out of scope: the
-login/consent/logout UI pages (08), the step-up *enforcement* and dual-control (05),
-the email subsystem mechanics (07), the erasure saga (13), and the schema (02, the
+login/consent/logout UI pages (11), the step-up *enforcement* and dual-control (07),
+the email subsystem mechanics (10), the erasure saga (17), and the schema (02, the
 SSOT).
 
 ## Decisions realized
@@ -27,7 +27,7 @@ SSOT).
 | Decision | What this design applies |
 |---|---|
 | ADR-0028 | Build on ASP.NET Core Identity; native passkeys with an attestation/AAL seam; lifecycle; credential-hardening baseline; `Nami.Identity.Users` |
-| ADR-0013 | Produce `acr` (recomputed per token-request), `amr` (RFC 8176 array), `auth_time` (JSON number); step-up is enforced in 05 |
+| ADR-0013 | Produce `acr` (recomputed per token-request), `amr` (RFC 8176 array), `auth_time` (JSON number); step-up is enforced in 07 |
 | ADR-0003 | Server-side session store (`ITicketStore`): `sid` lifecycle, inactivity 1h / absolute 8h, concurrent-session cap, revoke-denies-authorize/refresh |
 | ADR-0002 | Handler-based external login into the global identity; `(provider, sub)` anti-takeover linking; external-claim allow-list; SSRF; RFC 9207 `iss` |
 | ADR-0005 / ADR-0001 | One `IClaimsProfileService` choke-point (shared with 04); global identity, tenant via membership |
@@ -60,7 +60,7 @@ number (the `long` overload, not a string). This is the canonical claims contrac
 | Claim | Shape | Destination | Consumer |
 |---|---|---|---|
 | `memberships` | JSON array of `{tid, name?, roles?}`, capped ~10 with a `memberships_truncated` flag | id_token | tenant-switcher UI, integrators (full list via self-service when truncated) |
-| `acr` | single string `urn:nami.identity:aal1`/`aal2`/`aal3` (`0` = below-aal1, not for valuable resources) | id_token + access_token | step-up (05), Admin `AcrRequirement` |
+| `acr` | single string `urn:nami.identity:aal1`/`aal2`/`aal3` (`0` = below-aal1, not for valuable resources) | id_token + access_token | step-up (07), Admin `AcrRequirement` |
 | `amr` | JSON array (RFC 8176): `pwd`, `otp`, `mfa`, `hwk`, `swk` (never `passkey`; a federated login records the underlying factor) | id_token | informational (gate on `acr`+`auth_time`, not `amr`) |
 | `auth_time` | JSON number | id_token + access_token | `max_age`/step-up freshness |
 | `idp` | string: external scheme or `local` | id_token | RP and tenant/membership decisions |
@@ -100,7 +100,7 @@ least one fallback (a second passkey, recovery codes, or a password); the last
 recovery path cannot be removed; a lost-all-devices flow uses email-verified
 recovery plus a forced step-up re-enroll and is never weaker than the factor it
 replaces; every recovery step is rate-limited and audited, and admin-assisted
-recovery is dual-control (05).
+recovery is dual-control (07).
 
 ### MFA
 
@@ -127,7 +127,7 @@ refresh are denied when the session is revoked (revocation deletes the session r
 so row-absence is the revoked state the deny check tests). The interim
 back-channel-logout emitter and the first-party-SPA BFF receiver (ADR-0019) build on
 this store and consume the `sid`/`logout_token` contract, their fan-out owned by the
-logout design (08). The `sid` is stable across passive
+logout design (11). The `sid` is stable across passive
 refresh and **rotated on step-up or re-authentication**. At primary auth
 (anonymous to authenticated) a **new `sid` and a new ticket row are minted and the
 pre-login session handle discarded** (session-fixation defense); an anonymous
@@ -200,7 +200,7 @@ dual-control and Art.17/DPO-gated, not automatic per offboard); every transition
 audited with provenance (ADR-0008). The `pending-approval` state is gated by
 `CanSignInAsync` via a `Membership` status marker (approval is tenant-scoped even
 though identity is global) and is enabled by a per-tenant `RequireInviteApproval`
-flag; approval reuses the dual-control saga (05) as a constructive-action variant (a new
+flag; approval reuses the dual-control saga (07) as a constructive-action variant (a new
 `approve-user-invite` `ActionType` plus its `IProposalExecutor`, with the saga executor
 structure unchanged), and the invite-expiry timer is reused (not a second clock).
 
@@ -351,7 +351,7 @@ sequenceDiagram
 ### Password reset
 
 The Identity side; the email delivery, anti-enumeration timing, and token lifespan
-are the email subsystem (07).
+are the email subsystem (10).
 
 ```mermaid
 sequenceDiagram
@@ -425,7 +425,7 @@ stateDiagram-v2
 * **Backup-eligible passkey**: a synced credential is never rated aal3.
 * **Login-error uniformity**: lockout and disabled-account login failures return the
   same generic invalid-credentials response as a bad password (no locked/disabled
-  oracle); the lockout notice is emailed, not shown (05).
+  oracle); the lockout notice is emailed, not shown (07).
 
 ## Security considerations
 
@@ -442,7 +442,7 @@ stateDiagram-v2
 * Every lifecycle transition and recovery step is audited with provenance
   (ADR-0008); offboard invokes the gated erasure saga, which revokes live access
   first and preserves the audit hash-chain by crypto-shredding PII and appending a
-  tombstone rather than deleting the row (13, ADR-0016).
+  tombstone rather than deleting the row (17, ADR-0016).
 
 ## Testing strategy
 

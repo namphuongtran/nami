@@ -24,7 +24,7 @@ bootstrap/DR sequence, break-glass, store access, and key observability.
 
 Out of scope, referenced not redefined: the `SigningKeys` and `DataProtectionKeys`
 schema (02, the SSOT); the JWE `alg`/`enc` pins, the no-symmetric-signing-key startup
-self-check, and the per-tenant inferred issuer (04); the numeric SLO table (14); the
+self-check, and the per-tenant inferred issuer (04); the numeric SLO table (19); the
 `SubjectDek` crypto-shred consumer (03/13); and the break-glass *operational policy*
 (authorized personnel, KEK custody) which is deferred to ADR-0007/0009 ratification.
 
@@ -39,7 +39,7 @@ self-check, and the per-tenant inferred issuer (04); the numeric SLO table (14);
 | ADR-0012 | Bootstrap sequence (DP keyring before first key), auto-seed the first key with immediate activation, `ProtectKeysWithCertificate` default, restore-both |
 | ADR-0033 | One keyset per running instance; pool-group (Pool) vs tenant (Silo) `KeyScope`; scope-aware store with a centralized predicate; the Pool-shared-keyset accepted risk |
 | ADR-0009 / ADR-0021 | No static store secret (least-privilege / workload identity); every access audited; the rotation monitor is a catalogued version-sensitive seam with a per-bump contract test |
-| ADR-0039 / ADR-0049 | Break-glass triggers the fail-closed distrusted-kid module (owned by 10) for RS propagation under 60s; the shared-Pool-key mitigation (RS validates signature + issuer + audience + tenant) |
+| ADR-0039 / ADR-0049 | Break-glass triggers the fail-closed distrusted-kid module (owned by 13) for RS propagation under 60s; the shared-Pool-key mitigation (RS validates signature + issuer + audience + tenant) |
 
 ## OpenIddict facts this design is built on (verified 7.5, pinned seams)
 
@@ -345,9 +345,9 @@ Key-health metrics: a `key_rotations` counter, a `keys_loaded` gauge, and a
 key-rotation runbook; a JWKS-availability burn alert pages (JWKS down breaks all
 verification). The rotation runner emits a last-successful-run heartbeat, alerting when
 stale beyond two intervals. JWKS and discovery are output-cached and tag-evicted on
-rotation (the output cache and its Redis backplane are owned by 10; they are about a
+rotation (the output cache and its Redis backplane are owned by 13; they are about a
 quarter of traffic and effectively free from
-cache). The JWKS-availability SLO is 99.99%; the full numeric SLO table is owned by 14.
+cache). The JWKS-availability SLO is 99.99%; the full numeric SLO table is owned by 19.
 
 ## Security considerations
 
@@ -380,7 +380,7 @@ cache). The JWKS-availability SLO is 99.99%; the full numeric SLO table is owned
 - **Readiness probe:** asserts the active `kid` matches the expected persisted `kid`, not a
   bare round-trip.
 - **Distrusted-kid trigger:** revoking a key sets `RevokedAt` and drops it from the live
-  validation set; the cross-node propagation and fail-closed behavior are verified in 10.
+  validation set; the cross-node propagation and fail-closed behavior are verified in 13.
 - **X509-only ordering:** a startup assertion rejects a non-X509 rotation signing key.
 - **Cache correctness:** `CurrentValue` read many times per request does not regenerate a
   key each time (the `Lazy` cache holds).

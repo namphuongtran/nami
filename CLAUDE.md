@@ -87,8 +87,19 @@ later reader cannot tell the two apart.
 - **Say "not verified" out loud.** Uncertainty is reportable and cheap; a fabricated
   citation is neither. If a fact cannot be sourced, either leave it out or mark it
   explicitly as an open item.
+- **A stated value is not a known default.** A source that says "X is set to Y" tells you
+  nothing about what X would be if nobody set it. Writing "Y is set explicitly because the
+  default is weaker" is a *second* claim needing a *second* source, and it is the shape
+  self-generated errors take here: the source stated a value, the rationale was invented
+  around it. Read the default, or say only what the source says.
+- **Renumbering invalidates every cross-reference, including the prose ones.** A `(07)`
+  written in text is a citation with no link checker behind it. After any renumber, re-read
+  each numeric pointer against the index and confirm the *topic* matches, since a pointer
+  to a file that exists but is the wrong one passes every mechanical check.
 - **A false positive in a checker is a defect in the checker**, not noise to work
   around, and the same holds for a claim that survives only because nobody checked it.
+  A checker that stays green on the bug it was written for is worse than none, because it
+  converts an unchecked claim into a confident one.
 
 ## Non-negotiable content rules
 

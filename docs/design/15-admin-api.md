@@ -23,12 +23,12 @@ access; the first-admin bootstrap and the break-glass path; and admin NFR (secur
 performance, availability).
 
 Out of scope, referenced not redefined: the authorization **decision** and the dual-control
-**gating rule** (05); the user lifecycle, force-logout, and sessions (06); the tenant and
-erasure saga **bodies** (13, entered here); the **schema** (02, the SSOT); the audit catalog
-(03); the numeric SLO table (14); the front end ([Admin App](16-admin-app.md)); and the
-**key**-compromise break-glass (09, distinct). Dynamic per-tenant external IdP management is
-**v2** (ADR-0034 / design 32), so there is no IdentityProvider CRUD in v1, external IdPs are
-static host-level configuration (06).
+**gating rule** (07); the user lifecycle, force-logout, and sessions (08); the tenant and
+erasure saga **bodies** (18 and 17, entered here); the **schema** (02, the SSOT); the audit catalog
+(03); the numeric SLO table (19); the front end ([Admin App](16-admin-app.md)); and the
+**key**-compromise break-glass (12, distinct). Dynamic per-tenant external IdP management is
+**v2** (ADR-0034), so there is no IdentityProvider CRUD in v1, external IdPs are
+static host-level configuration (08).
 
 ## Decisions realized
 
@@ -36,7 +36,7 @@ static host-level configuration (06).
 |---|---|
 | ADR-0020 | Two projects + two DTO assemblies; `Application/`-folder business logic (managers-not-stores); dual-control server-side; no app-only token (RequireActor) |
 | ADR-0015 | First-admin bootstrap and the break-glass admin path |
-| ADR-0010 / ADR-0047 (ref) | The delegated-admin grant model and `ICheckAccess` decision engine the API consumes (owned by 05) |
+| ADR-0010 / ADR-0047 (ref) | The delegated-admin grant model and `ICheckAccess` decision engine the API consumes (owned by 07) |
 | ADR-0009 / ADR-0035 | Secret rollover via `private_key_jwt` multi-key; self-service client CRUD (distinct) |
 | ADR-0008 / ADR-0003 / ADR-0019 | Every action on the audit hash-chain; force-logout via the session store; single-token vs subject-wide revoke |
 | ADR-0013 (ref) | Step-up returns 401 `insufficient_user_authentication` (RFC 9470), not 403 |
@@ -91,9 +91,9 @@ A dangerous action lacking sufficient `acr` returns **401** `WWW-Authenticate: B
 error="insufficient_user_authentication", acr_values="urn:nami.identity:aal2|aal3"` (RFC 9470, a 401
 challenge, not a 403), and the App re-authenticates. Tenant-scoped resources sit under
 `/tenants/{tenantId}/...` where `TenantScopeHandler` checks the grant and sets the tenant
-context; global id-routes pass the deny-by-default BOLA/IDOR object-level filter (05).
+context; global id-routes pass the deny-by-default BOLA/IDOR object-level filter (07).
 (`Admin.TenantScope`'s set-tenant-context side effect must be rehomed before that handler is
-retired in favor of `[HasCapability]`, a build-time item flagged by 05.)
+retired in favor of `[HasCapability]`, a build-time item flagged by 07.)
 
 **Who can access, and how admin is granted.** There are two ways to hold admin authority,
 both deny-by-default:
@@ -106,7 +106,7 @@ both deny-by-default:
 The **first admin** is created by the bootstrap seeder (below). After that, granting admin is
 itself an admin action: assigning a global admin role or issuing a delegated-admin grant goes
 through the Admin API under `Admin.Users`/`re_delegate`, and a *dangerous* delegated-admin
-grant is a dual-control proposal (05). Issuing or revoking a delegated-admin grant requires
+grant is a dual-control proposal (07). Issuing or revoking a delegated-admin grant requires
 `re_delegate` held **directly** on the root tenant plus dual-control (this closes chain
 re-delegation). Admin login requires MFA; sensitive actions require step-up to aal2/aal3.
 
@@ -181,7 +181,7 @@ force-logout}`; lifecycle `POST /users/invite`, `POST /users/{id}/{disable|enabl
 `RequireInviteApproval`, invite routes through the `approve-user-invite` proposal).
 `PasskeyDto`: `CredentialId`, `DeviceName?`, `CreatedAt`, `LastUsedAt?` (metadata only, never
 key material). Disable is `CanSignInAsync=false` + force-logout (not delete, and distinct
-from lock which auto-expires); offboard invokes the gated erasure saga (13). The lifecycle
+from lock which auto-expires); offboard invokes the gated erasure saga (17). The lifecycle
 model itself is 06's.
 
 ### Roles
@@ -236,7 +236,7 @@ shared Pool store (below).
 
 The destructive-action catalog and the gating rule (proposer ≠ approver, `request_hash =
 H(capability + target + params)`, single-use, step-up-gated, the `FullyConsistent` re-check)
-are owned by 05. This design owns the **workflow**: the saga state machine, the
+are owned by 07. This design owns the **workflow**: the saga state machine, the
 `IProposalExecutor` registry (one keyed executor per catalog `ActionType`), and the
 `DualControlProposals` behavior. Enforcement is at the Application layer, `ProposalService`
 is the *only* path to an executor, so adding a controller cannot bypass it. EDA is forbidden
@@ -334,7 +334,7 @@ committing synchronously in the action's transaction. It reuses the existing cat
 (`admin_config_change`, `dual_control_approval`, `force_logout`, `mass_revoke`, `key_purge`)
 and **proposes a minimal net-new set**: the granular `proposal.created/approved/rejected/
 executed/failed` events and `audit_read`, raised as a proposed addition to the ADR-0008
-catalog (flagged, not settled here), each carrying the authz provenance produced by 05
+catalog (flagged, not settled here), each carrying the authz provenance produced by 07
 (`actor_sub`, `actor_chain`, `on_behalf_of_subject`, `capability`, `grant_id`, `decision_path`,
 `authz_decision`, `stepup_satisfied`, `approval_request_id`, `approver_sub`, `request_hash`,
 `result`). The audit-read path (`GET /audit*`) is itself audited and tenant-filtered
@@ -348,16 +348,16 @@ request.
   validates IdP tokens); TLS internal; the host runs **separately from the IdP runtime** so an
   admin-surface problem cannot degrade token issuance; every mutation is on the hash-chain;
   secrets are never returned or logged. The whole surface is held to OWASP ASVS L2 (ADR-0062,
-  owned by 15/CI), with BOLA/IDOR object-level authz a must-pass (05).
+  owned by 21/CI), with BOLA/IDOR object-level authz a must-pass (07).
 - **Performance.** List endpoints are always paged (`X-Total-Count`, no unbounded scans); each
   request incurs one `ICheckAccess` call (DB-tier p95 < 30ms / p99 < 80ms, fail-closed at
   250ms, 05); reads go through the manager caches (per-request, no cross-node backplane, 10);
-  the config/CORS cache is the FusionCache+Redis one (10), invalidated on a client change; the
-  audit list query is tenant-filtered and indexed. The numeric SLO table is owned by 14.
+  the config/CORS cache is the FusionCache+Redis one (13), invalidated on a client change; the
+  audit list query is tenant-filtered and indexed. The numeric SLO table is owned by 19.
 - **Availability.** The Admin API is **not on the critical authentication path**: if it is
   down, token issuance and validation continue. Rate limiting is per actor; a hard 429 write
   ceiling uses the same `Microsoft.AspNetCore.RateLimiting` mechanism as the device/PAR
-  endpoints (11).
+  endpoints (14).
 
 ## Data touchpoints (schema is 02)
 
@@ -392,13 +392,13 @@ first-admin seed is idempotent and forces a change; Scalar performs a real OIDC 
   (added in 02).
 - Deferred to GA: the admin break-glass policy (ISMS DP.01, ADR-0015); the capability taxonomy,
   the per-capability acr map, and approver-role separation (ADR-0010/0013); the secret-store
-  purge holder and two-approver process (ADR-0009); the authorization SLO (ADR-0047, owned by 05).
-- Deferred to other docs: the tenant/erasure saga bodies (13); IdentityProvider management (v2,
-  ADR-0034); the numeric SLO table (14).
+  purge holder and two-approver process (ADR-0009); the authorization SLO (ADR-0047, owned by 07).
+- Deferred to other docs: the tenant/erasure saga bodies (18 and 17); IdentityProvider management (v2,
+  ADR-0034); the numeric SLO table (19).
 
 ## References
 
-- ADRs: ADR-0020, ADR-0015, ADR-0010 / ADR-0047 (05), ADR-0029 (the App's BFF), ADR-0009 /
+- ADRs: ADR-0020, ADR-0015, ADR-0010 / ADR-0047 (07), ADR-0029 (the App's BFF), ADR-0009 /
   ADR-0035, ADR-0008, ADR-0003, ADR-0019, ADR-0007 (distinct), ADR-0013, ADR-0021, ADR-0024 /
   ADR-0027, ADR-0034 (v2 dynamic IdP), ADR-0062 (ASVS).
 - Design docs: [Admin App](16-admin-app.md), [05 authorization](07-authorization.md) (the

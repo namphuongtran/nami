@@ -13,14 +13,14 @@ port with consistency semantics, the DB-first decision query, the delegated-admi
 policy model (capabilities, forbidden-cascade, time-bound revocable grants, no
 global super-admin), the token-versus-decision-point split, delegation via the
 `act` claim, anti-confused-deputy, step-up and dual-control gating, and audit
-provenance. It feeds token issuance (04), user/membership (06), and the admin
-surface (12).
+provenance. It feeds token issuance (04), user/membership (08), and the admin
+surface (15).
 
 In scope: the authorization engine and its port, the decision query and capability
 catalog, delegation and initiator resolution, ASP.NET enforcement wiring, and the
 step-up/dual-control gate. Out of scope: the `acr`/`amr`/`auth_time` **producer**
-(06, which this consumes), the dual-control saga *workflow* and the admin API
-surface (12), the audit *mechanism* (03), and the schema (02, the SSOT).
+(08, which this consumes), the dual-control saga *workflow* and the admin API
+surface (15), the audit *mechanism* (03), and the schema (02, the SSOT).
 
 ## Decisions realized
 
@@ -28,7 +28,7 @@ surface (12), the audit *mechanism* (03), and the schema (02, the SSOT).
 |---|---|
 | ADR-0010 | The delegated-admin policy: explicit membership, scoped/capability-typed/time-bound/revocable grants, forbidden-cascade, no super-admin (the *what*) |
 | ADR-0047 | The DB-first `ICheckAccess` engine with `ConsistencyRequirement`, fail-closed timeout, one canonical seam, ReBAC-swappable (the *how*) |
-| ADR-0013 | Step-up (RFC 9470) enforcement, consuming the `acr`/`auth_time` produced in 06 |
+| ADR-0013 | Step-up (RFC 9470) enforcement, consuming the `acr`/`auth_time` produced in 08 |
 | ADR-0005 | Deny-by-default, which forces the fail-closed decision |
 | ADR-0008 | Audit provenance (direct versus delegated) on every cross-tenant decision |
 | ADR-0024 / ADR-0001 / ADR-0021 | Hexagonal port; global control-plane data; ReBAC syntax/consistency as a version-dependent seam |
@@ -130,7 +130,7 @@ caller tenant, and must be passed explicitly.
 A precondition to any capability check is **`RequireActor`**: the request must carry
 a real user (a `sub` plus `amr` or `auth_time`, on the `admin-api` audience); an app-only
 or client-credentials token is rejected with 403 `admin_requires_actor`, so an application
-permission can never exercise admin authority (the anti-bypass lesson, policy detailed in 12). For
+permission can never exercise admin authority (the anti-bypass lesson, policy detailed in 15). For
 **root-level id-routes** that carry an object id but no `{tenantId}`
 (`/applications/{id}`, `/users/{id}`, `/proposals/{id}`), the owning tenant is
 derived from the loaded object before the check (an object-level filter that closes
@@ -150,7 +150,7 @@ before authentication/authorization so the tenant is resolved before the check r
 Dangerous or high-assurance operations return `401` with
 `WWW-Authenticate: ... error="insufficient_user_authentication", acr_values, max_age`
 (RFC 9470); the required assurance is `max(client default, scope, runtime)` and is
-consumed from the `acr`/`auth_time` produced in 06. A fixed catalog of destructive or
+consumed from the `acr`/`auth_time` produced in 08. A fixed catalog of destructive or
 irreversible actions additionally requires **dual-control** (the D-SEC-1 forbidden-cascade
 class): `delete-application`, `delete-scope`, `delete-tenant`, `suspend-tenant` and
 `resume-tenant`, `offboard-user`, `revoke-all-tokens`, a dangerous delegated-admin grant,
@@ -161,7 +161,7 @@ a different principal approves (proposer not equal approver, single-use and time
 against that hash, itself step-up-gated), then execute. A constructive variant,
 `approve-user-invite`, reuses the same four-eyes saga (gated per-tenant by
 `RequireInviteApproval`). The saga aggregate is `DualControlProposals` (schema in 02); its
-workflow and the `IProposalExecutor` registry live in the admin design (12). This design
+workflow and the `IProposalExecutor` registry live in the admin design (15). This design
 owns the authorization decision and the gating rule.
 
 When the upstream is Entra, the equivalent challenge is `error="insufficient_claims"`
@@ -307,7 +307,7 @@ flowchart TD
 * **Registration mistakes**: the handler must be scoped (it depends on scoped
   `ICheckAccess`/tenant context); the policy provider must not cache decisions; and
   `Admin.TenantScope`'s set-tenant-context side effect must be rehomed before it is
-  retired (12).
+  retired (15).
 
 ## Security considerations
 
