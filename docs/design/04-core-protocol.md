@@ -28,7 +28,7 @@ not-turnkey part. All namespaces are `Nami.Identity.*` and the host is
 | ADR-0039 | Tiered revocation: short-TTL JWT default, reference tokens plus introspection where instant revoke is needed; per-client `AccessTokenType` |
 | ADR-0050 | Per-client CORS through a custom `ICorsPolicyProvider`, applied only on the right endpoints |
 | ADR-0049 | Per-tenant issuer; resource-server isolation by issuer plus tenant binding (a shared Pool key is not the boundary) |
-| ADR-0014 | mTLS native, DPoP built (14); JAR, JARM, RAR, and EdDSA de-scoped; CIBA skipped |
+| ADR-0014 | mTLS native, DPoP built (06); JAR, JARM, RAR, and EdDSA de-scoped; CIBA skipped |
 | ADR-0021 | Native behaviours relied on are pinned seams: pipeline order, `ValidateAuthorizedParty`, PAR, the `Set*EndpointUris` method names, the `SetLogoutEndpointUris` to `SetEndSessionEndpointUris` rename, and auto-pathing being limited to discovery and JWKS |
 | ADR-0052 / ADR-0043 | The fail-closed declaration layer this host consumes, and the startup invariant self-check that asserts the protocol posture |
 
@@ -43,8 +43,8 @@ per-tenant issuer. It is Phase 03 and rests on the data tier (02).
 In scope: the `AddOpenIddict` configuration, the pipeline extension model, the
 controllers, discovery metadata, `IClaimsProfileService`, token format and lifetimes,
 refresh mechanics, consent, introspection and revocation isolation, per-client CORS,
-and per-tenant issuer resolution. Out of scope: DPoP handler internals and the
-resource-server validation library (14 and, when written, 05 and 06), key rotation
+and per-tenant issuer resolution. Out of scope: DPoP handler internals (06) and the
+resource-server validation library (05), both still to be written; key rotation
 (12), user authentication, MFA, sessions, and the `acr`/`amr` producer (08), the login
 and consent UI (11), and the configuration layer (01).
 
@@ -124,7 +124,7 @@ controller at all.
 
 | Endpoint | Path (illustrative) | Mechanism |
 |---|---|---|
-| Discovery | `/.well-known/openid-configuration` | auto-pathed, per tenant issuer |
+| Discovery | `/.well-known/openid-configuration` **and** `/.well-known/oauth-authorization-server` | auto-pathed, both, per tenant issuer |
 | JWKS | `/.well-known/jwks` | auto-pathed, per tenant issuer |
 | Authorize | `connect/authorize` | pass-through controller (login and consent interaction) |
 | Token | `connect/token` | pass-through controller (code plus PKCE, client-credentials, refresh) |
@@ -239,7 +239,7 @@ protocol contract. Advertised: `authorization_response_iss_parameter_supported=t
 `token_endpoint_auth_methods_supported` covering `client_secret_basic`,
 `client_secret_post`, `private_key_jwt`, `tls_client_auth`, and
 `self_signed_tls_client_auth`; `dpop_signing_alg_values_supported` (the nine-algorithm
-RS, PS, and ES cross 256, 384, 512 set, once DPoP lands, 14);
+RS, PS, and ES cross 256, 384, 512 set, once DPoP lands, 06);
 `backchannel_logout_supported=true` with `backchannel_logout_session_supported=true`
 and `frontchannel_logout_supported=false`; `request_parameter_supported=false` (JAR
 de-scoped); and `claims_supported` including `sid`. Deliberately **not** advertised:
@@ -488,7 +488,7 @@ lookup is **tenant-scoped**, riding the Pool filter, so a tenant-A caller cannot
 introspect or revoke a tenant-B token, and a negative test asserts it.
 
 Native introspection auto-surfaces the mTLS `cnf` (`x5t#S256`). Surfacing the DPoP
-`cnf.jkt` is a build item gated on spikes A-1 and A-3 (14), and its invariant is
+`cnf.jkt` is a build item gated on spikes A-1 and A-3 (06), and its invariant is
 enrich-or-inactive: a DPoP-bound token either carries `cnf.jkt` in the response or
 returns `active:false`, and never active-but-unbound.
 
@@ -629,7 +629,7 @@ that did not come from the trusted proxy, because otherwise header spoofing is
 client-certificate impersonation. The trusted-proxy addresses are an Ops and Security
 ratification item (ADR-0073). The alternative posture is L4 pass-through, with Kestrel
 requiring the certificate directly, where the application sees the real certificate and
-there is no header to spoof. DPoP for public clients is built (14).
+there is no header to spoof. DPoP for public clients is built (06).
 
 ## 6. Dependencies and wiring
 
@@ -764,7 +764,7 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
 * **Consent re-prompt cadence.** A `Permanent` authorization does not expire, so whether
   the data-protection officer requires periodic re-consent is a Legal and DPO
   ratification item and is not decided here.
-* DPoP issuance and validation handlers are gated on spikes A-1 and A-3, detailed in 14
+* DPoP issuance and validation handlers are gated on spikes A-1 and A-3, detailed in 06
   (ADR-0014).
 * The trusted-proxy address list behind the mTLS header-spoof guard is an Ops and
   Security ratification item (ADR-0073).
@@ -807,7 +807,11 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
   `UseClientCertificateBoundAccessTokens`, and `AddDevelopmentSigningCertificate` all
   exist as named. Read in `OpenIddictServerOptions.cs`: `CodeChallengeMethods` is a
   `HashSet<string>` **initialized to `{ Plain, Sha256 }`**, which is why `plain` must be
-  actively removed rather than merely not added. Read in
+  actively removed rather than merely not added. The same file confirms the auto-pathing
+  rule by construction: `ConfigurationEndpointUris` and `JsonWebKeySetEndpointUris` are the
+  only endpoint collections with non-empty initializers, and discovery is auto-pathed at
+  **two** URIs, `.well-known/openid-configuration` and
+  `.well-known/oauth-authorization-server`, not one. Read in
   `src/OpenIddict.Server.AspNetCore/OpenIddictServerAspNetCoreOptions.cs`: there are
   **exactly six** pass-through options, `EnableAuthorizationEndpointPassthrough`,
   `EnableEndSessionEndpointPassthrough`, `EnableEndUserVerificationEndpointPassthrough`,
@@ -815,7 +819,20 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
   `EnableUserInfoEndpointPassthrough`, plus `EnableStatusCodePagesIntegration` on the
   builder. There is **no pass-through option for introspection, revocation, or device
   authorization**, which is the source-level proof that those endpoints cannot be
-  intercepted by a controller.
+  intercepted by a controller. The handler and context names this design pins as seams
+  were checked in the same tree: `ValidateAuthorizedParty` exists in **three** handler
+  areas, `Exchange`, `Introspection`, and `Revocation`, so the confinement this design
+  relies on at the introspection and revocation endpoints also runs at the token endpoint;
+  `AttachApplicationClaims` is in `Introspection`; `GenerateIdentityModelToken` is in
+  `Protection`; and `IsReferenceToken` and `PersistTokenPayload` are both settable members
+  of the protection events, which is what makes the per-client format handler possible.
+  Package identifiers were confirmed to resolve on nuget.org, which the ADR-0026
+  license-scan gate needs: `OpenIddict.Core`, `OpenIddict.Server`,
+  `OpenIddict.Server.AspNetCore`, `OpenIddict.Validation`,
+  `OpenIddict.Validation.AspNetCore`, `OpenIddict.Validation.ServerIntegration`,
+  `OpenIddict.EntityFrameworkCore`, `OpenIddict.Quartz`,
+  `Microsoft.AspNetCore.Authentication.JwtBearer`, and
+  `Microsoft.AspNetCore.Authentication.Certificate`.
 * Reconciled against the design corpus's core-protocol design on 2026-07-26. Taken from
   it: the `AddOpenIddict` configuration block, the `GetDestinations` switch, the three
   controller responsibilities, the token-pipeline and consent diagrams, the named

@@ -32,7 +32,7 @@ section ordering are used: no standard text is reproduced.
 
 | # | Section | What belongs in it |
 |---|---|---|
-| 1 | Header | Frontmatter, the architecture view this sits under, the implementer source of record, and the **decisions-realized table** mapping this module to its ADRs |
+| 1 | Header and decisions realized | The frontmatter, the architecture view this sits under, and the implementer source of record open the file **above** section 1, the way a title does; section 1 itself is the **decisions-realized table** mapping this module to the ADRs it applies |
 | 2 | Purpose and scope | What the module is and its boundary, including what is out of scope and which design owns it instead |
 | 3 | Interfaces and contract | Public interfaces, method signatures, DTOs, ports. `classDiagram` lives here |
 | 4 | Data and structure | Entities, fields, types, keys, indexes, DDL. `erDiagram` lives here |

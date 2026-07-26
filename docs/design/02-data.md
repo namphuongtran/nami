@@ -679,10 +679,22 @@ kept as regression):
   OpenIddict's stores create internally (redeem, revoke) are stamped with the ambient
   tenant when they are tracked. Deriving `MultiTenantDbContext` alone does not stamp
   externally-created entities.
-* **`TenantNotSetMode = Throw` and `TenantMismatchMode = Throw`.** The first auto-stamps
-  the current tenant and refuses a write with no ambient tenant; the second blocks a
-  cross-tenant write outright. Both are set explicitly rather than left at their
-  defaults.
+* **`TenantMismatchMode` and `TenantNotSetMode` are both already `Throw` by default**, and
+  they govern narrower cases than their names suggest. Read at Finbuckle v10.1.2:
+  `MultiTenantDbContext` initializes both properties to `Throw`, so the strict posture is
+  the library's default rather than something Nami switches on. `TenantMismatchMode`
+  covers an entity whose `TenantId` is set to a **different** tenant, on both inserts and
+  updates. `TenantNotSetMode` covers an **unset** `TenantId` on an **update only**: for an
+  insert, an unset `TenantId` is *always* overwritten with the ambient tenant regardless
+  of the mode. And the case that matters most is governed by neither: if any tracked
+  multi-tenant entity changed while there is **no ambient tenant at all**, the library
+  throws unconditionally. So "no ambient tenant fails closed" (A-4/T13) is a property of
+  the library, not of Nami's configuration.
+
+  Both are nonetheless asserted at startup and pinned as a version seam (ADR-0043,
+  ADR-0021), precisely **because** they are defaults: a default is the easiest thing for
+  a dependency to change in a minor release, and the failure would be silent
+  cross-tenant writes rather than an error.
 * **A named soft-delete filter** (`"soft_delete"`, EF Core 10 named filters) coexists
   with the tenant filter, ANDed, so an admin can view disabled rows by ignoring only
   `soft_delete` without ignoring tenancy and leaking across tenants.
@@ -1002,6 +1014,22 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
   `Type` property. Read in `src/OpenIddict.Abstractions/OpenIddictConstants.cs`: the
   `Statuses` class defines exactly five values, whose stored forms are the lowercase
   strings `inactive`, `redeemed`, `rejected`, `revoked`, and `valid`.
+* **External verification, 2026-07-26, Finbuckle.MultiTenant at release tag v10.1.2.**
+  Read in `src/Finbuckle.MultiTenant.EntityFrameworkCore/MultiTenantDbContext.cs`: both
+  `TenantMismatchMode` and `TenantNotSetMode` are settable properties **initialized to
+  `Throw`**. Read in `Extensions/MultiTenantDbContextExtensions.cs`, in
+  `EnforceMultiTenant`: a null `TenantInfo` with any changed multi-tenant entity throws
+  **unconditionally**, before either mode is consulted; `TenantMismatchMode` is consulted
+  for a `TenantId` set to a different tenant on inserts and on updates; `TenantNotSetMode`
+  is consulted only for an unset `TenantId` on an **update**, because for an insert the
+  code overwrites an unset `TenantId` with the ambient tenant unconditionally, under the
+  comment "for added entities TenantNotSetMode is always Overwrite". `EnforceMultiTenant`
+  and `EnforceMultiTenantOnTracking` both exist, and the base context calls the former
+  itself. An earlier revision of this section said the two modes are "set explicitly
+  rather than left at their defaults", which was **wrong in the opposite direction**: the
+  defaults already are what Nami wants. That claim was this repository's own inference
+  from a corpus line that recorded only the values, and it is corrected above along with
+  the two semantics the corpus also stated loosely.
 * Reconciled against the design corpus's data model on 2026-07-26. Taken from it: the DDL
   at field level, the custom entity declarations with their generic arguments, the
   Finbuckle mode settings, the native index shape and the "expiry does not change status"
