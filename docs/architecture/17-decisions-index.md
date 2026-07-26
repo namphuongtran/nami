@@ -155,10 +155,28 @@ consolidated as one release gate in the
 [Pre-GA Ratification Checklist](../PRE-GA-RATIFICATION-CHECKLIST.md) rather than duplicated
 here, so there is one place to read before a release rather than two that can disagree.
 
-Separately, six load-bearing claims surfaced while writing and auditing this layer have **no
-owning ADR** and are recorded in place in the views that carry them, each marked as a
-candidate rather than presented as settled. They are not listed here as decisions, because
-they are not decisions yet.
+Separately, **eight** load-bearing claims surfaced while writing and auditing this layer have
+**no owning ADR**. Each is recorded in place in the view that carries it, marked as a candidate
+rather than presented as settled. They are not listed above as decisions, because they are not
+decisions yet. They are enumerated here rather than counted, because an earlier revision of
+this page asserted the count as six and the count was wrong: two more were found later, while
+writing the threat model, and a number nobody can check is exactly the kind of claim this
+repository has learned not to write.
+
+| # | Claim with no owning ADR | Recorded in |
+|---|---|---|
+| 1 | **Claim destinations are deny-by-default**, so a claim is emitted only where declared. The strongest candidate: it is the named control against claim leakage in a High-rated threat row | [04-components](04-components.md) section 1, [11-security-architecture](11-security-architecture.md) section 3, [20-threat-model](20-threat-model.md) row I4 |
+| 2 | The **application-side strict-transport-security and TLS floor**, which ADR-0073 assumes at the edge rather than decides in the application | [11-security-architecture](11-security-architecture.md) section 7 |
+| 3 | The **meter inventory**: which metrics exist at all | [15-observability-and-monitoring](15-observability-and-monitoring.md) |
+| 4 | **Telemetry export is lossy, never blocking**, with the collector-outage proof that shows it | [15-observability-and-monitoring](15-observability-and-monitoring.md) |
+| 5 | The **high-cardinality prohibition** and its enforcement: no tenant, subject, session, proof identifier, or address as a metric tag, with the exact-match view selector and the attachment test. It is a personal-data rule as much as a cardinality one | [15-observability-and-monitoring](15-observability-and-monitoring.md), [20-threat-model](20-threat-model.md) row I5 |
+| 6 | The **periodic restore-verify probe**, which is what distinguishes a backup that exists from one that restores | [13-reliability-backup-and-dr](13-reliability-backup-and-dr.md) |
+| 7 | A **crypto-path throughput gate in CI**, separate from the SLO gate ADR-0041 owns | [12-performance-and-scalability](12-performance-and-scalability.md) |
+| 8 | The **exclusion of `may_act`**, the delegation claim: no ADR in this repository contains the term | [20-threat-model](20-threat-model.md) row E5 |
+
+Items 3, 4, and 5 share an owner in the observability design and may resolve as one ADR rather
+than three; items 6 and 7 are more likely amendments to ADR-0074 or ADR-0006 and to ADR-0041
+than new decisions. That is a judgement to make when they are drafted, not here.
 
 ## 5. Decisions whose feature is not built
 

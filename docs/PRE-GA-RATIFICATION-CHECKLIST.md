@@ -25,6 +25,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 - ☐ MFA / assurance: AAL threshold per dangerous capability; per-scope required-`acr` list ([ADR-0013](adr/0013-mfa-assurance-and-step-up.md))
 - ☐ Credential-hardening thresholds: length 12, PBKDF2 >= 210k (with DPO on HIBP) ([ADR-0028](adr/0028-user-management.md))
 - ☐ Accepted risk: Pool-shared keyset (pool-group blast radius) ([ADR-0033](adr/0033-key-scope-isolation-model.md))
+- ☐ Formal cryptoperiod (ISMS sign-off, with Ops): the signing, encryption, and retention periods stated as policy with a named owner. The build implements ADR-0011's 90/14/14; this ratifies it as the recorded cryptoperiod ([ADR-0011](adr/0011-no-restart-key-rotation.md), [ADR-0005](adr/0005-encryption-credential-lifecycle.md))
 - ☐ Authorization SLO / timeout (with Ops) ([ADR-0047](adr/0047-authorization-decision-engine.md))
 - ☐ Trusted-proxy IP list for mTLS (with Ops) ([ADR-0014](adr/0014-advanced-protocol-scope.md))
 - ☐ Change-event publishing (v2): per-consumer bus access control; whether configuring the broker connection is an IAM-class change requiring dual-control; thin-versus-fat payload for PII minimization ([ADR-0071](adr/0071-identity-change-event-publishing.md))
@@ -44,6 +45,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 
 - ☐ SLO numeric table plus error-budget policy ([ADR-0041](adr/0041-nfr-targets-and-slo-release-gate.md))
 - ☐ Abuse and email throttle numbers (per-recipient caps) ([ADR-0042](adr/0042-abuse-and-bot-defense.md) / [ADR-0038](adr/0038-email-notification-subsystem.md))
+- ☐ Overload-protection numbers: request timeouts, concurrency limits, and rate-limit windows and quotas, tuned against the capacity model. Distinct from the abuse and email caps above, which answer hostile volume rather than capacity ([ADR-0040](adr/0040-resiliency-and-overload-protection.md))
 - ☐ Suppression store: hash-versus-encrypt and soft-bounce TTL (with DPO) ([ADR-0038](adr/0038-email-notification-subsystem.md))
 - ☐ OpenID certification profile set plus budget/timing ([ADR-0027](adr/0027-packaging-and-distribution.md))
 

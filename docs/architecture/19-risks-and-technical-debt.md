@@ -35,7 +35,7 @@ design**, not a plan.
 | R7 | **Back-channel logout is an interim build**, and front-channel logout is dead under third-party-cookie blocking | M | M | Built now on the session store that already exists, with a decommission marker for the native equivalent. A relying party without a back-channel endpoint degrades to bounded logout at the access-token lifetime, which is a **stated parity boundary** (ADR-0019) | Maintainers |
 | R8 | **Human ratification is not done.** Several parameters and verdicts are a named owner's call | H | M | Ratification runs **in parallel with the build** and gates production, not the build. Consolidated as one release gate (the [checklist](../PRE-GA-RATIFICATION-CHECKLIST.md)) | All named owners |
 | R9 | **Acceptance evidence needs running code.** The load, conformance, recovery-drill, and cross-tenant negative gates cannot close before there is something to run | H | M | Wired as CI gates that land with the code they test; the SLO gate and the cross-tenant negative gate are must-pass (ADR-0041, ADR-0060, ADR-0001) | Maintainers |
-| R10 | **Six load-bearing claims have no owning decision**, surfaced by writing and auditing this layer | M | M | Each is recorded **in place** in the view that carries it, marked as a candidate rather than presented as settled, and collected as one round of work. The most consequential is the control this architecture names against claim leakage | Maintainers |
+| R10 | **Eight load-bearing claims have no owning decision**, surfaced by writing and auditing this layer | M | M | Each is recorded **in place** in the view that carries it, marked as a candidate rather than presented as settled, and all eight are enumerated in [17-decisions-index](17-decisions-index.md) section 4 so the set is checkable rather than counted. The most consequential is the deny-by-default claim-destination rule, which this architecture names as its control against claim leakage in a High-rated threat row | Maintainers |
 
 R10 is this repository's own finding rather than an inherited one, and it is a risk in the
 precise sense: nothing is wrong today, and the exposure is that a control with no decision
@@ -91,9 +91,11 @@ emergency work, which is the entire reason the analysis was written down.
   is an optional future for a different capability, so it is not debt and section 3 says why.
   **One entry was dropped**: the corpus's last debt item concerns illustrative naming in its own
   older documents, which is an artifact of that corpus rather than a property of this
-  repository. **One entry was added**: R10, the six load-bearing claims with no owning decision,
-  which this repository found by writing and auditing its own architecture layer and which has
-  no corpus counterpart.
+  repository. **One entry was added**: R10, the eight load-bearing claims with no owning
+  decision, which this repository found by writing and auditing its own architecture layer and
+  which has no corpus counterpart. R10 read "six" until 2026-07-26; two further claims were
+  found while writing the threat model and the count was never revisited, so the set is now
+  enumerated in the decisions index and referenced from here rather than counted twice.
 
 ---
 
