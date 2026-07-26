@@ -149,7 +149,7 @@ applied by an idempotent, tenant-aware seeder. The mapper is **fail-closed by
 construction**: a public or code client is forced to PKCE (throws if absent), a
 confidential client without a credential throws, wildcard redirect URIs are
 rejected, and a native app sets `ApplicationType = Native`. Config keys follow
-`Nami:Section:Key` with env form `Nami__Section__Key` (ADR-0032); precedence is
+`Nami:Section:Key` with env form `Nami__Section__Key` (ADR-0065 states the shape); precedence is
 env then secret-store then `appsettings.{Env}` then `appsettings` (ADR-0031). Config-time
 secrets load through a `SecretStoreSource : IConfigurationSource` added after the JSON
 providers (last-added-wins), which is distinct from the runtime `ISecretResolver` port.

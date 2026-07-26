@@ -635,7 +635,7 @@ there is no header to spoof. DPoP for public clients is built (06).
 
 ### Configuration keys
 
-Keys follow `Nami:Section:Key` with the `Nami__Section__Key` environment form (ADR-0032)
+Keys follow `Nami:Section:Key` with the `Nami__Section__Key` environment form (ADR-0065)
 and are validated at boot (ADR-0052). **These names are set by this design**, so this
 section is their origin:
 
@@ -768,7 +768,7 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
   (ADR-0014).
 * The trusted-proxy address list behind the mTLS header-spoof guard is an Ops and
   Security ratification item (ADR-0073).
-* The `acr`, `amr`, and `auth_time` producer lives in 08 (ADR-0013, ADR-0003); this
+* The `acr`, `amr`, and `auth_time` producer lives in 08 (ADR-0013 owns the three claims; the session age they are recomputed against is ADR-0003's); this
   design owns only the challenge and the recompute point.
 * A future identity-change-event emit (the shared-signals direction, ADR-0068 proposed)
   would ride this same order-anchored handler seam and must be accommodated by the

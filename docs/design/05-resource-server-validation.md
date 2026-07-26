@@ -305,7 +305,7 @@ services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =
 ### Configuration keys
 
 **Set by this design**, following `Nami:Section:Key` with the `Nami__Section__Key`
-environment form (ADR-0032):
+environment form (ADR-0065):
 
 | Key | Purpose |
 |---|---|
@@ -370,7 +370,7 @@ Named per ADR-0066:
 * Isolation is by issuer and `tenant`-claim binding, never by signature. The per-tenant-host
   shape isolates by rejecting an issuer mismatch; the shared-host shape isolates by the
   `tenant` claim driving row-level security under a **de-privileged** database role, since a
-  superuser bypasses the policy entirely (02, ADR-0043).
+  superuser bypasses the policy entirely (02, ADR-0037).
 * Sender-constraint (`cnf`) is checked **after** per-tenant validation, so a proof-of-
   possession match can never substitute for a tenant check (T4, ADR-0014).
 * Introspection requires client authentication and audience confinement, so one client

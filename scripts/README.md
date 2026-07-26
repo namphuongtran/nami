@@ -62,3 +62,22 @@ index, which is always an error.
 python3 scripts/review/design-pointer-audit.py            # whole layer
 python3 scripts/review/design-pointer-audit.py docs/design/04-core-protocol.md
 ```
+
+## review/citation-keyword-screen.py (review aid, not a gate)
+
+Flags an ADR citation whose sentence names an identifier the cited ADR never mentions.
+The defect it exists for is citing an ADR because its *topic* feels like the right home
+for a claim, rather than because the ADR contains it. Two design documents cited
+ADR-0043, the startup-self-check decision, for the rule that the runtime database role
+must be `NOSUPERUSER`; ADR-0043 has no such invariant and ADR-0037 owns it. The citation
+resolved, the claim was true, and only the pairing was wrong, which `CLAUDE.md` names as
+the most common defect in this repository.
+
+Not a gate, for the same reason as the pointer audit: a miss is not proof of error. An
+ADR can own a rule without using the design's identifier, so the output is a reading list
+with the suspicious pairs first.
+
+```bash
+python3 scripts/review/citation-keyword-screen.py            # whole design layer
+python3 scripts/review/citation-keyword-screen.py docs/design/05-resource-server-validation.md
+```

@@ -849,7 +849,7 @@ tier, and to anyone who does not know about T7 it looks like a missed optimizati
 ### Configuration keys
 
 Keys follow the `Nami:Section:Key` shape with the `Nami__Section__Key` environment form
-(ADR-0032), validated fail-fast at boot through
+(ADR-0065 states the shape; ADR-0032 is where the pattern was first used), validated fail-fast at boot through
 `AddOptions<T>().BindConfiguration(...).ValidateDataAnnotations().ValidateOnStart()`
 (ADR-0052). **The key names below are set by this design**, not inherited from a
 decision, so this section is their origin:
@@ -913,8 +913,11 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
 ### Other failure modes
 
 * **A superuser bypasses RLS.** The application role must be `NOSUPERUSER` with no
-  `BYPASSRLS`, or layer 2 is silently off while looking configured. A deployment check
-  asserts it (ADR-0043).
+  `BYPASSRLS`, or layer 2 is silently off while looking configured (ADR-0037). Note what
+  does **not** guard this: it is a property of the deployed database role, not of the
+  application's configuration, so the startup self-check cannot see it and ADR-0043 does not
+  cover it. The threat model classes it as a deployment control and an Ops ratification
+  item, which is where it is tracked.
 * **Missing composite index.** Without the `(TenantId, ClientId)` override, the second
   tenant to reuse a `client_id` fails with `23505`.
 * **The `uuid` GUC cast on a pooled connection.** Without `NULLIF`, an unset

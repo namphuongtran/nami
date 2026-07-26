@@ -34,6 +34,7 @@ Every accepted ADR builds a **mechanism**; several defer a **policy, threshold, 
 
 ## Ops
 
+- ☐ **Row-level-security role verification in every deployed environment**: confirm the runtime database role is `NOSUPERUSER` and lacks `BYPASSRLS` ([ADR-0037](adr/0037-database-engine-postgresql.md)). This is the one isolation control that is neither in the code nor in the application's configuration, so the ADR-0043 startup self-check structurally cannot see it: a superuser connection satisfies every application-level check while silently disabling the row-level-security backstop entirely. The threat model rates the exposure Critical and classes it as a deployment control, which is why it is an Ops sign-off rather than a test
 - ☐ Formal RTO/RPO targets, DR runbook, per-adapter capability matrix ([ADR-0006](adr/0006-disaster-recovery-key-material.md))
 - ☐ Root-cert provisioning/rotation ceremony; per-environment cloud-protector adapter ([ADR-0012](adr/0012-key-bootstrap-and-dr-sequence.md))
 - ☐ Public reference-host decision (owner / hosting / patch-cadence / cost) versus local-Docker-only ([ADR-0027](adr/0027-packaging-and-distribution.md))
