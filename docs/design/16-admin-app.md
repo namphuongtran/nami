@@ -152,9 +152,9 @@ preview + a rejected http/private-IP logo; and a back-channel-logout that ends t
 
 - ADRs: ADR-0020 (admin architecture), ADR-0029 (BFF), ADR-0003 (sessions), ADR-0019
   (back-channel logout), ADR-0013 (step-up, referenced).
-- Design docs: [Admin API](15-admin-api.md) (the backend it consumes), [08 login/consent/logout
+- Design docs: [Admin API](15-admin-api.md) (the backend it consumes), [11 login/consent/logout
   UI](11-login-consent-ui.md) (the `SecurityHeadersAttribute`, step-up page, open-redirect
-  guard, i18n), [05 authorization](07-authorization.md) (step-up enforcement), [13 GDPR erasure
+  guard, i18n), [07 authorization](07-authorization.md) (step-up enforcement), [13 GDPR erasure
   and tenant provisioning] (the saga bodies the wizards drive).
 - [Architecture](../architecture/README.md): containers (`Admin.App`), runtime view 2
   (dual-control with step-up).

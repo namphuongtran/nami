@@ -23,10 +23,10 @@ CI gate; the ASVS L2 baseline and the Content-Security-Policy finalization; and 
 acceptance-test catalog that maps to the feature docs.
 
 Out of scope, referenced not redefined: the load/SLO gate, the external canary, the
-collector-outage test, and the chaos suite ([14 observability](19-observability-capacity-slo.md));
+collector-outage test, and the chaos suite ([19 observability](19-observability-capacity-slo.md));
 the CI job graph, the release pipeline, and the deployment tests
-([15 CI/CD and deployment](21-cicd-and-deployment.md)); the migration and expand/contract
-CI checks ([13 tenant lifecycle](18-tenant-lifecycle.md)); the foundational CI-gate set
+([21 CI/CD and deployment](21-cicd-and-deployment.md)); the migration and expand/contract
+CI checks ([18 tenant lifecycle](18-tenant-lifecycle.md)); the foundational CI-gate set
 ([01 foundations](01-foundations.md)); and every per-feature assertion, which stays owned
 by its feature doc (cited below).
 
@@ -53,7 +53,7 @@ rather than re-deciding it.
 | End-to-end | Protocol path (issuance, validation, revocation, introspection, tenant-isolation negative) and the admin UI | xUnit + WebApplicationFactory + Testcontainers; Playwright | ADR-0025 |
 | Architecture | The dependency rule and slice decoupling | `Nami.Identity.ArchitectureTests` (TngTech.ArchUnitNET) | ADR-0024 |
 | Contract-regression | Each OpenIddict seam's behavior on the pinned version, on every OpenIddict/.NET bump | xUnit | ADR-0021, ADR-0030 |
-| Load and soak | The NFR targets on p95/p99; the SLO CI gate and canary | k6 / NBomber | ADR-0041 (owned by [14](19-observability-capacity-slo.md)) |
+| Load and soak | The NFR targets on p95/p99; the SLO CI gate and canary | k6 / NBomber | ADR-0041 (owned by [19](19-observability-capacity-slo.md)) |
 | Conformance | OpenID certification profiles | OIDF conformance suite (self-hosted) | this doc |
 
 **SQLite is never substituted** for the database in any test: row-level security,
@@ -102,7 +102,7 @@ one to diff against**, since this enumeration has already fallen behind it once.
 ### The security-test catalogue (ADR-0062)
 
 - **RFC 9700 (OAuth 2.0 Security BCP):** PKCE bypass, open redirect, token replay, mix-up, CSRF/state, authorization-code injection, refresh-reuse detection.
-- **OWASP ASVS 5.0 Level 2** across V2 (auth), V3 (session, including a cookie-attribute test), V7 (errors/logging), V8 (data protection), V9 (communications), with Level 3 depth for key, token, dual-control, and tenant-isolation surfaces, and the API Security Top 10 mapped. This ASVS baseline plus the concrete Content-Security-Policy are finalized here (the CSP values deferred from [08](11-login-consent-ui.md) and [14](19-observability-capacity-slo.md)).
+- **OWASP ASVS 5.0 Level 2** across V2 (auth), V3 (session, including a cookie-attribute test), V7 (errors/logging), V8 (data protection), V9 (communications), with Level 3 depth for key, token, dual-control, and tenant-isolation surfaces, and the API Security Top 10 mapped. This ASVS baseline plus the concrete Content-Security-Policy are finalized here (the CSP values deferred from [11](11-login-consent-ui.md) and [19](19-observability-capacity-slo.md)).
 - **IDOR/BOLA on the admin API:** object-level authorization negatives (a tenant-A caller cannot read/modify/delete a tenant-B resource; a non-admin cannot reach an admin object).
 - **Fuzzing:** `/token` (grant_type, code, client params, malformed/oversized/encoded bodies) with no crash, no 5xx, no leak, extended in breadth to `/authorize`, PAR, device, introspection, the JWKS/JWT parser, and the back-channel `logout_token` receiver.
 - **Cross-tenant negative test as a CI gate** and the **audit hash-chain integrity test** (a mutated or deleted record must be detected).
@@ -125,17 +125,17 @@ doc references them rather than restating the assertions:
 
 | Area | Owner doc |
 |---|---|
-| Cross-tenant / RLS isolation | [02](02-data.md), [05](07-authorization.md), [04](04-core-protocol.md), [13](18-tenant-lifecycle.md) |
+| Cross-tenant / RLS isolation | [02](02-data.md), [07](07-authorization.md), [04](04-core-protocol.md), [18](18-tenant-lifecycle.md) |
 | PKCE, discovery, per-tenant issuer, claims | [04](04-core-protocol.md) |
-| mTLS spoofed-header rejection, DPoP, device backoff, PAR flood | [04](04-core-protocol.md), [11](14-advanced-flows.md) |
-| Revocation propagation, distrusted-kid, config propagation | [10](13-revocation-caching.md) |
-| Dual-control (proposer not approver, step-up, target_changed, BOLA) | [12](15-admin-api.md), [05](07-authorization.md) |
+| mTLS spoofed-header rejection, DPoP, device backoff, PAR flood | [04](04-core-protocol.md), [14](14-advanced-flows.md) |
+| Revocation propagation, distrusted-kid, config propagation | [13](13-revocation-caching.md) |
+| Dual-control (proposer not approver, step-up, target_changed, BOLA) | [15](15-admin-api.md), [07](07-authorization.md) |
 | Audit hash-chain integrity, delivery, two-lane independence | [03](03-audit.md) |
-| Playwright admin end-to-end (propose, second-user step-up approve, no token in browser) | [12 app](16-admin-app.md) |
-| Erasure erase-set plus chain-verify gate | [13 erasure](17-erasure-and-data-subject-rights.md) |
-| Federation security (SSRF egress, RFC 9207 iss/mix-up, anti-takeover, claim allow-list, HIBP fail-open) | [06](08-user-management.md) |
-| Abuse defense (risk-triggered challenge, lockout-DoS scoping) | [08](11-login-consent-ui.md) |
-| Load/SLO gate, external canary, collector-outage, chaos | [14](19-observability-capacity-slo.md) |
+| Playwright admin end-to-end (propose, second-user step-up approve, no token in browser) | [16 app](16-admin-app.md) |
+| Erasure erase-set plus chain-verify gate | [17 erasure](17-erasure-and-data-subject-rights.md) |
+| Federation security (SSRF egress, RFC 9207 iss/mix-up, anti-takeover, claim allow-list, HIBP fail-open) | [08](08-user-management.md) |
+| Abuse defense (risk-triggered challenge, lockout-DoS scoping) | [11](11-login-consent-ui.md) |
+| Load/SLO gate, external canary, collector-outage, chaos | [19](19-observability-capacity-slo.md) |
 
 Because the taxonomy is confirmed against the real suites when the test projects land at
 M1 (ADR-0060), it is a strategy and a naming convention here, not a frozen list.
@@ -203,7 +203,7 @@ flowchart TD
 ## Testing strategy
 
 This design *is* the testing strategy; its own confirmation is that the suites above run
-green in CI (with the load/SLO gate and canary as [14](19-observability-capacity-slo.md)'s
+green in CI (with the load/SLO gate and canary as [19](19-observability-capacity-slo.md)'s
 separate job), and that the taxonomy is reconciled to the real test projects at M1.
 
 ## Open and build-time items
@@ -217,7 +217,7 @@ separate job), and that the taxonomy is reconciled to the real test projects at 
 ## References
 
 - ADRs: ADR-0060 (testing strategy), ADR-0062 (OWASP ASVS baseline), ADR-0058 (Separation of Concerns), ADR-0021/ADR-0030 (contract-regression per bump), ADR-0024 (architecture tests), ADR-0025 (Testcontainers/e2e/CI), ADR-0041 (load/SLO gate, owned by 19), ADR-0049 (tenant-isolation binding), ADR-0026 (permissive dependencies), ADR-0014 (FAPI de-scope).
-- Design docs: [15 CI/CD and deployment](21-cicd-and-deployment.md) (the pipeline that runs these suites), [14 observability](19-observability-capacity-slo.md) (load/SLO gate, canary, chaos), [13 tenant lifecycle](18-tenant-lifecycle.md) (migration CI checks), [01 foundations](01-foundations.md) (the foundational CI gates), and the feature docs cited in the acceptance-test catalog.
+- Design docs: [21 CI/CD and deployment](21-cicd-and-deployment.md) (the pipeline that runs these suites), [19 observability](19-observability-capacity-slo.md) (load/SLO gate, canary, chaos), [18 tenant lifecycle](18-tenant-lifecycle.md) (migration CI checks), [01 foundations](01-foundations.md) (the foundational CI gates), and the feature docs cited in the acceptance-test catalog.
 - [Architecture](../architecture/README.md); [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 
 ---

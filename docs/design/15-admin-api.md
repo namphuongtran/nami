@@ -401,9 +401,9 @@ first-admin seed is idempotent and forces a change; Scalar performs a real OIDC 
 - ADRs: ADR-0020, ADR-0015, ADR-0010 / ADR-0047 (07), ADR-0029 (the App's BFF), ADR-0009 /
   ADR-0035, ADR-0008, ADR-0003, ADR-0019, ADR-0007 (distinct), ADR-0013, ADR-0021, ADR-0024 /
   ADR-0027, ADR-0034 (v2 dynamic IdP), ADR-0062 (ASVS).
-- Design docs: [Admin App](16-admin-app.md), [05 authorization](07-authorization.md) (the
-  decision and gating rule), [06 user management](08-user-management.md) (lifecycle, force-logout,
-  sessions), [07 email](10-email-notification.md) (proposal-failure notification), [10
+- Design docs: [Admin App](16-admin-app.md), [07 authorization](07-authorization.md) (the
+  decision and gating rule), [08 user management](08-user-management.md) (lifecycle, force-logout,
+  sessions), [10 email](10-email-notification.md) (proposal-failure notification), [13
   revocation](13-revocation-caching.md) (force-logout / config cache), [02 data](02-data.md)
   (`DualControlProposals`, `TenantBranding`), [03 audit](03-audit.md), [13 GDPR erasure and
   tenant provisioning] (saga bodies), [14 observability] (SLO table), [01

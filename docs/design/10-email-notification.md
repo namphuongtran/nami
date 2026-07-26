@@ -541,7 +541,7 @@ Pre-GA checklist (ADR-0008) is where they land.
   (resilience and the fail-closed carve-out), ADR-0015 (break-glass alert), ADR-0042
   (abuse/throttle numbers), ADR-0028 / ADR-0037 (packaging, PostgreSQL DDL).
 - Design docs: [02 data tier](02-data.md) (schema SSOT for `OutboxEmail` /
-  `SuppressionEntry`), [03 audit](03-audit.md) (two lanes, security events), [06 user
+  `SuppressionEntry`), [03 audit](03-audit.md) (two lanes, security events), [08 user
   management](08-user-management.md) (change-email flow, `RequireConfirmedAccount`), [01
   foundations](01-foundations.md) (ports catalog, `Cloud:Provider` selector, package
   graph).

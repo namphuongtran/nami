@@ -16,6 +16,7 @@ Usage:  python3 scripts/review/design-pointer-audit.py [file ...]
         (no arguments audits every docs/design/*.md)
 """
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -109,6 +110,33 @@ def exhaustive(path: Path) -> None:
             print(f"  {lineno:5} {flag} [{prev} {num}] ...{line[start:m.end() + 20]}")
 
 
+LABEL_LINK = re.compile(r"\[\s*(\d{2})\b[^\]]*\]\((\d{2})-[^)]*\.md\)")
+
+
+def label_mismatches() -> int:
+    """Report links whose visible label number disagrees with the file it points at.
+
+    This is the one genuinely mechanical check here, and it is the only defect class in
+    this batch that was invisible to every other screen: a renumber rewrites link
+    *targets* and leaves link *labels* alone, so "[10 revocation](13-revocation-caching.md)"
+    resolves, passes the broken-link sweep, and lies to the reader. 108 of these survived
+    two renumbers, nine of them in the architecture layer from a renumber a batch earlier.
+    The target is authoritative because it resolves, so a mismatch is always the label.
+    """
+    files = subprocess.run(
+        ["git", "ls-files", "*.md"], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.split()
+    bad = 0
+    for rel in files:
+        for lineno, line in enumerate((ROOT / rel).read_text().split("\n"), 1):
+            for m in LABEL_LINK.finditer(line):
+                if m.group(1) != m.group(2):
+                    print(f"  MISMATCH {rel}:{lineno}  label {m.group(1)} points at {m.group(2)}")
+                    bad += 1
+    print(f"  label-versus-target mismatches: {bad}")
+    return bad
+
+
 def main() -> int:
     titles = index_titles()
     args = [a for a in sys.argv[1:] if a != "--exhaustive"]
@@ -125,6 +153,8 @@ def main() -> int:
         return 0
     files = [Path(a) for a in args] if args else sorted(DESIGN.glob("[0-9][0-9]-*.md"))
     unresolved = sum(audit(f, titles) for f in files)
+    print("\nLink labels versus their targets (mechanical, a mismatch is always an error):")
+    unresolved += label_mismatches()
     print(
         f"\nRead each pointer against its title. Numbers that resolve are not "
         f"necessarily correct.\nUnresolved numbers (a real error, and the only thing "

@@ -266,8 +266,8 @@ replace or alter the internal per-path enforcement in this design, and v1 stays 
   (introspection), ADR-0049 (resource-server validation), ADR-0021 (seam catalogue),
   ADR-0068 (v2 Shared Signals, proposed).
 - Design docs: [04 core protocol](04-core-protocol.md) (revocation endpoint,
-  entry-validation, `AccessTokenType`, introspection cache, 15-min TTL), [06 user
-  management](08-user-management.md) (sessions, force-logout, `ValidationInterval`), [09
+  entry-validation, `AccessTokenType`, introspection cache, 15-min TTL), [08 user
+  management](08-user-management.md) (sessions, force-logout, `ValidationInterval`), [12
   key management](12-key-management.md) (break-glass trigger, RS validation-key set), [02
   data](02-data.md) (`SigningKeys.RevokedAt`, `ServerSideSessions`), [01 foundations]
   (01-foundations.md) (Redis / cache wiring), [03 audit](03-audit.md) (event catalog).

@@ -483,7 +483,7 @@ stateDiagram-v2
   management, sessions, external login), [runtime views](../architecture/09-runtime-flow-views.md).
 * Design: [02-data](02-data.md) (Identity, passkeys, sessions, membership schema),
   [04-core-protocol](04-core-protocol.md) (the claims choke-point and token issuance),
-  [05-authorization](07-authorization.md) (step-up enforcement, dual-control),
+  [07-authorization](07-authorization.md) (step-up enforcement, dual-control),
   [03-audit](03-audit.md) (transition provenance).
 * ADRs: 0028 (user management), 0013 (MFA/assurance producer), 0003 (sessions), 0002
   (federation), 0005 (claims choke-point), 0001 (global identity/membership), 0008

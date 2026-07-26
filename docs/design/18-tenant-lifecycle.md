@@ -22,10 +22,10 @@ the deprovision saga (`ITenantDeprovisioningService`), the re-home and re-parent
 
 Out of scope, referenced not redefined: the erasure saga the deprovision invokes and
 the cross-border transfer register and jurisdiction profile
-([13 erasure and DSR](17-erasure-and-data-subject-rights.md)); the key-set bootstrap,
+([17 erasure and DSR](17-erasure-and-data-subject-rights.md)); the key-set bootstrap,
 escrow, destruction, and the DP-key delete-is-irreversible caveat
-([09 key management](12-key-management.md)); the dual-control proposal workflow and the
-`PUT /tenants` guards and problem codes ([12 Admin API](15-admin-api.md)); the
+([12 key management](12-key-management.md)); the dual-control proposal workflow and the
+`PUT /tenants` guards and problem codes ([15 Admin API](15-admin-api.md)); the
 per-tenant issuer derivation from `Identifier` ([04 core protocol](04-core-protocol.md));
 the tenant registry, closure table, Pool/Silo isolation, and forced RLS
 ([01 foundations](01-foundations.md), [02 data](02-data.md)); and the audit-forward
@@ -56,7 +56,7 @@ retry, never half-live:
 6. **Flip `Enabled=true` only after the readiness gate:** `SchemaVersion == AppExpectedVersion`, the Silo keys load, the DNS/TLS certificate is ready, and the runtime residency-enforcement hook passes (below). Emit `tenant.provisioned`.
 
 Tenant creation is an `iam_change`/`delete_tenant`-class non-cascading capability, so it
-runs under dual-control ([12 Admin API](15-admin-api.md), [05 authorization](07-authorization.md)).
+runs under dual-control ([15 Admin API](15-admin-api.md), [07 authorization](07-authorization.md)).
 
 ### `IMigrationRunner` and `SchemaVersionGate`
 
@@ -108,7 +108,7 @@ Resume flips `Enabled=true` with no data loss. Both suspend and resume run throu
 dual-control proposal (resume is security-sensitive because a suspension may follow a
 compromise), and each emits a `tenant.suspended`/`tenant.resumed` audit event. A runtime
 operation against a suspended tenant returns `409 tenant_suspended`
-([12 Admin API](15-admin-api.md)).
+([15 Admin API](15-admin-api.md)).
 
 The tenant `Identifier` is **immutable after provisioning** because it derives the
 per-tenant issuer ([04 core protocol](04-core-protocol.md)); changing it would break
@@ -127,11 +127,11 @@ checkpoint for a manual, dual-controlled resume or rollback:
 
 1. Flip `Enabled=false` with a 503 traffic-gate.
 2. Revoke all tokens (access, refresh, authorization) and kill all sessions (the ticket store and the reference-token store).
-3. Erase or archive the subject data through the erasure saga ([13 erasure and DSR](17-erasure-and-data-subject-rights.md)).
-4. **Escrow then destroy** the key-set: short-term escrow per the retention window, then destroy; not an immediate destroy, and the destroy distinguishes a soft-delete under purge-protection from an irreversible hard-delete of a DP key ([09 key management](12-key-management.md)).
+3. Erase or archive the subject data through the erasure saga ([17 erasure and DSR](17-erasure-and-data-subject-rights.md)).
+4. **Escrow then destroy** the key-set: short-term escrow per the retention window, then destroy; not an immediate destroy, and the destroy distinguishes a soft-delete under purge-protection from an irreversible hard-delete of a DP key ([12 key management](12-key-management.md)).
 5. Retire the keys from the JWKS (stop advertising them).
 6. Drop or archive the Silo database, or purge the Pool rows by tenant filter with forced row-level security.
-7. Remove the tenant from the registry and the closure table. Because delegated-admin grants are subtree-scoped and rooted on a tenant (`RootTenantId` to `Tenants`, ADR-0010) and the ancestor lookup reads the closure ([05 authorization](07-authorization.md)), an ancestor-rooted grant stops resolving into the subtree once the tenant leaves the closure.
+7. Remove the tenant from the registry and the closure table. Because delegated-admin grants are subtree-scoped and rooted on a tenant (`RootTenantId` to `Tenants`, ADR-0010) and the ancestor lookup reads the closure ([07 authorization](07-authorization.md)), an ancestor-rooted grant stops resolving into the subtree once the tenant leaves the closure.
 8. Release the secrets (connection-string and key references) from the secret store (dual-control).
 9. Emit a `delete_tenant`-class, hash-chained audit event.
 
@@ -154,7 +154,7 @@ residency-enforcement hook**: the saga asserts that the Silo database, key-store
 SIEM-forward destination regions equal the declared residency before `Enabled=true`; a
 mismatch fails the step and the tenant stays `Enabled=false`. The transfer register and
 the jurisdiction profile that this placement serves are owned by
-[13 erasure and DSR](17-erasure-and-data-subject-rights.md).
+[17 erasure and DSR](17-erasure-and-data-subject-rights.md).
 
 ### Key libraries and licenses
 
@@ -179,7 +179,7 @@ UNIQUE, Name, IsolationMode, ConnectionString NULL, KeyScope, Enabled, SchemaVer
 with `xmin` concurrency, and `TenantClosure(AncestorId, DescendantId, Depth,
 PK(AncestorId, DescendantId))` with a reverse index. The residency attribute is a
 ratified column on the registry (ADR-0054). The `DualControlProposals` fields the
-lifecycle executors read/write live in [02 data](02-data.md)/[12 Admin API](15-admin-api.md).
+lifecycle executors read/write live in [02 data](02-data.md)/[15 Admin API](15-admin-api.md).
 
 ## Runtime flows
 
@@ -264,7 +264,7 @@ stateDiagram-v2
 ## References
 
 - ADRs: ADR-0017 (tenant provisioning and Silo migration), ADR-0054 (cross-border transfer and data residency), ADR-0001 (Pool/Silo, registry, closure, data-move), ADR-0010 (tenant hierarchy and delegated admin, whose subtree-scoped grants re-parent recomputes and whose ancestor-rooted grants stop resolving into a deprovisioned subtree), ADR-0012 (key bootstrap), ADR-0016 (erasure saga reused in deprovision), ADR-0025 (first-run DNS/TLS), ADR-0021 (pin-and-re-verify discipline), ADR-0033 (key-scope isolation).
-- Design docs: [02 data](02-data.md) (`Tenants`, `TenantClosure`, RLS, `SchemaVersion`), [13 erasure and DSR](17-erasure-and-data-subject-rights.md) (the erasure saga, transfer register, jurisdiction profile), [09 key management](12-key-management.md) (key bootstrap, escrow, destroy), [12 Admin API](15-admin-api.md) (the `PUT /tenants` guards, suspend/resume, provision endpoints), [04 core protocol](04-core-protocol.md) (per-tenant issuer from `Identifier`), [03 audit](03-audit.md) (audit-forward residency assertion).
+- Design docs: [02 data](02-data.md) (`Tenants`, `TenantClosure`, RLS, `SchemaVersion`), [17 erasure and DSR](17-erasure-and-data-subject-rights.md) (the erasure saga, transfer register, jurisdiction profile), [12 key management](12-key-management.md) (key bootstrap, escrow, destroy), [15 Admin API](15-admin-api.md) (the `PUT /tenants` guards, suspend/resume, provision endpoints), [04 core protocol](04-core-protocol.md) (per-tenant issuer from `Identifier`), [03 audit](03-audit.md) (audit-forward residency assertion).
 - [Architecture](../architecture/README.md); [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 
 ---

@@ -51,7 +51,7 @@ classDiagram
   class StampConfirmationJkt {
     HandleAsync(ProcessSignInContext) ValueTask
   }
-  class ExtractDPoPAccessToken {
+  class ExtractDPoPAccessTokenFromAuthHeader {
     HandleAsync(ProcessAuthenticationContext) ValueTask
   }
   class ValidateDPoPProofOfPossession {
@@ -70,7 +70,7 @@ classDiagram
 | Seam | Pipeline and event | Why it exists |
 |---|---|---|
 | `StampConfirmationJkt` | Server, `ProcessSignInContext` | The engine stamps `cnf` only for a client certificate, so the `jkt` form has no code path |
-| `ExtractDPoPAccessToken` | Validation, `ProcessAuthenticationContext` | The built-in extractor matches only the literal `Bearer` prefix, space included |
+| `ExtractDPoPAccessTokenFromAuthorizationHeader` | Validation, `ProcessAuthenticationContext` | The built-in extractor matches only the literal `Bearer` prefix, space included |
 | `ValidateDPoPProofOfPossession` | Validation, `ValidateTokenContext` | The built-in proof handler understands only `x5t#S256` and **throws** on a `jkt` |
 | `IDPoPReplayCache` | Port (ADR-0024) | Replay detection needs a cross-node store, and the store is an adapter concern |
 
@@ -179,7 +179,7 @@ a token that carries a binding the system will not enforce:
 sequenceDiagram
   autonumber
   participant C as Public client
-  participant X as ExtractDPoPAccessToken, ours
+  participant X as ExtractDPoPAccessToken handler, ours
   participant V as ValidateDPoPProofOfPossession, ours
   participant RC as IDPoPReplayCache
   participant B as Built-in proof handler
@@ -217,6 +217,24 @@ fail:
   standalone anchor is an integration item in section 10. Anchoring a handler on one
   pipeline to a descriptor from the other is the specific mistake this note exists to
   prevent.
+
+Both anchors are relative to a named built-in descriptor rather than absolute, and the
+offsets spike A-3 settled are one order before the built-in extractor and five hundred
+before the built-in proof handler:
+
+```mermaid
+flowchart TB
+  E["ExtractDPoPAccessTokenFromAuthorizationHeader<br/>order: built-in extractor minus 1"]:::ours
+  V["ValidateDPoPProofOfPossession<br/>order: built-in proof handler minus 500"]:::ours
+  B["built-in ValidateProofOfPossession<br/>x5t#S256 only, throws on a jkt"]:::engine
+  REJ["reject, invalid_dpop_proof"]:::ext
+  E --> V
+  V -->|proof valid, then consume the cnf branch| B
+  V -->|jti replayed, or the add is unconfirmed| REJ
+  classDef ours fill:#fff2cc,stroke:#d6b656,color:#000000
+  classDef engine fill:#85bbf0,stroke:#5d82a8,color:#000000
+  classDef ext fill:#999999,stroke:#6b6b6b,color:#ffffff
+```
 
 A bound token presented over `Bearer` is rejected (RFC 9449 section 7.2). And because the
 engine's `WWW-Authenticate` writer hardcodes the Bearer scheme, the DPoP challenge headers
@@ -288,7 +306,7 @@ services.AddOpenIddict().AddServer(o => o.AddEventHandler(StampConfirmationJkt.D
 // before the built-in proof handler.
 services.AddOpenIddict().AddValidation(o =>
 {
-    o.AddEventHandler(ExtractDPoPAccessToken.Descriptor);
+    o.AddEventHandler(ExtractDPoPAccessTokenFromAuthorizationHeader.Descriptor);
     o.AddEventHandler(ValidateDPoPProofOfPossession.Descriptor);
 });
 
@@ -436,7 +454,9 @@ thumbprint while a matching one rotates and re-stamps.
   0049 (composition order), 0048 (introspection), 0029 (the backend-for-frontend), 0040
   (the fail-open cache policy this design carves out of), 0073 (the proxy posture), 0065,
   0066.
-* Records: V18 for spikes A-1 and A-3, V27 for the fourth test of A-7 that showed
+* Architecture: the DPoP runtime view and the protocol-core component that carries these
+  handlers.
+* Records: R16 for the DPoP research that preceded the design, V18 for spikes A-1 and A-3, V27 for the fourth test of A-7 that showed
   sender-constraint composing after per-tenant validation, V14 for the finding that the
   engine's `cnf`-in-introspection covers only the certificate form.
 * **External verification, 2026-07-26, OpenIddict at release tag 7.5.0**, the version

@@ -161,50 +161,16 @@ per-tenant runtime federation; ADR-0034; the v2 dynamic-provider design is not i
 
 ## Data touchpoints
 
-This design adds no tables. The `jti` replay set is Redis-only (non-persistent,
+This design adds no tables. The replay set that 06 owns is Redis-only (non-persistent,
 fail-closed); PAR `request_uri`s and device codes ride the native OpenIddict token
 entities in the OpenIddict context (device codes are JWE); any new persistence would be
 raised as an ADR, not settled here.
 
 ## Runtime flows
 
-DPoP issuance and resource validation (the detailed realization of SAD runtime view 5):
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant SPA as SPA / mobile (holds key)
-  participant IDP as Authorization server
-  participant API as Resource server
-  participant R as Redis (jti)
-
-  SPA->>IDP: POST /token + DPoP proof (typ dpop+jwt, jwk, htm, htu, iat)
-  IDP->>IDP: validate proof (no ath), compute thumbprint
-  IDP-->>SPA: access token with cnf.jkt (refresh bound too)
-  SPA->>API: GET resource, Authorization DPoP token + fresh proof (ath, htm, htu)
-  API->>API: extract DPoP scheme, validate proof + thumbprint == cnf.jkt
-  API->>R: check-then-add jti (fail-closed on unconfirmed write)
-  alt valid, not replayed
-    API-->>SPA: 200
-  else missing / stale nonce
-    API-->>SPA: 401 use_dpop_nonce + DPoP-Nonce
-  else bound token sent as Bearer
-    API-->>SPA: 401 invalid_token
-  end
-```
-
-DPoP validation pipeline order:
-
-```mermaid
-flowchart TB
-  classDef c fill:#fff2cc,stroke:#d6b656,color:#000
-  E["ExtractDPoPAccessTokenFromAuthorizationHeader<br/>(order: extract-Bearer minus 1)"]:::c
-  V["ValidateDPoPProofOfPossession<br/>(order: ValidateProofOfPossession minus 500)"]:::c
-  B["built-in ValidateProofOfPossession<br/>(x5t#S256 only, throws SR.ID2196 on jkt)"]
-  E --> V
-  V -->|validate proof, then neutralize cnf branch| B
-  V -->|jti replay fail-closed| REJ["Reject invalid_dpop_proof"]
-```
+The DPoP issuance and validation flows moved to [06](06-sender-constrained-tokens.md)
+with the mechanism, including the pipeline-order diagram that fixes the two handler
+anchors. What remains here is the hardening this design owns.
 
 Device-flow backoff:
 
@@ -227,45 +193,30 @@ sequenceDiagram
 
 ## Security considerations
 
-- **No half-bound token:** a token is fully DPoP-bound or plain; there is no partial
-  `cnf.jkt`, and a bound token presented as `Bearer` is rejected.
-- **Replay is fail-closed by necessity:** an unconfirmed `jti` write rejects the proof.
-- **XSS:** browser DPoP is not an XSS defense; the BFF is the real SPA mitigation.
-- **Tenant isolation:** signature alone is not a boundary; the RS validates
-  issuer/audience/tenant and `cnf` composes after that.
+- **Tenant isolation:** signature alone is not a boundary; the resource server validates
+  issuer, audience, and tenant, and a sender-constraint check composes after that (05, 06).
 - **Device and PAR DoS:** the 429 ceilings, not `slow_down`/rate hints alone, are the real
   controls.
-- **Version-sensitive seams:** the DPoP handler orders, the `SR.ID2196` avoidance, the
-  device pre-consumption order, the end-user-verification passthrough method name (inferred,
-  not yet confirmed in the reference tree), and the PAR/introspection behaviors are pinned
-  seams with a contract-regression test on every bump; DPoP is owned permanently (no
-  committed native).
+- **Version-sensitive seams:** the device pre-consumption order, the
+  end-user-verification passthrough method name, and the PAR and introspection behaviours
+  are pinned seams with a contract-regression test on every bump. The sender-constraint
+  seams are 06's.
 
 ## Testing strategy
 
-- **DPoP:** a token over `Authorization: DPoP` passes and the same token over `Bearer` is
-  rejected (§7.2); tampering `htm`/`htu`/`ath` is rejected; a replayed `jti` is rejected
-  (including cross-node over shared Redis); an out-of-skew `iat` is rejected; a
-  `cnf.jkt` that does not match the proof thumbprint is rejected; the nonce flow
-  (401 → retry → 200) works; mTLS `x5t#S256` still validates (no regression); introspection
-  is enrich-or-inactive; and refresh requires `jkt` continuity.
 - **Device:** the `slow_down` handler is ordered before device-code consumption and
   `interval` is emitted; the 429 ceiling holds.
 - **PAR:** the anti-flood ceiling returns 429 and the shortened `request_uri` lifetime
   applies.
 - **Multi-tenant:** every advanced flow is tenant-scoped and cross-tenant use is rejected.
-- **Contract regression (per bump):** the DPoP handler orders and `SR.ID2196` avoidance,
-  the device ordering, the PAR seam, and the standalone-versus-co-host validation anchor.
+- **Contract regression (per bump):** the device ordering and the PAR seam. The
+  sender-constraint handler orders and their version sensitivity are 06's.
 
 ## Open and build-time items
 
-- **Standalone-versus-co-host DPoP validation anchor:** the exact order anchor for a
-  standalone `OpenIddict.Validation` resource server is confirmed at build time (the spikes
-  exercised the `TokenValidationParameters` layer, not the real validation-scheme wiring).
-- **Refresh `jkt`-continuity and the server-issued nonce** (phase 2) are build-time items.
-- **Trusted-proxy mTLS IP list** is an Ops/Security ratification item (ADR-0014, Pre-GA
-  checklist); the step-up AAL thresholds are referenced there too (ADR-0013), owned by
-  05/06.
+- **The sender-constraint build-time items** (the standalone validation anchor, refresh
+  thumbprint continuity, the nonce phase, and the trusted-proxy address list) are 06's, and
+  the step-up assurance thresholds are an ADR-0013 ratification item owned by 07 and 08.
 - **De-scope revisit triggers:** the FAPI 2.0 message-signing tier (proposed ADR-0056, for
   JAR/JARM/RAR), the MCP AS-role resource-indicator policy layer (proposed ADR-0064), and
   the native DCR and back-channel logout that arrive with OpenIddict 8.0.
@@ -278,15 +229,15 @@ sequenceDiagram
   (device-code JWE, referenced), ADR-0033 (shared-key isolation, referenced), and the
   proposed ADR-0056 (FAPI 2.0) / ADR-0064 (MCP AS-role) for de-scope revisit.
 - Design docs: [04 core protocol](04-core-protocol.md) (mTLS, PAR endpoint, device grant,
-  introspection, discovery, the pipeline seam), [05 authorization](07-authorization.md)
-  (token-exchange `act`, step-up enforcement), [06 user management](08-user-management.md)
-  (the acr/amr/auth_time producer), [08 login/consent/logout UI](11-login-consent-ui.md)
+  introspection, discovery, the pipeline seam), [07 authorization](07-authorization.md)
+  (token-exchange `act`, step-up enforcement), [08 user management](08-user-management.md)
+  (the acr/amr/auth_time producer), [11 login/consent/logout UI](11-login-consent-ui.md)
   (device and step-up pages, back-channel fan-out), [10 revocation and caching]
   (13-revocation-caching.md) (the Redis wiring, the fail-closed discipline).
-- [Architecture](../architecture/README.md): runtime view 5 (DPoP), the protocol-core
-  components (DPoP handlers), the Redis container role.
-- Verification: the A-1 issuance and A-3 validation spikes and their results (V18); the
-  RS-side per-tenant validation spike (V27); the DPoP research (R16).
+- [Architecture](../architecture/README.md): the protocol-core components and the Redis
+  container role.
+- Verification: the resource-server per-tenant validation spike (V27). The sender-constraint
+  spikes and research (A-1, A-3, V18, R16) moved to 06 with the mechanism.
 - [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md) (trusted-proxy mTLS
   IP list).
 

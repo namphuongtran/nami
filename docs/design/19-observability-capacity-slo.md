@@ -25,12 +25,12 @@ posture (operator-chosen production, a dev-only Grafana stack).
 Out of scope, referenced not redefined: the audit lane (`ISecurityEventSink`,
 hash-chain, delivery guarantee) which is a **separate** lane from diagnostics
 ([03 audit](03-audit.md)); the keys-health gauges and JWKS availability target
-([09 key management](12-key-management.md)); the `/health/ready` and `/health/live`
-predicate ([01 foundations](01-foundations.md), extended in [09](12-key-management.md));
-the authorization SLIs and their SLO ([05 authorization](07-authorization.md)); the
+([12 key management](12-key-management.md)); the `/health/ready` and `/health/live`
+predicate ([01 foundations](01-foundations.md), extended in [12](12-key-management.md));
+the authorization SLIs and their SLO ([07 authorization](07-authorization.md)); the
 rate-limiting/load-shedding and revocation mechanisms
-([10 revocation](13-revocation-caching.md), [11 advanced flows](14-advanced-flows.md),
-[12 Admin API](15-admin-api.md)); the token-endpoint and pooling capacity levers
+([13 revocation](13-revocation-caching.md), [14 advanced flows](14-advanced-flows.md),
+[15 Admin API](15-admin-api.md)); the token-endpoint and pooling capacity levers
 ([04 core protocol](04-core-protocol.md), [02 data](02-data.md)); and RTO/RPO
 (ADR-0006). Content-Security-Policy finalization is a security-hardening concern
 (design #15), not observability, and is not settled here.
@@ -85,7 +85,7 @@ ASP.NET Core standard names; the `nami.`-rooted rule governs Nami's own instrume
 rename or removal is a breaking change under the SemVer policy, and a migration to native
 instrumentation if OpenIddict issue #1345 lands is handled under the same deprecation
 window (ADR-0044 §G, ADR-0021). Key-health gauges (`key_rotations`, `keys_loaded`,
-`signing_key_days_to_expiry`) are owned by [09](12-key-management.md); this design consumes
+`signing_key_days_to_expiry`) are owned by [12](12-key-management.md); this design consumes
 them for alerting.
 
 ### High-cardinality control (mandatory)
@@ -201,7 +201,7 @@ and alerting independently of pod readiness. It catches configuration, certifica
 JWKS-publication, and keyring failures that an internal readiness probe cannot see from
 the outside, and its end-to-end latency feeds the SLO gate. It complements, and does not
 replace, the internal `/health/ready` probe ([01](01-foundations.md),
-[09](12-key-management.md)).
+[12](12-key-management.md)).
 
 ### Observability backend posture
 
@@ -315,17 +315,17 @@ sequenceDiagram
 
 ## Open and build-time items
 
-- **Product/Ops ratifications** (tracked in the [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md), the SLO row): the SLO numeric table and error-budget freeze policy; the workload parameters (logins/user/day, peak factor, and the M2M ceiling); the availability figure (99.9% versus 99.95%); and the trailing-window length (28 days proposed). Every absolute throughput/latency number stays load-test-determined until proven on the target infrastructure. The authorization SLO (ADR-0047, owned by [05](07-authorization.md)) and RTO/RPO (ADR-0006, owned by [09](12-key-management.md)) are ratified elsewhere and only referenced here.
+- **Product/Ops ratifications** (tracked in the [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md), the SLO row): the SLO numeric table and error-budget freeze policy; the workload parameters (logins/user/day, peak factor, and the M2M ceiling); the availability figure (99.9% versus 99.95%); and the trailing-window length (28 days proposed). Every absolute throughput/latency number stays load-test-determined until proven on the target infrastructure. The authorization SLO (ADR-0047, owned by [07](07-authorization.md)) and RTO/RPO (ADR-0006, owned by [12](12-key-management.md)) are ratified elsewhere and only referenced here.
 - **Ops**: the on-call and escalation roster (recommended, pending Ops); the collector agent-versus-gateway topology for the reference host (the ADR-0022 open item).
 - **Architect**: the RS256-versus-ES256 default (RS256 is the baseline; ES256 is a config option worth revisiting if the M2M mint-rate profile justifies it).
 - **Decommission marker (ADR-0021)**: retire the custom meter for native instrumentation if OpenIddict issue #1345 lands.
 - **Consumer monitoring and metrics reference (build-time, M1)**: publish an operator-facing reference that documents enablement and OTLP export configuration and then catalogs every emitted metric (name, instrument type, unit, description, and its bounded attributes) plus the standard attributes, so an operator can point their own Collector at Nami and know exactly what it provides. The metrics themselves are the stable contract fixed by ADR-0044 §G and named per ADR-0065; the reference is finalized against the real instruments when code lands, with a docs-code-sync check asserting every emitted instrument appears in it. (This is operator-facing operational telemetry to the operator's own backend, distinct from the opt-in vendor phone-home of ADR-0032.)
-- **Cross-doc consistency (with [09](12-key-management.md))**: the keys-health gauge names owned by 12 (`key_rotations`, `keys_loaded`, `signing_key_days_to_expiry`) do not carry the `nami.`-rooted prefix that the telemetry-naming rule (ADR-0065) requires, and should, for full contract conformance; raised here, to be reconciled when 12 is next revised, rather than renamed across a committed doc from here.
+- **Cross-doc consistency (with [12](12-key-management.md))**: the keys-health gauge names owned by 12 (`key_rotations`, `keys_loaded`, `signing_key_days_to_expiry`) do not carry the `nami.`-rooted prefix that the telemetry-naming rule (ADR-0065) requires, and should, for full contract conformance; raised here, to be reconciled when 12 is next revised, rather than renamed across a committed doc from here.
 
 ## References
 
 - ADRs: ADR-0022 (logging and observability stack), ADR-0041 (NFR targets and SLO release gate), ADR-0063 (observability backend and dev visualization), ADR-0040 (rate-limiting and load-shedding), ADR-0018 (connection pooling), ADR-0037 (PostgreSQL write path), ADR-0008 (the separate audit lane), ADR-0006 (RTO/RPO), ADR-0005 (RS256 baseline, claim minimization), ADR-0021 (OpenIddict version adaptation and the decommission marker), ADR-0031 (12-factor logs), ADR-0026 (permissive dependencies), ADR-0044 (public-API stability and SemVer, whose §G makes emitted metric names a versioned contract), ADR-0065 (the `nami.`-rooted telemetry naming scheme), ADR-0032 (the distinct opt-in vendor phone-home, not this operator-facing lane).
-- Design docs: [03 audit](03-audit.md) (the audit lane), [09 key management](12-key-management.md) (keys-health gauges, JWKS target, readiness), [01 foundations](01-foundations.md) (health endpoints), [05 authorization](07-authorization.md) (authorization SLIs), [04 core protocol](04-core-protocol.md) (token-endpoint capacity levers), [02 data](02-data.md) (pooling, write path), [10 revocation](13-revocation-caching.md) (rate-limit/Redis posture).
+- Design docs: [03 audit](03-audit.md) (the audit lane), [12 key management](12-key-management.md) (keys-health gauges, JWKS target, readiness), [01 foundations](01-foundations.md) (health endpoints), [07 authorization](07-authorization.md) (authorization SLIs), [04 core protocol](04-core-protocol.md) (token-endpoint capacity levers), [02 data](02-data.md) (pooling, write path), [13 revocation](13-revocation-caching.md) (rate-limit/Redis posture).
 - [Architecture](../architecture/README.md); [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 
 ---

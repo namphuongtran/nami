@@ -23,13 +23,13 @@ cross-border transfer register and jurisdiction profile.
 Out of scope, referenced not redefined: the audit hash-chain, the `IAuditChainScrubber`
 three-mode model, and the `SubjectDek` vault schema ([03 audit](03-audit.md),
 [02 data](02-data.md)); the dual-control proposal state machine and executor registry
-([12 Admin API](15-admin-api.md)); key escrow, destruction, and the DP-key
-delete-is-irreversible caveat ([09 key management](12-key-management.md)); the
-revoke-by-subject and force-logout primitives ([10 revocation](13-revocation-caching.md),
-[08 UI](11-login-consent-ui.md)); the self-service profile-edit and change-email
-mechanics ([06 user management](08-user-management.md)); and tenant
+([15 Admin API](15-admin-api.md)); key escrow, destruction, and the DP-key
+delete-is-irreversible caveat ([12 key management](12-key-management.md)); the
+revoke-by-subject and force-logout primitives ([13 revocation](13-revocation-caching.md),
+[11 UI](11-login-consent-ui.md)); the self-service profile-edit and change-email
+mechanics ([08 user management](08-user-management.md)); and tenant
 provisioning, deprovisioning, suspension, and residency-aware **placement**
-([13 tenant lifecycle](18-tenant-lifecycle.md)).
+([18 tenant lifecycle](18-tenant-lifecycle.md)).
 
 ## Decisions realized
 
@@ -63,7 +63,7 @@ The order is load-bearing (ADR-0016) and each step is check-then-act with a per-
 checkpoint so a retry resumes rather than repeats:
 
 1. **Intake and guard.** Record an `ErasureRequest { RequestId, SubjectId, RequestedAtUtc, Status }`. Consult legal holds, unexpired retention, and any active `ProcessingRestriction`; split the subject's data into an erase-set and a retain-set (the retain-set carries an Art.17(3) basis per record; the split itself is a DPO-policy decision point).
-2. **Dual-control gate.** Erasure is destructive and touches PII, so it runs as a non-cascading `data_export`/`iam_change`-class capability with proposer not equal to approver, gated and audited through the proposal workflow ([12 Admin API](15-admin-api.md), [05 authorization](07-authorization.md)). Never autonomous.
+2. **Dual-control gate.** Erasure is destructive and touches PII, so it runs as a non-cascading `data_export`/`iam_change`-class capability with proposer not equal to approver, gated and audited through the proposal workflow ([15 Admin API](15-admin-api.md), [07 authorization](07-authorization.md)). Never autonomous.
 3. **Revoke live access first.** For each tenant the subject belongs to (via global Memberships), set the tenant context (Pool filter or Silo connection) and call `RevokeBySubjectAsync` on the authorization and token managers, then delete the subject's server-side sessions. This runs before any delete because an OpenIddict application's tokens have no cascade and would keep validating if the row were removed first ([02 data](02-data.md)); revoke-before-delete is a security requirement, not cleanup.
 4. **Delete tenant-operational data**, FK-safe and in one transaction: tokens then authorizations then application, per Pool/Silo ([02 data](02-data.md)), with a Quartz prune to finalize (the prune's `MinimumTokenLifespan` exceeds the 8h refresh ceiling, at least 24 hours, [04 core protocol](04-core-protocol.md)).
 5. **Delete global identity and control data**: UserLogins/UserClaims/UserTokens, Memberships, DelegatedAdmin, then AspNetUsers.
@@ -130,7 +130,7 @@ carry the mechanism.
   controller is optional and skipped in v1.
 - **Rectification (Art.16).** Identity and profile data is mutable and is corrected
   through the self-service custom endpoints and admin-assisted edits owned by
-  [06 user management](08-user-management.md) (dual-control for sensitive fields,
+  [08 user management](08-user-management.md) (dual-control for sensitive fields,
   the hardened change-email flow), propagated to derived read-models and caches. The
   audit hash-chain is **never rewritten**: rectification appends a `subject.rectified`
   correction-note rather than editing the original row.
@@ -143,12 +143,12 @@ carry the mechanism.
   where Art.21 does not apply; an objection flag stops **optional** processing
   (analytics, non-essential notifications, marketing) while essential authentication
   continues. Direct marketing is an absolute stop and reuses the email suppression list
-  ([07 email](10-email-notification.md)); any legitimate-interest balancing is routed to
+  ([10 email](10-email-notification.md)); any legitimate-interest balancing is routed to
   the DPO.
 
 ### Consent receipts (Art.7(1))
 
-On granting consent, [08 UI](11-login-consent-ui.md) emits an immutable, hash-chained
+On granting consent, [11 UI](11-login-consent-ui.md) emits an immutable, hash-chained
 consent-receipt event through the audit sink; this design owns the **receipt schema and
 the policy-version governance**. The payload is
 `{ subject, client_id, tenant, scope_set, purpose, legal_basis, policy_version_hash,
@@ -192,7 +192,7 @@ authority and deadline in one place, shared with the breach hooks above:
   provider's personal-data role.
 
 The residency-aware **placement** that keeps a residency-bound tenant's data
-in-jurisdiction (Silo pinning) is owned by [13 tenant lifecycle](18-tenant-lifecycle.md);
+in-jurisdiction (Silo pinning) is owned by [18 tenant lifecycle](18-tenant-lifecycle.md);
 the audit-forward residency assertion is owned by [03 audit](03-audit.md). This design
 owns the classification model, the transfer register, and the profile.
 
@@ -247,8 +247,8 @@ Referenced, not defined here: `SubjectDek` and `AuditLog` (with the ciphertext-a
 precondition on subject-bearing columns) live in [02 data](02-data.md)/[03 audit](03-audit.md);
 the `DualControlProposals` fields the erasure and DSAR executors read/write
 (`TargetETag`, `FailReason`/`FailDetail`, `PriorProposalId`, the 72-hour `ExpiresAt`,
-timestamps) live in [02 data](02-data.md)/[12 Admin API](15-admin-api.md); the
-`SuppressionEntry` table reused for objection lives in [07 email](10-email-notification.md).
+timestamps) live in [02 data](02-data.md)/[15 Admin API](15-admin-api.md); the
+`SuppressionEntry` table reused for objection lives in [10 email](10-email-notification.md).
 
 ## Runtime flows
 
@@ -300,7 +300,7 @@ stateDiagram-v2
 
 ## Edge cases and failure modes
 
-- **Erasure is never automatic on offboard.** Offboard invokes the gated erasure saga, but erasure stays dual-control and Art.17/DPO-gated ([06 user management](08-user-management.md)); the saga can revoke and disable without erasing until the gate clears.
+- **Erasure is never automatic on offboard.** Offboard invokes the gated erasure saga, but erasure stays dual-control and Art.17/DPO-gated ([08 user management](08-user-management.md)); the saga can revoke and disable without erasing until the gate clears.
 - **Legal hold or restriction overlaps the erase-set.** The intake split moves held/retained records to the retain-set with an Art.17(3) basis; an active `ProcessingRestriction` pauses erasure rather than deleting.
 - **A tenant is mid-migration or 503-gated.** The saga skips that tenant and retries; the per-plane checkpoint makes the resume idempotent, never half-erased.
 - **Crypto-shredded field surfaces in a DSAR.** The access report renders it as "erased" rather than failing.
@@ -314,7 +314,7 @@ stateDiagram-v2
 - Cross-subject data is redacted from every access report; the audit-about-the-subject slice shows only what the subject is entitled to see.
 - The per-subject DEK never leaves its vault and never appears in the audit store, its backups, SIEM, or WORM; destroying it is irreversible and does not touch an audit row.
 - At-rest encryption and crypto-shred are a genuine lever that reduces the Art.34 notification obligation (unintelligible data is exempt).
-- There is no global super-admin; a platform-level erasure operator is still a scoped or global-role grant anchored to a root tenant ([05 authorization](07-authorization.md)).
+- There is no global super-admin; a platform-level erasure operator is still a scoped or global-role grant anchored to a root tenant ([07 authorization](07-authorization.md)).
 
 ## Testing strategy
 
@@ -333,7 +333,7 @@ stateDiagram-v2
 ## References
 
 - ADRs: ADR-0016 (right to erasure), ADR-0053 (data-subject-rights suite), ADR-0054 (cross-border transfer and residency), ADR-0008 (immutable audit), ADR-0013 (step-up), ADR-0007 (key-compromise, feeding the breach assembler), ADR-0005 (claim minimization), ADR-0038 (email suppression), ADR-0026 (permissive dependencies).
-- Design docs: [02 data](02-data.md) (`SubjectDek`, `AuditLog`, `ProcessingRestriction` reference), [03 audit](03-audit.md) (`IAuditChainScrubber`, `RecordHash`), [12 Admin API](15-admin-api.md) (dual-control frame), [09 key management](12-key-management.md) (key destroy), [06 user management](08-user-management.md) (rectification surface), [07 email](10-email-notification.md) (suppression, priority lane), [13 tenant lifecycle](18-tenant-lifecycle.md) (residency placement, deprovision).
+- Design docs: [02 data](02-data.md) (`SubjectDek`, `AuditLog`, `ProcessingRestriction` reference), [03 audit](03-audit.md) (`IAuditChainScrubber`, `RecordHash`), [15 Admin API](15-admin-api.md) (dual-control frame), [12 key management](12-key-management.md) (key destroy), [08 user management](08-user-management.md) (rectification surface), [10 email](10-email-notification.md) (suppression, priority lane), [18 tenant lifecycle](18-tenant-lifecycle.md) (residency placement, deprovision).
 - [Architecture](../architecture/README.md); [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 
 ---
