@@ -103,7 +103,7 @@ erDiagram
     MEMBERSHIPS {
         uuid UserId PK "FK into the Identity context"
         uuid TenantId PK "FK to Tenants"
-        jsonb Roles_JSON "roles within this tenant, source of truth for belonging"
+        jsonb RolesJson "roles within this tenant, source of truth for belonging"
     }
     DELEGATED_ADMIN {
         uuid GrantId PK "UUIDv7"
@@ -156,11 +156,11 @@ erDiagram
         timestamptz Timestamp "when the event occurred"
         bytea PrevHash "previous link, genesis is 32 zero bytes"
         bytea RecordHash "keyed chain link"
-        text Payload_Canonical "the canonical form that is hashed"
+        text PayloadCanonical "the canonical form that is hashed"
         text ActorSub "per-subject ciphertext, crypto-shreddable"
         text OnBehalfOfSubject "per-subject ciphertext"
         text ApproverSub "per-subject ciphertext"
-        jsonb ActorChain_JSON "delegation chain, per-subject ciphertext"
+        jsonb ActorChainJson "delegation chain, per-subject ciphertext"
         text EventType "classification"
         uuid TargetTenantId "which tenant"
         text Result "outcome"
@@ -176,7 +176,7 @@ erDiagram
         bytea RequestHash "binds the audited request"
     }
     SUBJECT_DEK {
-        text SubjectRef PK "one data-encryption key per subject, created lazily"
+        uuid SubjectRef PK "one data-encryption key per subject, created lazily"
         bytea WrappedDek "per-subject key wrapped by the keyring master key"
         timestamptz CreatedAt "when created"
         timestamptz DestroyedAt "nullable, erasure sets this and every ciphertext copy becomes unreadable"
@@ -524,13 +524,20 @@ failover behaviour and deployment topology are elaborated in
   Field lists were then rebuilt from **this repository's** data design rather than transcribed
   from the corpus, and that changed several things. The entity names are `TenantApplication`,
   `TenantAuthorization`, `TenantToken`, and `TenantScope`, not the corpus's unprefixed names.
-  `SigningKeys.Id` is a `text` `kid`, where the corpus has `uuid`. `Tenants` carries
-  `SchemaVersion` and `RequireInviteApproval`, which the corpus omits. `SubjectDek` exists at
-  all, which the corpus has no equivalent for, and the audit table's subject-bearing fields are
-  per-subject ciphertext, which the corpus does not record. Several load-bearing details are
-  ours only: the hard-coded-literal requirement on the partial index predicate, soft-delete
-  flags as real columns rather than extension-bag JSON, and the `KeyScope` vocabulary mismatch
-  between two tables. The corpus's audit note also writes the chain as
+  `SigningKeys.Id` is a `text` `kid`, where the corpus's data model has `uuid`; that divergence
+  was re-examined on 2026-07-26 and kept, because the corpus contradicts itself there (its
+  key-management design types the same column as a string) and RFC 7517 defines `kid` as a
+  string. Three further items were recorded here as absent from the corpus and are
+  **corrected**: `Tenants.SchemaVersion` and `Tenants.RequireInviteApproval`, the existence of
+  `SubjectDek`, and the audit table's subject-bearing fields being per-subject ciphertext are
+  absent from the corpus **view** this chapter was reconciled against, and all three are present
+  in the corpus's own **data model** one layer down, which the detailed-design reconcile read on
+  2026-07-26. The original claims were true of the document consulted and wrong as written,
+  because "the corpus omits X" reads as a claim about all of it. Details that are genuinely ours
+  after checking both corpus layers: the hard-coded-literal requirement on the partial index
+  predicate, soft-delete flags on the **scope** entity (the corpus carries them on the
+  application entity but leaves scope bare), and the `KeyScope` vocabulary mismatch between two
+  tables. The corpus's audit note also writes the chain as
   `H(PrevHash || canonical(fields))` while calling it HMAC-keyed in the same sentence, an
   internal inconsistency; ADR-0008's keyed form is used. This view's own earlier mis-citation of
   the global scope catalog to ADR-0018 and ADR-0037 was corrected to ADR-0001.

@@ -759,8 +759,9 @@ empty string rather than NULL once the transaction ends and casting an empty str
 `uuid` **throws** instead of failing closed. The trap is scoped by **column type, not by
 release**: it does not reach the OpenIddict tenant tables, whose discriminator is `text`
 and therefore fails closed on an unset variable, but it reaches every guarded
-`uuid`-tenant table, and **v1 already has four** (`LogoutDeliveryOutbox`, `OutboxEmail`,
-`SuppressionEntry`, `ProcessingRestriction`), so this outbox follows an existing rule
+`uuid`-tenant table, and **v1 already has five** (`LogoutDeliveryOutbox`, `OutboxEmail`,
+`SuppressionEntry`, `TenantBranding`, `ProcessingRestriction`), so this outbox follows an
+existing rule
 rather than introducing one. Nami is a **producer only** and takes no inbound dependency on any
 consumer. The kill
 switch is simply not calling the registration extension, so nothing is added to the hot

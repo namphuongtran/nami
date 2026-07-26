@@ -78,7 +78,7 @@ The audit scrub is realized as **key destruction, never a row edit** so the
 INSERT/SELECT-only grant and tamper-evidence hold. Three modes are owned and ranked
 by [03 audit](03-audit.md) and are not re-ranked here:
 
-- **Crypto-shred (runtime default).** Subject-bearing audit columns (`ActorSub`, `OnBehalfOfSubject`, `ApproverSub`, `ActorChain_JSON`) are written as ciphertext at insert, so `RecordHash = HMAC-SHA256(canonical(fields) || PrevHash)` is computed over the ciphertext and does **not** change when the key is destroyed. Erasure destroys the per-subject key; the chain still verifies.
+- **Crypto-shred (runtime default).** Subject-bearing audit columns (`ActorSub`, `OnBehalfOfSubject`, `ApproverSub`, `ActorChainJson`) are written as ciphertext at insert, so `RecordHash = HMAC_k(PrevHash || canonical(fields))` is computed over the ciphertext and does **not** change when the key is destroyed. Erasure destroys the per-subject key; the chain still verifies.
 - **PII-outside-the-chain (schema design target).** Where an event can carry an opaque `SubjectRef` plus a separately deletable mapping instead of embedding PII, it should; the chain then never hashed real PII.
 - **Anonymise-in-place (deferred).** A `NotImplemented` opt-in stub only, never the default: keeping the original hash of erased PII is itself a re-identification vector and conflicts with the append-only grant, so it is dominated on every axis and not built in v1.
 
@@ -214,20 +214,29 @@ owns the classification model, the transfer register, and the profile.
 
 ## Data model
 
-This design defines **one** new table; the rest are referenced.
+Every table this design operates on is defined in [02 data](02-data.md), which is the
+schema source of record; this section states what the columns mean for the saga rather
+than redefining them.
 
-**`ProcessingRestriction`** (control-plane, tenant-columned) is created here (its schema
-was deferred to this doc by [02 data](02-data.md)):
+**`ProcessingRestriction`** (control-plane, tenant-columned) carries the Art.18
+restriction:
 
 | Column | Type | Notes |
 |---|---|---|
-| Id | uuid PK | `uuidv7()` (PG18) |
-| TenantId | uuid | tenant discriminator |
-| SubjectRef | text | the restricted subject |
+| SubjectRef | uuid | the restricted subject; **primary key together with `TenantId`** |
+| TenantId | uuid | tenant discriminator, and the second half of the primary key |
 | Reason | text | accuracy-contested \| erasure-alt \| legal-claim \| objection-pending |
 | Scope | text | which processing is restricted |
 | StartedAt | timestamptz | when applied |
 | LiftedAt | timestamptz NULL | null while active |
+
+The key is composite rather than a surrogate `Id` on purpose: one live restriction per
+subject per tenant is the invariant, and a surrogate key would permit duplicates that
+the saga would then have to reconcile.
+
+**`ErasureRequest`** (`RequestId` PK, `SubjectId`, `RequestedAtUtc`, `Status`,
+`CheckpointJson`, `xmin`) carries the request itself, and its `CheckpointJson` is what
+makes the saga resumable per plane.
 
 Because the discriminator is a uuid, its row-level-security policy uses the uuid
 predicate form `TenantId = NULLIF(current_setting('app.current_tenant', true), '')::uuid`

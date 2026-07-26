@@ -98,7 +98,7 @@ One correctness caveat rides with that step. A policy that casts the tenant sett
 must use `NULLIF(current_setting(...), '')::uuid`, because a **pooled** connection returns an
 empty string rather than NULL once the transaction ends, and casting an empty string to `uuid`
 **throws** instead of failing closed. The scope is the column **type**, not the release:
-text-typed tenant comparisons are safe as they are, and four v1 control-plane tables carry a
+text-typed tenant comparisons are safe as they are, and five v1 control-plane tables carry a
 `uuid` tenant column and therefore need the cast (ADR-0071, and the data design carries the
 authoritative list).
 

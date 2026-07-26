@@ -6,35 +6,61 @@ tags: [design, data, multi-tenancy, persistence]
 
 # Data tier and multi-tenancy (detailed design)
 
-## Purpose and scope
+> **Sits under:** [architecture: data architecture](../architecture/12-data-architecture.md),
+> which gives the shape (contexts, relationships, topology). This design gives the
+> columns: types, keys, indexes, constraints, and the isolation SQL.
+> **Implementer source of record for the schema:** this document. Every persistent
+> table's fields, keys, and load-bearing indexes are defined here; a feature design
+> references these tables and owns the behaviour over them.
 
-The persistence tier and the isolation model that every other subsystem depends
-on: the four DbContexts, tiered Pool/Silo multi-tenancy with a two-layer isolation
-control (an EF query filter plus PostgreSQL FORCE row-level security), the
-control-plane schema, the UUIDv7 key and `xmin` concurrency conventions, and the
-migration model. It is Phase 02 and rests on the foundations (01).
+DDL below is PostgreSQL-flavoured because the engine is fixed (ADR-0037): `text`,
+`boolean`, `bytea`, `timestamptz`, `jsonb`, UUIDv7 primary keys, and `xmin` for
+optimistic concurrency. The types are the design intent; exact lengths, collations,
+constraint names, and index storage parameters are set at implementation.
 
-In scope: the DbContext topology and tenancy composition, the control-plane
-tables at schema level, keying/concurrency, isolation mechanics, and migrations.
-Out of scope (owned by later designs): the audit hash-chain mechanism (03), the
-authorization logic over the delegated-admin tables (05), key rotation internals
-(09), and the protocol wiring that reads these stores (04). This doc creates the
-tables and the isolation guarantees; those docs use them.
-
-## Decisions realized
+## 1. Decisions realized
 
 | Decision | What this design applies |
 |---|---|
 | ADR-0001 | Global identity/membership/registry; tenant-scoped OpenIddict data; Pool by default, Silo on demand; global scope catalog; four DbContexts (topology fixed) |
 | ADR-0037 | PostgreSQL 18 sole engine; FORCE RLS backstop; `xmin` concurrency; `pg_advisory_lock`; `jsonb`; efbundle migrations plus a raw-SQL RLS step |
-| ADR-0036 | UUIDv7 clustered keys everywhere, one bigint exception (the session surrogate) |
+| ADR-0036 | UUIDv7 clustered keys everywhere, with two declared surrogate exceptions |
 | ADR-0018 | DbContext pooling: non-pooled Pool context in v1 (A-4/T7), pooled-plus-mutable as a post-v1 option; per-context pooling matrix; connection-pool sizing |
 | ADR-0049 | Resource-server isolation by issuer and tenant binding (a shared Pool keyset means the signature is not the boundary) |
-| ADR-0008 / ADR-0003 / ADR-0010 | The audit, session, and delegated-admin tables live in the control plane (mechanisms detailed in 03, 05, 06) |
+| ADR-0065 | Database identifier casing: PascalCase tables and columns, `IX_<Table>_<detail>` indexes, snake_case for objects EF never maps, specification names verbatim |
+| ADR-0008 / ADR-0003 / ADR-0010 | The audit, session, and delegated-admin tables live in the control plane (mechanisms detailed in 03, 08, 07) |
+| ADR-0016 / ADR-0053 / ADR-0017 | The erasure, data-subject-rights, and provisioning tables live here; their sagas are owned by 17 and 18 |
 
-## Component and interface design
+## 2. Purpose and scope
+
+The persistence tier and the isolation model that every other subsystem depends on:
+the four DbContexts, tiered Pool/Silo multi-tenancy with a two-layer isolation
+control (an EF query filter plus PostgreSQL FORCE row-level security), the
+control-plane schema, the UUIDv7 key and `xmin` concurrency conventions, and the
+migration model. It is Phase 02 and rests on the foundations (01).
+
+In scope: the DbContext topology and tenancy composition, every control-plane table
+at field level, keying and concurrency, isolation mechanics, and migrations. Out of
+scope, owned by later designs: the audit hash-chain mechanism (03), the authorization
+logic over the delegated-admin tables (07), key rotation internals (12), the erasure
+and provisioning sagas (17, 18), and the protocol wiring that reads these stores (04).
+This doc creates the tables and the isolation guarantees; those docs use them.
+
+## 3. Interfaces and contract
 
 ### The four DbContexts
+
+| DbContext | Scope | Base type | Pooling |
+|---|---|---|---|
+| `OpenIddictDbContext` | Tenant-scoped | Finbuckle `MultiTenantDbContext` | **Non-pooled** `AddDbContext` in v1; Silo never pooled |
+| `IdentityDbContext` | Global | ASP.NET Core Identity context with a `Guid` key | Pooled |
+| `DataProtectionDbContext` | Global | `DbContext`, implements `IDataProtectionKeyContext` | Pooled |
+| `ControlPlaneDbContext` | Global | `DbContext` | Pooled |
+
+The topology is fixed by ADR-0001; changing it requires a superseding ADR. Each
+context owns its own `__EFMigrationsHistory` in its own schema (`openiddict`,
+`identity`, `dataprotection`, `controlplane`) so a shared database has no collision.
+Data tables are all in `public`: v1 uses no schema separation for data.
 
 ```mermaid
 graph LR
@@ -57,117 +83,108 @@ graph LR
   style oi fill:#fff4e6,stroke:#c69a66
 ```
 
-| DbContext | Scope | Tables | Pooling |
-|---|---|---|---|
-| `OpenIddictDbContext` | Tenant-scoped | Applications, Authorizations, Tokens (carry `TenantId`); Scopes (global catalog) | Non-pooled `AddDbContext` in v1; Silo never pooled |
-| `IdentityDbContext` | Global | AspNetUsers, Roles, Claims, UserRoles | Pooled |
-| `DataProtectionDbContext` | Global | DataProtectionKeys | Pooled |
-| `ControlPlaneDbContext` | Global | Tenants, TenantClosure, Memberships, DelegatedAdmin, CapabilityCatalog, AuditLog, SigningKeys, ServerSideSessions, and the outbox tables | Pooled |
+### The custom OpenIddict entity types
 
-The topology is fixed by ADR-0001; changing it requires a superseding ADR.
+OpenIddict's EF Core entities are generic in the key type and in each other. Nami
+replaces the defaults so the key type is `Guid` and the three tenant-scoped entities
+carry `TenantId`:
 
-### Pool composition (the A-4-proven pattern)
+```csharp
+public class TenantApplication
+    : OpenIddictEntityFrameworkCoreApplication<Guid, TenantAuthorization, TenantToken>
+{
+    public string? TenantId { get; set; }
+    public bool Enabled { get; set; } = true;            // soft-delete: indexable, filterable
+    public DateTimeOffset? DeletedAtUtc { get; set; }
+}
 
-`OpenIddictDbContext` derives Finbuckle's `MultiTenantDbContext` and marks the
-three tenant-scoped entities `.IsMultiTenant()` (Applications, Authorizations,
-Tokens), deliberately **not** Scope. This gives auto-stamp of `TenantId` on insert,
-a named tenant query filter, and throw-on-mismatch/unset, which closes the
-footgun that OpenIddict's stores do not know about `TenantId`. Three details are
-load-bearing and spike-proven (A-4, 17/17, kept as regression):
+public class TenantAuthorization
+    : OpenIddictEntityFrameworkCoreAuthorization<Guid, TenantApplication, TenantToken>
+{
+    public string? TenantId { get; set; }
+}
 
-* `EnforceMultiTenantOnTracking()` is called in the constructor so that entities
-  OpenIddict's stores create internally (redeem/revoke) are stamped with the
-  ambient tenant when tracked; deriving `MultiTenantDbContext` alone does not stamp
-  externally-created entities.
-* The global unique index on `ClientId` is replaced with a composite unique index
-  on `(TenantId, ClientId)`, so the same `client_id` can exist per tenant in Pool
-  mode. Without the override a second tenant reusing a `client_id` fails with a
-  PostgreSQL unique violation (23505).
-* A named soft-delete filter (`"soft_delete"`) coexists with the tenant filter (EF
-  Core 10 named filters, ANDed), so an admin can view disabled rows by ignoring
-  only `soft_delete` without leaking across tenants.
+public class TenantToken
+    : OpenIddictEntityFrameworkCoreToken<Guid, TenantApplication, TenantAuthorization>
+{
+    public string? TenantId { get; set; }
+}
 
-The A-4 harness is the reference implementation; the composition of Finbuckle +
-OpenIddict + EF Core is a version-pinned seam re-verified on each bump (ADR-0021).
+// GLOBAL catalog (R18): no TenantId, never .IsMultiTenant()
+public class TenantScope : OpenIddictEntityFrameworkCoreScope<Guid>
+{
+    public bool Enabled { get; set; } = true;
+    public DateTimeOffset? DeletedAtUtc { get; set; }
+}
+```
 
-### Silo composition and the global scope catalog
+They are registered with `ReplaceDefaultEntities` and the context is declared with the
+five-argument `UseOpenIddict` overload so the stores resolve the custom types.
 
-A Silo tenant gets its own database (a per-tenant connection string via
-`OnConfiguring`), no discriminator column, and its own key set; Silo contexts are
-never pooled because the connection string varies. The **scope catalog is global**
-(R18): Scopes carry no `TenantId`, `Name` stays globally unique, and per-tenant
-differences are expressed as scope allowlists on the client grant, never by
-forking the catalog.
+```mermaid
+classDiagram
+  class TenantApplication {
+    Guid Id
+    string TenantId
+    string ClientId
+    bool Enabled
+    DateTimeOffset DeletedAtUtc
+  }
+  class TenantAuthorization {
+    Guid Id
+    string TenantId
+    string Subject
+    string Status
+    string Type
+  }
+  class TenantToken {
+    Guid Id
+    string TenantId
+    string ReferenceId
+    string Subject
+    string Status
+    string Type
+    DateTimeOffset ExpirationDate
+  }
+  class TenantScope {
+    Guid Id
+    string Name
+  }
+  TenantApplication "1" --> "0..*" TenantAuthorization : authorizes
+  TenantApplication "1" --> "0..*" TenantToken : issues
+  TenantAuthorization "1" --> "0..*" TenantToken : backs
+  note for TenantScope "GLOBAL catalog: no TenantId, not multi-tenant"
+```
 
-### Two-layer tenant isolation
+`ITenantService` owns every mutation of the tenant tree (create, move, closure
+maintenance) in one transactional path rather than a database trigger (ADR-0024). The
+tree algorithm is in section 5.
 
-* **Layer 1, the EF query filter** (Finbuckle): keeps cross-tenant rows off the
-  wire on the normal read/write path.
-* **Layer 2, PostgreSQL FORCE row-level security**: a policy comparing the row's
-  tenant to `current_setting('app.current_tenant', true)` under a **de-privileged
-  role** (`NOSUPERUSER`, no `BYPASSRLS`), set per request with `SET LOCAL` inside
-  the request transaction. This is the backstop for the bulk and raw-SQL paths that
-  bypass the EF filter (`ExecuteDelete`/`ExecuteUpdate` honor the filter but bypass
-  the change-tracker stamp, so RLS is the only write-side guard for a background
-  job running without an ambient tenant). A superuser bypasses RLS, so the
-  de-privileged role is mandatory or the second layer is silently off.
+## 4. Data and structure
 
-The RLS objects (ENABLE/FORCE, the policy, the role and grants) are not in the EF
-model and are added as an explicit `migrationBuilder.Sql(...)` step after table
-creation (ADR-0037, ADR-0017). The policy expression must match the tenant-column
-type: `TenantId = current_setting('app.current_tenant', true)` for the `text`
-OpenIddict discriminator, but for a `uuid` tenant column it must be
-`TenantId = NULLIF(current_setting('app.current_tenant', true), '')::uuid`, because an
-unset GUC returns an empty string and `''::uuid` raises `22P02` (a crash, not the
-intended fail-closed zero rows).
+### Identifier conventions
 
-**This list is the single authority for which tables take the `uuid` form**, and a new
-guarded table with a `uuid` tenant column is added here rather than only in its own
-design, because the failure is a crash rather than a leak and is therefore easy to
-discover late. In v1 it is four control-plane tables: `LogoutDeliveryOutbox` (this doc),
-`OutboxEmail` and `SuppressionEntry` (07), and `ProcessingRestriction` (13). The v2
-change-event outbox joins them (ADR-0071). `TenantBranding` carries a `uuid` tenant column
-as its primary key but has **no row-level-security policy recorded**, which is an open
-item, not an exemption: either it is guarded and takes the `uuid` form, or the reason it
-does not need a policy is stated where the table is defined.
+ADR-0065 is the authority; the rules that bite in this document are: tables and
+columns are **PascalCase**, so PostgreSQL folding means EF emits them quoted and
+**every hand-written statement must quote them too** (`"TenantId"`), which covers the
+RLS policies, the outbox drain, DBA sessions, and dashboards. Indexes are
+`IX_<Table>_<detail>`, unique indexes `UX_<Table>_<detail>`. Objects EF never maps,
+meaning RLS policies and database roles, are snake_case. Wire and specification names
+stay verbatim in their own case (`client_id`, the `Properties` dictionary keys).
 
-### Key libraries and licenses
+Conventions across all tables (ADR-0036, ADR-0037): primary keys are UUIDv7 `uuid`
+except the two declared surrogate exceptions; the optimistic-concurrency token is the
+`xmin` system column, surfaced as the admin ETag and the dual-control TOCTOU check;
+JSON is `jsonb`, used as an extension bag and never as the only home for data that must
+be queried; timestamps are `timestamptz`; encrypted blobs are `bytea`; enums are stored
+as `text`.
 
-| Library | Purpose | License | ADR |
-|---|---|---|---|
-| Npgsql (+ EF Core provider) | PostgreSQL 18 provider: `uuidv7()`, `xmin`, RLS SQL | PostgreSQL (BSD-like) | 0037 |
-| Finbuckle.MultiTenant (+ AspNetCore, EntityFrameworkCore) | Tenant resolution, Pool/Silo stores, auto-stamp | Apache-2.0 | 0001 |
-| EF Core 10 | ORM, named query filters, migrations | MIT | 0037 |
-| `Microsoft.AspNetCore.DataProtection.EntityFrameworkCore` | DP keyring backing store | MIT | 0006 |
-
-The Finbuckle + OpenIddict + EF Core version triple is a pinned composition seam;
-the exact pins live in `Directory.Packages.props` (the implementation plan).
-
-### Patterns applied
-
-Named per ADR-0066 (a vocabulary, applied where it clarifies intent):
-
-* **Closure Table** over an adjacency list for the tenant hierarchy (read-heavy
-  authz in one seek).
-* **Strategy** for tenant resolution (host/path) and Pool-versus-Silo store routing
-  (Finbuckle).
-* **Repository** via the EF and OpenIddict stores, always behind managers, never a
-  `DbContext` touched directly.
-
-## Data model
-
-This design is the **schema single source of truth**. Every persistent table's
-fields, keys, and load-bearing indexes are defined here at design fidelity;
-feature designs (03 audit, 06 admin, 07 email, 09 keys) reference these tables and
-own the behavior over them. The exact DDL (column defaults, constraint names, the
-raw-SQL RLS/role step, index storage) lives in the implementation plan.
-
-Conventions across all tables (ADR-0036/0037): primary keys are UUIDv7 `uuid`
-except the one `bigint` session surrogate; the optimistic-concurrency token is the
-`xmin` system column (surfaced as the admin ETag and the dual-control TOCTOU
-check); JSON is `jsonb` used as an extension bag, never the only home for data that
-must be queried; timestamps are `timestamptz`; encrypted blobs are `bytea`; enums
-are stored as `text`.
+**UUIDv7** is chosen for the write path: time-ordered keys fragment a B-tree far less
+than random UUIDv4, they stay globally unique for a Silo merge or move, and they are not
+enumerable. They are generated by PostgreSQL 18's native `uuidv7()` or by .NET's
+`Guid.CreateVersion7()`. The two exceptions are deliberate, and both are internal
+high-churn surrogates never referenced from outside: `ServerSideSessions.Id` (`bigint`
+identity) and `DataProtectionKeys.Id` (`int` identity, the framework's own schema).
 
 ### Relationships
 
@@ -198,36 +215,35 @@ erDiagram
   TENANTS ||--o{ SIGNINGKEYS : "scoped when Silo"
   TENANTS ||--o{ DUALCONTROLPROPOSALS : scoped
   TENANTS ||--o{ SUPPRESSIONENTRY : scoped
+  TENANTS ||--o{ PROCESSINGRESTRICTION : scoped
 ```
 
-`TenantScope` is a global catalog with no relationship to a tenant; `OutboxEmail`
-and `DataProtectionKeys` are standalone.
+`TenantScope` is a global catalog with no relationship to a tenant; `OutboxEmail`,
+`DataProtectionKeys`, `ErasureRequest`, and `SubjectDek` are standalone.
 
-### OpenIddictDbContext (tenant-scoped)
+### OpenIddictDbContext: the Nami-added columns
 
-Custom entities extend the OpenIddict EF base types with the key type overridden to
-`Guid` via `ReplaceDefaultEntities`. Only the Nami-added columns and the
-isolation-critical index are listed; the remaining columns are OpenIddict's
-standard entity schema.
+Only the added columns and the isolation-critical index are listed; the rest is
+OpenIddict's own entity schema, summarized under "native columns and indexes" below.
 
-`TenantApplication` (adds to OpenIddict Application):
+`TenantApplication`:
 
 | Field | Type | Key / index | Notes |
 |---|---|---|---|
 | Id | uuid | PK | UUIDv7; overrides OpenIddict's default string key |
 | TenantId | text | composite unique with ClientId; RLS column | `.IsMultiTenant()`; auto-stamped, throw on unset/mismatch |
-| ClientId | text | unique (TenantId, ClientId) | replaces OpenIddict's global-unique ClientId index |
+| ClientId | text | `UX_Application_tenant_client (TenantId, ClientId)` | replaces OpenIddict's global-unique `ClientId` index |
 | Enabled | boolean | | disable-not-delete default |
 | DeletedAtUtc | timestamptz null | named `soft_delete` filter | coexists with the tenant filter (ANDed) |
 
-`TenantAuthorization` and `TenantToken` (add to OpenIddict Authorization/Token):
+`TenantAuthorization` and `TenantToken`:
 
 | Field | Type | Key / index | Notes |
 |---|---|---|---|
 | Id | uuid | PK | UUIDv7 |
 | TenantId | text | RLS column | `.IsMultiTenant()`, auto-stamped |
-| ApplicationId | uuid | FK to TenantApplication, optional | LEFT JOIN; `DeleteBehavior.Restrict`, no cascade |
-| AuthorizationId (Token) | uuid | FK to TenantAuthorization, FK-indexed | optional; backs family revoke and prune |
+| ApplicationId | uuid null | FK to TenantApplication, optional | LEFT JOIN; `DeleteBehavior.Restrict`, no cascade |
+| AuthorizationId (Token) | uuid null | FK to TenantAuthorization, FK-indexed | optional; backs family revoke and prune |
 
 `TenantScope` (global catalog, R18):
 
@@ -235,186 +251,462 @@ standard entity schema.
 |---|---|---|---|
 | Id | uuid | PK | UUIDv7 |
 | Name | text | globally unique | no `TenantId`, not `.IsMultiTenant()`; seeded once |
-| Enabled / DeletedAtUtc | boolean / timestamptz null | | disable-not-delete, same as `TenantApplication` (real columns, not `Properties`-JSON, so they index and filter); the `soft_delete` named filter is registered per entity and coexists with the tenant filter (ANDed), spike-validated |
+| Enabled / DeletedAtUtc | boolean / timestamptz null | named `soft_delete` filter | real columns, not `Properties` JSON, so they index and filter |
 
-### IdentityDbContext (global)
+### Native columns and indexes (verified at the OpenIddict source)
 
-The standard ASP.NET Core Identity schema (`AspNetUsers`, `AspNetRoles`,
-`AspNetUserRoles`, `AspNetUserClaims`, `AspNetUserLogins`, `AspNetUserTokens`,
-`AspNetRoleClaims`), with `ApplicationUser : IdentityUser<Guid>` (UUIDv7 PK). Nami
-adds passkey storage (`UserPasskeyInfo` with `Aaguid` and `AttestationTrust`,
-detailed in 06) and hosts one copy of `OutboxEmail` (see below) for the
-confirm/reset flows. No tenant filter: identity is global (ADR-0001).
+The engine's own schema is not restated here in full, but three facts about it are
+load-bearing, for capacity planning and for the migration that overrides part of it.
+All three were read in the OpenIddict source at release tag **7.5.0**, the version
+ADR-0061 pins:
 
-### DataProtectionDbContext (global)
+* **The default index set is small.** Every entity declares `HasKey(Id)`. Beyond that:
+  Application has one unique index on `ClientId`; Scope one unique index on `Name`;
+  Authorization one **composite, non-unique** index on `(ApplicationId, Status,
+  Subject, Type)`; Token the same composite plus a unique index on `ReferenceId`. That
+  is the whole set.
+* **Neither `ExpirationDate` nor `CreationDate` is indexed.** Prune needs no extra index
+  because `PruneAsync` is a primary-key-ordered batched walk, which A-6/V26 measured. A
+  query filtering on `Subject` alone cannot seek the composite either, since `Subject`
+  is its third key; add a dedicated index only if a hot Subject-only path actually
+  appears, not speculatively.
+* **An application has three separate type-like columns, not one.** The descriptor
+  exposes `ApplicationType`, `ClientType`, and `ConsentType`, and there is no single
+  `Type` property. Code or DDL that assumes one `Type` column on an application is
+  wrong.
 
-`DataProtectionKeys` (the ASP.NET Data Protection keyring): `Id` (`int` identity),
-`FriendlyName` (`text`), `Xml` (`text`). Standard schema; the context implements
-`IDataProtectionKeyContext`. This keyring wraps `SigningKeys.Data`, so DR restores
-both together (09).
+**The Pool composite-uniqueness override** (spike A-4/T8-T9, V21): the global unique
+index on `ClientId` is dropped and replaced with a unique index on
+`(TenantId, ClientId)`, so the same `client_id` can exist once per tenant. Without the
+override, the second tenant to reuse a `client_id` fails with PostgreSQL `23505`.
+`Scope.Name` stays globally unique because the catalog is global. A Silo tenant keeps
+the engine's global unique index, since it has its own database.
 
-### ControlPlaneDbContext (global)
+### ControlPlaneDbContext DDL
 
-`Tenants` (adjacency):
+```sql
+-- Tenancy and hierarchy ------------------------------------------------------
+CREATE TABLE "Tenants" (
+  "TenantId"              uuid PRIMARY KEY,                 -- UUIDv7
+  "ParentTenantId"        uuid NULL REFERENCES "Tenants"("TenantId"),
+  "Identifier"            text NOT NULL UNIQUE,             -- IMMUTABLE post-provision; drives the per-tenant issuer
+  "Name"                  text NOT NULL,
+  "IsolationMode"         text NOT NULL,                    -- 'Pool' | 'Silo'
+  "ConnectionString"      text NULL,                        -- Silo only
+  "KeyScope"              text NOT NULL,                    -- 'pool-group' | 'own': the tenant's isolation choice
+  "Enabled"               boolean NOT NULL DEFAULT false,   -- provisioned-but-not-live, and suspension of a live tenant
+  "RequireInviteApproval" boolean NOT NULL DEFAULT false,   -- per-tenant invite-approval gate (08)
+  "SchemaVersion"         text NULL                         -- migration traffic gate
+  -- xmin: PostgreSQL system column, optimistic concurrency via Npgsql
+);
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| TenantId | uuid | PK | UUIDv7 |
-| ParentTenantId | uuid null | FK to Tenants | adjacency; source of truth for the tree |
-| Identifier | text | unique | immutable post-provision; drives the per-tenant issuer |
-| Name | text | | display |
-| IsolationMode | text | | Pool or Silo |
-| ConnectionString | text null | | set for Silo only |
-| KeyScope | text | | pool-group or own (ADR-0033) |
-| Enabled | boolean | | not-yet-live at provisioning vs suspension of a live tenant |
-| SchemaVersion | text | | migration traffic-gate |
-| RequireInviteApproval | boolean | | per-tenant invite-approval gate (06) |
+CREATE TABLE "TenantClosure" (
+  "AncestorId"   uuid NOT NULL REFERENCES "Tenants"("TenantId"),
+  "DescendantId" uuid NOT NULL REFERENCES "Tenants"("TenantId"),
+  "Depth"        int  NOT NULL,                             -- the self row is depth 0
+  PRIMARY KEY ("AncestorId", "DescendantId")
+);
+CREATE INDEX "IX_TenantClosure_reverse"
+  ON "TenantClosure" ("DescendantId", "AncestorId") INCLUDE ("Depth");
 
-`TenantClosure`:
+-- Membership and delegated administration ------------------------------------
+CREATE TABLE "Memberships" (
+  "UserId"    uuid  NOT NULL,
+  "TenantId"  uuid  NOT NULL REFERENCES "Tenants"("TenantId"),
+  "RolesJson" jsonb NOT NULL,                               -- roles within this tenant
+  "Status"    text  NOT NULL DEFAULT 'active',              -- 'active' | 'pending-approval': gates sign-in (08)
+  PRIMARY KEY ("UserId", "TenantId")
+);
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| AncestorId | uuid | PK part 1, FK to Tenants | |
-| DescendantId | uuid | PK part 2, FK to Tenants | reverse index (DescendantId, AncestorId) include Depth |
-| Depth | int | | self-row is depth 0 |
+CREATE TABLE "CapabilityCatalog" (
+  "Capability"    text PRIMARY KEY,                         -- lowercase snake_case (ADR-0065)
+  "IsInheritable" boolean NOT NULL                          -- forbidden-cascade: dangerous capabilities are false
+);
 
-`Memberships`:
+CREATE TABLE "DelegatedAdmin" (
+  "GrantId"         uuid PRIMARY KEY,
+  "GranteeUserId"   uuid NOT NULL,
+  "RootTenantId"    uuid NOT NULL REFERENCES "Tenants"("TenantId"),
+  "ValidFrom"       timestamptz NOT NULL,
+  "ExpiresAt"       timestamptz NULL,
+  "RevokedAt"       timestamptz NULL,
+  "GrantedByUserId" uuid NOT NULL,
+  "CreatedAt"       timestamptz NOT NULL
+);
+-- hot-path filtered covering index: equality first, revoked rows excluded
+CREATE INDEX "IX_DelegatedAdmin_active"
+  ON "DelegatedAdmin" ("GranteeUserId", "ExpiresAt")
+  INCLUDE ("RootTenantId", "ValidFrom")
+  WHERE "RevokedAt" IS NULL;
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| UserId | uuid | PK part 1, FK to AspNetUsers | |
-| TenantId | uuid | PK part 2, FK to Tenants | |
-| Roles_JSON | jsonb | | roles within this tenant; source of truth for belonging |
+CREATE TABLE "DelegatedAdminCapabilities" (
+  "GrantId"    uuid NOT NULL REFERENCES "DelegatedAdmin"("GrantId"),
+  "Capability" text NOT NULL REFERENCES "CapabilityCatalog"("Capability"),
+  PRIMARY KEY ("GrantId", "Capability")
+);
 
-`DelegatedAdmin` (+ `DelegatedAdminCapabilities`, `CapabilityCatalog`):
+-- Dual-control saga (mechanism in 15) ----------------------------------------
+CREATE TABLE "DualControlProposals" (
+  "ProposalId"      uuid PRIMARY KEY,
+  "ActionType"      text NOT NULL,                          -- kebab-case wire contract (ADR-0065)
+  "TargetType"      text NOT NULL,
+  "TargetId"        text NOT NULL,
+  "TenantId"        uuid NULL,
+  "PayloadJson"     jsonb NOT NULL,
+  "TargetETag"      text NOT NULL,                          -- TOCTOU guard, re-checked at execute
+  "Justification"   text NOT NULL,
+  "ProposedBy"      uuid NOT NULL,
+  "ProposedAt"      timestamptz NOT NULL,
+  "Status"          text NOT NULL,
+  "ApprovedBy"      uuid NULL,                              -- must differ from ProposedBy
+  "DecidedAt"       timestamptz NULL,
+  "ExecutedAt"      timestamptz NULL,
+  "FailReason"      text NULL,                              -- for example 'target_changed'
+  "FailDetail"      jsonb NULL,                             -- the expected and the observed ETag
+  "PriorProposalId" uuid NULL,                              -- lineage: replaces a failed proposal
+  "ExpiresAt"       timestamptz NOT NULL,                   -- 72h
+  "CorrelationId"   uuid NOT NULL
+  -- xmin: optimistic concurrency
+);
+CREATE INDEX "IX_DualControlProposals_status"   ON "DualControlProposals" ("Status", "ExpiresAt");
+CREATE INDEX "IX_DualControlProposals_proposer" ON "DualControlProposals" ("ProposedBy");
+CREATE INDEX "IX_DualControlProposals_tenant"   ON "DualControlProposals" ("TenantId");
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| GrantId | uuid | PK | UUIDv7 |
-| GranteeUserId | uuid | partial covering index | index (GranteeUserId, ExpiresAt) include (RootTenantId, ValidFrom) where RevokedAt is null |
-| RootTenantId | uuid | FK to Tenants | subtree the grant covers |
-| ValidFrom / ExpiresAt / RevokedAt / CreatedAt | timestamptz (ExpiresAt, RevokedAt null) | | time-bounded and revocable |
-| GrantedByUserId | uuid | | provenance |
-| (cap) GrantId + Capability | uuid + text | PK, FK to catalog | `DelegatedAdminCapabilities` |
-| (cat) Capability + IsInheritable | text + boolean | Capability PK | `CapabilityCatalog` |
+-- Audit (mechanism in 03) -----------------------------------------------------
+CREATE TABLE "AuditLog" (
+  "EntryId"           uuid PRIMARY KEY,
+  "Timestamp"         timestamptz NOT NULL,
+  "EventType"         text NOT NULL,
+  "ActorSub"          text NULL,                            -- ciphertext at write (crypto-shreddable)
+  "ActorChainJson"    jsonb NULL,                           -- ciphertext at write
+  "OnBehalfOfSubject" text NULL,                            -- ciphertext at write
+  "ApproverSub"       text NULL,                            -- ciphertext at write
+  "TargetTenantId"    uuid NULL,
+  "GrantId"           uuid NULL,
+  "Capability"        text NULL,
+  "DecisionPath"      text NULL,
+  "AuthzDecision"     text NULL,
+  "Acr"               text NULL,
+  "AuthTime"          timestamptz NULL,
+  "StepupSatisfied"   boolean NULL,
+  "ApprovalRequestId" uuid NULL REFERENCES "DualControlProposals"("ProposalId"),
+  "RequestHash"       bytea NULL,
+  "Result"            text NULL,
+  "PayloadCanonical"  text NOT NULL,                        -- canonical TEXT; jsonb does not preserve bytes
+  "PrevHash"          bytea NOT NULL,                       -- genesis is 32 zero bytes, not a string
+  "RecordHash"        bytea NOT NULL,                       -- HMAC_k(PrevHash || canonical(fields)), prev-first
+  "CorrelationId"     uuid NULL
+);
+-- append-only: INSERT grant only, plus REVOKE UPDATE, DELETE, TRUNCATE and a block trigger
 
-The partial covering index's `WHERE RevokedAt IS NULL` predicate must be a **hard-coded
-literal, never a bind parameter**: PostgreSQL's planner only uses a partial index when it
-can prove the query implies the index predicate at plan time, which it cannot do against a
-parameter. Equality/range keys (`GranteeUserId = $1`, `@now BETWEEN ValidFrom AND ExpiresAt`)
-as binds are fine and do not defeat the index.
+-- Signing keys (rotation state machine in 12) ---------------------------------
+CREATE TABLE "SigningKeys" (
+  "Id"                text PRIMARY KEY,                     -- the JWK kid; RFC 7517 defines it as a string
+  "Version"           int  NOT NULL,
+  "Use"               text NOT NULL,                        -- 'sig' | 'enc'
+  "Algorithm"         text NOT NULL,
+  "IsX509Certificate" boolean NOT NULL,                     -- publish-before-sign needs X509
+  "Data"              bytea NOT NULL,                       -- authoritative key material, encrypted at rest
+  "DataProtected"     boolean NOT NULL,                     -- DP-wrapped versus KMS-enveloped
+  "State"             text NOT NULL,                        -- 'announced' | 'active' | 'retired' | 'deleted'
+  "NotBefore"         timestamptz NOT NULL,
+  "NotAfter"          timestamptz NOT NULL,
+  "RetiresAt"         timestamptz NOT NULL,
+  "DeletesAt"         timestamptz NOT NULL,
+  "RevokedAt"         timestamptz NULL,                     -- break-glass, orthogonal to State
+  "KeyScope"          text NOT NULL,                        -- 'pool-group' | 'tenant'
+  "TenantId"          uuid NULL,                            -- set for a Silo per-tenant key set
+  "Created"           timestamptz NOT NULL
+);
+CREATE UNIQUE INDEX "UX_SigningKeys_active"
+  ON "SigningKeys" ("Use") WHERE "State" = 'active';        -- blocks two active signers per use
+CREATE INDEX "IX_SigningKeys_lookup" ON "SigningKeys" ("Use", "State");
 
-`AuditLog` (mechanism in 03):
+-- Sessions (ITicketStore backing, ADR-0003): global, not tenant-linked --------
+CREATE TABLE "ServerSideSessions" (
+  "Id"          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,  -- declared UUIDv7 exception
+  "Key"         text NOT NULL UNIQUE,                       -- the sid clients reference
+  "Scheme"      text NOT NULL,
+  "SubjectId"   text NOT NULL,
+  "SessionId"   text NULL,
+  "DisplayName" text NULL,
+  "Created"     timestamptz NOT NULL,                       -- backs evict-oldest
+  "Renewed"     timestamptz NOT NULL,                       -- last activity; inactivity window 1h
+  "Expires"     timestamptz NOT NULL,                       -- absolute 8h
+  "Data"        bytea NOT NULL                              -- serialized ticket
+);
+CREATE INDEX "IX_ServerSideSessions_Expires"   ON "ServerSideSessions" ("Expires");
+CREATE INDEX "IX_ServerSideSessions_SubjectId" ON "ServerSideSessions" ("SubjectId");
+CREATE INDEX "IX_ServerSideSessions_SessionId" ON "ServerSideSessions" ("SessionId");
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| EntryId | uuid | PK | UUIDv7 |
-| Timestamp | timestamptz | | when the event occurred |
-| PrevHash / RecordHash | bytea | | hash-chain; `RecordHash` = `HMAC_k(PrevHash \|\| canonical(fields))`, prev-first per ADR-0008; the genesis `PrevHash` is 32 zero bytes (not a string) |
-| Payload_Canonical | text | | canonical form hashed (jsonb does not preserve bytes) |
-| ActorSub / OnBehalfOfSubject / ApproverSub / ActorChain_JSON | text / jsonb | | all subject-bearing identifiers stored as per-subject ciphertext (crypto-shreddable) |
-| EventType / TargetTenantId / Result / CorrelationId | text | | event classification and correlation |
-| Acr / AuthTime / DecisionPath / AuthzDecision / Capability / GrantId / StepupSatisfied / ApprovalRequestId / RequestHash | mixed | | authz-decision and dual-control provenance (produced by 05) |
+CREATE TABLE "SessionParticipatingClients" (
+  "SessionKey" text NOT NULL
+    REFERENCES "ServerSideSessions"("Key") ON DELETE CASCADE,
+  "ClientId"   text NOT NULL,
+  PRIMARY KEY ("SessionKey", "ClientId")
+);
 
-Append-only: INSERT grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block trigger (ADR-0008).
+-- Back-channel logout delivery outbox (tenant-scoped, RLS) --------------------
+CREATE TABLE "LogoutDeliveryOutbox" (
+  "Id"             uuid PRIMARY KEY,
+  "TenantId"       uuid NOT NULL,                           -- .IsMultiTenant() + FORCE RLS
+  "Sid"            text NOT NULL,
+  "ClientId"       text NOT NULL,
+  "LogoutUri"      text NOT NULL,
+  "Status"         text NOT NULL,                           -- 'pending' | 'delivered' | 'failed'
+  "Attempts"       int  NOT NULL,
+  "NextAttemptUtc" timestamptz NULL,
+  "CreatedUtc"     timestamptz NOT NULL,
+  "DeliveredUtc"   timestamptz NULL
+);
+CREATE INDEX "IX_LogoutDeliveryOutbox_claim"
+  ON "LogoutDeliveryOutbox" ("Status", "NextAttemptUtc");
 
-`SubjectDek` (the crypto-shred key vault; mechanism in 03, saga in 13):
+-- Email outbox and suppression (mechanism in 10) ------------------------------
+-- The control-plane variant carries TenantId + RLS; a global variant with no
+-- TenantId lives in IdentityDbContext for the confirm and reset mail.
+CREATE TABLE "OutboxEmail" (
+  "Id"                uuid PRIMARY KEY,
+  "TenantId"          uuid NOT NULL,
+  "Payload"           text NOT NULL,
+  "IdempotencyKey"    text NOT NULL UNIQUE,                 -- prevents double-send
+  "Status"            text NOT NULL,                        -- 'Pending' | 'InFlight' | 'Sent' | 'DeadLettered'
+  "Attempts"          int  NOT NULL,
+  "NextAttemptAt"     timestamptz NULL,
+  "ProviderMessageId" text NULL,
+  "CreatedAt"         timestamptz NOT NULL
+);
+CREATE INDEX "IX_OutboxEmail_claim" ON "OutboxEmail" ("Status", "NextAttemptAt");
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| SubjectRef | text | PK | one DEK per subject; generated lazily on first audit PII |
-| WrappedDek | bytea | | the per-subject AES-256-GCM DEK wrapped by the ADR-0006 keyring master key; never written to `AuditLog`, its backup, SIEM, or WORM |
-| CreatedAt / DestroyedAt | timestamptz (DestroyedAt null) | | erasure sets `DestroyedAt` (or KMS-destroys), rendering every ciphertext copy permanently unreadable |
+CREATE TABLE "SuppressionEntry" (
+  "Id"            uuid PRIMARY KEY,
+  "TenantId"      uuid NOT NULL,
+  "RecipientHash" bytea NOT NULL,                           -- hash only, never the address
+  "Reason"        text NOT NULL,                            -- 'hard-bounce' | 'complaint' | 'manual'
+  "ExpiresAt"     timestamptz NULL,                         -- hard-bounce and complaint persist; soft carries a TTL
+  "CreatedAt"     timestamptz NOT NULL
+);
+CREATE INDEX "IX_SuppressionEntry_lookup"
+  ON "SuppressionEntry" ("TenantId", "RecipientHash");
 
-`SigningKeys` (detailed in 09):
+-- Tenant branding (per-tenant theming; RLS-isolated) --------------------------
+CREATE TABLE "TenantBranding" (
+  "TenantId"              uuid PRIMARY KEY REFERENCES "Tenants"("TenantId"),
+  "LogoUri"               text NULL,                        -- https only, SSRF-safe
+  "ThemeJson"             jsonb NULL,                       -- design tokens only, never raw CSS
+  "DisplayName"           text NULL,
+  "UpdatedByMembershipId" uuid NOT NULL,
+  "UpdatedAtUtc"          timestamptz NOT NULL
+);
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| Id | text | PK (kid) | |
-| Version / IsX509Certificate | int / boolean | | key version; whether `Data` is an X.509 cert (publish-before-sign needs X509) |
-| Use / Algorithm / State | text | index (Use, State); unique (Use, State) where State is active | prevents two active signers |
-| Data / DataProtected | bytea / boolean | | encrypted at rest; `DataProtected` records DP-wrapped versus KMS-enveloped |
-| KeyScope / TenantId | text / uuid null | | `pool-group` or `tenant` (ADR-0033) |
-| NotBefore / NotAfter / RetiresAt / DeletesAt / RevokedAt / Created | timestamptz | | rotation lifecycle |
+-- Erasure, provisioning, and data-subject rights (sagas in 17 and 18) ---------
+CREATE TABLE "ErasureRequest" (
+  "RequestId"      uuid PRIMARY KEY,
+  "SubjectId"      uuid NOT NULL,
+  "RequestedAtUtc" timestamptz NOT NULL,
+  "Status"         text NOT NULL,                           -- 'pending' | 'in-progress' | 'completed' | 'failed'
+  "CheckpointJson" jsonb NOT NULL                           -- per-plane idempotent checkpoint
+  -- xmin
+);
 
-The key store must enforce a **mandatory scope predicate centralized in one adapter** (a
-unit test asserts no query omits scope), and when a single store serves multiple scopes (a
-Pool multi-group deployment) it carries **RLS on `(KeyScope, TenantId)`** so the key store
-has the same defense-in-depth as the token store (ADR-0033 F2). Note the `KeyScope` literals
-here (`pool-group` / `tenant`) differ from `Tenants.KeyScope` (`pool-group` / `own`); the two
-columns are parallel but the vocabulary is reconciled in the key-management design (09).
+CREATE TABLE "ProvisioningRequest" (
+  "RequestId"      uuid PRIMARY KEY,
+  "TenantId"       uuid NOT NULL REFERENCES "Tenants"("TenantId"),
+  "Kind"           text NOT NULL,                           -- 'provision' | 'deprovision' | 'rehome'
+  "Status"         text NOT NULL,                           -- 'pending' | 'in-progress' | 'done' | 'failed'
+  "CheckpointJson" jsonb NOT NULL,                          -- per-step saga checkpoint
+  "LastError"      text NULL
+  -- xmin
+);
 
-`ServerSideSessions` (+ `SessionParticipatingClients`; detailed in 06/08):
+CREATE TABLE "ProcessingRestriction" (                      -- GDPR Art.18 (tenant-scoped, RLS)
+  "SubjectRef" uuid NOT NULL,
+  "TenantId"   uuid NOT NULL REFERENCES "Tenants"("TenantId"),
+  "Reason"     text NOT NULL,   -- 'accuracy-contested' | 'erasure-alt' | 'legal-claim' | 'objection-pending'
+  "Scope"      text NOT NULL,
+  "StartedAt"  timestamptz NOT NULL,
+  "LiftedAt"   timestamptz NULL,
+  PRIMARY KEY ("SubjectRef", "TenantId")
+);
+```
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| Id | bigint | PK identity | the one deliberate non-UUIDv7 key (internal surrogate) |
-| Key | text | unique | the `sid` clients reference |
-| SubjectId / SessionId / Scheme | text | index (SubjectId), (SessionId) | evict-oldest on concurrent-session cap |
-| DisplayName | text null | | optional session label |
-| Created / Renewed / Expires | timestamptz | index (Expires) | `Created` backs evict-oldest; inactivity 1h / absolute 8h |
-| Data | bytea | | serialized ticket |
-| (participants) SessionKey + ClientId | text | PK, FK to Key cascade | which RPs to back-channel-logout |
+**`SubjectDek`, the crypto-shred key vault** (mechanism in 03, saga in 17), lives in a
+keystore **separate from the audit store**. Not co-locating it is the whole point:
+destroying a DEK renders every copy of the ciphertext unintelligible, including copies
+in backups, the SIEM, and WORM storage, without touching those rows (ADR-0016).
 
-`LogoutDeliveryOutbox` (tenant-scoped, RLS):
+```sql
+CREATE TABLE "SubjectDek" (
+  "SubjectRef"  uuid PRIMARY KEY,                           -- one DEK per subject, created lazily
+  "WrappedDek"  bytea NOT NULL,                             -- AES-256-GCM DEK wrapped by the ADR-0006 master key
+  "CreatedAt"   timestamptz NOT NULL,
+  "DestroyedAt" timestamptz NULL                            -- set on erasure: this is the crypto-shred
+);
+```
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| Id | uuid | PK | UUIDv7 |
-| TenantId | uuid | `.IsMultiTenant()` + RLS | |
-| Status / NextAttemptUtc | text / timestamptz | index (Status, NextAttemptUtc) | at-least-once delivery; `Status` is `pending` / `delivered` / `failed` |
-| Sid / ClientId / LogoutUri / Attempts | text / int | | |
-| CreatedUtc / DeliveredUtc | timestamptz (DeliveredUtc null) | | enqueue and delivery timestamps |
+The wrapped DEK is never written to `AuditLog`, its backup, the SIEM, or WORM storage.
 
-`OutboxEmail` (two homes: Identity and control-plane; detailed in 07):
+Two notes on columns above whose failure mode is subtle:
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| Id | uuid | PK | UUIDv7 |
-| IdempotencyKey | text | unique | prevents double-send |
-| Status / NextAttemptAt | text / timestamptz null | index (Status, NextAttemptAt) | relay claim via SKIP LOCKED; `Status` is `Pending` / `InFlight` / `Sent` / `DeadLettered` |
-| Payload / Attempts / ProviderMessageId / CreatedAt | text / int / text null / timestamptz | | control-plane copy adds `TenantId` (RLS) |
+* **The partial index predicate must be a literal, never a bind parameter.**
+  PostgreSQL's planner uses a partial index only when it can prove at plan time that the
+  query implies the index predicate, and it cannot prove that against a parameter. So
+  `WHERE "RevokedAt" IS NULL` stays hard-coded in the DDL. Equality and range keys as
+  binds (`"GranteeUserId" = $1`, `@now BETWEEN "ValidFrom" AND "ExpiresAt"`) are fine and
+  do not defeat the index.
+* **`KeyScope` is two different vocabularies in two tables.** `Tenants.KeyScope` is
+  `pool-group` or `own` and records the tenant's isolation *choice*;
+  `SigningKeys.KeyScope` is `pool-group` or `tenant` and records which key set a row
+  belongs to. The columns are parallel, not the same domain; 12 owns the reconciliation
+  (ADR-0033).
 
-`SuppressionEntry` (tenant-scoped):
+### IdentityDbContext and DataProtectionDbContext (global)
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| Id | uuid | PK | UUIDv7 |
-| TenantId + RecipientHash | uuid + bytea | index (TenantId, RecipientHash) | hash only, never the address (DP.01) |
-| Reason / ExpiresAt / CreatedAt | text / timestamptz (ExpiresAt null) / timestamptz | | `Reason` is `hard-bounce` / `complaint` / `manual`; hard-bounce and complaint persist, soft carries a TTL |
+**Identity** uses the standard ASP.NET Core Identity schema (`AspNetUsers`,
+`AspNetRoles`, `AspNetUserRoles`, `AspNetUserClaims`, `AspNetUserLogins`,
+`AspNetUserTokens`, `AspNetRoleClaims`) with `ApplicationUser : IdentityUser<Guid>` and
+UUIDv7 keys. Passkeys use the **native .NET 10 passkey store**, whose `UserPasskeyInfo`
+carries `CredentialId`, `PublicKey`, `Aaguid`, `IsBackupEligible`, `IsBackedUp`, and the
+signature counter; Nami adds exactly **one** column, `AttestationTrust`, which is the
+seam the authenticator-assurance policy reads (ADR-0028, detailed in 08). There is no
+tenant filter: identity is global (ADR-0001). A global `OutboxEmail` variant without
+`TenantId` also lives here, for confirm and reset mail.
 
-`TenantBranding`:
+**DataProtection** has one table, the framework's own:
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| TenantId | uuid | PK, FK to Tenants | one row per tenant |
-| LogoUri | text null | | https-only, SSRF-safe |
-| ThemeJson | jsonb null | | design tokens, not raw CSS |
-| DisplayName / UpdatedByMembershipId / UpdatedAtUtc | text / uuid / timestamptz | | |
+```sql
+CREATE TABLE "DataProtectionKeys" (                          -- IDataProtectionKeyContext
+  "Id"           int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  "FriendlyName" text NULL,
+  "Xml"          text NOT NULL                               -- serialized key element
+);
+```
 
-The data-subject-rights design (13) adds the Art.18 `ProcessingRestriction` table
-(control-plane, tenant-columned); its schema lands with that doc rather than here.
+This keyring **wraps** `SigningKeys.Data`, which is why disaster recovery must restore
+both together and why restoring one alone leaves unreadable key material (12).
 
-`DualControlProposals` (the dual-control saga; detailed in 12):
+### Row-level security (the Pool backstop)
 
-| Field | Type | Key / index | Notes |
-|---|---|---|---|
-| ProposalId | uuid | PK | UUIDv7 |
-| TargetETag | text | | TOCTOU guard (the `xmin`-derived ETag), re-checked at execute |
-| Status / ProposedBy / ApprovedBy | text (last null) | | proposer not equal approver |
-| ActionType / TargetType / TargetId / TenantId | text / uuid | | routes to a keyed executor |
-| ProposedAt / DecidedAt / ExecutedAt | timestamptz (last two null) | | lifecycle timestamps |
-| FailReason / FailDetail | text / jsonb (both null) | | `target_changed` etc.; `FailDetail` holds the expected/observed ETag |
-| PayloadJson / PriorProposalId / ExpiresAt / CorrelationId | jsonb / uuid null / timestamptz / text | | single-use, expiring; `PriorProposalId` links a re-propose after a terminal `Failed(target_changed)` |
+RLS is **not in the EF model**. It is a raw-SQL migration step applied after
+`CREATE TABLE` (spike A-4/T17), covering the three tenant-scoped OpenIddict tables and
+the tenant-scoped control-plane tables.
+
+```sql
+ALTER TABLE "OpenIddictApplications" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "OpenIddictApplications" FORCE  ROW LEVEL SECURITY;  -- applies to the table owner too
+CREATE POLICY tenant_isolation ON "OpenIddictApplications"
+  USING      ("TenantId" = current_setting('app.current_tenant', true))
+  WITH CHECK ("TenantId" = current_setting('app.current_tenant', true));
+
+-- the de-privileged application role: a superuser BYPASSES RLS
+CREATE ROLE nami_identity_app LOGIN NOSUPERUSER;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "OpenIddictApplications" TO nami_identity_app;
+```
+
+Per request, inside the request transaction:
+`SELECT set_config('app.current_tenant', $1, true);`. The third argument `true` means
+`SET LOCAL`, which is what makes it pooling-safe; passing `false` would leak the setting
+to the next request on that connection and must never be used.
+
+**The policy expression must match the tenant column's type**, and this is the one place
+where getting it wrong crashes rather than fails closed. The OpenIddict `TenantId` is
+`text`, because it holds the Finbuckle identifier, so an unset GUC simply fails to match
+and returns zero rows. A `uuid` tenant column must cast through `NULLIF`:
+
+```sql
+USING ("TenantId" = NULLIF(current_setting('app.current_tenant', true), '')::uuid)
+```
+
+because a pooled connection with no setting returns the empty string, and `''::uuid`
+raises `22P02` instead of failing closed.
+
+**This document is the single authority for which tables take the `uuid` form**, and a
+new guarded table with a `uuid` tenant column is added to this list rather than only to
+its own design, because the failure is a crash rather than a leak and is therefore easy
+to discover late. In v1 there are five: `LogoutDeliveryOutbox`, `OutboxEmail`,
+`SuppressionEntry`, `TenantBranding`, and `ProcessingRestriction`. The v2 change-event
+outbox joins them (ADR-0071).
+
+`TenantBranding` is RLS-isolated and `.IsMultiTenant()` like every other per-tenant
+control-plane table, for consistency and defence in depth, and it carries a read-path
+consequence worth stating for the implementer: the login surface reads branding for the
+tenant being signed into, so **the tenant resolver must set `app.current_tenant` before
+that read**, or the `NULLIF` cast fails closed and no branding is returned. That is a
+benign degrade to the default theme rather than a security failure, but it looks like a
+bug to anyone who has not been told.
+
+RLS is layer 2; the EF named filter plus auto-stamp is layer 1. Both are required,
+because the bulk, `ExecuteUpdate`/`ExecuteDelete`, and raw paths bypass layer 1, which
+leaves layer 2 as the only guard there. `PruneAsync` is exactly such a path.
+
+## 5. Behaviour
+
+### Token and authorization status lifecycle
+
+Status drives prune and revocation. OpenIddict defines exactly five statuses, and the
+**stored values are lowercase** (`inactive`, `valid`, `redeemed`, `revoked`,
+`rejected`), not the C# constant names; read in `OpenIddictConstants.Statuses` at
+release 7.5.0.
+
+```mermaid
+stateDiagram-v2
+  [*] --> inactive : created, for example a device code
+  [*] --> valid : issued, for example an auth code or refresh token
+  inactive --> valid : approved
+  inactive --> rejected : denied
+  valid --> redeemed : consumed, a code or a refresh token
+  valid --> revoked : revoke or family-revoke
+  redeemed --> [*] : pruned
+  revoked --> [*] : pruned
+  rejected --> [*] : pruned
+```
+
+**Expiry does not change the status.** An expired token stays `valid` in the column and
+is evaluated from `ExpirationDate` at read time. Prune removes rows by age plus expiry,
+consumption, or revocation; there is no "expired" status to query for, and code that
+looks for one will find nothing.
+
+### Pool composition, the A-4-proven pattern
+
+`OpenIddictDbContext` derives Finbuckle's `MultiTenantDbContext` and marks the three
+tenant-scoped entities `.IsMultiTenant()`, deliberately not `Scope`. That gives
+auto-stamp of `TenantId` on insert, a named tenant query filter, and
+throw-on-mismatch/unset, which closes the footgun that OpenIddict's own stores know
+nothing about `TenantId`. Three details are load-bearing and spike-proven (A-4, 17/17,
+kept as regression):
+
+* **`EnforceMultiTenantOnTracking()` is called in the constructor**, so entities that
+  OpenIddict's stores create internally (redeem, revoke) are stamped with the ambient
+  tenant when they are tracked. Deriving `MultiTenantDbContext` alone does not stamp
+  externally-created entities.
+* **`TenantNotSetMode = Throw` and `TenantMismatchMode = Throw`.** The first auto-stamps
+  the current tenant and refuses a write with no ambient tenant; the second blocks a
+  cross-tenant write outright. Both are set explicitly rather than left at their
+  defaults.
+* **A named soft-delete filter** (`"soft_delete"`, EF Core 10 named filters) coexists
+  with the tenant filter, ANDed, so an admin can view disabled rows by ignoring only
+  `soft_delete` without ignoring tenancy and leaking across tenants.
+
+The A-4 harness is the reference implementation, and the Finbuckle plus OpenIddict plus
+EF Core triple is a version-pinned composition seam re-verified on every bump
+(ADR-0021).
+
+### Silo composition and the global scope catalog
+
+A Silo tenant gets its own database through a per-tenant connection string resolved in
+`OnConfiguring`, no discriminator column, and its own key set. Silo contexts are never
+pooled, because the connection string varies per tenant. The **scope catalog stays
+global** (R18): scopes carry no `TenantId`, `Name` is globally unique, and per-tenant
+differences are expressed as scope allowlists on the client grant, never by forking the
+catalog.
 
 ### The tenant tree
 
-The tree is an adjacency (`ParentTenantId`) with a derived `TenantClosure`,
-maintained in application code inside `ITenantService` (one transactional path,
-not a database trigger, per ADR-0024), with cycle rejection on MOVE (the new parent
-must not be in the moved subtree), serialized tree mutation
-(`SELECT ... FOR UPDATE` or SERIALIZABLE with retry), and a periodic
-closure-integrity verify job.
+The tree is an adjacency (`ParentTenantId`) with a derived `TenantClosure`, maintained
+in application code inside `ITenantService` as one transactional path rather than a
+database trigger (ADR-0024), with cycle rejection on MOVE, serialized tree mutation
+(`SELECT ... FOR UPDATE`, or SERIALIZABLE with retry), and a periodic closure-integrity
+verify job.
 
 ```mermaid
 sequenceDiagram
@@ -432,24 +724,6 @@ sequenceDiagram
   end
   Note over TS,PG: a periodic job re-derives closure from adjacency to verify integrity
 ```
-
-### Migrations
-
-Each context has its own `__EFMigrationsHistory` in a separate schema
-(`openiddict`/`identity`/`dataprotection`/`controlplane`) so a shared database has no
-collision. Migrations apply through an EF Core bundle (`efbundle`), with the RLS
-objects added as a raw-SQL step after table creation; production never
-migrates-on-startup (ADR-0017). Silo tenants are migrated by fan-out with a per-tenant
-`SchemaVersion` and the resolver traffic-gate. Migration history must stay linear (EF
-Core 10 rejects out-of-order at runtime; a CI `HasPendingModelChanges` check enforces
-it), and EF Core 9+ takes an exclusive `__EFMigrationsHistory` lock as a
-concurrent-migrate backstop under the single-runner orchestrator. The runtime application
-connects under a least-privilege, **no-DDL** role; migrations run under a **separate
-migration role** (Npgsql supports splitting the migration role from the query role). This is
-distinct from, and complementary to, the de-privileged `NOSUPERUSER` runtime role that makes
-FORCE RLS effective.
-
-## Runtime flows
 
 ### Per-request tenant resolution and isolation
 
@@ -473,10 +747,22 @@ sequenceDiagram
   PG-->>Ctx: only this tenant's rows
 ```
 
-`app.UseMultiTenant()` runs before authentication/authorization so the OpenIddict
+`app.UseMultiTenant()` runs before authentication and authorization, so the OpenIddict
 middleware and the DbContext both see the tenant.
 
-### Silo migration fan-out with a traffic gate
+### Migrations and the Silo fan-out
+
+Migrations apply through an EF Core bundle (`efbundle`), with the RLS objects added as a
+raw-SQL step after table creation; production never migrates on startup (ADR-0017).
+Migration history must stay linear, because EF Core 10 rejects an out-of-order history
+at runtime, and a CI `HasPendingModelChanges` check enforces it. EF Core 9 and later
+take an exclusive lock on `__EFMigrationsHistory`, which is a concurrent-migrate
+backstop underneath the single-runner orchestrator rather than a replacement for it.
+
+Two roles, not one: the runtime application connects under a least-privilege **no-DDL**
+role, and migrations run under a **separate migration role** (Npgsql supports splitting
+them). This is distinct from, and complementary to, the de-privileged `NOSUPERUSER`
+runtime role that makes FORCE RLS effective at all.
 
 ```mermaid
 sequenceDiagram
@@ -489,24 +775,22 @@ sequenceDiagram
     Orch->>DB: apply idempotent migration
     Orch->>Reg: update SchemaVersion on success
   end
-  Note over Reg: resolver refuses routing to a tenant whose SchemaVersion is not the app expected version
+  Note over Reg: resolver refuses routing to a tenant whose SchemaVersion is not the expected version
 ```
 
-The `SchemaVersionGate` middleware refuses a version-mismatched tenant with **HTTP 503 plus
-`Retry-After`** (a resumable signal), never a 404: a 404 would imply the tenant does not
-exist and make relying parties drop cached discovery metadata.
+The `SchemaVersionGate` middleware refuses a version-mismatched tenant with **HTTP 503
+plus `Retry-After`**, a resumable signal, and never a 404: a 404 would imply the tenant
+does not exist and would make relying parties drop cached discovery metadata.
 
-Background jobs (prune, closure-verify) run without an ambient tenant, so they
-iterate tenants explicitly: a child DI scope sets the Finbuckle ambient tenant and
-`set_config('app.current_tenant', tid)` per iteration for Pool tenants, and uses
-the dedicated connection for Silo tenants.
+### Background jobs iterate tenants explicitly
 
-### Background-job tenant iteration
+Background jobs run with no ambient tenant, so they set one per iteration rather than
+relying on request state.
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant Q as Quartz single runner
+  participant Q as Scheduled job, single runner
   participant Reg as Tenants registry
   participant Scope as Child DI scope
   participant PG as PostgreSQL, FORCE RLS
@@ -523,80 +807,216 @@ sequenceDiagram
   Q->>PG: closure-verify once on the control plane, no ambient tenant
 ```
 
-## Edge cases and failure modes
+## 6. Dependencies and wiring
 
-* **Pooled context tenant leak**: a naive pooled context reuses a stamped
-  `TenantId` across tenants (A-4/T7); v1 uses a non-pooled context, with
-  pooled-plus-mutable as a post-v1 option (ADR-0018).
-* **Required-navigation Include INNER JOIN row loss**: a required nav to a filtered
-  entity turns into an INNER JOIN and drops rows; OpenIddict navigations are kept
-  optional (LEFT JOIN) so a filtered principal does not lose the token row (A-4/T16).
-* **Bulk/raw-SQL bypass**: `ExecuteDelete`/`ExecuteUpdate` honor the query filter
-  but bypass the stamp; non-composable raw SQL bypasses the filter entirely; RLS is
-  the backstop.
-* **Superuser bypasses RLS**: the app role must be `NOSUPERUSER`/no `BYPASSRLS`, or
-  layer 2 is silently disabled (a deployment check asserts this).
-* **Compiled models** do not support global query filters, so `dbcontext optimize`
-  is not used on the tenant context.
-* **Missing composite index**: without the `(TenantId, ClientId)` override, a
-  second tenant reusing a `client_id` fails with 23505.
-* **Migration partial failure / version skew**: a fan-out can leave two schema
-  versions live; per-tenant `SchemaVersion` plus the resolver traffic-gate prevents
-  new code from running on an old schema.
-* **No ambient tenant on the EF path**: fail-closed (throw / zero rows), never
-  fail-open (A-4/T13).
+### Registration
 
-## Security considerations
+The pooling decision is per context, and the tenant-scoped context is the one that must
+not be pooled in v1:
 
-* Two-layer isolation is the top security control of the product; a forgotten
-  filter would be a cross-tenant leak, which is why RLS backstops it and
-  cross-tenant negative tests are a permanent acceptance criterion (ADR-0001).
-* Because Pool tenants share a pool-group signing key (ADR-0033), the signature is
-  not a tenant boundary at the resource server; isolation there is by issuer and
-  `tenant`-claim binding plus RLS (ADR-0049, detailed in 04).
-* At rest: full-volume/managed-disk encryption plus per-column Data Protection for
-  sensitive payloads (for example reference-token payloads); PostgreSQL has no
-  native TDE (ADR-0005, ADR-0037).
-* The audit table is append-only and tamper-evident at the schema level (INSERT
-  grant only, `REVOKE UPDATE/DELETE/TRUNCATE` plus a block trigger); the mechanism is
+```csharp
+// Tenant-scoped: NON-pooled. A pooled instance carries a stale TenantId into the
+// next tenant's request (spike A-4/T7). ADR-0018.
+services.AddDbContext<OpenIddictDbContext>(o => o.UseNpgsql(poolConnectionString));
+
+// Global contexts: pooled.
+services.AddDbContextPool<ControlPlaneDbContext>(o => o.UseNpgsql(controlPlaneConnection));
+services.AddDbContextPool<IdentityDbContext>(o => o.UseNpgsql(identityConnection));
+services.AddDbContextPool<DataProtectionDbContext>(o => o.UseNpgsql(dataProtectionConnection));
+
+services.AddMultiTenant<NamiTenantInfo>()
+        .WithHostStrategy()          // acme.id.example.com
+        .WithBasePathStrategy()      // /t/acme
+        .WithStore<TenantStore>();
+```
+
+`AddDbContextPool` is deliberately not used for `OpenIddictDbContext`, and a comment
+saying why belongs at the call site: this is the single most consequential line in the
+tier, and to anyone who does not know about T7 it looks like a missed optimization.
+
+### Configuration keys
+
+Keys follow the `Nami:Section:Key` shape with the `Nami__Section__Key` environment form
+(ADR-0032), validated fail-fast at boot through
+`AddOptions<T>().BindConfiguration(...).ValidateDataAnnotations().ValidateOnStart()`
+(ADR-0052). **The key names below are set by this design**, not inherited from a
+decision, so this section is their origin:
+
+| Key | Purpose |
+|---|---|
+| `Nami:Database:ConnectionString` | The Pool and control-plane connection, under the runtime no-DDL role |
+| `Nami:Database:MigrationConnectionString` | The separate migration role; used only by the migration bundle |
+| `Nami:Database:MaxPoolSize` | Npgsql `Maximum Pool Size`; order-of-magnitude only until benchmarked |
+| `Nami:Database:CommandTimeoutSeconds` | Statement timeout for the application role |
+| `Nami:Tenancy:DefaultIsolationMode` | `Pool` or `Silo` for newly provisioned tenants |
+| `Nami:Tenancy:ResolutionStrategy` | `Host`, `BasePath`, or both, in resolution order |
+
+Connection strings are secrets and are never baked into an image; they load through the
+configuration precedence in 01 (ADR-0031).
+
+### Key libraries and licenses
+
+| Library | Purpose | License | ADR |
+|---|---|---|---|
+| Npgsql (and the EF Core provider) | PostgreSQL 18 provider: `uuidv7()`, `xmin`, RLS SQL, role splitting | PostgreSQL (BSD-like) | 0037 |
+| Finbuckle.MultiTenant (`.AspNetCore`, `.EntityFrameworkCore`) | Tenant resolution, Pool/Silo stores, auto-stamp, named filter | Apache-2.0 | 0001 |
+| Microsoft.EntityFrameworkCore 10 | ORM, named query filters, migrations | MIT | 0037 |
+| Microsoft.AspNetCore.DataProtection.EntityFrameworkCore | DP keyring backing store | MIT | 0006 |
+| OpenIddict.EntityFrameworkCore | The entity base types and stores this schema customizes | Apache-2.0 | 0021 |
+
+The Finbuckle plus OpenIddict plus EF Core plus Npgsql version quadruple is a pinned
+composition seam; the exact pins live in `Directory.Packages.props` (the implementation
+plan), and the versions of record are in ADR-0061.
+
+### Patterns applied
+
+Named per ADR-0066, a vocabulary applied where it clarifies intent:
+
+* **Closure Table** rather than an adjacency list alone for the tenant hierarchy, so
+  read-heavy authorization resolves a subtree in one seek.
+* **Strategy** for tenant resolution (host or base path) and for Pool-versus-Silo store
+  routing, both supplied by Finbuckle.
+* **Repository** through the EF and OpenIddict stores, always reached through a manager,
+  never a `DbContext` touched directly from a feature.
+
+## 7. Error handling, edge cases, invariants
+
+### Query-filter pitfalls, all five
+
+1. **A pooled context must read a mutable per-request property**, not a value captured
+   in the constructor. v1 avoids the problem entirely by not pooling the tenant context.
+2. **A required navigation plus `Include` becomes an INNER JOIN**, which silently drops
+   rows whose principal is filtered or soft-deleted. OpenIddict's `Token` navigations to
+   `Application` and `Authorization` are optional, so `Include` is row-loss-safe
+   (A-4/T16). Never mark such a navigation required.
+3. **Raw SQL and `ExecuteUpdate`/`ExecuteDelete` honour the query filter but bypass the
+   `SaveChanges` auto-stamp**, so RLS is the only write-side guard on those paths, and
+   background jobs must set the tenant explicitly per iteration.
+4. **Compiled models do not support global query filters**, so `dbcontext optimize` is
+   never run against the tenant context.
+5. **No ambient tenant must fail closed** (A-4/T13): zero rows or a throw, never
+   fail-open, and production adds an explicit fail-fast rather than relying on a null
+   reference somewhere downstream.
+
+### Other failure modes
+
+* **A superuser bypasses RLS.** The application role must be `NOSUPERUSER` with no
+  `BYPASSRLS`, or layer 2 is silently off while looking configured. A deployment check
+  asserts it (ADR-0043).
+* **Missing composite index.** Without the `(TenantId, ClientId)` override, the second
+  tenant to reuse a `client_id` fails with `23505`.
+* **The `uuid` GUC cast on a pooled connection.** Without `NULLIF`, an unset
+  `app.current_tenant` raises `22P02`. That is a crash rather than a fail-closed, which
+  is why the list of `uuid`-form tables is centralized in section 4.
+* **Migration partial failure or version skew.** A fan-out can leave two schema versions
+  live; the per-tenant `SchemaVersion` plus the resolver traffic gate stops new code from
+  running against an old schema.
+* **Branding read before tenant resolution** returns no branding rather than another
+  tenant's branding: a degrade, not a leak (section 4).
+
+## 8. Security and multi-tenancy notes
+
+* Two-layer isolation is the top security control of the product. A forgotten filter
+  would be a cross-tenant leak, which is why RLS backstops it and why cross-tenant
+  negative tests are a permanent acceptance criterion (ADR-0001).
+* Because Pool tenants share a pool-group signing key (ADR-0033), **the signature is not
+  a tenant boundary** at the resource server. Isolation there is by issuer plus
+  `tenant`-claim binding plus RLS (ADR-0049, detailed in 04 and 05).
+* At rest: full-volume or managed-disk encryption plus per-column Data Protection for
+  sensitive payloads such as reference-token payloads. PostgreSQL has no native
+  transparent encryption (ADR-0005, ADR-0037).
+* The audit table is append-only and tamper-evident at the schema level (INSERT grant
+  only, `REVOKE UPDATE/DELETE/TRUNCATE`, plus a block trigger); the chain mechanism is
   in 03.
+* Every subject-bearing audit column is written as ciphertext, and the DEK that decrypts
+  it lives in a different store, so erasure is a key destruction rather than a row
+  rewrite. The hash chain therefore still verifies after erasure, because it was computed
+  over the ciphertext.
 
-## Testing strategy
+## 9. Testing
 
 * The **A-4 harness** is kept as the regression suite (17/17 against Testcontainers
-  PostgreSQL 18), covering stamp, cross-tenant read isolation, internal-write stamp,
-  bulk honor-filter/bypass-stamp, the composite index, soft-delete coexistence,
-  RLS confinement, mismatch throw, no-ambient fail-closed, the global scope catalog,
-  and Include row-loss (ADR-0001).
-* **Cross-tenant negative tests** (Pool filter and Silo connection) are a permanent
-  acceptance criterion; RLS confines reads and bulk `DELETE` under the de-privileged
-  role with a no-tenant context yielding zero rows.
-* Insert with a missing or wrong `TenantId` throws; prune touches only expired/
-  invalid tokens and never a valid token of any tenant; a migration version
-  mismatch is refused by the traffic gate.
+  PostgreSQL 18): stamp, cross-tenant read isolation, internal-write stamp, bulk
+  honour-filter and bypass-stamp, the composite index, soft-delete coexistence, RLS
+  confinement, mismatch throw, no-ambient fail-closed, the global scope catalog, and
+  Include row-loss.
+* **Cross-tenant negative tests** in both modes (Pool filter and Silo connection) are a
+  permanent acceptance criterion: tenant B cannot read or stamp tenant A rows.
+* **RLS backstop:** a de-privileged `NOSUPERUSER` role confines both reads and a bulk
+  `DELETE` at the database level, independently of the EF filter (T14); a superuser
+  bypasses RLS and therefore must not be the application role; the `NULLIF` cast on a
+  `uuid` GUC does not crash on a pooled connection whose setting is the empty string.
+* **Composite `(TenantId, ClientId)`:** the same `client_id` works in two tenants (T8),
+  and without the override the second tenant fails `23505` (T9). The test needs a
+  flag-aware model cache key factory, or the EF model cache reports the wrong shape.
+* **Global scope catalog:** a scope created in tenant A is visible in B, and `Name` is
+  globally unique (T15).
+* **Prune:** touches only expired, redeemed, or revoked rows, never a `valid` token of
+  any tenant, on the default schema with no extra index (A-6/V26).
+* **Migration DDL:** the composite unique index is present, the single-column `ClientId`
+  unique index is gone, Scope is global, and RLS is absent from the EF model because it
+  is a raw-SQL step (T17).
+* **Version gate:** a `SchemaVersion` mismatch is refused with 503 and `Retry-After`,
+  not 404.
+* Tests run on **Testcontainers PostgreSQL 18**, not SQLite: FORCE RLS, `xmin`, and
+  `uuidv7()` are all engine-specific.
 
-## Open and build-time items
+## 10. Open and build-time items
 
-* **A-4b** (pooled-plus-mutable `TenantId`) is a post-v1 performance optimization
-  needing its own spike (ADR-0018).
-* Silo connection-pool sizing (`Maximum Pool Size` per tenant, PgBouncer
-  transaction-mode) is order-of-magnitude and must be benchmarked on the target
-  infrastructure (ADR-0018).
-* An extra prune index is optional micro-tuning, not needed for v1 (A-6 proved the
-  default PK/FK indexes suffice).
-* The Silo classification criteria (which tenants qualify for a dedicated database)
-  are ratified with Security/DPO at onboarding (ADR-0001, Pre-GA checklist).
-* The Finbuckle/OpenIddict/EF/Npgsql composition is a contract-regression seam
-  re-verified on each bump (ADR-0021).
+* **A-4b**, the pooled-plus-mutable `TenantId` variant, is a post-v1 performance
+  optimization needing its own spike (ADR-0018).
+* **Silo connection-pool sizing** (`Maximum Pool Size` per tenant, PgBouncer transaction
+  mode) is order-of-magnitude only and must be benchmarked on the target infrastructure
+  (ADR-0018).
+* An extra prune index is optional micro-tuning, not needed for v1: A-6 showed the
+  default primary-key and foreign-key indexes suffice.
+* **The Silo classification criteria**, meaning which tenants qualify for a dedicated
+  database, are ratified with Security and the DPO at onboarding (ADR-0001, Pre-GA
+  checklist).
+* **Retention specifics for the audit-adjacent columns** remain a Security and DPO
+  ratification item (ADR-0008, and 03).
+* The Finbuckle, OpenIddict, EF Core, and Npgsql composition is a contract-regression
+  seam re-verified on every bump (ADR-0021).
 
-## References
+## 11. Sources
 
-* Architecture overview: [components](../architecture/08-component-view.md),
-  [data view](../architecture/12-data-architecture.md), [cross-cutting](../architecture/11-cross-cutting-concepts.md).
-* Design: [01-foundations](01-foundations.md).
-* ADRs: 0001 (tenancy), 0037 (engine), 0036 (keys), 0018 (pooling), 0049 (RS
-  validation), 0008 (audit), 0003 (sessions), 0010 (delegated admin), 0017
-  (migrations), 0033 (key scope), 0021 (version seam).
+* Architecture: [data architecture](../architecture/12-data-architecture.md),
+  [components](../architecture/08-component-view.md),
+  [cross-cutting concepts](../architecture/11-cross-cutting-concepts.md),
+  [schema migration and evolution](../architecture/15-schema-migration-evolution.md).
+* Design: [01-foundations](01-foundations.md) for the configuration layer and the package
+  graph; 03, 07, 08, 10, 12, 15, 17, and 18 own the behaviour over the tables defined
+  here.
+* ADRs: 0001 (tenancy), 0037 (engine), 0036 (keys), 0018 (pooling), 0049 (resource-server
+  validation), 0008 (audit), 0003 (sessions), 0010 (delegated admin), 0017 (migrations),
+  0033 (key scope), 0065 (identifier casing), 0021 (version seam), 0016 and 0053 (erasure
+  and data-subject rights), 0043 (the startup assertion of the RLS role).
+* **External verification, 2026-07-26, OpenIddict at release tag 7.5.0**, the version
+  ADR-0061 pins. Read in `src/OpenIddict.EntityFrameworkCore/Configurations/`: every
+  entity declares `HasKey(Id)`; Application has one unique index on `ClientId`; Scope one
+  unique index on `Name`; Authorization one non-unique composite on `(ApplicationId,
+  Status, Subject, Type)`; Token the same composite plus a unique index on `ReferenceId`;
+  and neither `ExpirationDate` nor `CreationDate` is indexed. Read in
+  `src/OpenIddict.Abstractions/Descriptors/OpenIddictApplicationDescriptor.cs`: the
+  descriptor exposes `ApplicationType`, `ClientType`, and `ConsentType`, and no single
+  `Type` property. Read in `src/OpenIddict.Abstractions/OpenIddictConstants.cs`: the
+  `Statuses` class defines exactly five values, whose stored forms are the lowercase
+  strings `inactive`, `redeemed`, `rejected`, `revoked`, and `valid`.
+* Reconciled against the design corpus's data model on 2026-07-26. Taken from it: the DDL
+  at field level, the custom entity declarations with their generic arguments, the
+  Finbuckle mode settings, the native index shape and the "expiry does not change status"
+  rule, the identifier-casing convention (now ADR-0065), the native passkey column set,
+  the `TenantBranding` isolation resolution with its read-path caveat, and the
+  `Memberships.Status` gate column. Two divergences were resolved in the corpus's favour:
+  `SubjectDek.SubjectRef` is `uuid`, matching every other subject reference in the control
+  plane, and `Memberships.Status` was missing here while `Tenants.RequireInviteApproval`
+  was already present, so the gate could not have worked. One divergence was resolved
+  **against** the corpus: it types `SigningKeys.Id` as `uuid` in its data model while its
+  own key-management design types the same column as a string, and RFC 7517 defines `kid`
+  as a string, so `text` is kept. Content this repository carries beyond the corpus: the
+  partial-index bind-parameter rule, the `SchemaVersionGate` 503-not-404 rule, the
+  migration-role split, the EF Core 9 history lock, and the `KeyScope` vocabulary
+  reconciliation.
 
 ---
 

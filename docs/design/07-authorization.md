@@ -91,7 +91,7 @@ scoped deny-override belongs to the ReBAC-era adapter, not to v1.
 ### Token versus decision point
 
 Coarse per-tenant roles (`member`, `tenant_admin`, `billing`, sourced from
-`Memberships.Roles_JSON`; the role catalog is a Security/DPO ratification item) and the
+`Memberships.RolesJson`; the role catalog is a Security/DPO ratification item) and the
 `tenant` claim ride in the 15-minute access token (enough for a gateway/RS check,
 ADR-0004/0005); the **delegated-admin capability
 check runs live at the Admin API**, never baked into the token, because grants are
