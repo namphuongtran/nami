@@ -67,8 +67,11 @@ makes it dynamic and per-tenant.
 from a control-plane table under row-level security. It deliberately does **not** register one
 framework scheme per tenant, which would neither scale nor survive without a restart.
 
-**Evidence.** Gate spike A-8 passed 8 of 8 (verification record V28), and four findings changed
-the design rather than confirming it, which is why the spike ran first (ADR-0034).
+**Evidence.** Gate spike A-8 ran on 2026-07-10 and passed 8 of 8 (verification record V28), and
+four findings were folded back into the design rather than merely confirming it, which is why
+the spike ran first. One of the four is worth singling out: **F-A8-4 was surfaced not by the
+spike but by an adversarial review of it**, which then tightened three of the tests. A spike
+proves what it was asked; reviewing the spike is what finds what it was not asked (ADR-0034).
 
 **Cost to v1: awareness pointers only.**
 
@@ -108,18 +111,27 @@ clearest argument for spiking before committing (ADR-0071, ADR-0036).
 
 ## 3. Tier two: proposed, demand-driven
 
-Six extensions are recorded with their shape and a revisit trigger, and **none is a
-commitment**. The value of writing them down is that the analysis is not repeated, and that a
-request for one of them can be answered with a position rather than a shrug.
+Six extensions are recorded with their intended approach and an explicit revisit trigger, and
+**none is a commitment**. The value of writing them down is that the analysis is not repeated
+and that a request for one can be answered with a position rather than a shrug.
 
-| Extension | Trigger to revisit |
+**All six share a shape, and two parts of it matter more than the list itself.** First, a
+trigger firing does **not** open a shortcut into the codebase: the recorded wording is that the
+item then earns a **full ADR and design, and a spike where the security surface warrants one**,
+before any build, at which point the proposed record is superseded or promoted. Second, and
+less obvious, **the recorded analysis is treated as having a shelf life**: several of these
+triggers require re-reading the then-current specification and re-checking the ecosystem
+"rather than assuming it improved". So what is captured here is a starting position, not a
+conclusion to be executed later.
+
+| Extension | Recorded trigger |
 |---|---|
-| SAML 2.0 and WS-Federation (ADR-0055) | A demand for enterprise federation with legacy relying parties |
-| FAPI 2.0 high-assurance profiles (ADR-0056) | Entering a regulated open-banking or high-assurance context. This is also what would reopen the message-signing tier de-scoped in v1 |
-| Windows integrated authentication (ADR-0057) | A demand for on-premises domain-joined single sign-on |
-| Authorization server for MCP servers (ADR-0064) | Adoption of the ecosystem, and the fine-grained authorization-details work it implies |
-| Continuous access evaluation via Shared Signals (ADR-0068) | Library and interop maturity. Deferred on **evidence**: the specifications reached Final in September 2025, there is no widely adopted .NET transmitter or receiver, and vendor support is uneven |
-| Verifiable credentials via OpenID4VC (ADR-0069) | A demand for issuance in a wallet ecosystem |
+| SAML 2.0 and WS-Federation (ADR-0055) | Enterprise, public-sector, and health customers that still require it. The ADR states plainly that its absence is **the single largest gap** against mainstream commercial identity servers, which is why it is recorded rather than left implicit |
+| FAPI 2.0 high-assurance profiles (ADR-0056) | Entering a regulated open-banking or open-finance context. This is also what reopens the message-signing tier (JARM, RAR, JAR) that v1 de-scoped for want of a use case (ADR-0014) |
+| Windows integrated authentication (ADR-0057) | On-premises Active Directory environments where a domain-joined user expects to reach the application without a separate login. Left out of v1 as an on-premises rather than general need |
+| Authorization server for MCP servers (ADR-0064) | Real demand rather than speculation, then re-reading the then-current authorization revision for new required endpoints, client-registration changes, and tightened audience rules. Separately, rich authorization requests are the trigger recorded against this ADR in the advanced-flows design |
+| Continuous access evaluation via Shared Signals (ADR-0068) | Nami actively developing continuous access evaluation, **or** the ecosystem gap closing: a maintained .NET library appearing, or real receivers existing among consumers. Deferred on **evidence**, not preference: the specifications reached Final in September 2025, there is no widely adopted .NET transmitter or receiver, and vendor support is uneven |
+| Verifiable credentials via OpenID4VC (ADR-0069) | Nami actively developing credential issuance, then confirming the then-current issuance and presentation profiles and the applicable regulatory requirements, deciding build-versus-adopt for a permissive library, and settling the format set |
 
 **ADR-0068 is the pair most easily confused with tier one.** Change-event publishing (ADR-0071)
 is a Nami-shaped CloudEvents stream to backend microservices, accepted and spike-proven; Shared
