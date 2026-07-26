@@ -98,9 +98,11 @@ Only bounded tags are allowed: `grant_type`, `token_type`, `scheme`, `result`/`o
 plus traces and logs, never a high-cardinality tag. The OpenTelemetry SDK default
 cardinality limit is 2000 per metric; per-metric caps are tightened with a `View`. The
 `nami.identity.tokens_issued` cap is a `View` (a cardinality limit of 50) whose
-instrument-name selector is exactly `"nami.identity.tokens_issued"` (an exact match for
-the emitted name; a mismatched selector would match nothing and make the cap a silent
-no-op), and a test asserts the view is attached.
+instrument-name selector is the emitted name `"nami.identity.tokens_issued"`. The SDK
+matches that selector case-insensitively, so casing is not the hazard; a selector that
+matches no instrument is, because it is silently inert and the counter then falls back to
+the 2000 default instead of failing. A test asserts the view is attached (ADR-0077 rule D,
+which carries the source evidence).
 
 ### Telemetry is lossy, never blocking
 

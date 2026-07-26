@@ -90,10 +90,11 @@ Per-tenant or per-user investigation therefore goes through **exemplars** and th
 logs they point at, never through a tag. The SDK's default per-metric cardinality limit is
 2000, with measurements beyond it folded into an overflow point rather than dropped silently,
 and individual metrics are tightened further with a view. A test asserts the view is actually
-attached, because a view whose selector matches no instrument configures nothing and this
-project could not confirm from the SDK's documentation that such a view reports anything: an
-unattached cap is indistinguishable from an attached one by reading the configuration, and it
-reads as protection.
+attached, because a view whose selector matches no instrument is silently inert and the metric
+then falls back to the 2000 default: an unattached cap is indistinguishable from an attached one
+by reading the configuration, and the only message the SDK logs on that path says the instrument
+will be processed and aggregated, which reads as reassurance. ADR-0077 rule D owns that
+reasoning and carries the source evidence for it.
 
 **ADR-0077 owns this**, and owns it as a data-protection rule at least as much as a capacity
 one. The dimensions are **allow-listed rather than deny-listed**, because the failure mode is a
@@ -223,9 +224,11 @@ dependency: nothing Nami ships carries them (ADR-0063, ADR-0026).
   from readiness, and the backpressure invariant with its collector-outage proof. Nothing in
   the corpus view needed correcting against an owning decision, which is the first view in this
   migration where that is true; where this repository's own design goes further, it is on the
-  cardinality mechanics (the exact-match view selector, the no-op failure mode it prevents, and
-  the test that the view is attached), which are carried here because the failure they prevent
-  is silent.
+  cardinality mechanics (the name-matched view selector, the silently-inert failure mode it
+  prevents, and the test that the view is attached), which are carried here because the failure
+  they prevent is silent. The SDK behaviour behind that failure mode was verified in the
+  OpenTelemetry .NET source on 2026-07-26 and is recorded in ADR-0077, after an earlier revision
+  of this view reported it as unconfirmable from the documentation.
 
 ---
 
