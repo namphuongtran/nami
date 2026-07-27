@@ -72,7 +72,7 @@ No new tables; this design uses `AspNetUsers`/roles/claims, `UserPasskeyInfo`
 
 ## 5. Behaviour
 
-### The assurance producer
+### 5.1 Interactive login and the assurance producer
 
 OpenIddict has no profile-service equivalent, so a single `IClaimsProfileService` (the
 choke-point owned by 04, with the claim contract in 09) is where session claims are
@@ -107,7 +107,31 @@ RFC 8176 defines none. OpenIddict 7.5 does not emit `sid` natively, so it is set
 explicitly to the session `sid`; without it a relying party can only log out by `sub`,
 killing every session the person has rather than the one that ended.
 
-### Passkeys and assurance level
+The backend authentication step (the protocol wrapper is 04's authorize flow): a
+password sign-in, uniform failure, session establishment, and claim production.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as End user
+  participant L as Login page
+  participant SM as SignInManager
+  participant S as Session store
+  participant CP as IClaimsProfileService
+  U->>L: submit username and password
+  L->>SM: PasswordSignInAsync, lockoutOnFailure true
+  alt bad credentials, locked, or disabled
+    SM-->>U: uniform invalid credentials
+  else two-factor required
+    SM-->>U: redirect to the MFA challenge
+  else success
+    SM->>S: establish session, mint a new sid, discard the pre-login handle
+    SM->>CP: stamp amr pwd, auth_time, compute acr
+    L-->>U: signed in, return to authorize
+  end
+```
+
+### 5.2 Passkeys and assurance level
 
 Passkeys are native to .NET 10 (`SignInManager.MakePasskeyCreationOptionsAsync` /
 `PerformPasskeyAttestationAsync` / `MakePasskeyRequestOptionsAsync` /
@@ -133,7 +157,41 @@ recovery plus a forced step-up re-enroll and is never weaker than the factor it
 replaces; every recovery step is rate-limited and audited, and admin-assisted
 recovery is dual-control (07).
 
-### MFA
+**Registration and AAL resolution.**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant SM as SignInManager
+  participant UM as UserManager
+  participant CP as ComputeAcr
+  U->>SM: MakePasskeyCreationOptionsAsync
+  SM-->>U: creation options, navigator.credentials.create
+  U->>SM: PerformPasskeyAttestationAsync with the credential
+  SM->>UM: AddOrUpdatePasskeyAsync, persist Aaguid and AttestationTrust
+  Note over CP: ComputeAcr resolves aaguid, trust, IsBackupEligible to a tier
+  Note over CP: v1 attestation off so aal2, aal3 allow-list empty, backup-eligible never aal3
+```
+
+**Recovery when every device is lost.**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant R as Recovery endpoint
+  participant E as Email
+  participant SM as SignInManager
+  Note over U: enroll-time invariant, at least one fallback before passkey-only
+  U->>R: lost all devices, request recovery
+  R->>E: email-verified recovery link, rate-limited and audited
+  U->>R: open the link, then forced step-up
+  R->>SM: re-enroll a new passkey before a full session
+  Note over R: recovery is never weaker than the replaced factor, admin-assisted is dual-control
+```
+
+### 5.3 MFA
 
 TOTP plus 10 recovery codes are the baseline (native); passkeys ship in v1. `amr`
 reflects the factors used; SMS/email OTP is roadmap (weakest factor). TOTP enrollment is
@@ -148,7 +206,24 @@ stored in `AspNetUserTokens`, redeemed via `TwoFactorRecoveryCodeSignInAsync`, c
 (`GetTwoFactorAuthenticationUserAsync`) then
 `TwoFactorAuthenticatorSignInAsync(code, isPersistent, rememberClient)`.
 
-### Server-side sessions (ADR-0003)
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as End user
+  participant M as MFA challenge
+  participant SM as SignInManager
+  participant CP as IClaimsProfileService
+  U->>M: enter TOTP code or a recovery code
+  M->>SM: TwoFactorAuthenticatorSignInAsync
+  alt invalid or lockout
+    SM-->>U: uniform failure, lockout after threshold
+  else valid
+    SM->>CP: amr becomes pwd, otp, mfa and acr recomputes to aal2
+    M-->>U: signed in
+  end
+```
+
+### 5.4 Server-side sessions (ADR-0003)
 
 Sessions are core, not optional: an `ITicketStore` over PostgreSQL persists the
 ticket and the cookie carries only a handle. Keyed by `sid`; inactivity 1h, absolute
@@ -164,7 +239,7 @@ refresh and **rotated on step-up or re-authentication**. At primary auth
 pre-login session handle discarded** (session-fixation defense); an anonymous
 session is never upgraded in place.
 
-### Federation (external login, ADR-0002)
+### 5.5 Federation (external login, ADR-0002)
 
 Handler-based ASP.NET Core external login (`AddMicrosoftAccount` /
 `AddMicrosoftIdentityWebApp` / `AddOpenIdConnect`), provisioning or linking into the
@@ -185,136 +260,6 @@ enforces `iss` natively is a verify-at-source item, and if it does not it is wir
 `OnMessageReceived` without double-handling) with the correlation state bound to the
 provider scheme (mix-up defense); provider secrets live in the secret store
 (ADR-0009), never plaintext.
-
-### Credential hardening baseline (ADR-0028 §E)
-
-The levers, in order of effect, are MFA/passkeys, a breached-password check, length
-over complexity, strong hashing, then lockout, not complexity rules or rotation
-(which NIST shows weaken passwords):
-
-| Setting | Baseline | Why |
-|---|---|---|
-| `Password.RequiredLength` | 12 | length over complexity (NIST) |
-| PBKDF2 `IterationCount` | >= 210000 | OWASP 2023 (Argon2id via a custom hasher optional) |
-| `SecurityStampValidatorOptions.ValidationInterval` | 1-2 min | fast logout-everywhere (ADR-0003) |
-| `SignIn.RequireConfirmedAccount` | true | anti-fake-account |
-| `User.RequireUniqueEmail` | true | one email is one identity (ADR-0001) |
-| `RequiredUniqueChars` | 4 | blocks trivial repeats |
-| Lockout | on-failure enabled, 5 attempts, 5-15 min timespan, plus a separate 2FA-step lockout | the template defaults on-failure off |
-| Breached-password check | HIBP range API (k-anonymity), fail-open, prod-on | banned-password lever |
-| Forced rotation | none | rotation weakens passwords (NIST) |
-
-The password hasher upgrades transparently: on a successful verify against an older stored
-hash it re-hashes at the current work factor (re-hash-on-verify), so raising
-`IterationCount` migrates users at their next login without a reset.
-
-Complexity flags stay on as defense-in-depth backstop, not the primary lever. The
-lockout-DoS mitigation and the risk-triggered challenge layer are ADR-0042.
-
-### Self-service
-
-Self-service (profile, email/phone, MFA/passkey/password, sessions, membership) uses
-**custom endpoints, not `MapIdentityApi`**: `MapIdentityApi` exposes `/register`,
-`/login`, and similar as a parallel JSON attack surface that bypasses the UI flow,
-anti-enumeration, and the challenge layer. **Change-email is hardened** (the top
-takeover surface): notify the old address (an informational tripwire with a support
-CTA and no actionable token or link), require step-up (acr >= aal2)
-before initiating, verify the new address before the switch takes effect (the old
-email stays the login until then), and on completion rotate the `SecurityStamp` and
-revoke the refresh-token family so existing sessions fall out.
-
-### Lifecycle
-
-`invited -> pending-approval -> active -> disabled -> offboarded`, with
-disable-not-delete by default and offboard invokes the gated erasure saga (13,
-dual-control and Art.17/DPO-gated, not automatic per offboard); every transition is
-audited with provenance (ADR-0008). The `pending-approval` state is gated by
-`CanSignInAsync` via a `Membership` status marker (approval is tenant-scoped even
-though identity is global) and is enabled by a per-tenant `RequireInviteApproval`
-flag; approval reuses the dual-control saga (07) as a constructive-action variant (a new
-`approve-user-invite` `ActionType` plus its `IProposalExecutor`, with the saga executor
-structure unchanged), and the invite-expiry timer is reused (not a second clock).
-
-### Interactive login
-
-The backend authentication step (the protocol wrapper is 04's authorize flow): a
-password sign-in, uniform failure, session establishment, and claim production.
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor U as End user
-  participant L as Login page
-  participant SM as SignInManager
-  participant S as Session store
-  participant CP as IClaimsProfileService
-  U->>L: submit username and password
-  L->>SM: PasswordSignInAsync, lockoutOnFailure true
-  alt bad credentials, locked, or disabled
-    SM-->>U: uniform invalid credentials
-  else two-factor required
-    SM-->>U: redirect to the MFA challenge
-  else success
-    SM->>S: establish session, mint a new sid, discard the pre-login handle
-    SM->>CP: stamp amr pwd, auth_time, compute acr
-    L-->>U: signed in, return to authorize
-  end
-```
-
-### MFA (TOTP) sign-in
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor U as End user
-  participant M as MFA challenge
-  participant SM as SignInManager
-  participant CP as IClaimsProfileService
-  U->>M: enter TOTP code or a recovery code
-  M->>SM: TwoFactorAuthenticatorSignInAsync
-  alt invalid or lockout
-    SM-->>U: uniform failure, lockout after threshold
-  else valid
-    SM->>CP: amr becomes pwd, otp, mfa and acr recomputes to aal2
-    M-->>U: signed in
-  end
-```
-
-### Passkey registration and AAL resolution
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor U as User
-  participant SM as SignInManager
-  participant UM as UserManager
-  participant CP as ComputeAcr
-  U->>SM: MakePasskeyCreationOptionsAsync
-  SM-->>U: creation options, navigator.credentials.create
-  U->>SM: PerformPasskeyAttestationAsync with the credential
-  SM->>UM: AddOrUpdatePasskeyAsync, persist Aaguid and AttestationTrust
-  Note over CP: ComputeAcr resolves aaguid, trust, IsBackupEligible to a tier
-  Note over CP: v1 attestation off so aal2, aal3 allow-list empty, backup-eligible never aal3
-```
-
-### Passkey recovery (lost all devices)
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor U as User
-  participant R as Recovery endpoint
-  participant E as Email
-  participant SM as SignInManager
-  Note over U: enroll-time invariant, at least one fallback before passkey-only
-  U->>R: lost all devices, request recovery
-  R->>E: email-verified recovery link, rate-limited and audited
-  U->>R: open the link, then forced step-up
-  R->>SM: re-enroll a new passkey before a full session
-  Note over R: recovery is never weaker than the replaced factor, admin-assisted is dual-control
-```
-
-### External login with anti-takeover linking
 
 ```mermaid
 sequenceDiagram
@@ -340,7 +285,44 @@ sequenceDiagram
   Note over IDP: sensitive claims from the local record, external claims allow-listed
 ```
 
-### Password reset
+### 5.6 Credential hardening baseline (ADR-0028 §E)
+
+The levers, in order of effect, are MFA/passkeys, a breached-password check, length
+over complexity, strong hashing, then lockout, not complexity rules or rotation
+(which NIST shows weaken passwords):
+
+| Setting | Baseline | Why |
+|---|---|---|
+| `Password.RequiredLength` | 12 | length over complexity (NIST) |
+| PBKDF2 `IterationCount` | >= 210000 | OWASP 2023 (Argon2id via a custom hasher optional) |
+| `SecurityStampValidatorOptions.ValidationInterval` | 1-2 min | fast logout-everywhere (ADR-0003) |
+| `SignIn.RequireConfirmedAccount` | true | anti-fake-account |
+| `User.RequireUniqueEmail` | true | one email is one identity (ADR-0001) |
+| `RequiredUniqueChars` | 4 | blocks trivial repeats |
+| Lockout | on-failure enabled, 5 attempts, 5-15 min timespan, plus a separate 2FA-step lockout | the template defaults on-failure off |
+| Breached-password check | HIBP range API (k-anonymity), fail-open, prod-on | banned-password lever |
+| Forced rotation | none | rotation weakens passwords (NIST) |
+
+The password hasher upgrades transparently: on a successful verify against an older stored
+hash it re-hashes at the current work factor (re-hash-on-verify), so raising
+`IterationCount` migrates users at their next login without a reset.
+
+Complexity flags stay on as defense-in-depth backstop, not the primary lever. The
+lockout-DoS mitigation and the risk-triggered challenge layer are ADR-0042.
+
+### 5.7 Self-service
+
+Self-service (profile, email/phone, MFA/passkey/password, sessions, membership) uses
+**custom endpoints, not `MapIdentityApi`**: `MapIdentityApi` exposes `/register`,
+`/login`, and similar as a parallel JSON attack surface that bypasses the UI flow,
+anti-enumeration, and the challenge layer. **Change-email is hardened** (the top
+takeover surface): notify the old address (an informational tripwire with a support
+CTA and no actionable token or link), require step-up (acr >= aal2)
+before initiating, verify the new address before the switch takes effect (the old
+email stays the login until then), and on completion rotate the `SecurityStamp` and
+revoke the refresh-token family so existing sessions fall out.
+
+**Password reset.**
 
 The Identity side; the email delivery, anti-enumeration timing, and token lifespan
 are the email subsystem (10).
@@ -351,7 +333,7 @@ sequenceDiagram
   actor U as End user
   participant F as Forgot-password endpoint
   participant UM as UserManager
-  participant E as Email subsystem, 07
+  participant E as Email subsystem, 10
   U->>F: submit email address
   Note over F: constant response and latency, no account disclosure
   F->>UM: if the user exists, GeneratePasswordResetTokenAsync
@@ -361,7 +343,7 @@ sequenceDiagram
   Note over UM: existing sessions and refresh tokens fall out
 ```
 
-### Change-email hardening
+**Change-email hardening.**
 
 ```mermaid
 sequenceDiagram
@@ -379,7 +361,17 @@ sequenceDiagram
   P->>P: switch email, rotate SecurityStamp, revoke refresh family
 ```
 
-### Lifecycle states
+### 5.8 Lifecycle
+
+`invited -> pending-approval -> active -> disabled -> offboarded`, with
+disable-not-delete by default and offboard invokes the gated erasure saga (17,
+dual-control and Art.17/DPO-gated, not automatic per offboard); every transition is
+audited with provenance (ADR-0008). The `pending-approval` state is gated by
+`CanSignInAsync` via a `Membership` status marker (approval is tenant-scoped even
+though identity is global) and is enabled by a per-tenant `RequireInviteApproval`
+flag; approval reuses the dual-control saga (07) as a constructive-action variant (a new
+`approve-user-invite` `ActionType` plus its `IProposalExecutor`, with the saga executor
+structure unchanged), and the invite-expiry timer is reused (not a second clock).
 
 ```mermaid
 stateDiagram-v2
