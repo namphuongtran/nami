@@ -104,6 +104,16 @@ later reader cannot tell the two apart.
   number, and a checker that assumes one layer reports clean on the other. Prefer the
   slug form for cross-layer links, and note that a slug label encodes the number twice,
   so it goes stale twice.
+- **Audit a numeric pointer against the target's *topic*, and start with the file's
+  self-contradictions.** A sweep of all 271 bare numeric pointers in `docs/design/` found
+  five wrong, and the cheapest signal in every case was a document disagreeing with itself:
+  `13` gave path (c) to `06` in its table and to `08` in the heading eight lines later, and
+  `08` cited the email subsystem as `10` in prose and `07` inside a mermaid participant.
+  Two of the five sat where no link checker can reach, one inside a fenced block and one as
+  a bare number in prose. Also expect regex noise, since `Art.17(3)`, `AC-2(2)`,
+  `PostgreSQL 18`, `.NET 10`, and `FromHours(8)` all look like pointers: extract by machine,
+  then judge every hit by reading, and never let the extractor's count stand in for the
+  judgement.
 - **A checker's anchor is part of its coverage claim.** A pattern that requires the target
   to start where the link opens matches same-directory links and silently passes every
   `../other-layer/` one. State what a screen does *not* match, in the screen, or its zero

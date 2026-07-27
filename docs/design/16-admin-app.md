@@ -36,7 +36,7 @@ design). The end-user login/consent UI (11) is a different application.
 The App is a **confidential OIDC client of the IdP** (dogfooding): authorization code + PKCE,
 `client_secret` migrating to `private_key_jwt`, scopes `openid profile admin-api`, exact-match
 redirect URIs. The session is a `__Host-` HttpOnly/Secure/SameSite=Lax cookie over the
-server-side session store (03); it receives back-channel logout (validating
+server-side session store (ADR-0003); it receives back-channel logout (validating
 `iss`/`aud`/`sid`/`events` with a `jti` replay guard) so an admin's IdP logout ends the console
 session. Token management uses `Duende.AccessTokenManagement.OpenIdConnect` (Apache-2.0,
 provider-agnostic, ADR-0026 section D): `AddOpenIdConnectAccessTokenManagement()` plus

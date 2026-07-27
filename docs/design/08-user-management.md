@@ -369,7 +369,8 @@ dual-control and Art.17/DPO-gated, not automatic per offboard); every transition
 audited with provenance (ADR-0008). The `pending-approval` state is gated by
 `CanSignInAsync` via a `Membership` status marker (approval is tenant-scoped even
 though identity is global) and is enabled by a per-tenant `RequireInviteApproval`
-flag; approval reuses the dual-control saga (07) as a constructive-action variant (a new
+flag; approval reuses the dual-control saga (its catalogue entry in 07, its executor
+registry in 15) as a constructive-action variant (a new
 `approve-user-invite` `ActionType` plus its `IProposalExecutor`, with the saga executor
 structure unchanged), and the invite-expiry timer is reused (not a second clock).
 
@@ -441,7 +442,7 @@ user-management public surface is governed by the SemVer and deprecation policy
 * **Backup-eligible passkey**: a synced credential is never rated aal3.
 * **Login-error uniformity**: lockout and disabled-account login failures return the
   same generic invalid-credentials response as a bad password (no locked/disabled
-  oracle); the lockout notice is emailed, not shown (07).
+  oracle); the lockout notice is emailed, not shown (11).
 
 ## 8. Security and multi-tenancy notes
 

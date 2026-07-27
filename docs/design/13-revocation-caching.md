@@ -62,7 +62,7 @@ validation-key set (12); and the schema (02).
 |---|---|---|---|---|
 | (a) access-token revoke | JWT to expiry / reference immediate | the JWT itself | short-TTL 15-min JWT + reference token for sensitive clients | 04 (referenced) |
 | (b) refresh-family revoke | immediate on next use | none (DB-direct) | native family-revoke on rotation, DB-fresh | 04 (referenced) |
-| (c) force-logout / session | near-immediate | cookie not yet re-validated | `ITicketStore` row-delete + `ValidationInterval` 1-2 min | 06 (referenced) |
+| (c) force-logout / session | near-immediate | cookie not yet re-validated | `ITicketStore` row-delete + `ValidationInterval` 1-2 min | 08 (referenced) |
 | (d) delegated-admin grant revoke | immediate (live check) | none (DB-direct) | `EnableAuthorizationEntryValidation`, DB-fresh | 04/05 (referenced) |
 | (e) signing-key break-glass | ≤ 60s (SLO) | RS JWKS cache ~12h | ~5-min RS refresh + fail-closed distrusted-kid set | **this design** |
 | (f) client/scope config change | ≤ 30s (SLO) | the config cache you add | FusionCache + Redis backplane | **this design** |
@@ -139,7 +139,7 @@ tenant under the Finbuckle ambient context.
   through to the durable store at higher latency, never a 5xx); security checks fail closed.
   The distrusted-kid set is fail-closed under this general rule, not as a special
   carve-out (the one deliberate carve-out in the resiliency posture is the email throttle,
-  ADR-0038, which is not part of this design). Note the DPoP `jti` replay cache (14) is a
+  ADR-0038, which is not part of this design). Note the DPoP `jti` replay cache (06) is a
   different pattern again: Redis is its **authoritative L2 store** (a replay set has no DB
   backstop to read through to), so it is fail-closed by necessity, not an accelerator in
   front of a durable source.
