@@ -92,7 +92,7 @@ plan, not here.
 | [04](04-core-protocol.md) | Core protocol server | reviewed | 0004, 0005, 0014, 0048, 0049 |
 | [05](05-resource-server-validation.md) | Resource-server token validation | draft | 0049, 0033, 0005, 0004, 0048, 0001, 0037, 0009 |
 | [06](06-sender-constrained-tokens.md) | Sender-constrained tokens (DPoP and mTLS) | draft | 0014, 0005, 0021, 0024, 0049 |
-| [07](07-authorization.md) | Authorization and delegated admin | reviewed | 0010, 0047, 0013 |
+| [07](07-authorization.md) | Authorization and delegated admin | draft | 0010, 0047, 0013, 0005, 0008, 0024, 0001, 0021, 0075 |
 | [08](08-user-management.md) | User management and authentication | reviewed | 0028, 0013, 0003, 0002 |
 | [09](09-federation-and-claims-profile.md) | Federation and the claims profile | draft | 0002, 0075, 0005, 0001, 0013, 0019, 0009, 0034 |
 | [10](10-email-notification.md) | Email and notification subsystem | draft | 0038 |
