@@ -107,6 +107,8 @@ RFC 8176 defines none. OpenIddict 7.5 does not emit `sid` natively, so it is set
 explicitly to the session `sid`; without it a relying party can only log out by `sub`,
 killing every session the person has rather than the one that ended.
 
+#### Interactive login
+
 The backend authentication step (the protocol wrapper is 04's authorize flow): a
 password sign-in, uniform failure, session establishment, and claim production.
 
@@ -157,7 +159,7 @@ recovery plus a forced step-up re-enroll and is never weaker than the factor it
 replaces; every recovery step is rate-limited and audited, and admin-assisted
 recovery is dual-control (07).
 
-**Registration and AAL resolution.**
+#### Passkey registration and AAL resolution
 
 ```mermaid
 sequenceDiagram
@@ -174,7 +176,7 @@ sequenceDiagram
   Note over CP: v1 attestation off so aal2, aal3 allow-list empty, backup-eligible never aal3
 ```
 
-**Recovery when every device is lost.**
+#### Passkey recovery (lost all devices)
 
 ```mermaid
 sequenceDiagram
@@ -205,6 +207,8 @@ stored in `AspNetUserTokens`, redeemed via `TwoFactorRecoveryCodeSignInAsync`, c
 `RequiresTwoFactor` branch over the `IdentityConstants.TwoFactorUserIdScheme` interim cookie
 (`GetTwoFactorAuthenticationUserAsync`) then
 `TwoFactorAuthenticatorSignInAsync(code, isPersistent, rememberClient)`.
+
+#### MFA (TOTP) sign-in
 
 ```mermaid
 sequenceDiagram
@@ -260,6 +264,8 @@ enforces `iss` natively is a verify-at-source item, and if it does not it is wir
 `OnMessageReceived` without double-handling) with the correlation state bound to the
 provider scheme (mix-up defense); provider secrets live in the secret store
 (ADR-0009), never plaintext.
+
+#### External login with anti-takeover linking
 
 ```mermaid
 sequenceDiagram
@@ -322,7 +328,7 @@ before initiating, verify the new address before the switch takes effect (the ol
 email stays the login until then), and on completion rotate the `SecurityStamp` and
 revoke the refresh-token family so existing sessions fall out.
 
-**Password reset.**
+#### Password reset
 
 The Identity side; the email delivery, anti-enumeration timing, and token lifespan
 are the email subsystem (10).
@@ -343,7 +349,7 @@ sequenceDiagram
   Note over UM: existing sessions and refresh tokens fall out
 ```
 
-**Change-email hardening.**
+#### Change-email hardening
 
 ```mermaid
 sequenceDiagram
@@ -373,6 +379,8 @@ flag; approval reuses the dual-control saga (its catalogue entry in 07, its exec
 registry in 15) as a constructive-action variant (a new
 `approve-user-invite` `ActionType` plus its `IProposalExecutor`, with the saga executor
 structure unchanged), and the invite-expiry timer is reused (not a second clock).
+
+#### Lifecycle states
 
 ```mermaid
 stateDiagram-v2
