@@ -6,7 +6,18 @@ tags: [design, identity, passkeys, mfa, federation, sessions]
 
 # User management and authentication (detailed design)
 
-## Purpose and scope
+## 1. Decisions realized
+
+| Decision | What this design applies |
+|---|---|
+| ADR-0028 | Build on ASP.NET Core Identity; native passkeys with an attestation/AAL seam; lifecycle; credential-hardening baseline; `Nami.Identity.Users` |
+| ADR-0013 | Produce `acr` (recomputed per token-request), `amr` (RFC 8176 array), `auth_time` (JSON number); step-up is enforced in 07 |
+| ADR-0003 | Server-side session store (`ITicketStore`): `sid` lifecycle, inactivity 1h / absolute 8h, concurrent-session cap, revoke-denies-authorize/refresh |
+| ADR-0002 | Handler-based external login into the global identity; `(provider, sub)` anti-takeover linking; external-claim allow-list; SSRF; RFC 9207 `iss` |
+| ADR-0075 / ADR-0005 / ADR-0001 | The `IClaimsProfileService` choke-point and its deny-by-default destinations are ADR-0075's invariant; ADR-0005 sets which claims exist and how small they stay; global identity with tenant via membership is ADR-0001 |
+| ADR-0008 / ADR-0016 / ADR-0009 | Audit provenance on every lifecycle transition; offboard invokes the gated erasure saga; external secrets in the secret store |
+
+## 2. Purpose and scope
 
 The identity store and the human-authentication surface built on ASP.NET Core
 Identity: the global user model, passkeys/WebAuthn and MFA, the assurance producer
@@ -21,18 +32,28 @@ login/consent/logout UI pages (11), the step-up *enforcement* and dual-control (
 the email subsystem mechanics (10), the erasure saga (17), and the schema (02, the
 SSOT).
 
-## Decisions realized
+## 3. Interfaces and contract
 
-| Decision | What this design applies |
-|---|---|
-| ADR-0028 | Build on ASP.NET Core Identity; native passkeys with an attestation/AAL seam; lifecycle; credential-hardening baseline; `Nami.Identity.Users` |
-| ADR-0013 | Produce `acr` (recomputed per token-request), `amr` (RFC 8176 array), `auth_time` (JSON number); step-up is enforced in 07 |
-| ADR-0003 | Server-side session store (`ITicketStore`): `sid` lifecycle, inactivity 1h / absolute 8h, concurrent-session cap, revoke-denies-authorize/refresh |
-| ADR-0002 | Handler-based external login into the global identity; `(provider, sub)` anti-takeover linking; external-claim allow-list; SSRF; RFC 9207 `iss` |
-| ADR-0075 / ADR-0005 / ADR-0001 | The `IClaimsProfileService` choke-point and its deny-by-default destinations are ADR-0075's invariant; ADR-0005 sets which claims exist and how small they stay; global identity with tenant via membership is ADR-0001 |
-| ADR-0008 / ADR-0016 / ADR-0009 | Audit provenance on every lifecycle transition; offboard invokes the gated erasure saga; external secrets in the secret store |
+### Native versus built, at a glance
 
-## Component and interface design
+The framework supplies most of this subsystem, and the single most expensive mistake here
+is rebuilding something it already does. This table is the boundary, and it is worth
+reading before writing any code in this area.
+
+| Concern | Native, use as-is | Built here |
+|---|---|---|
+| Credentials | `UserManager` and `SignInManager`, `PasswordSignInAsync`, lockout, hashing with re-hash-on-verify | the password policy values, and the breach-check port |
+| MFA (TOTP) | `GetAuthenticatorKeyAsync`, `VerifyTwoFactorTokenAsync`, `SetTwoFactorEnabledAsync`, `TwoFactorAuthenticatorSignInAsync` | the enrolment page and QR, and `amr` stamping |
+| Recovery codes | `GenerateNewTwoFactorRecoveryCodesAsync` (ten by default, stored hashed), `TwoFactorRecoveryCodeSignInAsync`, `CountRecoveryCodesAsync` | the last-fallback invariant |
+| Passkeys | the .NET 10 creation, attestation, assertion, and sign-in APIs, plus `IdentityPasskeyOptions` and `UserPasskeyInfo` | endpoint mapping, attestation policy, and the authenticator-to-assurance seam |
+| Assurance | **nothing**: the protocol engine emits only `sub` | the whole `acr`, `amr`, and `auth_time` producer, including `ComputeAcr` |
+| External login | the handler-based authentication schemes | provisioning and linking by `(provider, sub)`, and the claims allow-list (09) |
+| Session | the ASP.NET cookie | the server-side ticket store, and revocation (13) |
+| Email | Identity's generic `IEmailSender<TUser>`, which the infrastructure itself calls | the cloud-agnostic adapter and outbox (10) |
+
+The assurance row is the one that surprises people: the engine emits `sub` and nothing
+else, so every claim a resource server uses to decide *how strongly* a person authenticated
+is produced here.
 
 ### Store and model
 
@@ -41,6 +62,15 @@ identity); tenant belonging is a `Membership`, never a user-per-tenant (ADR-0001
 `AddIdentity<ApplicationUser, IdentityRole<Guid>>()` over the global
 `IdentityDbContext` (02), with default token providers. OpenIddict owns the
 protocol; Identity owns the user store entirely.
+
+## 4. Data and structure
+
+No new tables; this design uses `AspNetUsers`/roles/claims, `UserPasskeyInfo`
+(`Aaguid`, `AttestationTrust`), `Memberships`, and `ServerSideSessions`, all in
+[02-data](02-data.md). It adds one field to the tenant config in 02: a per-tenant
+`RequireInviteApproval` boolean for the invite-approval gate.
+
+## 5. Behaviour
 
 ### The assurance producer
 
@@ -55,6 +85,15 @@ session downgrades; `amr` is stamped at sign-in via
 `SignInWithClaimsAsync(user, isPersistent, [amr claims])` and `auth_time` is sourced from
 `AuthenticationProperties.IssuedUtc`, emitted as a JSON
 number (the `long` overload, not a string).
+
+**`amr` is a historical fact of one authentication, stamped once and never recomputed**,
+which is exactly why `acr` has to be recomputed instead: the factors used do not change,
+but their sufficiency decays with session age. Password plus TOTP stamps
+`["pwd","otp","mfa"]`, and the `mfa` value sits **alongside** its factor children rather
+than replacing them because RFC 8176 Appendix A shows that combination: a verifier that
+wants "was more than one factor used" reads `mfa`, and one that wants "which factors"
+reads the children, without either having to infer the other. A passkey stamps `hwk` when
+the credential is device-bound or `swk` when it is synced.
 
 The **shape and destination** of each of those claims is the canonical claims contract,
 which [09](09-federation-and-claims-profile.md) owns: its seven claims have five
@@ -195,45 +234,6 @@ though identity is global) and is enabled by a per-tenant `RequireInviteApproval
 flag; approval reuses the dual-control saga (07) as a constructive-action variant (a new
 `approve-user-invite` `ActionType` plus its `IProposalExecutor`, with the saga executor
 structure unchanged), and the invite-expiry timer is reused (not a second clock).
-
-### Patterns applied
-
-Named per ADR-0066:
-
-* **State machine** for the user lifecycle.
-* **Strategy** for external auth handlers per provider and for `ComputeAcr`
-  assurance tiers.
-* **Single choke-point** for `IClaimsProfileService` (shared with 04).
-* **Ports and Adapters** for `IAttestationValidator`, `IPasswordBreachCheck`,
-  `IEmailDispatcher`, and `IAuditSink`.
-
-### Libraries
-
-ASP.NET Core Identity and native .NET 10 passkeys (MIT); the external-login handlers
-(`Microsoft.Identity.Web` / `AddMicrosoftAccount` / `AddOpenIdConnect`, MIT); the
-HIBP Pwned-Passwords range API (an external service, k-anonymity, fail-open); and, for
-future hardware-attested aal3, `fido2-net-lib` (MIT) with the FIDO MDS. No commercial
-dependency (ADR-0026). The confirm/reset path integrates through Identity's generic
-`IEmailSender<TUser>` (the interface Identity infrastructure itself calls), never the
-legacy single-method `IEmailSender` (only scaffolded Razor calls that one); implementing
-only the legacy interface means confirm/reset mail silently never sends. The delivery
-mechanics are 10's.
-
-### Packaging
-
-Bundled as `Nami.Identity.Users` with an `.AddUsers(...)` builder (ADR-0027). The
-`IEmailDispatcher` and `IAuditSink` ports are consumer swap-points (ADR-0024), and the
-user-management public surface is governed by the SemVer and deprecation policy
-(ADR-0044).
-
-## Data model
-
-No new tables; this design uses `AspNetUsers`/roles/claims, `UserPasskeyInfo`
-(`Aaguid`, `AttestationTrust`), `Memberships`, and `ServerSideSessions`, all in
-[02-data](02-data.md). It adds one field to the tenant config in 02: a per-tenant
-`RequireInviteApproval` boolean for the invite-approval gate.
-
-## Runtime flows
 
 ### Interactive login
 
@@ -396,7 +396,39 @@ stateDiagram-v2
   offboarded --> [*]
 ```
 
-## Edge cases and failure modes
+## 6. Dependencies and wiring
+
+### Patterns applied
+
+Named per ADR-0066:
+
+* **State machine** for the user lifecycle.
+* **Strategy** for external auth handlers per provider and for `ComputeAcr`
+  assurance tiers.
+* **Single choke-point** for `IClaimsProfileService` (shared with 04).
+* **Ports and Adapters** for `IAttestationValidator`, `IPasswordBreachCheck`,
+  `IEmailDispatcher`, and `IAuditSink`.
+
+### Libraries
+
+ASP.NET Core Identity and native .NET 10 passkeys (MIT); the external-login handlers
+(`Microsoft.Identity.Web` / `AddMicrosoftAccount` / `AddOpenIdConnect`, MIT); the
+HIBP Pwned-Passwords range API (an external service, k-anonymity, fail-open); and, for
+future hardware-attested aal3, `fido2-net-lib` (MIT) with the FIDO MDS. No commercial
+dependency (ADR-0026). The confirm/reset path integrates through Identity's generic
+`IEmailSender<TUser>` (the interface Identity infrastructure itself calls), never the
+legacy single-method `IEmailSender` (only scaffolded Razor calls that one); implementing
+only the legacy interface means confirm/reset mail silently never sends. The delivery
+mechanics are 10's.
+
+### Packaging
+
+Bundled as `Nami.Identity.Users` with an `.AddUsers(...)` builder (ADR-0027). The
+`IEmailDispatcher` and `IAuditSink` ports are consumer swap-points (ADR-0024), and the
+user-management public surface is governed by the SemVer and deprecation policy
+(ADR-0044).
+
+## 7. Error handling, edge cases, invariants
 
 * **Passkey lockout**: a passkey-only user who loses all devices is locked out
   unless a fallback exists; the last recovery path cannot be removed, and recovery is
@@ -419,7 +451,7 @@ stateDiagram-v2
   same generic invalid-credentials response as a bad password (no locked/disabled
   oracle); the lockout notice is emailed, not shown (07).
 
-## Security considerations
+## 8. Security and multi-tenancy notes
 
 * MFA/passkeys are the top lever; the breached-password check and length beat
   complexity and rotation (ADR-0028).
@@ -436,7 +468,7 @@ stateDiagram-v2
   first and preserves the audit hash-chain by crypto-shredding PII and appending a
   tombstone rather than deleting the row (17, ADR-0016).
 
-## Testing strategy
+## 9. Testing
 
 * Passkey register/login end-to-end; removing the last fallback is blocked;
   lost-all-devices recovery forces re-enroll and is not weaker than the replaced
@@ -457,7 +489,7 @@ stateDiagram-v2
   and tokens and invokes the gated erasure saga (dual-control, revoke-first, audit
   preserved).
 
-## Open and build-time items
+## 10. Open and build-time items
 
 * The aal3 attestation thresholds and the AAGUID allow-list are a Security
   ratification item; v1 attestation is off (flat aal2).
@@ -469,7 +501,7 @@ stateDiagram-v2
 * The dynamic per-tenant external-IdP flow is a v2 feature (ADR-0034) designed
   separately, not in this v1 doc.
 
-## References
+## 11. Sources
 
 * Architecture overview: [components](../architecture/08-component-view.md) (user
   management, sessions, external login), [runtime views](../architecture/09-runtime-flow-views.md).
