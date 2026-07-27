@@ -189,6 +189,19 @@ written to a log, a data-protection keyring is shared across nodes under one app
 name, a tenant store resolves without a chicken-and-egg dependency on the token endpoint,
 and a mail dispatcher is idempotent per message key.
 
+**A port needs at least two real reasons to exist**, drawn from swapping, testing, and a
+genuine boundary (ADR-0024). A single-implementation interface added only to satisfy
+layering is noise, and the catalogue above is short on purpose rather than by omission.
+
+The rule has an **acknowledged exception, and it is instructive rather than embarrassing**:
+`Nami.Identity.Bff` is a real infrastructure edge and has **no port**. It composes a reverse
+proxy and a token-management library, and the seam that a consumer actually changes is
+**configuration**, the routes, clusters, and token-management options, with those libraries
+themselves as the adapter. It fails the two-reasons bar, since there is no engine to swap
+and no need for an in-process fake when the thing is tested over HTTP. Wrapping it in a port
+would be applying the ports doctrine against its own purpose, so the doctrine is honoured by
+declining (ADR-0024, ADR-0029).
+
 **Axis two, insert an event handler at a named pipeline position.** Custom protocol
 behaviour is a handler registered into the engine's pipeline, anchored to a **named
 built-in descriptor** plus an offset, never to a literal order number, with every custom

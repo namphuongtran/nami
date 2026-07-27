@@ -139,7 +139,8 @@ and **where** a field lands is the part an implementer gets wrong.
 
 | Definition field | Lands as | Why there |
 |---|---|---|
-| `ClientId`, `ClientSecret`, `DisplayName` | descriptor properties | first-class on the descriptor |
+| `ClientId`, `DisplayName` | descriptor properties | first-class on the descriptor |
+| `ClientSecret` | a descriptor property, passed as **plaintext** and hashed by the manager | see section 5.6; it does **not** go to the secret store |
 | `RedirectUris`, `PostLogoutRedirectUris` | descriptor URI collections | parsed to `Uri`, so a malformed value fails at mapping |
 | `RequireConsent` | `ConsentType`, explicit or implicit | the engine models consent as a type, not a flag |
 | derived from credentials | `ClientType`, public or confidential | **derived, never declared**: see section 5.1 |
@@ -317,6 +318,33 @@ introspection**, because an opaque token cannot be validated locally
 ([05](05-resource-server-validation.md)). The selection guide is therefore: JWT for
 high-volume, first-party, backend-for-frontend, and machine-to-machine clients; reference
 for admin, privileged, and high-assurance clients.
+
+### 5.6 The client secret is the one credential that does not go to the secret store
+
+Everywhere else in this repository a secret is resolved through the secret port (ADR-0009),
+so the natural assumption here is wrong and worth stating as a rule. The engine's
+application descriptor documents at its own `ClientSecret` property that the value **"may
+be hashed or encrypted"** depending on the manager used to create it, and the default
+manager hashes it on create. Three consequences follow, and only the first is obvious:
+
+1. The secret is passed to the manager as **plaintext** and the manager stores the hash. It
+   is **not** placed in the secret store, because the store would then hold a second copy of
+   a credential whose only authoritative form is a hash the engine owns.
+2. **Nothing may read a client secret back.** The stored form is manager-dependent **by
+   contract**, so code that retrieves one is depending on an implementation detail that the
+   engine reserves the right to change. Rotation is therefore *generate a new one and show
+   it once*, never *retrieve the old one* (ADR-0035).
+3. Where a secret is generated for a tenant admin, the plaintext is shown **exactly once**
+   and never stored or logged ([15](15-admin-api.md), ADR-0035).
+
+The distinction that makes this coherent: an **external identity provider's** secret does go
+to the secret store (ADR-0009, [09](09-federation-and-claims-profile.md)), because there
+Nami is the client and must present the secret. Here Nami is the server and only **verifies**
+it. The two look alike and must not be conflated.
+
+The same descriptor also records that shared-secret client authentication **is not
+recommended** and exists mainly for legacy clients. That is the source-level reason behind
+`AuthMethod` defaulting to `PrivateKeyJwt` in section 3, rather than a house preference.
 
 ## 6. Dependencies and wiring
 
