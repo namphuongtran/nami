@@ -253,7 +253,8 @@ The relay:
 The break-glass alert runs on a **priority lane** (sync-with-fallback) so it is never
 stuck behind a confirmation backlog, and it bypasses both throttle limiters. It is
 enqueued on the control-plane transaction, consistent with the break-glass ordering in
-06 where `audit.RecordSuccessAndAlert()` runs, fail-closed, *before* `SignInAsync`.
+[15](15-admin-api.md), where `audit.RecordSuccessAndAlert()` runs, fail-closed, *before*
+`SignInAsync` (ADR-0015).
 
 ```mermaid
 sequenceDiagram
