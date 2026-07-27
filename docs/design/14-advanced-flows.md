@@ -159,6 +159,42 @@ adopt the BFF); and dynamic per-tenant external IdP federation is deferred post-
 on a "no-restart-scheme" feasibility spike (v1 supports multi-tenant identities but not
 per-tenant runtime federation; ADR-0034; the v2 dynamic-provider design is not in this layer yet).
 
+## Libraries and patterns applied
+
+No new third-party dependency. The two runtime pieces this design leans on are both already
+in the stack:
+
+| Library | Purpose here | License |
+|---|---|---|
+| ASP.NET Core rate-limiting middleware, on `System.Threading.RateLimiting` | The hard 429 cap on the token and pushed-request endpoints | MIT (verified in the primitive package's own `nuspec`) |
+| `Microsoft.Extensions.Caching.StackExchangeRedis` | The last-poll store behind `slow_down`, through the cache port | MIT (verified in its own `nuspec`) |
+| `OpenIddict.Server` | The native grants, endpoints, and the pipeline the hardening handlers join | Apache-2.0 |
+
+The middleware ships in the shared framework rather than as a package to reference, so the
+identifier the ADR-0026 scan sees is the primitive above, not a `Microsoft.AspNetCore.*`
+rate-limiting package.
+
+> **Patterns applied** (ADR-0066, a vocabulary applied where it clarifies intent).
+> **Chain of Responsibility** is the engine's own handler pipeline, and every hardening in
+> this document is a handler inserted at a named position within it rather than a
+> replacement for anything: `ApplyDeviceAuthorizationResponseContext` to emit the polling
+> interval, `HandleTokenRequestContext` to enforce backoff **before** the device code is
+> consumed. **Decorator in spirit**: each handler augments a native behaviour and then falls
+> through to it, so a well-behaved client still receives the engine's own
+> `authorization_pending` rather than anything this design invents. **Throttling** is the
+> 429 cap, and it is deliberately a *separate* control from the protocol-level `slow_down`,
+> because a client that ignores the protocol still has to be stopped (ADR-0042, and the
+> rate-limiting-is-not-load-shedding distinction in ADR-0040).
+>
+> The **deliberate absences** matter more here than the presences, because this document is
+> mostly about not building. There is no custom device-code or pushed-request store, since
+> both ride the engine's native token entities. There is no controller for a fully handled
+> endpoint. And the native `authorization_pending` and `expired_token` responses are not
+> re-implemented. Each of those would be the wrong-API error class
+> ([22](22-openiddict-seam-catalogue.md), seams S16 and S20), which is the single most
+> common mistake in this problem domain: hand-rolling a weaker version of something the
+> engine already does correctly.
+
 ## Data touchpoints
 
 This design adds no tables. The replay set that 06 owns is Redis-only (non-persistent,
