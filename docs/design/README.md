@@ -100,7 +100,7 @@ plan, not here.
 | [12](12-key-management.md) | Key management and rotation | draft | 0005, 0006, 0007, 0011, 0012, 0033 |
 | [13](13-revocation-propagation-and-caching.md) | Revocation propagation and caching | reviewed | 0039, 0040 |
 | [14](14-advanced-flows.md) | Advanced flows | draft | 0014 |
-| [15](15-admin-api.md) | Admin API | draft | 0020, 0015 |
+| [15](15-admin-api.md) | Admin API | reviewed | 0020, 0015 |
 | [16](16-admin-app.md) | Admin App | draft | 0020, 0029 |
 | [17](17-erasure-and-data-subject-rights.md) | Erasure and data-subject rights | draft | 0016, 0053 |
 | [18](18-tenant-lifecycle.md) | Tenant lifecycle | draft | 0017, 0054 |
