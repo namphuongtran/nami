@@ -56,8 +56,8 @@ which are [04](04-core-protocol.md); the `Memberships` table and the coarse-role
 which are [07](07-authorization.md); the `AspNetUserLogins` schema, which is
 [02](02-data.md); per-tenant token validation on the resource side, which is
 [05](05-resource-server-validation.md); the login and external-login **pages**, which are
-[11](11-login-consent-ui.md); back-channel logout delivery, which is
-[13](13-revocation-propagation-and-caching.md).
+[11](11-login-consent-ui.md); and the back-channel logout fan-out and its `logout_token`
+mint, which are also [11](11-login-consent-ui.md).
 
 The claims contract is deliberately here rather than in a producer design. Its seven claims
 have five different producers, so hosting the table in any one of them would make the other
@@ -536,7 +536,7 @@ Claims-contract tests:
   [07](07-authorization.md) (the `Memberships` store), [02](02-data.md)
   (`AspNetUserLogins`), [05](05-resource-server-validation.md) (the `tenant` claim and
   step-up consumer), [11](11-login-consent-ui.md) (the login and external-login pages),
-  [13](13-revocation-propagation-and-caching.md) (back-channel logout delivery),
+  [11](11-login-consent-ui.md) (the back-channel logout fan-out that consumes `sid`),
   [20](20-testing.md) (the undeclared-claim regression).
 * **Records:** V02 (`auth_time` number coercion), V28 and spike A-8 (the v2 dynamic-scheme
   gate, 8 of 8 on 2026-07-10).

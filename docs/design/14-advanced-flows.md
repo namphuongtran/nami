@@ -38,7 +38,7 @@ fan-out (11); and the core native-verify flows (04). It adds no database tables.
 | ADR-0042 | Device-flow `slow_down`/429 backoff and the PAR anti-flood ceiling |
 | ADR-0048 | Introspection stays native; the enrich-or-inactive rule for a bound token is 06's |
 | ADR-0049 | Every advanced flow runs in the resolved tenant scope; the RS validates signature + issuer + audience + tenant, and `cnf` composes on top after per-tenant validation |
-| ADR-0013 / ADR-0019 (ref) | Step-up (producer 08 / enforcement 07 / UI 11) and back-channel logout (08/10) are referenced, not built here |
+| ADR-0013 / ADR-0019 (ref) | Step-up (producer 08 / enforcement 07 / UI 11) and back-channel logout (trigger 08 / fan-out 11 / outbox chassis 10) are referenced, not built here |
 | ADR-0056 / ADR-0064 (proposed) | The revisit triggers for the de-scoped items: a FAPI 2.0 message-signing tier (JAR/JARM/RAR) and an MCP AS-role resource-indicator policy layer |
 
 ## Flow support matrix
@@ -51,7 +51,7 @@ fan-out (11); and the core native-verify flows (04). It adds no database tables.
 | Token exchange (RFC 8693) | native grant wire + **`act` logic built in 07**; **`may_act` de-scoped** as a security decision (ADR-0014) | grant here, logic 07 |
 | mTLS-bound tokens (RFC 8705) | native (confidential and M2M) | 06, and 04 for the wiring |
 | **DPoP (RFC 9449)** | **built, both issuance and validation** | **06** |
-| Back-channel logout | built interim (front-channel is dead) | 11 / 13 (referenced) |
+| Back-channel logout | built interim (front-channel is dead) | 11, with the outbox chassis from 10 (referenced) |
 | Step-up (`acr`/`amr`/`max_age`/`prompt`) | built | 08 / 07 / 11 (referenced) |
 | JAR (RFC 9101) | de-scoped (revisit if FAPI) | this doc |
 | JARM, RAR (RFC 9396), EdDSA, front-channel logout / `check_session_iframe` | de-scoped | this doc |

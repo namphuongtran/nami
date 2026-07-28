@@ -199,9 +199,10 @@ Both tenant-columned tables use the `TenantId = NULLIF(current_setting('app.curr
 RLS predicate form (02): an unset GUC then fails closed rather than crashing with a
 `22P02` cast error, so the relay's per-tenant iteration must set the ambient tenant and
 GUC before touching the control-plane copies. The same outbox shape is reused by a
-second consumer, back-channel `logout_token` delivery (`LogoutDeliveryOutbox`, 04),
-which stores delivery *intent* rather than a payload; that table is defined in 02 and
-owned by the revocation-propagation design, not here.
+second consumer, back-channel `logout_token` delivery over `LogoutDeliveryOutbox`,
+which stores delivery *intent* rather than a payload; that table is defined in 02 and its
+fan-out behaviour is owned by the login, consent, and logout design (11), not here. This
+design owns only the chassis that fan-out reuses.
 
 ## Reliability: transactional outbox and relay
 

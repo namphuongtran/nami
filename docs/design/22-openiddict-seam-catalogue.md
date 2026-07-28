@@ -187,7 +187,7 @@ contract test that must pass on every bump.
 
 | # | Seam | Owner | Isolation | Decommission marker |
 |---|---|---|---|---|
-| S28 | Back-channel logout fan-out | [13](13-revocation-propagation-and-caching.md), ADR-0019 | the logout fan-out service | targeted at the next major; **the marker trips only when native is proven on a released build**, not when an issue is assigned to a milestone |
+| S28 | Back-channel logout fan-out | [11](11-login-consent-ui.md), ADR-0019 | the logout fan-out service | targeted at the next major; **the marker trips only when native is proven on a released build**, not when an issue is assigned to a milestone |
 | S29 | Dynamic client registration, if built as an interim | [15](15-admin-api.md) | the admin provisioning port | same condition, same major |
 | S30 | The whole sender-constraint family, S6 to S10 | [06](06-sender-constrained-tokens.md) | the handler interfaces | **no committed native**; treat as owned indefinitely and monitor |
 | S31 | Telemetry instruments, because the engine emits none | [19](19-observability-capacity-slo.md), ADR-0022 | Nami's own meter and activity source | open with no milestone; own it, and do not guess the native names |
