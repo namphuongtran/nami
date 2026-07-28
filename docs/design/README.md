@@ -103,7 +103,7 @@ plan, not here.
 | [15](15-admin-api.md) | Admin API | reviewed | 0020, 0015 |
 | [16](16-admin-app.md) | Admin App | reviewed | 0020, 0029 |
 | [17](17-erasure-and-data-subject-rights.md) | Erasure and data-subject rights | reviewed | 0016, 0053 |
-| [18](18-tenant-lifecycle.md) | Tenant lifecycle | draft | 0017, 0054 |
+| [18](18-tenant-lifecycle.md) | Tenant lifecycle | reviewed | 0017, 0054 |
 | [19](19-observability-capacity-slo.md) | Observability, capacity, and SLO | draft | 0022, 0041, 0063 |
 | [20](20-testing.md) | Testing | draft | 0060, 0062 |
 | [21](21-cicd-and-deployment.md) | CI/CD and deployment | draft | 0025, 0023, 0031, 0051 |
