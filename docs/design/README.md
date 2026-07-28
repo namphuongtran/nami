@@ -95,7 +95,7 @@ plan, not here.
 | [07](07-authorization.md) | Authorization and delegated admin | draft | 0010, 0047, 0013, 0005, 0008, 0024, 0001, 0021, 0075 |
 | [08](08-user-management.md) | User management and authentication | draft | 0028, 0013, 0003, 0002, 0075, 0005, 0001, 0008, 0016, 0009, 0042 |
 | [09](09-federation-and-claims-profile.md) | Federation and the claims profile | draft | 0002, 0075, 0005, 0001, 0013, 0019, 0009, 0034 |
-| [10](10-email-notification.md) | Email and notification subsystem | draft | 0038 |
+| [10](10-email-notification.md) | Email and notification subsystem | reviewed | 0038 |
 | [11](11-login-consent-ui.md) | Login, consent, and logout UI | draft | 0019, 0004, 0003, 0002, 0013 |
 | [12](12-key-management.md) | Key management and rotation | draft | 0005, 0006, 0007, 0011, 0012, 0033 |
 | [13](13-revocation-propagation-and-caching.md) | Revocation propagation and caching | reviewed | 0039, 0040 |
