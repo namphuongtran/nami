@@ -404,7 +404,7 @@ first-admin seed is idempotent and forces a change; Scalar performs a real OIDC 
 - Design docs: [Admin App](16-admin-app.md), [07 authorization](07-authorization.md) (the
   decision and gating rule), [08 user management](08-user-management.md) (lifecycle, force-logout,
   sessions), [10 email](10-email-notification.md) (proposal-failure notification), [13
-  revocation](13-revocation-caching.md) (force-logout / config cache), [02 data](02-data.md)
+  revocation](13-revocation-propagation-and-caching.md) (force-logout / config cache), [02 data](02-data.md)
   (`DualControlProposals`, `TenantBranding`), [03 audit](03-audit.md), [13 GDPR erasure and
   tenant provisioning] (saga bodies), [14 observability] (SLO table), [01
   foundations](01-foundations.md) (package graph).

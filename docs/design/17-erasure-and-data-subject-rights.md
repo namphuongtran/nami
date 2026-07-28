@@ -25,7 +25,7 @@ three-mode model, and the `SubjectDek` vault schema ([03 audit](03-audit.md),
 [02 data](02-data.md)); the dual-control proposal state machine and executor registry
 ([15 Admin API](15-admin-api.md)); key escrow, destruction, and the DP-key
 delete-is-irreversible caveat ([12 key management](12-key-management.md)); the
-revoke-by-subject and force-logout primitives ([13 revocation](13-revocation-caching.md),
+revoke-by-subject and force-logout primitives ([13 revocation](13-revocation-propagation-and-caching.md),
 [11 UI](11-login-consent-ui.md)); the self-service profile-edit and change-email
 mechanics ([08 user management](08-user-management.md)); and tenant
 provisioning, deprovisioning, suspension, and residency-aware **placement**

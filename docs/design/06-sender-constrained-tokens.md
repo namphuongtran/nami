@@ -11,7 +11,7 @@ tags: [design, dpop, mtls, sender-constrained, tokens]
 > **Implementer source of record:** this document, for both sender-constraint mechanisms.
 > The issuance pipeline they hook into is [04](04-core-protocol.md); the per-tenant
 > validation the `cnf` check composes on top of is [05](05-resource-server-validation.md);
-> the cross-node cache the replay store uses is [13](13-revocation-caching.md).
+> the cross-node cache the replay store uses is [13](13-revocation-propagation-and-caching.md).
 
 A sender-constrained token is useless to a thief who does not also hold the
 proof-of-possession key. Two mechanisms cover two client shapes, and the split is not a
@@ -468,7 +468,7 @@ thumbprint while a matching one rotates and re-stamps.
   [runtime flow views](../architecture/09-runtime-flow-views.md).
 * Design: [04](04-core-protocol.md) for the issuance pipeline, the mTLS wiring, and the
   snapshot test; [05](05-resource-server-validation.md) for the per-tenant validation this
-  composes after; [13](13-revocation-caching.md) for the cross-node cache;
+  composes after; [13](13-revocation-propagation-and-caching.md) for the cross-node cache;
   [14](14-advanced-flows.md) for device, PAR, and token exchange; [16](16-admin-app.md) and
   ADR-0029 for the backend-for-frontend.
 * ADRs: 0014 (both mechanisms, and the build-versus-native split), 0005 (the readable

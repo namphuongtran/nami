@@ -269,7 +269,7 @@ sequenceDiagram
   (token-exchange `act`, step-up enforcement), [08 user management](08-user-management.md)
   (the acr/amr/auth_time producer), [11 login/consent/logout UI](11-login-consent-ui.md)
   (device and step-up pages, back-channel fan-out), [10 revocation and caching]
-  (13-revocation-caching.md) (the Redis wiring, the fail-closed discipline).
+  (13-revocation-propagation-and-caching.md) (the Redis wiring, the fail-closed discipline).
 - [Architecture](../architecture/README.md): the protocol-core components and the Redis
   container role.
 - Verification: the resource-server per-tenant validation spike (V27). The sender-constraint
@@ -279,4 +279,4 @@ sequenceDiagram
 
 ---
 
-[Prev: Revocation propagation and caching](13-revocation-caching.md) · [Index](README.md) · Next: [Admin API](15-admin-api.md)
+[Prev: Revocation propagation and caching](13-revocation-propagation-and-caching.md) · [Index](README.md) · Next: [Admin API](15-admin-api.md)

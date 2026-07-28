@@ -129,7 +129,7 @@ doc references them rather than restating the assertions:
 | PKCE, discovery, per-tenant issuer, claims | [04](04-core-protocol.md) |
 | mTLS spoofed-header rejection, DPoP | [06](06-sender-constrained-tokens.md), [04](04-core-protocol.md) for the issuance-side wiring |
 | Device backoff, PAR flood | [14](14-advanced-flows.md) |
-| Revocation propagation, distrusted-kid, config propagation | [13](13-revocation-caching.md) |
+| Revocation propagation, distrusted-kid, config propagation | [13](13-revocation-propagation-and-caching.md) |
 | Dual-control (proposer not approver, step-up, target_changed, BOLA) | [15](15-admin-api.md), [07](07-authorization.md) |
 | Audit hash-chain integrity, delivery, two-lane independence | [03](03-audit.md) |
 | Playwright admin end-to-end (propose, second-user step-up approve, no token in browser) | [16 app](16-admin-app.md) |

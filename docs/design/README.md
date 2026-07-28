@@ -98,7 +98,7 @@ plan, not here.
 | [10](10-email-notification.md) | Email and notification subsystem | draft | 0038 |
 | [11](11-login-consent-ui.md) | Login, consent, and logout UI | draft | 0019, 0004, 0003, 0002, 0013 |
 | [12](12-key-management.md) | Key management and rotation | draft | 0005, 0006, 0007, 0011, 0012, 0033 |
-| [13](13-revocation-caching.md) | Revocation propagation and caching | draft | 0039, 0040 |
+| [13](13-revocation-propagation-and-caching.md) | Revocation propagation and caching | draft | 0039, 0040 |
 | [14](14-advanced-flows.md) | Advanced flows | draft | 0014 |
 | [15](15-admin-api.md) | Admin API | draft | 0020, 0015 |
 | [16](16-admin-app.md) | Admin App | draft | 0020, 0029 |

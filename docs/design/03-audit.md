@@ -165,7 +165,7 @@ The consent receipt (`consent_grant`, with `consent_revoke` on revocation) carri
 payload: subject, client, tenant, scope set, purpose, legal basis, policy version hash,
 consent timestamp, interface locale, and method. It is the immutable historical record, and
 it is deliberately distinct from the mutable authorization state (ADR-0053,
-[13](13-revocation-caching.md)). On erasure the saga appends a `subject.erased` tombstone
+[13](13-revocation-propagation-and-caching.md)). On erasure the saga appends a `subject.erased` tombstone
 carrying the subject reference, the erased fields, and the basis for anything retained, as
 chained proof of erasure; the wider data-subject-rights event set is
 [17](17-erasure-and-data-subject-rights.md).
@@ -400,7 +400,7 @@ what worked is useless for incident response and for abuse detection alike.
   [cross-cutting concepts](../architecture/11-cross-cutting-concepts.md).
 * **Design:** [02](02-data.md) (the schema and the subject-key vault),
   [10](10-email-notification.md) (the outbox chassis this reuses),
-  [13](13-revocation-caching.md) (the mutable authorization state the receipt is distinct
+  [13](13-revocation-propagation-and-caching.md) (the mutable authorization state the receipt is distinct
   from), [17](17-erasure-and-data-subject-rights.md) (the erasure saga),
   [19](19-observability-capacity-slo.md) (the diagnostics lane and the alert rules).
 * Reconciled against the design corpus's audit subsystem design on 2026-07-27. That document

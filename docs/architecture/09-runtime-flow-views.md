@@ -805,7 +805,7 @@ sequence adds little above the component view. They are listed so the omission i
 * Flow 4: ADR-0039 (the per-path freshness model and each bound), ADR-0003 (the
   validation-interval backstop), ADR-0074 (the distrusted-key rebuild invariant), ADR-0021
   (the pinned dependency floor under the refresh interval), and
-  [13-revocation-caching](../design/13-revocation-caching.md) (the per-path sequence this
+  [13-revocation-propagation-and-caching](../design/13-revocation-propagation-and-caching.md) (the per-path sequence this
   view adopts).
 * Flow 5: ADR-0014 (DPoP as a build, spikes A-1 and A-3), ADR-0048 (introspection
   surfacing `cnf.jkt`, V14-3), ADR-0049 and ADR-0033 (per-tenant validation first),

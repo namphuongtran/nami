@@ -29,7 +29,7 @@ hash-chain, delivery guarantee) which is a **separate** lane from diagnostics
 predicate ([01 foundations](01-foundations.md), extended in [12](12-key-management.md));
 the authorization SLIs and their SLO ([07 authorization](07-authorization.md)); the
 rate-limiting/load-shedding and revocation mechanisms
-([13 revocation](13-revocation-caching.md), [14 advanced flows](14-advanced-flows.md),
+([13 revocation](13-revocation-propagation-and-caching.md), [14 advanced flows](14-advanced-flows.md),
 [15 Admin API](15-admin-api.md)); the token-endpoint and pooling capacity levers
 ([04 core protocol](04-core-protocol.md), [02 data](02-data.md)); and RTO/RPO
 (ADR-0006). Content-Security-Policy finalization is a security-hardening concern
@@ -325,7 +325,7 @@ sequenceDiagram
 ## References
 
 - ADRs: ADR-0022 (logging and observability stack), ADR-0041 (NFR targets and SLO release gate), ADR-0063 (observability backend and dev visualization), ADR-0040 (rate-limiting and load-shedding), ADR-0018 (connection pooling), ADR-0037 (PostgreSQL write path), ADR-0008 (the separate audit lane), ADR-0006 (RTO/RPO), ADR-0005 (RS256 baseline, claim minimization), ADR-0021 (OpenIddict version adaptation and the decommission marker), ADR-0031 (12-factor logs), ADR-0026 (permissive dependencies), ADR-0044 (public-API stability and SemVer, whose §G makes emitted metric names a versioned contract), ADR-0065 (the `nami.`-rooted telemetry naming scheme), ADR-0032 (the distinct opt-in vendor phone-home, not this operator-facing lane).
-- Design docs: [03 audit](03-audit.md) (the audit lane), [12 key management](12-key-management.md) (keys-health gauges, JWKS target, readiness), [01 foundations](01-foundations.md) (health endpoints), [07 authorization](07-authorization.md) (authorization SLIs), [04 core protocol](04-core-protocol.md) (token-endpoint capacity levers), [02 data](02-data.md) (pooling, write path), [13 revocation](13-revocation-caching.md) (rate-limit/Redis posture).
+- Design docs: [03 audit](03-audit.md) (the audit lane), [12 key management](12-key-management.md) (keys-health gauges, JWKS target, readiness), [01 foundations](01-foundations.md) (health endpoints), [07 authorization](07-authorization.md) (authorization SLIs), [04 core protocol](04-core-protocol.md) (token-endpoint capacity levers), [02 data](02-data.md) (pooling, write path), [13 revocation](13-revocation-propagation-and-caching.md) (rate-limit/Redis posture).
 - [Architecture](../architecture/README.md); [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 
 ---

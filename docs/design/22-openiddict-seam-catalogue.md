@@ -49,7 +49,7 @@ How the rotation monitor works is [12](12-key-management.md); how the sender-con
 handlers work is [06](06-sender-constrained-tokens.md); the endpoint model is
 [04](04-core-protocol.md); the multi-tenant composition is [02](02-data.md) and
 [18](18-tenant-lifecycle.md); revocation and cache behaviour is
-[13](13-revocation-caching.md); the extension axes and the port catalogue are
+[13](13-revocation-propagation-and-caching.md); the extension axes and the port catalogue are
 [01](01-foundations.md); the CI wiring is [21](21-cicd-and-deployment.md); the test
 inventory is [20](20-testing.md). A registry that starts explaining mechanisms becomes a
 second source of truth for ten designs, and then the two disagree.
@@ -151,7 +151,7 @@ contract test that must pass on every bump.
 | S9 | The built-in proof handler recognises only the certificate thumbprint and **throws** on a key thumbprint | **T3** | the custom proof handler, ordered before it | the same test, plus the throw-avoidance assertion | no committed native |
 | S10 | Surfacing the key thumbprint in the introspection response, where the engine covers only the certificate case | **T5** | the issuance handler and introspection | introspection contract test | no committed native |
 
-**Validation, revocation, and caching** (owner [13](13-revocation-caching.md) and [05](05-resource-server-validation.md))
+**Validation, revocation, and caching** (owner [13](13-revocation-propagation-and-caching.md) and [05](05-resource-server-validation.md))
 
 | # | Seam | Tier | Isolation | Test | Decommission |
 |---|---|---|---|---|---|
@@ -187,7 +187,7 @@ contract test that must pass on every bump.
 
 | # | Seam | Owner | Isolation | Decommission marker |
 |---|---|---|---|---|
-| S28 | Back-channel logout fan-out | [13](13-revocation-caching.md), ADR-0019 | the logout fan-out service | targeted at the next major; **the marker trips only when native is proven on a released build**, not when an issue is assigned to a milestone |
+| S28 | Back-channel logout fan-out | [13](13-revocation-propagation-and-caching.md), ADR-0019 | the logout fan-out service | targeted at the next major; **the marker trips only when native is proven on a released build**, not when an issue is assigned to a milestone |
 | S29 | Dynamic client registration, if built as an interim | [15](15-admin-api.md) | the admin provisioning port | same condition, same major |
 | S30 | The whole sender-constraint family, S6 to S10 | [06](06-sender-constrained-tokens.md) | the handler interfaces | **no committed native**; treat as owned indefinitely and monitor |
 | S31 | Telemetry instruments, because the engine emits none | [19](19-observability-capacity-slo.md), ADR-0022 | Nami's own meter and activity source | open with no milestone; own it, and do not guess the native names |
@@ -411,7 +411,7 @@ its own gaps.
   [schema migration and evolution](../architecture/15-schema-migration-evolution.md).
 * **Design:** [01](01-foundations.md) (the extension axes and the port catalogue),
   [04](04-core-protocol.md), [06](06-sender-constrained-tokens.md),
-  [12](12-key-management.md), [13](13-revocation-caching.md), [02](02-data.md),
+  [12](12-key-management.md), [13](13-revocation-propagation-and-caching.md), [02](02-data.md),
   [18](18-tenant-lifecycle.md), [19](19-observability-capacity-slo.md),
   [20](20-testing.md), [21](21-cicd-and-deployment.md).
 * **External verification, 2026-07-27.** Seams S2, S3, S9, and S13 were read against the

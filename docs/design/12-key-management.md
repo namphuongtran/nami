@@ -616,7 +616,7 @@ by itself.
   [17 erasure](17-erasure-and-data-subject-rights.md) (the crypto-shred saga that destroys
   the DEK), [09 claims](09-federation-and-claims-profile.md) (the minimal access-token
   claim set), [19 observability](19-observability-capacity-slo.md) (the numeric SLO table),
-  [13 revocation](13-revocation-caching.md) (the distrusted-kid propagation and the
+  [13 revocation](13-revocation-propagation-and-caching.md) (the distrusted-kid propagation and the
   JWKS/discovery output cache).
 - [Architecture](../architecture/README.md): components (the key-management subsystem),
   runtime view 3 (no-restart key rotation).
@@ -630,4 +630,4 @@ by itself.
 
 ---
 
-[Prev: Login, consent, and logout UI](11-login-consent-ui.md) · [Index](README.md) · Next: [Revocation propagation and caching](13-revocation-caching.md)
+[Prev: Login, consent, and logout UI](11-login-consent-ui.md) · [Index](README.md) · Next: [Revocation propagation and caching](13-revocation-propagation-and-caching.md)
