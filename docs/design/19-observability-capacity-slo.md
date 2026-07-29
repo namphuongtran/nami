@@ -54,8 +54,9 @@ rate-limiting/load-shedding and revocation mechanisms
 ([04 core protocol](04-core-protocol.md), [02 data](02-data.md)); and RTO/RPO
 (ADR-0006, ADR-0074), whose continuous-monitoring metrics this pipeline carries but
 whose thresholds belong to [12](12-key-management.md). Content-Security-Policy
-finalization is a security-verification concern settled with the ASVS baseline in
-[20 testing](20-testing.md) under ADR-0062, not observability, and is not settled here.
+finalization is a security-hardening concern, not an observability one, and is deferred to
+[20 testing](20-testing.md); note that **no ADR in this repository owns the policy
+values**, which 20 records as an open item rather than a citation.
 
 ## 3. Interfaces and contract
 

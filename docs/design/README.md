@@ -105,7 +105,7 @@ plan, not here.
 | [17](17-erasure-and-data-subject-rights.md) | Erasure and data-subject rights | reviewed | 0016, 0053 |
 | [18](18-tenant-lifecycle.md) | Tenant lifecycle | reviewed | 0017, 0054 |
 | [19](19-observability-capacity-slo.md) | Observability, capacity, and SLO | reviewed | 0022, 0041, 0063, 0077, 0040 |
-| [20](20-testing.md) | Testing | draft | 0060, 0062 |
+| [20](20-testing.md) | Testing | reviewed | 0060, 0062, 0027, 0043 |
 | [21](21-cicd-and-deployment.md) | CI/CD and deployment | draft | 0025, 0023, 0031, 0051 |
 | [22](22-openiddict-seam-catalogue.md) | Engine seam catalogue and version adaptation | draft | 0021, 0024, 0030, 0011, 0014, 0018, 0019, 0022, 0075 |
 | [23](23-configuration-and-client-declaration.md) | Configuration and client declaration | draft | 0052, 0043, 0009, 0039, 0050, 0001, 0031, 0065, 0044, 0021 |
