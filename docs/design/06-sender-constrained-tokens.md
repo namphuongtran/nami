@@ -64,7 +64,7 @@ classDiagram
   ValidateDPoPProofOfPossession ..> IDPoPReplayCache : check then add
   StampConfirmationJkt ..> AccessTokenPrincipal : stamp after the principal is built
   note for ValidateDPoPProofOfPossession "runs before the built-in handler and consumes the jkt branch"
-  note for IDPoPReplayCache "the one Redis path that fails closed"
+  note for IDPoPReplayCache "fails closed, and on an unconfirmed write"
 ```
 
 | Seam | Pipeline and event | Why it exists |
@@ -240,17 +240,28 @@ A bound token presented over `Bearer` is rejected (RFC 9449 section 7.2). And be
 engine's `WWW-Authenticate` writer hardcodes the Bearer scheme, the DPoP challenge headers
 are written directly and the built-in Bearer header is suppressed.
 
-### Replay protection, and the one place Redis fails closed
+### Replay protection, and why the add fails closed
 
 The proof identifier check is a check-then-add against the distributed cache. The lifetime
 is the proof validity window plus **twice the applicable skew**, where "applicable" means
 one skew and not a sum: the `iat` mode uses the client clock skew, the nonce mode uses the
 server clock skew.
 
-**The add is fail-closed, and it is the only Redis path in the product that is.** If the
-write is not confirmed, the proof is rejected. Everywhere else a cache outage degrades
-performance (ADR-0040); here a fail-open add would open a replay window for exactly as
-long as the cache is down, which converts a cache outage into a security hole. The residual
+**The add is fail-closed: if the write is not confirmed, the proof is rejected.** An
+ordinary cache outage only degrades performance (ADR-0040 parameter C); here a fail-open
+add would open a replay window for exactly as long as the cache is down, which converts a
+cache outage into a security hole.
+
+This is not an exception to the caching policy but an instance of its general rule,
+**security checks fail closed** (ADR-0040), and it is not the only one. Two siblings are
+worth knowing so this path is not mistaken for unique: the **distrusted-kid set** is
+fail-closed on an unconfirmable *read*, treating an unverifiable `kid` as distrusted
+(ADR-0039, [13](13-revocation-propagation-and-caching.md)), and the **email anti-abuse
+throttle** is the one deliberate *carve-out* from the fail-open cache rule, degrading to a
+per-instance bucket rather than switching the cap off (ADR-0040 parameter D,
+[10](10-email-notification.md)). What is particular to this path is the **direction**: it
+is the one place where an inability to *record* state rejects the request, rather than an
+inability to read it. The residual
 is stated rather than hidden: in the default mode, replay defence is the `iat` window plus
 this cache, so a cache outage reduces the availability of DPoP-protected APIs during it.
 That is the trade being made, and the backend-for-frontend is what makes it acceptable.
@@ -397,7 +408,8 @@ Named per ADR-0066:
 * **Anchor to the pipeline that runs**, co-hosted server or standalone validation. The
   cross-pipeline anchor is a silent mis-order, not a compile error.
 * **A bound token over `Bearer` is rejected** (RFC 9449 section 7.2).
-* **The replay add is fail-closed**, uniquely among the product's cache paths.
+* **The replay add is fail-closed** on an unconfirmed write, under ADR-0040's general
+  security-check rule rather than as an exception to it.
 * **Introspection is enrich-or-inactive** for a bound token.
 * **Refresh requires thumbprint continuity**, and re-stamps the same value.
 * **`cnf` is a nested object**, never a string; a string double-serializes.
@@ -474,8 +486,9 @@ thumbprint while a matching one rotates and re-stamps.
 * ADRs: 0014 (both mechanisms, and the build-versus-native split), 0005 (the readable
   token), 0021 (the pinned seam and its decommission marker), 0024 (the replay port),
   0049 (composition order), 0048 (introspection), 0029 (the backend-for-frontend), 0040
-  (the fail-open cache policy this design carves out of), 0073 (the proxy posture), 0065,
-  0066.
+  (the caching policy, whose general security-check rule makes the replay add fail closed
+  rather than this design carving an exception out of it), 0039 (the distrusted-kid set,
+  the sibling fail-closed check), 0073 (the proxy posture), 0065, 0066.
 * Architecture: the DPoP runtime view and the protocol-core component that carries these
   handlers.
 * Records: R16 for the DPoP research that preceded the design, V18 for spikes A-1 and A-3, V27 for the fourth test of A-7 that showed
@@ -504,7 +517,7 @@ thumbprint while a matching one rotates and re-stamps.
   Taken from it: the two-mechanism split by client shape, the issuance event and order with
   the reason stamping earlier is lost, the extractor and proof-handler insertion points, the
   enrich-or-inactive and refresh-continuity invariants, the replay key shape and the
-  fail-closed carve-out with its two-skew rule, the four freshness modes and the nonce round
+  fail-closed add with its two-skew rule, the four freshness modes and the nonce round
   trip, the client key contract, and the cross-site-scripting caveat. **Carried forward from
   this repository rather than from the corpus, and deliberately:** the corpus describes DPoP
   as spike-proven, while this repository had already recorded the sharper boundary that the

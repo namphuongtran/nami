@@ -93,10 +93,10 @@ plan, not here.
 | [05](05-resource-server-validation.md) | Resource-server token validation | draft | 0049, 0033, 0005, 0004, 0048, 0001, 0037, 0009 |
 | [06](06-sender-constrained-tokens.md) | Sender-constrained tokens (DPoP and mTLS) | draft | 0014, 0005, 0021, 0024, 0049 |
 | [07](07-authorization.md) | Authorization and delegated admin | draft | 0010, 0047, 0013, 0005, 0008, 0024, 0001, 0021, 0075 |
-| [08](08-user-management.md) | User management and authentication | draft | 0028, 0013, 0003, 0002, 0075, 0005, 0001, 0008, 0016, 0009, 0042 |
+| [08](08-user-management.md) | User management and authentication | draft | 0028, 0013, 0003, 0002, 0075, 0005, 0001, 0008, 0016, 0009 |
 | [09](09-federation-and-claims-profile.md) | Federation and the claims profile | draft | 0002, 0075, 0005, 0001, 0013, 0019, 0009, 0034 |
 | [10](10-email-notification.md) | Email and notification subsystem | reviewed | 0038 |
-| [11](11-login-consent-ui.md) | Login, consent, and logout UI | reviewed | 0019, 0004, 0003, 0002, 0013 |
+| [11](11-login-consent-ui.md) | Login, consent, and logout UI | reviewed | 0019, 0004, 0003, 0002, 0013, 0042 |
 | [12](12-key-management.md) | Key management and rotation | draft | 0005, 0006, 0007, 0011, 0012, 0033 |
 | [13](13-revocation-propagation-and-caching.md) | Revocation propagation and caching | reviewed | 0039, 0040 |
 | [14](14-advanced-flows.md) | Advanced flows | draft | 0014 |
@@ -104,8 +104,8 @@ plan, not here.
 | [16](16-admin-app.md) | Admin App | reviewed | 0020, 0029 |
 | [17](17-erasure-and-data-subject-rights.md) | Erasure and data-subject rights | reviewed | 0016, 0053 |
 | [18](18-tenant-lifecycle.md) | Tenant lifecycle | reviewed | 0017, 0054 |
-| [19](19-observability-capacity-slo.md) | Observability, capacity, and SLO | reviewed | 0022, 0041, 0063, 0077, 0040 |
-| [20](20-testing.md) | Testing | reviewed | 0060, 0062, 0027, 0043 |
+| [19](19-observability-capacity-slo.md) | Observability, capacity, and SLO | reviewed | 0022, 0041, 0063, 0077 |
+| [20](20-testing.md) | Testing | reviewed | 0060, 0062 |
 | [21](21-cicd-and-deployment.md) | CI/CD and deployment | draft | 0025, 0023, 0031, 0051 |
 | [22](22-openiddict-seam-catalogue.md) | Engine seam catalogue and version adaptation | draft | 0021, 0024, 0030, 0011, 0014, 0018, 0019, 0022, 0075 |
 | [23](23-configuration-and-client-declaration.md) | Configuration and client declaration | draft | 0052, 0043, 0009, 0039, 0050, 0001, 0031, 0065, 0044, 0021 |
@@ -115,7 +115,17 @@ Every number is now a written document; the last reserved `planned` row was fill
 **confirmed against this repository when the file is written**, which has in practice
 meant it grows: `09` arrived with four ADRs recorded against it and needed eight, because
 the corpus attributed the claim choke-point to the wrong decision and had no equivalent of
-ADR-0075. A row moves `draft` to `reviewed` once approved. The file number is the reading
+ADR-0075.
+
+**The column lists what a design *realizes*, never what it merely cites.** A file's
+section-1 table marks a referenced decision `(ref)`, and a `(ref)` row does **not** earn a
+number in this column, so the column is a subset of that table rather than a copy of it.
+The direction that matters is the one that over-claims: a number here whose file marks it
+`(ref)`, or omits it, asserts an ownership the file itself declines, and that is how
+ADR-0042 came to be listed against `08` while `08` delegates it in prose and `11` is the
+design that applies it. Under-listing is the tolerable direction and is why the sets grow.
+
+A row moves `draft` to `reviewed` once approved. The file number is the reading
 order defined above, and designs are also
 authored in that order because a later document leans on an earlier one; it is **not** the
 order in which the code gets built, which is the separate axis described above. Inserting
