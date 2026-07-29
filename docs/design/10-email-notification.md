@@ -212,7 +212,7 @@ RLS predicate form (02): an unset GUC then fails closed rather than crashing wit
 GUC before touching the control-plane copies.
 
 The `Payload` holds a live bearer token until the row is `Sent`, which is why it is
-redacted at that point (5.1) and never logged (8).
+redacted at that point (section 5.1) and never logged (section 8).
 
 ## 5. Behaviour
 

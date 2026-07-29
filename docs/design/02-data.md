@@ -157,8 +157,12 @@ classDiagram
 ```
 
 `ITenantService` owns every mutation of the tenant tree (create, move, closure
-maintenance) in one transactional path rather than a database trigger (ADR-0024). The
-tree algorithm is in section 5.
+maintenance) in one transactional path rather than a database trigger. This is **this
+design's choice, not a decision imported from an ADR**: ADR-0010 names `TenantClosure` as a
+table and makes ancestor lookup a recursive query, but no ADR rules on where the
+maintenance runs. Keeping it in application code keeps the write path testable and inside
+the ports-and-adapters boundary, and it keeps closure maintenance visible to the same
+tenant-scoped context as every other write. The tree algorithm is in section 5.
 
 ## 4. Data and structure
 

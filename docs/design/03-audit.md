@@ -335,8 +335,10 @@ adapters are per-target and selected by configuration like the other cloud ports
 ## 8. Security and multi-tenancy notes
 
 Tamper-evidence is the whole point, and it is three mechanisms rather than one: append-only
-storage, the keyed chain, and an external anchor, with the key held outside the database
-(ADR-0009). Any two of the three without the third leaves a gap.
+storage, the keyed chain, and an external anchor, with the chain key **application-held
+rather than sitting in the database it protects** (ADR-0008, whose keyed `HMAC_k` form is
+what requires it; its custody follows the store-access model of ADR-0009). Any two of the
+three without the third leaves a gap.
 
 Personal-data discipline: non-essential data is redacted rather than written, raw secrets and
 tokens are never recorded, and the accountability identifiers that cannot be dropped are

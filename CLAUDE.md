@@ -118,6 +118,26 @@ later reader cannot tell the two apart.
   to start where the link opens matches same-directory links and silently passes every
   `../other-layer/` one. State what a screen does *not* match, in the screen, or its zero
   will be read as absence.
+- **The dangerous citation is the one that resolves.** `ADR-0062` passes every mechanical check
+  because the file exists; what fails is that the ADR does not contain the claim. A sweep of all
+  2606 `ADR-NNNN` citations in `docs/design/` and `docs/architecture/` found this class three
+  times, and one of them was invented outright: the concrete Content-Security-Policy was cited
+  to ADR-0062, which never mentions it, and **no ADR in the corpus does**. The other two were
+  true facts with the wrong owner, which is the same defect at lower cost: the audit chain key
+  cited to ADR-0009 when ADR-0008 is what requires it, and a closure-maintenance choice cited to
+  ADR-0024 when no ADR rules on it. Screen by keyword overlap between the citing sentence and
+  the cited ADR to *rank* candidates, then read every hit, since overlap cannot tell a wrong
+  claim written in its ADR's own vocabulary from a right one. Two shapes deserve suspicion before
+  any screen runs: a claim whose citation sits at the end of a **compound** sentence, where the
+  pointer silently attaches to the wrong clause, and a bundle of several items behind one ADR,
+  where usually one of them belongs elsewhere.
+- **Prefer a markdown link to a bare number, and the architecture layer is the proof.** The same
+  sweep found **155** bare cross-document pointers in `docs/design/` and **zero** in
+  `docs/architecture/`, which links every cross-reference. One design pointer was wrong and two
+  were single digits ambiguous between a document and a section. A screen also cannot distinguish
+  `(6)` meaning document 06 from `(6)` meaning section 6 without reading, and `section N`,
+  `runtime view N`, `FromMinutes(15)`, `Article 17(3)`, and `p(95)` all match a document-pointer
+  pattern, so write `(section 6)` when a section is meant.
 - **Never edit a document to silence a checker.** This is the rule the deleted `scripts/review/`
   screens were removed for breaking: a keyword check flagged a correct citation, and the
   response was to drop `: true` from the claim value `memberships_truncated: true` so the

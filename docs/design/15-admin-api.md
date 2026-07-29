@@ -413,7 +413,8 @@ this is the list an implementer should be able to point at a test for.
   retry-able only while the stored `TargetETag` still matches; the ETag guard, not the
   terminal state, is what blocks a stale retry.
 - **Two ETag sources, never interchanged**: `xmin` for control-plane rows, the entity's own
-  `ConcurrencyToken` for engine entities, read off the entity and not the descriptor (6).
+  `ConcurrencyToken` for engine entities, read off the entity and not the descriptor
+  (section 6).
 - **`If-Match` is required on every mutation**: absent gives 428, stale gives 409.
 - **Deleting a client revokes its tokens and authorizations first, in one transaction**,
   because the engine's relationships do not cascade (3.1).

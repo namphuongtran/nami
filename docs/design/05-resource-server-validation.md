@@ -375,9 +375,9 @@ Named per ADR-0066:
   possession match can never substitute for a tenant check (T4, ADR-0014).
 * Introspection requires client authentication and audience confinement, so one client
   cannot inspect another's tokens (ADR-0048).
-* A resource-server rejection worth recording goes to the security-event sink rather than
-  to the diagnostic log (03), because the diagnostics lane has neither the retention nor the
-  tamper-evidence that a rejection record needs.
+* A resource-server rejection worth recording goes to the security-event sink (03) rather
+  than to the diagnostic log (19), because the diagnostics lane has neither the retention nor
+  the tamper-evidence that a rejection record needs.
 * The access token is readable. Anything sensitive in it is a leak by construction, which is
   why the minimal claim set (ADR-0005) is a precondition of this whole design rather than a
   separate nicety.

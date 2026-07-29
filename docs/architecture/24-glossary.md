@@ -93,8 +93,12 @@ restating it.
 ## Keys, audit, and erasure
 
 * **Signing-key state.** The lifecycle `announced`, then `active`, then `retired`, then
-  `deleted`. **Compromise is not one of these states**: it is a transition, represented by a
-  revocation timestamp, so a key can be revoked from any state (ADR-0011).
+  `deleted` (ADR-0011). **Compromise is not one of these states**: it is a transition,
+  represented by a revocation timestamp orthogonal to the state, so a key can be revoked
+  from any state. That orthogonality is the key-management design's
+  ([12](../design/12-key-management.md), with the column in
+  [02](../design/02-data.md)), and the break-glass action that sets it is ADR-0007; ADR-0011
+  fixes the four states and defers revocation rather than defining it.
 * **Publish-before-sign.** A key appears in the JWKS for validation before it ever signs, so
   clients that cache the JWKS have already seen it. One deliberate exception: the very first
   key at genesis activates immediately, because there is nothing yet to protect (ADR-0012).
