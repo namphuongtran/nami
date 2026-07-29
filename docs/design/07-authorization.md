@@ -543,4 +543,4 @@ production gate:
 
 ---
 
-[Prev: Core protocol server](04-core-protocol.md) · [Index](README.md) · Next: [User management and authentication](08-user-management.md)
+[Prev: Sender-constrained tokens](06-sender-constrained-tokens.md) · [Index](README.md) · Next: [User management and authentication](08-user-management.md)

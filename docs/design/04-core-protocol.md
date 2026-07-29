@@ -44,7 +44,7 @@ In scope: the `AddOpenIddict` configuration, the pipeline extension model, the
 controllers, discovery metadata, `IClaimsProfileService`, token format and lifetimes,
 refresh mechanics, consent, introspection and revocation isolation, per-client CORS,
 and per-tenant issuer resolution. Out of scope: DPoP handler internals (06) and the
-resource-server validation library (05), both still to be written; key rotation
+resource-server validation library (05), both of which now have their own designs; key rotation
 (12), user authentication, MFA, sessions, and the `acr`/`amr` producer (08), the login
 and consent UI (11), and the configuration layer (01).
 

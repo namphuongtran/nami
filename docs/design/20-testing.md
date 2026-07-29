@@ -1,5 +1,5 @@
 ---
-status: draft
+status: reviewed
 created: 2026-07-24
 tags: [design, testing, conformance, asvs, behavior-first, ci-gate]
 ---

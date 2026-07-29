@@ -93,11 +93,11 @@ plan, not here.
 | [05](05-resource-server-validation.md) | Resource-server token validation | draft | 0049, 0033, 0005, 0004, 0048, 0001, 0037, 0009 |
 | [06](06-sender-constrained-tokens.md) | Sender-constrained tokens (DPoP and mTLS) | draft | 0014, 0005, 0021, 0024, 0049 |
 | [07](07-authorization.md) | Authorization and delegated admin | draft | 0010, 0047, 0013, 0005, 0008, 0024, 0001, 0021, 0075 |
-| [08](08-user-management.md) | User management and authentication | draft | 0028, 0013, 0003, 0002, 0075, 0005, 0001, 0008, 0016, 0009 |
+| [08](08-user-management.md) | User management and authentication | reviewed | 0028, 0013, 0003, 0002, 0075, 0005, 0001, 0008, 0016, 0009 |
 | [09](09-federation-and-claims-profile.md) | Federation and the claims profile | draft | 0002, 0075, 0005, 0001, 0013, 0019, 0009, 0034 |
 | [10](10-email-notification.md) | Email and notification subsystem | reviewed | 0038 |
 | [11](11-login-consent-ui.md) | Login, consent, and logout UI | reviewed | 0019, 0004, 0003, 0002, 0013, 0042 |
-| [12](12-key-management.md) | Key management and rotation | draft | 0005, 0006, 0007, 0011, 0012, 0033 |
+| [12](12-key-management.md) | Key management and rotation | reviewed | 0005, 0006, 0007, 0011, 0012, 0033 |
 | [13](13-revocation-propagation-and-caching.md) | Revocation propagation and caching | reviewed | 0039, 0040 |
 | [14](14-advanced-flows.md) | Advanced flows | draft | 0014 |
 | [15](15-admin-api.md) | Admin API | reviewed | 0020, 0015 |

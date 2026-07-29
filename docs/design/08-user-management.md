@@ -413,7 +413,9 @@ Named per ADR-0066:
 ### Libraries
 
 ASP.NET Core Identity and native .NET 10 passkeys (MIT); the external-login handlers
-(`Microsoft.Identity.Web` / `AddMicrosoftAccount` / `AddOpenIdConnect`, MIT); the
+(`Microsoft.Identity.Web` / `AddMicrosoftAccount` / `AddOpenIdConnect`, stated MIT but
+**not verified offline** for `Microsoft.Identity.Web`, which the ADR-0026 licence-scan gate
+confirms when the solution lands); the
 HIBP Pwned-Passwords range API (an external service, k-anonymity, fail-open); and, for
 future hardware-attested aal3, `fido2-net-lib` (MIT) with the FIDO MDS. No commercial
 dependency (ADR-0026). The confirm/reset path integrates through Identity's generic

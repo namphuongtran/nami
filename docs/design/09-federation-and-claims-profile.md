@@ -369,7 +369,8 @@ services.AddAuthentication()
 // finally built, so a provider added later cannot bypass the check.
 services.PostConfigure<OpenIdConnectOptions>(o => EgressPolicy.Validate(o));
 
-// The choke point, and the only place claims or destinations are set.
+// The claims choke point, whose seam is owned by 04; this design owns the contract it
+// carries. It stays the only place claims or destinations are set.
 services.AddScoped<IClaimsProfileService, ClaimsProfileService>();
 
 // The v2 seam. In v1 the static implementation ignores the tenant argument.
