@@ -287,7 +287,7 @@ services.AddAuthentication().AddJwtBearer(o =>
 // ConfigurePerTenant is an OptionsBuilder extension, so it hangs off AddOptions.
 services.AddOptions<OpenIddictValidationOptions>()
         .ConfigurePerTenant<OpenIddictValidationOptions, NamiTenantInfo>(
-            (options, tenant) => options.SetIssuer(tenant.IssuerUri));
+            (options, tenant) => options.Issuer = tenant.IssuerUri);
 
 // Shape b, shared host: resolve the issuer from the token, bind it to the known set.
 services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
@@ -301,6 +301,30 @@ services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =
 `NamiTenantInfo` is the concrete tenant-info type registered with
 `AddMultiTenant<NamiTenantInfo>()` in 02. The type argument must be a concrete
 `ITenantInfo` implementation.
+
+**`Issuer` is assigned, not set through `SetIssuer`, and the distinction is the receiver.**
+`SetIssuer` exists and this document names it correctly at section 10: it is on
+**`OpenIddictValidationBuilder`**, with two overloads (`Uri` and `string`), so it is available
+inside `AddValidation(...)` at composition time. What `ConfigurePerTenant` hands the callback
+is an **`OpenIddictValidationOptions`** instance, and that type carries a settable `Issuer`
+property and no `SetIssuer` member at all (verified in the shipped `OpenIddict.Validation`
+XML documentation, 2026-08-01: `OpenIddictValidationBuilder.SetIssuer(System.Uri)` and
+`(System.String)`, against the property `OpenIddictValidationOptions.Issuer`). Calling a builder
+method on the options object is a compile error, so this is loud rather than silent, but the
+shape is worth stating because the two types are one line apart in every registration snippet.
+
+**And on the IdP itself, under `UseLocalServer`, do not set this per tenant.** Assigning
+`options.Issuer` reaches the `iss` check only indirectly, and only on one of the two paths.
+For a resource server running as its own application, `OpenIddictValidationConfiguration`
+does `options.Configuration.Issuer ??= options.Issuer` and wraps it in a
+`StaticConfigurationManager`, so `options.Issuer` is the right knob, which is the case above.
+Co-located inside the IdP, `OpenIddictValidationServerIntegrationConfiguration` copies the
+**server's** issuer into `options.Issuer` itself, and this design leaves the server issuer null
+on purpose so the issuer is inferred per request ([04](04-core-protocol.md)); the issuer must
+then come from the dynamic `IConfigurationManager` or from `BaseUri`. Setting one of
+`options.Issuer` and `options.Configuration.Issuer` per tenant while the other stays static
+throws `InvalidOperationException` (ID0394) at startup rather than validating the wrong issuer
+silently, which is the good failure direction and is worth knowing before it is seen.
 
 ### Configuration keys
 
@@ -468,6 +492,21 @@ Named per ADR-0066:
   reason T2's shape matters when reading any test suite, the constraint-not-a-number framing
   of the rotation window, and the two open items about ADR-0061's missing row and the
   `ValidTypes` version seam.
+* **Corrected 2026-08-01, a self-contradiction inside this file.** The shape-a registration
+  snippet called `options.SetIssuer(tenant.IssuerUri)` on an `OpenIddictValidationOptions`
+  instance, while the external-verification bullet above had already recorded, correctly, that
+  `SetIssuer` is on `OpenIddictValidationBuilder`. Assignment to the `Issuer` property is the
+  correct form for that receiver. The `UseLocalServer` caveat and the ID0394 startup throw were
+  added with it, read at `OpenIddictValidationConfiguration` and
+  `OpenIddictValidationServerIntegrationConfiguration` in the pinned 7.5.0 source.
+  **Two lines that look wrong and are not, so a later reader does not "fix" them:** the package
+  table's `SetIssuer` row and the external-verification bullet's "two overloads" are both
+  accurate. The design corpus raises this defect (its finding H-02) with the rationale that
+  `SetIssuer` does not exist on the validation side, and **that rationale is wrong**: it was
+  concluded from absence in a 23-file curated source subset that does not contain
+  `OpenIddictValidationBuilder.cs`. Verified here against the shipped `OpenIddict.Validation`
+  XML documentation on 2026-08-01, both overloads exist. The defect was real, the reason was
+  not, and importing the corpus's reason would delete two correct statements.
 
 ---
 
