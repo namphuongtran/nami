@@ -57,7 +57,7 @@ a commercial product. The load-bearing goals:
 
 | Attribute | Target | How measured | Owner |
 |---|---|---|---|
-| Throughput | Established by load test at roughly 10k concurrent users | k6 or NBomber | ADR-0041 |
+| Throughput | Established by load test at roughly 10k concurrent users | Apache JMeter | ADR-0078, ADR-0041 |
 | Token-endpoint latency | p95 under 200 ms, p99 under 500 ms | Load test, enforced in CI as a build-failing threshold | ADR-0041 |
 | Local token validation | p99 under 50 ms | Load test | ADR-0041 |
 | Availability (token and authorize) | **99.9% or 99.95%, not yet ratified** | SLO monitor | ADR-0041 |

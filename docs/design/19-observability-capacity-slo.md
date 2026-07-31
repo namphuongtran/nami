@@ -273,10 +273,12 @@ Sizing, every figure load-test-determined:
 
 ### 5.6 Load-test methodology
 
-k6 is the primary tool in an **open model**
-(`constant-arrival-rate`/`ramping-arrival-rate`), because a closed model
-(`constant-vus`) produces coordinated omission: it backs off exactly when the server
-struggles, which hides tail latency. NBomber is the .NET-gate complement. A 2-to-5-minute
+Apache JMeter is the primary tool (ADR-0078), driven in an **open model** by the
+`PreciseThroughputTimer` (Poisson arrivals, in JMeter core) rather than by a fixed thread
+count, because a closed model driven by a fixed virtual-user count produces coordinated
+omission: it backs off exactly when the server struggles, which hides tail latency. Where a
+.NET-side gate is wanted it is a hand-written xUnit concurrency test, not a load-test library:
+no permissively licensed .NET load-test library is taken (ADR-0026). A 2-to-5-minute
 warm-up is discarded (tiered JIT, database and HttpClient pools, the signing-key and
 JWKS caches, the discovery cache) and steady state measured, with cold start measured
 separately. p50/p95/**p99** are reported, never the average, because a 120ms mean hides a
@@ -314,10 +316,19 @@ The SLO is a **formal release gate**: the load test enforces the thresholds in C
 breach stops the build rather than being advisory.
 
 ```text
-k6:      http_req_duration: ['p(95)<200', { threshold: 'p(99)<500', abortOnFail: true }]
-         http_req_failed:   ['rate<0.005']
-NBomber: Assert.True(stats.Ok.Latency.Percent99 < 500)
+Thresholds, tool-agnostic, all enforced in CI:
+  token endpoint    p95 < 200 ms   AND   p99 < 500 ms
+  error rate        < 0.5%
+  on breach         non-zero exit, the build fails
 ```
+
+JMeter writes samples to a result file (`.jtl`); the gate computes the percentiles from that
+file and exits non-zero on breach. **The concrete assertion mechanism is an M1 open item, not
+specified here** (ADR-0078): JMeter has no direct equivalent of a declarative threshold block
+with `abortOnFail`, so naming one would be inventing an API. What is fixed is the thresholds
+above and the requirement that a breach fails the build; how the check is wired is decided when
+the test plan lands. Where a .NET-side gate is wanted it is a hand-written xUnit concurrency
+test computing its own percentile, not a library.
 
 The error-rate threshold is part of the gate, not a separate report: a build that holds
 p99 while failing 1% of requests has not met the objective. `abortOnFail` on the p99
@@ -504,7 +515,18 @@ confirmed by the ADR-0026 license-scan gate when the solution lands:
 | Library | Purpose | License as stated | ADR |
 |---|---|---|---|
 | `Microsoft.Extensions.Compliance.Redaction` | The redaction primitives the pipeline calls | MIT (not in the local cache) | ADR-0022 |
-| k6 / NBomber | Load-test tools (open-model; .NET CI gate) | AGPLv3 (k6, a dev-time tool, not a dependency) / Apache-2.0 (NBomber) | ADR-0041 |
+| Apache JMeter | Load-test tool, open arrival-rate model, executed as an external binary | **Apache-2.0**, read at `apache/jmeter` `master` `LICENSE` on 2026-08-01 | ADR-0078 |
+
+> **JMeter is an external tool, so it sits outside the ADR-0026 section C gate by
+> construction.** That gate reads the license of every package from the NuGet restore graph;
+> JMeter runs as a separate process and is not in the graph, so the gate cannot see it and its
+> silence is not evidence of compliance. This is a property of every external tool here,
+> including the OIDF conformance suite image, not of JMeter specifically. Two things cover it
+> instead: the license is read at source and recorded with its date in
+> [`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md), and JMeter is an Apache Software
+> Foundation project, whose third-party policy forbids distributing Category X components
+> (GPL and AGPL among them) in a release. ADR-0078 records why the two previously named tools
+> failed here and how each was found.
 
 Dev-stack container images, licenses as verified in ADR-0063 on 2026-07-18 and not
 re-verified here:
@@ -544,7 +566,7 @@ re-verified here:
 
 ## 9. Testing
 
-- The SLO load-test gate (k6/NBomber, p95 < 200ms / p99 < 500ms / error rate < 0.5%, `abortOnFail`, non-zero exit) fails the build on breach, run in an open model against a discarded warm-up.
+- The SLO load-test gate (Apache JMeter, p95 < 200ms / p99 < 500ms / error rate < 0.5%, non-zero exit) fails the build on breach, run in an open arrival-rate model against a discarded warm-up (ADR-0078).
 - A collector-outage test proves p99 `/token` is unchanged and the audit lane does not drop; a `View`-attached assertion proves the cardinality cap is live.
 - **Redaction assurance** runs after an erasure saga for a subject and scans the diagnostic, log, trace, and metric-tag output **including the SIEM forward lane**, asserting no PII of the erased subject remains; the short-TTL expiry of the diagnostic lane reconciles the residual rather than a second erasure pass ([17](17-erasure-and-data-subject-rights.md)).
 - The external canary fails and pages when JWKS publication, a certificate, or DNS breaks even while all pods report ready; a game-day injects error to drive the budget fast (page plus freeze) and slow (ticket plus feature-freeze); a CI check confirms every page-severity alert links a runbook.

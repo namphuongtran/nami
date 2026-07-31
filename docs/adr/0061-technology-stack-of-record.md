@@ -64,6 +64,7 @@ Every technology in the table below was chosen under these rules, and a future c
 | Architecture | Hexagonal shell plus vertical slices, ArchUnitNET | 0024, 0058, 0059, 0066 |
 | Infrastructure as code | OpenTofu | 0023 |
 | Local dev and test | docker-compose plus Testcontainers, Playwright, xUnit; local HTTPS via dev-certs and a terminating proxy | 0025, 0060, 0070 |
+| Load testing | Apache JMeter, driven in an open arrival-rate model; an external tool, so outside the restore-graph licence scan by construction | 0078, 0041 |
 | Code style and conventions | `.editorconfig` plus .NET analyzers and `dotnet format` | 0065 |
 | Packaging and distribution | NuGet meta-package (`Nami.Identity`) plus a non-packable reference host application (`Nami.Identity.Host`) shipped as an image and a template | 0027, 0044, 0065 |
 | Database high availability | Primary plus streaming-replication standby, automatic failover, PITR; read replicas optional and not v1; Redis durability an operator option never depended on | 0074 |

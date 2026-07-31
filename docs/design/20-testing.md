@@ -56,7 +56,7 @@ rather than re-deciding it.
 | End-to-end | Protocol path (issuance, validation, revocation, introspection, tenant-isolation negative) and the admin UI | xUnit + WebApplicationFactory + Testcontainers; Playwright | ADR-0025 |
 | Architecture | The dependency rule and slice decoupling | `Nami.Identity.ArchitectureTests` (TngTech.ArchUnitNET) | ADR-0024 |
 | Contract-regression | Each OpenIddict seam's behavior on the pinned version, on every OpenIddict/.NET bump | xUnit | ADR-0021, ADR-0030 |
-| Load and soak | The NFR targets on p95/p99; the SLO CI gate and canary | k6 / NBomber | ADR-0041 (owned by [19](19-observability-capacity-slo.md)) |
+| Load and soak | The NFR targets on p95/p99; the SLO CI gate and canary | Apache JMeter, plus a hand-written xUnit concurrency test where a .NET-side gate is wanted | ADR-0078, ADR-0041 (owned by [19](19-observability-capacity-slo.md)) |
 | Conformance | OpenID certification profiles | OIDF conformance suite (self-hosted) | ADR-0027 parameter F |
 
 **SQLite is never substituted** for the database in any test: row-level security,
@@ -296,7 +296,7 @@ Not verified offline, to be confirmed by the ADR-0026 license-scan gate:
 
 | Component | Purpose | License as stated | ADR |
 |---|---|---|---|
-| OIDF conformance suite | OpenID conformance gate (self-hosted container image, not a compiled dependency) | Apache-2.0 | ADR-0027 |
+| OIDF conformance suite | OpenID conformance gate (self-hosted container image, not a compiled dependency) | **MIT**, read at `openid/conformance-suite` `LICENSE.txt` on 2026-08-01 | ADR-0027 |
 | (assertion library) | Fluent assertions | MIT/BSD, chosen at M1 (not FluentAssertions, now commercial) | ADR-0026 |
 
 > **Patterns applied (ADR-0066).** Behavior-first tests as an application of Separation

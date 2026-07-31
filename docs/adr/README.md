@@ -88,3 +88,4 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0075](0075-security-sensitive-port-invariants.md) | Treat security-sensitive ports as carrying non-weakenable invariants, verified by a contract test the consumer runs | accepted |
 | [0076](0076-application-transport-security.md) | Decide the application's own transport security: HSTS policy, the Kestrel TLS floor, and the transport-requirement guard | accepted |
 | [0077](0077-metric-cardinality-and-telemetry-privacy.md) | Bound metric cardinality with an allow-listed tag set, and keep personal data out of the diagnostics lane | accepted |
+| [0078](0078-load-test-tooling.md) | Adopt Apache JMeter as the load-test tool, replacing k6 (AGPL) and NBomber (commercial), and give the tool a row in the stack of record | accepted |
