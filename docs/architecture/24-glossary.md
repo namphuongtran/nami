@@ -192,10 +192,12 @@ restating it.
   deliberately, so relying parties do not purge cached metadata (ADR-0017).
 * **Seam, and the seam catalogue.** A seam is a dependency on engine behaviour: a port, a named
   handler position, or an undocumented-but-endorsed extension point. The catalogue enumerates
-  them with a risk tier, a contract test, and a decommission marker (ADR-0021). **Thirty-seven
-  rows, numbered S1 to S35**, the two extra being sub-lettered: reading the highest number as
+  them with a risk tier, a contract test, and a decommission marker (ADR-0021). **Thirty-eight
+  rows, numbered S1 to S36**, the two extra being sub-lettered: reading the highest number as
   the total undercounts it, and this entry said "S1 to S34" until 2026-08-01, one seam behind
-  the registry.
+  the registry. Any figure here is a count on a date, so diff it against the registry rather
+  than quoting it: it went from thirty-seven to thirty-eight later that same day when the
+  `form_post` response markup was registered.
 * **Contract-regression suite.** The tests that pin resolved handler order and public contract
   and run on every engine or runtime bump, failing the build on drift. It exists because a bump
   can silently reorder handlers or flip a native-versus-build verdict (ADR-0021).

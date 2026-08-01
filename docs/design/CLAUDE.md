@@ -70,8 +70,14 @@ end to pull**.
   9 respectively.
 - **What was actually broken was a claim, not a number:** section 9 said it mapped **one to
   one** onto the registry, and it covered thirty-two of thirty-seven, not even the same
-  thirty-two, since it dropped S5 and added S31. Five of the thirty-seven carry no `Test`
-  column at all, because the build-interims table has different columns.
+  thirty-two, since it dropped S5 and added S31. Five carried no `Test` column at all, because
+  the build-interims table has different columns.
+- **Every figure in this section is that day's, and the registry moved later the same day**, to
+  thirty-eight rows and thirty-three with a `Test` column, when the `form_post` response markup
+  was registered as S36. The five interims are the part that did not move, and they are the only
+  part worth carrying forward as a shape rather than a number: a row with no `Test` column is
+  not an untested seam, it is a row in a table with different columns, and conflating the two is
+  what started this.
 
 Two habits generalise from it. **A count and a list are different artifacts and disagreeing
 means one of them was derived and the other transcribed**, so find out which before trusting

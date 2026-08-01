@@ -19,7 +19,7 @@ OpenIddict (numbered `S1` onward), each tagged with a risk tier ... pointing to 
 contract test, an isolation port, and a decommission marker."* This is that document.
 
 The problem it solves is specific. Nami pins one engine version and depends on it in
-thirty-seven distinct places, and those places are not equally safe. Some are documented API
+thirty-eight distinct places, and those places are not equally safe. Some are documented API
 that breaks loudly with a release note. Some are internal behaviour that breaks **silently**,
 where a bump changes a sort order or removes an internal throw and nothing fails until a
 token is wrong in production. A catalogue that does not distinguish those two is decoration.
@@ -37,10 +37,11 @@ token is wrong in production. A catalogue that does not distinguish those two is
 | ADR-0019 | The back-channel-logout interim and its decommission marker |
 | ADR-0022 | The telemetry seam, built because the engine emits none |
 | ADR-0075 | Why a security-sensitive seam's invariant survives an adapter swap |
+| ADR-0091 | The response-markup seam: the `form_post` page is the engine's own HTML, so the browser-facing policy needs a per-response profile and a derived script hash rather than one global policy |
 
 ## 2. Purpose and scope
 
-In scope: the risk-tier taxonomy, the registry of all thirty-seven seams with owner and
+In scope: the risk-tier taxonomy, the registry of all thirty-eight seams with owner and
 contract test, the contract-regression mapping, the per-bump playbook, the decommission
 rules, and the readiness work for the next major.
 
@@ -128,7 +129,7 @@ arrives with documentation. A T2 or T3 break arrives as a wrong token.
 
 ### 5.2 The registry
 
-Thirty-seven seams. **Owner** is the design that holds the mechanism; **test** is the
+Thirty-eight seams. **Owner** is the design that holds the mechanism; **test** is the
 contract test that must pass on every bump.
 
 **Signing and key rotation** (owner [12](12-key-management.md), ADR-0011 and ADR-0012)
@@ -219,10 +220,35 @@ design that had written `?? "0"` would have converted that same break into a sil
 total outage, so the fail-closed rule is not only a correctness choice, it is what makes
 half of this seam self-reporting.
 
+**Response markup** (owner [11](11-login-consent-ui.md), ADR-0091)
+
+| # | Seam | Tier | Isolation | Test | Decommission |
+|---|---|---|---|---|---|
+| S36 | The `form_post` authorization response is **HTML the engine writes**, and it ends in an inline `<script>document.form.submit();</script>` that posts cross-origin to the client. So a strict `script-src` or a `form-action 'self'` breaks the protocol's last hop, and Nami cannot place a nonce in a page it does not render | **T3** | the Protocol HTML response profile (ADR-0091 parameter B), which is the only place in the product where a script hash or a per-response `form-action` exists | the browser completion test and the derived-hash check in [11](11-login-consent-ui.md) section 9 | none available; the markup is not configurable, so this is permanent until the engine stops emitting inline script |
+
+Registered 2026-08-01, when ADR-0091 had to decide the browser-facing headers and could not
+avoid this response. Two properties earn it a row rather than a sentence inside that ADR.
+
+**It breaks silently on the server and totally for the user**, which is the T3 shape in its
+purest form. There is no exception, no log line, and no failed request: the response is a `200`
+carrying valid markup, and the browser simply declines to run the one script that advances the
+flow. The `<noscript>` inside the form is **not** a fallback for this, because the HTML Standard
+ties `noscript` to scripting being *disabled for the document* rather than to a script having
+failed, so a policy-blocked script leaves a blank page with a hidden form. The user sees nothing
+on the last hop of an authorization that otherwise succeeded.
+
+**The hash is derived rather than written, and that moves the fragility.** Because the value is
+computed from the pinned package at build time, a change to the script's *text* is absorbed
+automatically. What is not absorbed is a change to the markup's *shape*: a second inline script,
+an attribute-based handler, or a nonce placeholder would each leave the derivation finding
+nothing or the wrong thing while still producing a syntactically valid policy. So the contract
+test asserts the flow completes, not merely that a hash matches, which is the difference between
+testing the behaviour and testing the feature that this tier's strategy asks for.
+
 ### 5.3 What was read at source, and what was not
 
-Six registry claims were re-read against the engine's own source at the pinned version, four
-on 2026-07-27, S35 on 2026-08-01, and S10 on 2026-08-01, rather than carried on the corpus's
+Seven registry claims were re-read against the engine's own source at the pinned version, four
+on 2026-07-27 and S35, S10, and S36 on 2026-08-01, rather than carried on the corpus's
 word. This is the standard the rest of the registry should reach before GA, not a claim that
 it already has.
 
@@ -233,6 +259,7 @@ it already has.
 | S9 | the validation protection handlers | the confirmation check reads only the certificate thumbprint and otherwise throws a specific internal error, which is why the custom handler must run first |
 | S13 | the server options | the reuse leeway is initialized to 30 seconds and documented as the default, confirming ADR-0004's wording rather than assuming it |
 | S10 | the introspection handlers | `OpenIddictServerHandlers.Introspection.cs:733-742` assigns the confirmation by reading `Claims.Confirmation` and parsing **the whole JSON object** through, with no mTLS branch and no filter on the key name; `:239-241` writes it to the response, and `:838` deliberately excludes `Confirmation` from the application-claims merge. So `cnf.jkt` is surfaced natively and **there was nothing to build**. Also read at `:762`: the engine emits `token_type: "Bearer"` only when the confirmation is **absent**, citing RFC 7662 section 2.2. **This row was previously tiered T5 build-interim on V14's word; the read is what retired it** |
+| S36 | the ASP.NET Core integration's response handlers | the `form_post` page is assembled from string literals ending `<script>document.form.submit();</script>`, with a `<noscript>` submit button before `</form>` and a content type of `text/html;charset=UTF-8`. Read from the shipped `lib/net10.0/OpenIddict.Server.AspNetCore.dll` at the pinned **7.5.0** fetched from nuget.org, and compared against **7.4.0** from the local package cache: two different assemblies (SHA-256 prefixes `be3708cf6e8e82ea` and `417988be70cfd668`, literals at different offsets) carrying **byte-identical** markup. That supports only the claim that these two versions agree, which is exactly why the hash is derived per build rather than transcribed from this row |
 | S35 | the server handlers and the constants file | the private prefix is `oi_` (`OpenIddictConstants.cs:121`); `PrepareAccessTokenPrincipal` (`:3571`) and `PrepareIdentityTokenPrincipal` (`:4557`) both drop private claims with a `return false` **above** the `HasDestination` check; `PrepareRefreshTokenPrincipal` (`:4374-4384`) excludes six claims by name and then returns true unconditionally, "other claims are always included in the refresh token, even private claims" (`:4383`); and the claim value-type switch (`:2846-2900`) ends in `_ => true`, so a name outside its well-known list never throws ID0424. **The corpus's citations for the third of these point at `:3675` and `:4333`, which are class declarations rather than the sentences; reading them is what surfaced the discrepancy** |
 
 **Two mappings that are not registry seams were read on 2026-08-01, and one of them was
@@ -447,8 +474,8 @@ A-4 rather than by argument.
 
 ## 9. Testing
 
-The contract-regression suite covers **thirty-three** of the thirty-seven registry rows, and it
-runs on every bump of the engine or any co-versioned library. The scope is the thirty-two rows
+The contract-regression suite covers **thirty-four** of the thirty-eight registry rows, and it
+runs on every bump of the engine or any co-versioned library. The scope is the thirty-three rows
 that carry a **`Test` column**, plus **S31**. The other five rows sit in the build-interims
 table, whose columns are owner, isolation, and decommission marker rather than tier and test,
 because what a build-interim owes is a marker that trips when native arrives rather than a
@@ -459,8 +486,8 @@ ADR-0085 freezes the instrument names as public API, so there is a contract a te
 the other four interims have no comparable surface, only a marker to watch.
 
 **Corrected 2026-08-01: that sentence read "maps one to one onto section 5.2", and it did not.**
-The table below covered thirty-two rows, and the registry carries exactly thirty-two rows with a
-`Test` column, so **the two totals agreed while the two sets did not**: the table had dropped
+The table below covered thirty-two rows, and the registry carried exactly thirty-two rows with a
+`Test` column **on that date**, so **the two totals agreed while the two sets did not**: the table had dropped
 S5 and added S31. Adding S31 was right, for the reason above; dropping S5 was the defect, and a
 numeric coincidence is what let it survive every reading that checked a total. A one-to-one
 claim of this shape describes the intention accurately, so the only way to catch it is to
@@ -477,12 +504,16 @@ enumerate both sides and compare them as sets.
 | Pipeline order, S33 | specified, the snapshot test |
 | Degraded mode, S34 | specified, the start-up test |
 | Private-claim carriage, S35 | specified, in [04](04-core-protocol.md) section 9 |
+| Response markup, S36 | specified, in [11](11-login-consent-ui.md) section 9: the browser completion test under the enforced profile, its no-navigation negative case, and the derived-hash check |
 | **Certificate loading, S5** | **to build**, and this is the row whose absence made the count below look wrong. Its registry entry names a "key-load test" and no design specifies one: [12](12-key-management.md) section 9 lists eight test groups to build and not one of them loads a certificate |
 | **Cache, entry validation, leeway, family revoke, refresh interval, S11 to S15** | **to build** |
 | **Prune scope S25, pin check S26, telemetry surface S31** | **to build** |
 
-**Nine of the thirty-seven seams have no contract test yet**: the eight in the final two grouped
-rows, plus S5 in the row above them. They are named rather than glossed, because a registry that
+**Nine of the thirty-eight seams have no contract test yet**: the eight in the final two grouped
+rows, plus S5 in the row above them. S36 raised the denominator and not this count, because it
+arrived with its tests named in [11](11-login-consent-ui.md) section 9 rather than with a `Test`
+cell pointing at a test no design specifies, which is precisely the defect S5's own row is the
+record of. They are named rather than glossed, because a registry that
 reported itself complete would be worse than one that reports its own gaps.
 
 **The nine was right before this correction and the rows were not**, which is why a row was
@@ -503,7 +534,7 @@ in no row" reads like one finding and is not.
 
 ## 10. Open and build-time items
 
-* **Build the contract-regression project** covering all thirty-seven seams, extending the
+* **Build the contract-regression project** covering all thirty-eight seams, extending the
   specified tests and adding the nine listed above.
 * **Write the pipeline-order constants and the snapshot baseline** (S33), and attach the
   decommission markers in code as well as here (S28 to S32).
@@ -554,7 +585,8 @@ in no row" reads like one finding and is not.
   0018, 0019, 0022 (the seam owners), 0075 (the security-sensitive port invariants), 0004
   (the leeway value), 0026 (the license gate that a new dependency would trip), 0001 (the
   global scope catalogue and the client-grant allowlist the scope-permission handler
-  enforces) and 0043 (the start-up self-check that the opt-out switch is a candidate for).
+  enforces), 0043 (the start-up self-check that the opt-out switch is a candidate for) and
+  0091 (the browser-facing response headers, whose three profiles exist because of S36).
 * **Architecture:** [component view](../architecture/08-component-view.md),
   [schema migration and evolution](../architecture/15-schema-migration-evolution.md).
 * **Design:** [01](01-foundations.md) (the extension axes and the port catalogue),
@@ -568,6 +600,14 @@ in no row" reads like one finding and is not.
   protection handlers, the unfiltered credential loop in the key-set discovery handler, and
   the reuse-leeway initializer in the server options. The local package cache carries only
   the preceding patch line, so that checked-in tree is what made an offline read possible.
+* **External verification, 2026-08-01, S36.** The `form_post` response template was read from
+  the shipped `OpenIddict.Server.AspNetCore` assembly at the pinned **7.5.0**, fetched from
+  nuget.org rather than taken from the local cache, and compared against **7.4.0** from that
+  cache. The two assemblies differ and the markup is byte-identical, which is the only claim
+  the comparison supports; the script hash is therefore derived per build rather than recorded.
+  This is the first seam verified against a package pulled from the registry instead of against
+  the corpus's checked-in tree, and it is the cheaper route where the seam is in a
+  **shipped literal** rather than in behaviour that has to be read as code.
 * **External verification, 2026-08-01.** The two extension-surface mappings held open in
   section 10 were read against the same tree: the four authorization-request validation
   handlers and their two rejection codes in the authorization handlers file, the interaction

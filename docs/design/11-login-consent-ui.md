@@ -588,6 +588,16 @@ selected by response class, and four consequences land directly on this design:
 - Cookies: SSO `__Host-`+Lax and correlation `SameSite=None` both present; external login
   with `response_mode=form_post` completes without cookie loss; `sid` reissued after primary
   auth (ASVS V3).
+- **Response headers, per profile (ADR-0091).** Each of the three profiles is asserted on a
+  representative response, and no response carries a `nonce-` source. The load-bearing case is
+  `response_mode=form_post`, which is a **browser** test rather than a header assertion: the
+  flow must complete under the enforced Protocol HTML profile, and the negative case must show
+  that the same response under the UI profile produces **no navigation**, since that is the
+  blank-page failure ADR-0091 exists to prevent and it is invisible to a server-side assertion.
+  Alongside it, a build-time check asserts the script hash derived from the pinned engine
+  package equals the one the profile carries, so a template change on a bump fails the build
+  instead of the login. Seam S36 in [22](22-openiddict-seam-catalogue.md) section 5.2 is this
+  dependency; these are its contract tests.
 - Antiforgery: interactive form POSTs require a valid token; machine OAuth endpoints do not.
 - Error states: E1-E7 render the specified copy and behavior.
 - Localization: a missing key falls to the `en` floor and warns once; a missing tenant
