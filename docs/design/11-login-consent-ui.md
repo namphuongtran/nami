@@ -22,7 +22,7 @@ tags: [design, ui, login, consent, logout, razor, theming, localization]
 | ADR-0042 / ADR-0038 | Risk-triggered `IChallengeProvider` on login/reset/device/signup (off in Development); per-IP plus per-account lockout; constant-time anti-enumeration |
 | ADR-0062 | OWASP ASVS 5.0 L2 baseline for this whole surface, with each security test tagged to its requirement id |
 | ADR-0072 / ADR-0091 | Razor Pages with no client runtime, and the browser-facing response headers as three profiles: the `SecurityHeadersAttribute` applies the UI profile, `form_post` takes its own, framing is denied outright, and no nonce is available to theming (section 7.4) |
-| ADR-0027 | These pages ship in `Nami.Identity.Host` and in no NuGet package (parameter G), so an embedder supplies its own; this is why section 5.5 has two override points and not three |
+| ADR-0027 / ADR-0044 | These pages ship in `Nami.Identity.Host` and in no NuGet package (0027 parameter G), so an embedder supplies its own, which is why section 5.5 has two override points and not three; UI customization is an extension point per distribution channel (0027 parameter E) and its configuration keys and asset paths are a versioned surface (0044 parameter I) |
 
 ## 2. Purpose and scope
 
@@ -389,17 +389,29 @@ it was actionable in the wrong direction: it would have had an implementer build
 precedence-based overriding into a project where nothing takes precedence, and the result
 would have appeared to work in whichever host the implementer happened to test in.
 
-**What the surviving points are owned by, measured 2026-08-01 rather than asserted.** This
-section used to say all three had **no ADR home**, which was too broad in two directions. The
-*mechanism* has an owner: ADR-0072 parameter C fixes Bootstrap 5, CSS-variable driven with no
-npm or Tailwind build step, and forbids a theme that would loosen the Content Security Policy.
-The *delivery* has an owner: ADR-0091 parameter D requires the theme to arrive as a served
-stylesheet under `style-src 'self'`. What has no owner is the two points **as extension
-points**: ADR-0027 parameter E's list covers the hexagonal ports only, and searches of
-`docs/adr/` for `cshtml`, `_Layout`, `wwwroot`, `override point`, and `view name` return
-nothing at all, while `branding` returns five ADRs (0018, 0038, 0071, 0072, 0091) of which none
-names a UI extension point. That residual is the open item below, and the searches are written
-down here because an absence is only as good as the pattern that produced it.
+**Every part of the seam now has an owner, and it took three ADRs rather than one.** This
+section said all three points had **no ADR home** until 2026-08-01, which was too broad in two
+directions at once, and the measurement that replaced it resolved as follows. The *mechanism*
+was already owned: ADR-0072 parameter C fixes Bootstrap 5, CSS-variable driven with no npm or
+Tailwind build step, and forbids a theme that would loosen the Content Security Policy. The
+*delivery* was already owned: ADR-0091 parameter D requires the theme to arrive as a served
+stylesheet under `style-src 'self'`. What was genuinely unowned was the points **as extension
+points**, and that is now ADR-0027 parameter E, which names UI customization alongside the
+ports and states the mechanism per distribution channel. Their *stability* is ADR-0044
+parameter I: the configuration keys and the `wwwroot/theme/` paths are a versioned surface, so
+a rename is a MAJOR rather than a tidy-up.
+
+Two consequences of that split are worth carrying, because neither is visible from this
+section alone. **The channel decides the mechanism.** Configuration works everywhere because
+it is read at runtime; `wwwroot/theme/` is the template channel's, where the consumer owns the
+scaffolded files; and how an operator on the **container** channel replaces a shipped asset is
+recorded as open in ADR-0027 parameter E and routed to [21](21-cicd-and-deployment.md), since
+the image carries `wwwroot` baked in and that is a deployment mechanism rather than a packaging
+one. Until it exists the container channel offers configuration only, so do not describe the
+assets folder here as though every deployment can reach it. And **per-tenant branding is not
+part of this seam at all**: `TenantBranding` is product data an administrator edits, which is
+why it survives all of this unchanged while the consumer-facing override points were rewritten
+twice in one day.
 
 Branding depth in v1 is deliberately bounded: a logo, a primary and accent colour, a
 display name, and support, privacy, and terms links. Custom fonts and full per-tenant page
@@ -648,16 +660,18 @@ selected by response class, and four consequences land directly on this design:
   ships **no** UI package, so an embedder supplies its own pages. The entry is kept rather
   than deleted because the withdrawn view-override point in section 5.5 was a consequence of
   this question being open, not of the answer it got.
-- **The UI theming seam still has no ADR home, and the gap is two points rather than three.**
-  ADR-0072 parameter C owns the mechanism and ADR-0091 parameter D owns the delivery; section
-  5.5 records that measurement and the searches behind it. What is unowned is config-level
-  branding and `wwwroot/theme/` **as extension points**, since ADR-0027 parameter E's list
-  covers the hexagonal ports only. Either that list gains a UI-theming entry or the seam gets
-  its own ADR. One constraint on that choice is already on record: ADR-0044's Context says
-  ADR-0027 "is only about packaging/distribution, so the API-lifetime contract had no proper
-  home", so the extension-point list is the wrong place for anything about the seam's
-  *stability*, and a `wwwroot/theme/` path is a compatibility surface that ADR-0044 parameter
-  A's analyzer cannot see.
+- **The UI theming seam has an ADR home as of 2026-08-01, split across two decisions rather
+  than gathered into a new one.** ADR-0027 parameter E names UI customization as an extension
+  point per distribution channel, and ADR-0044 parameter I makes the configuration keys and the
+  asset paths a versioned surface. The split follows what was already on record rather than a
+  preference: ADR-0044's own Context says ADR-0027 "is only about packaging/distribution, so
+  the API-lifetime contract had no proper home", and ADR-0044 parameter G had already brought a
+  surface no analyzer can see (telemetry names) under the same rules, so *offering* the seam and
+  *stabilising* it belong to different ADRs. Section 5.5 records the rest.
+- **What that split left open**, and it is not this document's to close: how an operator on the
+  container channel replaces a shipped asset (ADR-0027 parameter E, routed to
+  [21](21-cicd-and-deployment.md)); and the manifest of configuration keys and asset paths that
+  ADR-0044 parameter I requires, which is a build-time artifact and lands with the first code.
 - **Middleware pipeline:** the security-headers/CSP, request-localization, and antiforgery
   stages are added to the 01 composition (extends that pipeline).
 - **`logo_uri` / `client_uri`:** confirm the read path with 02 and add the config-DX mapper
@@ -684,8 +698,10 @@ selected by response class, and four consequences land directly on this design:
   ADR-0035 (redirect_uri guardrails), ADR-0014 (device / CIBA
   de-scope), ADR-0020 (admin-UI boundary), ADR-0034 (dynamic IdP v2), ADR-0010
   (delegated-admin approval boundary), ADR-0072 (Razor Pages, no client runtime),
-  ADR-0091 (the response-header profiles), and ADR-0027 (parameter B for where these pages
-  live and parameter G for their not shipping in a package). **The last three were absent
+  ADR-0091 (the response-header profiles), ADR-0027 (parameter B for where these pages
+  live, parameter G for their not shipping in a package, and parameter E for UI customization
+  as an extension point), and ADR-0044 (parameter I, the versioned status of the configuration
+  keys and asset paths this design's theming seam exposes). **The last three were absent
   from this list until 2026-08-01** while all three appear in the section 1 table, which is
   the recurring shape here: a decision gets added to the table that earns its keep on every
   read and not to the list that is only read when someone audits provenance.

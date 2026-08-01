@@ -375,8 +375,10 @@ audit and diagnostics appear as distinct components rather than as one logging c
 The cloud-agnostic ports (signing credentials, encryption credentials, secret resolution,
 the data-protection key store, email dispatch, and the audit sink) default to
 database-backed adapters and swap to a cloud key or secret store by configuration alone
-(ADR-0006, ADR-0009). They are also the documented extension points for consumers
-(ADR-0027). Per ADR-0024 they exist **only** at real infrastructure seams; the
+(ADR-0006, ADR-0009). They are also the documented extension points for consumers,
+though no longer the only ones: the same parameter of ADR-0027 now names UI customization
+alongside them, offering configuration on every distribution channel and ownership of the
+scaffolded files on the template channel (ADR-0027). Per ADR-0024 they exist **only** at real infrastructure seams; the
 backend-for-frontend is the one acknowledged infrastructure edge with no port, because it is
 a composition boundary whose seam is configuration (ADR-0029).
 
