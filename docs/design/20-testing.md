@@ -126,9 +126,17 @@ degraded mode is off in any token-issuing environment; the HSTS middleware is re
 with at least the product `max-age` outside Development; no explicitly configured TLS
 protocol below 1.2 is permitted where the application terminates TLS itself; and
 `DisableTransportSecurityRequirement` is off outside Development (the last three from
-ADR-0076). Eleven in total, and the list here is a restatement: **ADR-0043's table is the
-one to diff against**, since this enumeration has already fallen behind it once. It does
-**not** assert access-token encryption, which is intentionally off by design (ADR-0005).
+ADR-0076); no client-credentials client is registered with the `admin-api` scope
+(ADR-0020); and none of OpenIddict's six `Ignore*Permissions` switches is set, so the
+per-client endpoint, grant-type, response-type, scope, resource, and audience checks all
+stay on (ADR-0001, ADR-0035). Thirteen in total, and the list here is a restatement:
+**ADR-0043's table is the one to diff against**. This enumeration already carried a
+warning that it had fallen behind once, and on 2026-08-01 it was found behind **again**:
+it still said eleven while ADR-0043's table held twelve, having missed `no-app-only-admin`
+entirely. Which drift the earlier warning referred to is not recorded and is deliberately
+not guessed at here. A restatement that drifts is worse than a pointer, so treat the count
+as the thing most likely to be stale on this page. It does **not** assert access-token
+encryption, which is intentionally off by design (ADR-0005).
 
 ### 5.3 The multi-tenant isolation suite (blocking gate)
 

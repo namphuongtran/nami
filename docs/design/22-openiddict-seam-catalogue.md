@@ -268,9 +268,24 @@ side; every roadmap statement in section 5.6, which is external and time-sensiti
 `RequireScopeValidationEnabled` and `RequireScopePermissionsEnabled`, because the filter file
 is not among the twenty-five checked in. The options they are named after **are** read,
 `DisableScopeValidation` (`OpenIddictServerOptions.cs:435`) and `IgnoreScopePermissions`
-(`:643`), both `bool` with no initializer and therefore false, the second carrying an upstream
-remark that setting it is not recommended. That each filter binds to the option sharing its
-name is the obvious reading, and it is not a read one.
+(`:643`), both `bool` with no initializer and therefore false **as declared**, the second
+carrying an upstream remark that setting it is not recommended. That each filter binds to the
+option sharing its name is the obvious reading, and it is not a read one.
+
+**Completed 2026-08-01: the declared default is not the whole story for `IgnoreScopePermissions`,
+because a second writer sets it.** The engine's `PostConfigure` assigns `true` to four of the six
+per-client permission opt-outs whenever `EnableDegradedMode` is on, `IgnoreEndpointPermissions`
+and `IgnoreGrantTypePermissions` on one line and `IgnoreResponseTypePermissions` and
+`IgnoreScopePermissions` on the next (`OpenIddictServerConfiguration.cs:41-46`). The sentence
+above was true about the field and incomplete about the effective value, which is the shape the
+root instructions call out as a stated value read as a known default. The conclusion it was
+supporting still holds, but for a reason that had to be checked rather than assumed:
+ADR-0043's `no-degraded-mode-in-prod` blocks that path in token-issuing environments, and its
+`client-permissions-enforced` row, **added the same day for this finding**, now asserts all six
+switches directly, so the Development-only gap where the per-tenant scope allowlist would test
+as passing while enforcing nothing is closed too. Note that degraded mode does **not** touch
+`DisableScopeValidation`: scope *existence* validation survives it while scope *permission*
+validation does not, and collapsing the two is the mistake this paragraph exists to prevent.
 
 **Two rows were corrected on 2026-08-01, and the shape of both errors is worth keeping.**
 S4 previously read "the local validation stack snapshots keys at startup and **refreshes on
@@ -514,13 +529,19 @@ in no row" reads like one finding and is not.
   done", and that sentence is why it is worth noting how it was closed**: the two mappings
   were never identified in this document, only described, so the item could not be actioned
   from inside the repository. Naming what an open item points at is part of writing one.
-* **What the closure leaves behind, as a build-time item rather than a gap.** The scope
-  half of that read gives ADR-0001's per-tenant allowlist a named engine handler,
-  `ValidateScopePermissions`, and a named opt-out, `IgnoreScopePermissions`. A default that
-  a single call can invert is the shape ADR-0043's start-up self-check exists for, and no
-  seam row owns it today. Deciding whether it becomes a start-up assertion, a conformance
-  case, or neither belongs with the authorization work in [07](07-authorization.md), not
-  here.
+* **Closed 2026-08-01: the opt-out that the closure left behind is now a start-up assertion.**
+  The scope half of that read gave ADR-0001's per-tenant allowlist a named engine handler,
+  `ValidateScopePermissions`, and a named opt-out, `IgnoreScopePermissions`, and this item
+  said that a default a single call can invert is the shape ADR-0043's self-check exists for,
+  while leaving the choice between an assertion, a conformance case, and neither to
+  [07](07-authorization.md). It became **both**: ADR-0043 carries a
+  `client-permissions-enforced` row covering all six `Ignore*Permissions` switches, and 07
+  section 9 carries the negative test. **Reading the switch at source is what settled it**,
+  and it turned out to be worse than this item described: the opt-out is not only invertible
+  by naming it, it is set as a side effect of `EnableDegradedMode` (section 5.3, and
+  `OpenIddictServerConfiguration.cs:41-46`), so an assertion that only watched for the
+  builder call would have missed the path a developer is more likely to take. An open item
+  that describes a switch is worth less than one that has read it.
 * **Reconcile the verification version gap**: [05](05-resource-server-validation.md) records
   an API verified at tenancy-library 10.1.2 while the pinned stack is 10.1.1. Harmless today,
   but verifying against a version the project does not pin is how a false confirmation gets

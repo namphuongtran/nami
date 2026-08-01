@@ -39,6 +39,7 @@ the negative tests are a production gate, not a nice-to-have.
 | ADR-0001 | Global identity with per-tenant membership, and the tenant tree the closure walks |
 | ADR-0021 | The relationship-engine APIs as a version-sensitive seam |
 | ADR-0075 | The invariant a replacement adapter may not weaken |
+| ADR-0043 | The `client-permissions-enforced` start-up invariant, whose negative case this design's suite carries (section 8, section 9) |
 
 ## 2. Purpose and scope
 
@@ -502,6 +503,23 @@ contains a no-cascade capability **or** the root tenant has descendants (ADR-001
 replayed onto a different action, and the grant-time ceiling runs **before** any of this, so
 an escalating request is refused `403` rather than reaching an approver at all.
 
+**Scope authority is a separate axis from capability authority, and the engine enforces it.**
+Everything above is about capabilities behind `ICheckAccess`. What a *client* may request is
+the other half: the scope catalogue is global and per-tenant differences are expressed as
+scope allowlists on the client grant rather than by forking the catalogue (ADR-0001), and the
+component that enforces that at the protocol edge is OpenIddict's own
+`ValidateScopePermissions` handler, not this design's port. Two details of it are worth
+knowing before writing a test against it, both read at source in
+[22](22-openiddict-seam-catalogue.md) section 5.3: it rejects with `invalid_request` rather
+than the `invalid_scope` a reader would expect, and it skips `openid` and `offline_access` as
+protocol scopes. The handler has an off switch, `IgnoreScopePermissions`, which the engine
+itself sets whenever degraded mode is on, so ADR-0043 asserts the whole
+`Ignore*Permissions` family at start-up (`client-permissions-enforced`) and this design owns
+the negative test in section 9. The distinction matters because a scope allowlist and a
+capability grant fail in different directions: a widened allowlist lets a client **ask** for
+more, while a widened grant lets a subject **do** more, and only the second is a decision
+this port makes.
+
 Consistency is in the contract, so a later engine swap cannot reintroduce
 stale-after-revoke authorization (ADR-0047). And the port carries a security invariant a
 replacement adapter may not weaken (ADR-0075): deny-by-default, consistency-carrying, and
@@ -522,6 +540,12 @@ production gate:
   with the initiator taken from `sub`;
 * dual-control: a proposer cannot self-approve, and step-up is enforced on dangerous
   capabilities;
+* scope allowlist, which is the client axis rather than the capability axis (section 8): a
+  client requesting a scope its grant does not carry is refused, and the refusal is
+  `invalid_request`, so a test asserting `invalid_scope` passes for the wrong reason or fails
+  for a right one; `openid` and `offline_access` are not refused, being protocol scopes; and
+  a host started with any of the six `Ignore*Permissions` switches set, or with degraded mode
+  on, fails to start rather than serving with the allowlist unenforced (ADR-0043);
 * an app-only token is rejected by `RequireActor`, and a root-level id-route authorizes
   against the loaded object's owning tenant, so a caller cannot act on an object outside
   its tenant set;
@@ -552,8 +576,10 @@ production gate:
 * **ADRs:** 0010 (the delegated-admin policy, including the narrows-in-effect
   reconciliation), 0047 (the engine and the port), 0013 (step-up), 0005 (deny-by-default),
   0008 (audit provenance), 0024 (the port as a real boundary), 0075 (the invariant a
-  replacement may not weaken), 0001 (tenancy), 0021 (the engine version seam), 0016 (why
-  the provenance fields are ciphertext at write).
+  replacement may not weaken), 0001 (tenancy, and the global scope catalogue whose
+  per-tenant differences are allowlists on the client grant), 0021 (the engine version
+  seam), 0016 (why the provenance fields are ciphertext at write), 0043 (the
+  `client-permissions-enforced` start-up invariant whose negative case section 9 carries).
 * **Architecture:** [component view](../architecture/08-component-view.md),
   [security architecture](../architecture/13-security-architecture.md),
   [runtime flow views](../architecture/09-runtime-flow-views.md).
@@ -562,7 +588,9 @@ production gate:
   [03](03-audit.md) (the chain that protects the provenance), [08](08-user-management.md)
   (the assurance producer), [15](15-admin-api.md) (the dual-control saga and the actor
   policy), [18](18-tenant-lifecycle.md) (tree mutation and closure maintenance),
-  [22](22-openiddict-seam-catalogue.md) (the `act` seam).
+  [22](22-openiddict-seam-catalogue.md) (the `act` seam, and section 5.3 for the
+  scope-permission handler read at source), [20](20-testing.md) (the start-up
+  invariant suite the section 9 negative case sits beside).
 * **Standards:** RFC 9068 section 2.2.3.1 (the roles claim in a JWT access token), RFC 8693
   (delegation rather than impersonation, and `act` as identity rather than authority), RFC
   7523 (the on-behalf-of grant that carries no `act`), RFC 9470 (the step-up challenge),
