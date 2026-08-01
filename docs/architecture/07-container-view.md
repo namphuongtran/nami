@@ -104,6 +104,12 @@ distinction is what makes both consumption stories work (ADR-0027, ADR-0065):
   `dotnet new` template, which is also what makes turnkey "run the container and log in"
   possible (ADR-0025, ADR-0027).
 
+One consequence of that split is easy to read past, so ADR-0027 parameter G states it
+outright: because the login, consent, and logout pages live in the host and **no UI class
+library is published**, a consumer who embeds the meta-package in their own application
+supplies those pages themselves. "Add a package and it runs" is a claim about the server, not
+about the pages a human sees; the image and the template are what carry those.
+
 That split is why the end-to-end tests are meaningful: they exercise **the host that ships**
 rather than one a test project assembled for itself (ADR-0060). The same `IsPackable=false`
 rule applies to `Nami.Identity.Admin.Api` and `Nami.Identity.Admin.App`, which are

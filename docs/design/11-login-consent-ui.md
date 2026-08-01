@@ -22,6 +22,7 @@ tags: [design, ui, login, consent, logout, razor, theming, localization]
 | ADR-0042 / ADR-0038 | Risk-triggered `IChallengeProvider` on login/reset/device/signup (off in Development); per-IP plus per-account lockout; constant-time anti-enumeration |
 | ADR-0062 | OWASP ASVS 5.0 L2 baseline for this whole surface, with each security test tagged to its requirement id |
 | ADR-0072 / ADR-0091 | Razor Pages with no client runtime, and the browser-facing response headers as three profiles: the `SecurityHeadersAttribute` applies the UI profile, `form_post` takes its own, framing is denied outright, and no nonce is available to theming (section 7.4) |
+| ADR-0027 | These pages ship in `Nami.Identity.Host` and in no NuGet package (parameter G), so an embedder supplies its own; this is why section 5.5 has two override points and not three |
 
 ## 2. Purpose and scope
 
@@ -50,9 +51,23 @@ In scope: the interaction service, the page catalog, consent/grants UI, the sing
 fan-out, the tenant switcher, the step-up challenge page, the external-login / passkey /
 MFA / account-management pages, the error-state inventory, security-headers/CSP wiring,
 antiforgery, the cookie matrix, the open-redirect guard, theming and the OSS override
-seam, and localization. The UI lives inside the `Nami.Identity` reference host (a
-dedicated UI assembly would be a future ADR); the admin console is a separate app (16 /
-ADR-0020) and is out of scope here.
+seam, and localization. The admin console is a separate app (16 / ADR-0020) and is out of
+scope here.
+
+**Where these pages live, corrected 2026-08-01.** They live in **`Nami.Identity.Host`**, the
+runnable reference host, which is not published to NuGet (`IsPackable=false`, ADR-0027
+parameter B). Until this date both this section and section 10 wrote "the `Nami.Identity`
+reference host", which attaches the host label to the **meta-package**, the one thing it
+cannot be: [01](01-foundations.md) section 3.1 records that "conflating them makes both
+stories ambiguous, because a meta-package is by construction an empty project carrying only
+references while a host carries an entry point, configuration, a Dockerfile, and health
+endpoints". The correction is worth more than a name, because the wrong name hid an
+undecided question and made it look settled. **ADR-0027 parameter G now decides it: no UI
+package ships**, so a consumer who embeds the meta-package in their own application supplies
+these pages themselves, including the `/Account/Login` route that the pass-through authorize
+endpoint challenges to (section 3.1). The entry that used to say "a dedicated UI assembly
+would be a future ADR" is therefore answered rather than still open, and answered in the
+negative.
 
 ## 3. Interfaces and contract
 
@@ -360,13 +375,31 @@ Two branding tiers must not be conflated: tenant-level (Login/Logout/StepUp show
 tenant's IdP this is, resolved by host/path from `TenantBranding`) and client-level
 (Consent shows which app is asking, from the OpenIddict `Application`). A default Bootstrap
 5 theme ships so a deployment runs out of the box. Consumers restyle without forking core
-through three override points, which **this design defines**: config-level (logo/color/name
-via config/env), Razor **view-override** (a consumer `_Layout` or view wins over the default
-by `RazorViewEngine` precedence), and a `wwwroot/theme/` assets folder. The packaging
-decision's extension-point list covers backend ports and handlers only and does not yet
-name a UI theming seam, so these three points currently have **no ADR home**; that gap is
-an open item below rather than a citation, because crediting them to a decision that does
-not mention them would be worse than naming the gap.
+through **two** override points, which **this design defines**: config-level
+(logo/colour/name via config/env) and a `wwwroot/theme/` assets folder.
+
+**A third point was withdrawn on 2026-08-01, and why is more useful than that it was.** This
+section used to name Razor **view-override**, "a consumer `_Layout` or view wins over the
+default by `RazorViewEngine` precedence". View-engine precedence over a *package's* views is a
+Razor Class Library mechanism, and ADR-0027 parameter G ships no UI library: these pages live
+in an application project (section 2). So a template consumer owns the `.cshtml` files
+outright and edits them rather than overriding anything, a container consumer cannot reach
+them, and an embedder has none to override. The withdrawn wording was not merely optimistic,
+it was actionable in the wrong direction: it would have had an implementer build
+precedence-based overriding into a project where nothing takes precedence, and the result
+would have appeared to work in whichever host the implementer happened to test in.
+
+**What the surviving points are owned by, measured 2026-08-01 rather than asserted.** This
+section used to say all three had **no ADR home**, which was too broad in two directions. The
+*mechanism* has an owner: ADR-0072 parameter C fixes Bootstrap 5, CSS-variable driven with no
+npm or Tailwind build step, and forbids a theme that would loosen the Content Security Policy.
+The *delivery* has an owner: ADR-0091 parameter D requires the theme to arrive as a served
+stylesheet under `style-src 'self'`. What has no owner is the two points **as extension
+points**: ADR-0027 parameter E's list covers the hexagonal ports only, and searches of
+`docs/adr/` for `cshtml`, `_Layout`, `wwwroot`, `override point`, and `view name` return
+nothing at all, while `branding` returns five ADRs (0018, 0038, 0071, 0072, 0091) of which none
+names a UI extension point. That residual is the open item below, and the searches are written
+down here because an absence is only as good as the pattern that produced it.
 
 Branding depth in v1 is deliberately bounded: a logo, a primary and accent colour, a
 display name, and support, privacy, and terms links. Custom fonts and full per-tenant page
@@ -465,8 +498,11 @@ permissive (MIT/Apache-2.0/BSD) per ADR-0026.
 
 Patterns applied (ADR-0066): **Humble Object / pass-through controller** (the interaction
 service holds no protocol logic), **Strategy** (`ConsentType` handling, `IChallengeProvider`,
-external-provider selection), **Adapter** (external IdP handlers), **Template Method** (the
-Razor view-override theming seam), and deny-by-default (returnUrl and scope validation).
+external-provider selection), **Adapter** (external IdP handlers), **Template Method** (a
+`_Layout` fixing the skeleton and each page filling the hole; **the previous example here was
+"the Razor view-override theming seam", corrected 2026-08-01** when that seam was withdrawn in
+section 5.5, and the pattern is unaffected because a layout is Template Method whether or not
+the view is overridable), and deny-by-default (returnUrl and scope validation).
 
 ## 7. Error handling, edge cases, invariants
 
@@ -605,13 +641,23 @@ selected by response class, and four consequences land directly on this design:
 
 ## 10. Open and build-time items
 
-- **UI package placement:** the UI lives in the `Nami.Identity` reference host; a dedicated
-  `Nami.Identity.UI` assembly would be a new ADR.
-- **The UI theming seam has no ADR home.** The three override points are defined in this
-  design, but the packaging decision that catalogues extension points lists backend ports
-  and handlers only. Either that list gains a UI-theming entry or the seam gets its own
-  ADR; until then the seam is documented here and owned by nothing, which is the state
-  worth fixing rather than papering over with a citation.
+- **UI package placement, closed 2026-08-01.** The UI lives in `Nami.Identity.Host`. This
+  entry used to name the host as "the `Nami.Identity` reference host" and to say a dedicated
+  `Nami.Identity.UI` assembly "would be a new ADR". Both halves are settled: the name was
+  wrong (section 2), and the assembly was decided against in ADR-0027 parameter G, which
+  ships **no** UI package, so an embedder supplies its own pages. The entry is kept rather
+  than deleted because the withdrawn view-override point in section 5.5 was a consequence of
+  this question being open, not of the answer it got.
+- **The UI theming seam still has no ADR home, and the gap is two points rather than three.**
+  ADR-0072 parameter C owns the mechanism and ADR-0091 parameter D owns the delivery; section
+  5.5 records that measurement and the searches behind it. What is unowned is config-level
+  branding and `wwwroot/theme/` **as extension points**, since ADR-0027 parameter E's list
+  covers the hexagonal ports only. Either that list gains a UI-theming entry or the seam gets
+  its own ADR. One constraint on that choice is already on record: ADR-0044's Context says
+  ADR-0027 "is only about packaging/distribution, so the API-lifetime contract had no proper
+  home", so the extension-point list is the wrong place for anything about the seam's
+  *stability*, and a `wwwroot/theme/` path is a compatibility surface that ADR-0044 parameter
+  A's analyzer cannot see.
 - **Middleware pipeline:** the security-headers/CSP, request-localization, and antiforgery
   stages are added to the 01 composition (extends that pipeline).
 - **`logo_uri` / `client_uri`:** confirm the read path with 02 and add the config-DX mapper
@@ -637,7 +683,12 @@ selected by response class, and four consequences land directly on this design:
   ADR-0053 (consent receipt), ADR-0008 (audit), ADR-0042 (abuse defense), ADR-0062 (ASVS),
   ADR-0035 (redirect_uri guardrails), ADR-0014 (device / CIBA
   de-scope), ADR-0020 (admin-UI boundary), ADR-0034 (dynamic IdP v2), ADR-0010
-  (delegated-admin approval boundary).
+  (delegated-admin approval boundary), ADR-0072 (Razor Pages, no client runtime),
+  ADR-0091 (the response-header profiles), and ADR-0027 (parameter B for where these pages
+  live and parameter G for their not shipping in a package). **The last three were absent
+  from this list until 2026-08-01** while all three appear in the section 1 table, which is
+  the recurring shape here: a decision gets added to the table that earns its keep on every
+  read and not to the list that is only read when someone audits provenance.
 - Design docs: [04 core protocol](04-core-protocol.md) (authorize/consent/logout,
   `prompt=none`, revocation), [08 user management](08-user-management.md) (login/MFA/passkey/
   federation, claims, sessions, change-email), [10 email](10-email-notification.md) (reset/
