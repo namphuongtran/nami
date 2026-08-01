@@ -235,9 +235,42 @@ it already has.
 | S10 | the introspection handlers | `OpenIddictServerHandlers.Introspection.cs:733-742` assigns the confirmation by reading `Claims.Confirmation` and parsing **the whole JSON object** through, with no mTLS branch and no filter on the key name; `:239-241` writes it to the response, and `:838` deliberately excludes `Confirmation` from the application-claims merge. So `cnf.jkt` is surfaced natively and **there was nothing to build**. Also read at `:762`: the engine emits `token_type: "Bearer"` only when the confirmation is **absent**, citing RFC 7662 section 2.2. **This row was previously tiered T5 build-interim on V14's word; the read is what retired it** |
 | S35 | the server handlers and the constants file | the private prefix is `oi_` (`OpenIddictConstants.cs:121`); `PrepareAccessTokenPrincipal` (`:3571`) and `PrepareIdentityTokenPrincipal` (`:4557`) both drop private claims with a `return false` **above** the `HasDestination` check; `PrepareRefreshTokenPrincipal` (`:4374-4384`) excludes six claims by name and then returns true unconditionally, "other claims are always included in the refresh token, even private claims" (`:4383`); and the claim value-type switch (`:2846-2900`) ends in `_ => true`, so a name outside its well-known list never throws ID0424. **The corpus's citations for the third of these point at `:3675` and `:4333`, which are class declarations rather than the sentences; reading them is what surfaced the discrepancy** |
 
+**Two mappings that are not registry seams were read on 2026-08-01, and one of them was
+wrong.** They come from the corpus's parity table, which maps another product's extensibility
+interfaces onto engine equivalents. That table's substance moved to
+[01](01-foundations.md) section 3.2, restated as Nami's own extension surface, but the corpus
+flagged two of its rows as cross-checked against that product's documentation rather than
+against engine source, and section 10 held them open on the rule that a finding is not a
+finding until read at source. Both are now read, in the checked-in 7.5.0 tree.
+
+| Mapping | What the corpus claimed | What the source says |
+|---|---|---|
+| The **resource-and-scope-validation** extension point | `ValidateAuthorizationRequestContext`, plus a scope-validation handler | **Right about the context, and one handler short of the mechanism.** Four built-ins sit on that context across two independent axes. Existence: `ValidateScopes` (`oi_Authentication.cs:1496`) subtracts `context.Options.Scopes` first and asks `IOpenIddictScopeManager.FindByNamesAsync` only for what is left, rejecting `Errors.InvalidScope`; `ValidateResources` (`:1571`) is the options-only analogue, rejecting `Errors.InvalidTarget`. Permission: `ValidateScopePermissions` (`:1833`) calls `HasPermissionAsync(application, Permissions.Prefixes.Scope + scope)` and rejects `Errors.InvalidRequest`, **not** `InvalidScope`, skipping `openid` and `offline_access` as protocol scopes (`:1865-1870`); `ValidateResourcePermissions` (`:1894`) is its analogue. **The permission handler is the engine-level mechanism ADR-0001 rests on**, where a per-tenant difference is "a scope allowlist on the client grant" rather than a forked catalogue |
+| The **authorize-interaction** extension point | `ProcessSignInContext`, plus `HandleAuthorizationRequestContext` | **Half right, and the wrong half is the half that would have been built.** `HandleAuthorizationRequestContext` is the decision (`oi_Authentication.cs:270`): a handler answers by setting handled, skipped, or rejected, or by supplying a `Principal`, and if none of those happens the engine throws (`:375`). Exactly one built-in sits on it, `AttachPrincipal` (`:2117`), which only forwards the identity-token-hint principal. `ProcessSignInContext` is **not** an interaction seam: it is constructed only once a principal exists (`:294`) and carries the token-minting chain (`OpenIddictServerHandlers.cs:3140`, `:3418`, `:3511`, `:4755`). Interaction logic placed there never runs in the three cases interaction exists for, a challenge, a consent screen, and a `prompt=none` refusal, because each of them resolves before that context is built |
+
+**Neither correction propagated into this repository, which is why this closes an item rather
+than fixing a defect.** `ProcessSignInContext` appears in one design,
+[06](06-sender-constrained-tokens.md), where it is used correctly to stamp a confirmation at
+issuance, and [04](04-core-protocol.md) section 3 already models the authorize endpoint as a
+pass-through controller that "supplies the principal and nothing else". The wrong mapping was
+declined at import rather than caught afterwards.
+
+**What the second one is an instance of.** Naming a handler context for a decision the shipped
+model leaves to application code is the pass-through-versus-fully-handled error already
+registered as S16. That it recurred inside a parity table, produced by mapping another
+product's interface list onto engine type names, is the argument for S16 carrying "confirm
+before writing code" rather than a note.
+
 **Not verified here**, and marked so deliberately: whether the server-side signing path has
 a handler identical to S2's, because the checked-in source excerpt covers the validation
-side; and every roadmap statement in section 5.6, which is external and time-sensitive.
+side; every roadmap statement in section 5.6, which is external and time-sensitive; and the
+**bodies of the two descriptor filters** the scope handlers carry,
+`RequireScopeValidationEnabled` and `RequireScopePermissionsEnabled`, because the filter file
+is not among the twenty-five checked in. The options they are named after **are** read,
+`DisableScopeValidation` (`OpenIddictServerOptions.cs:435`) and `IgnoreScopePermissions`
+(`:643`), both `bool` with no initializer and therefore false, the second carrying an upstream
+remark that setting it is not recommended. That each filter binds to the option sharing its
+name is the obvious reading, and it is not a read one.
 
 **Two rows were corrected on 2026-08-01, and the shape of both errors is worth keeping.**
 S4 previously read "the local validation stack snapshots keys at startup and **refreshes on
@@ -431,11 +464,21 @@ its own gaps.
 * **Re-verify the roadmap quarterly**, on the same schedule as the runtime lifecycle watch
   (ADR-0030), since a runtime major drags the engine and ORM with it. The statements in 5.6
   carry the corpus's verification date, not this repository's.
-* **Source-verify the two mappings the corpus flagged as unverified**: the engine handlers
-  corresponding to a resource-validation seam and an authorize-interaction seam. The corpus
-  marks both as cross-checked against a product reference rather than against engine source,
-  and its own rule, which is also ours, is that a finding is not a finding until read at
-  source. Neither may be coded against until that is done.
+* **Closed 2026-08-01: the two mappings the corpus flagged are read at source**, and the
+  result is in section 5.3. One was right about its context and short of half its mechanism;
+  the other named the token-minting context for a decision that resolves before that context
+  exists. Both are recorded there rather than deleted, on the same rule that kept the S4 and
+  S10 corrections visible. **This item said "neither may be coded against until that is
+  done", and that sentence is why it is worth noting how it was closed**: the two mappings
+  were never identified in this document, only described, so the item could not be actioned
+  from inside the repository. Naming what an open item points at is part of writing one.
+* **What the closure leaves behind, as a build-time item rather than a gap.** The scope
+  half of that read gives ADR-0001's per-tenant allowlist a named engine handler,
+  `ValidateScopePermissions`, and a named opt-out, `IgnoreScopePermissions`. A default that
+  a single call can invert is the shape ADR-0043's start-up self-check exists for, and no
+  seam row owns it today. Deciding whether it becomes a start-up assertion, a conformance
+  case, or neither belongs with the authorization work in [07](07-authorization.md), not
+  here.
 * **Reconcile the verification version gap**: [05](05-resource-server-validation.md) records
   an API verified at tenancy-library 10.1.2 while the pinned stack is 10.1.1. Harmless today,
   but verifying against a version the project does not pin is how a false confirmation gets
@@ -446,7 +489,9 @@ its own gaps.
 * **ADRs:** 0021 (the owning decision, and the source of the seam-registry scope and the tier
   vocabulary), 0024 (the extension axes), 0030 (the sibling runtime playbook), 0011, 0014,
   0018, 0019, 0022 (the seam owners), 0075 (the security-sensitive port invariants), 0004
-  (the leeway value), 0026 (the license gate that a new dependency would trip).
+  (the leeway value), 0026 (the license gate that a new dependency would trip), 0001 (the
+  global scope catalogue and the client-grant allowlist the scope-permission handler
+  enforces) and 0043 (the start-up self-check that the opt-out switch is a candidate for).
 * **Architecture:** [component view](../architecture/08-component-view.md),
   [schema migration and evolution](../architecture/15-schema-migration-evolution.md).
 * **Design:** [01](01-foundations.md) (the extension axes and the port catalogue),
@@ -460,6 +505,17 @@ its own gaps.
   protection handlers, the unfiltered credential loop in the key-set discovery handler, and
   the reuse-leeway initializer in the server options. The local package cache carries only
   the preceding patch line, so that checked-in tree is what made an offline read possible.
+* **External verification, 2026-08-01.** The two extension-surface mappings held open in
+  section 10 were read against the same tree: the four authorization-request validation
+  handlers and their two rejection codes in the authorization handlers file, the interaction
+  dispatch and its throw in the same file, the single built-in on the interaction context,
+  the token-minting chain on the sign-in context in the server handlers file, the two opt-out
+  properties in the server options. A sample authorization controller in the same tree shows
+  the decision living in application code under pass-through, through `Challenge`, `Forbid`,
+  and `SignIn`; it corroborates the engine read rather than carrying it, and it is described
+  as a sample rather than as the upstream one because, unlike every engine file beside it, it
+  carries no licence header naming its origin. The filter file those handlers depend on is
+  **not** in the tree, and section 5.3 says so rather than inferring through it.
 * Reconciled against the design corpus's seam catalogue and its extensibility design on
   2026-07-27, through the corpus's own five-part bundle: the root document, the mini-spec,
   the decision, the verification records, and the readiness register entry, which records
