@@ -240,7 +240,8 @@ cached**.
 equal to the ambient caller tenant.
 
 A precondition to any capability check is **`RequireActor`**: the request must carry a real
-user (a `sub` plus `amr` or `auth_time`, on the `admin-api` audience). An app-only or
+user (a `sub` plus **`auth_time`**, on the `admin-api` audience; **never `amr`**, which is
+id_token-only and therefore absent from the access token this policy reads). An app-only or
 client-credentials token is rejected with 403 `admin_requires_actor`, so an application
 permission can never exercise admin authority. It is paired with an issuance-time
 invariant: no client-credentials client is ever granted the `admin-api` scope, so an

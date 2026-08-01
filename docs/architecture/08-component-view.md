@@ -202,7 +202,7 @@ graph TB
   subgraph KEYS[Key management]
     direction TB
     rot[Rotation state machine<br/>announce, active, retire, delete]:::comp
-    reload[No-restart reload seam<br/>custom IOptionsMonitor plus change token]:::comp
+    reload[No-restart reload seam<br/>framework options monitor, custom configure-options plus change token]:::comp
     kstore[Key store<br/>one active state per use]:::comp
     env[Envelope and data-protection wrapping]:::comp
   end

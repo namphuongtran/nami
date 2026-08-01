@@ -407,6 +407,8 @@ this design fixes is the constraint, not the prose.
 | JWKS-availability burn | page | page on-call (JWKS down breaks every verify) | `rb-jwks-down` |
 | `nami.identity.keys_loaded` false, or readiness failing | page | page on-call | `rb-keys-not-loaded` |
 | `nami.identity.signing_key_days_to_expiry` low | ticket | ticket key-ops | `rb-key-rotation` |
+| Data Protection cannot read its own keyring: `XmlKeyManager` logs an `Error` processing a key element, or `DefaultKeyResolver` logs a `Warning` that a key is ineligible because `CreateEncryptor` failed | **page** | page key-ops; the protecting root is gone or wrong, and every cookie and DP-wrapped signing key is already undecryptable | `rb-keyring-unreadable` |
+| Data Protection created a key outside a change window: `XmlKeyManager` logs `Information` "Creating key {kid}" with no rotation or bootstrap in flight | ticket | ticket key-ops; **expect this to fire on a legitimate cold start too**, see below | `rb-keyring-key-created` |
 | Stale scheduler run heartbeat (no successful run in more than two intervals) | ticket | ticket | `rb-scheduler-stale` |
 | Slow burn on any SLI | ticket, plus feature freeze | ticket | `rb-slo-budget` |
 | Sustained rate-limit or load-shed 503 spike | ticket, escalating to page | investigate saturation | `rb-load-shed` |
@@ -414,6 +416,19 @@ this design fixes is the constraint, not the prose.
 Alerts are deduplicated by `(rule, deployment, tenant-scope)`, so many pods with one
 symptom become one incident rather than one page per pod, with a grouping window (about
 5 minutes) before paging; flap suppression is already covered by the short-window confirm.
+
+**The two keyring rows are deliberately asymmetric, and the weaker one is kept anyway.**
+`rb-keyring-unreadable` is unambiguous: the framework only emits those lines when it has a
+keyring it cannot decrypt, so it is a page. `rb-keyring-key-created` is not, and the reason
+is measured rather than assumed ([Data Protection regeneration probe](../kb/notes/data-protection-keyring-regeneration-log-levels.md)):
+a **lost** keyring and a **legitimate first boot** produce identical log output, down to the
+same two `Information` lines, so nothing in the log distinguishes them. That row is
+therefore a ticket, it is expected to fire on every genuine cold start, and it must never be
+described as the keyring-loss detector. The detector is the readiness `kid`-match gate
+(ADR-0012, ADR-0031), which compares the active key against an **expected persisted** value
+and so can tell "no ring" from "no ring yet". These alerts shorten the time to notice; they
+do not replace the gate, and tuning them to fire less often would only make them slower at
+the one thing they are good for.
 
 **The abuse and recovery alert family shares this infrastructure and is owned
 elsewhere.** It is routed here because the dedup key, the severity ladder, and the

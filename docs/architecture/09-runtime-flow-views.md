@@ -108,8 +108,9 @@ sequenceDiagram
 ```
 
 **Invariants.** `RequireActor` is a **precondition to any capability check**: the
-request must carry a real user (a `sub` plus `amr` or `auth_time` on the `admin-api`
-audience), and an app-only or client-credentials token is rejected with 403
+request must carry a real user (a `sub` plus **`auth_time`** on the `admin-api`
+audience; `amr` must never be used here, because it is id_token-only and so is never on
+the access token this policy inspects), and an app-only or client-credentials token is rejected with 403
 `admin_requires_actor`. It is paired with an **issuance-time** invariant that no
 client-credentials client is ever granted the `admin-api` scope, so an app-only token
 for the admin API cannot exist in the first place; the runtime check alone would be one
@@ -136,7 +137,7 @@ sequenceDiagram
   autonumber
   participant Q as KeyRotationHostedService, clustered, one trigger fires
   participant KS as ISigningKeyStore
-  participant OM as Custom IOptionsMonitor
+  participant OM as Options monitor, #1434 seam
   participant JWKS as JWKS and discovery
   participant N as All nodes
   Q->>KS: announce new key, publish before sign
@@ -177,9 +178,13 @@ data-protection unprotect. The third is an **assertion, not a smoke test**: the 
 asserts the active `kid` **matches the expected persisted `kid`**, because a bare
 protect-and-unprotect round trip would pass on a freshly regenerated key and mask the loss.
 That matters because if the Data Protection keyring is lost while the key store survives,
-the framework **silently regenerates** a new key on keyring load and skips the
-undecryptable one instead of throwing, so every previously issued token and cookie breaks
-with no error anywhere (ADR-0012).
+the framework regenerates a new key on keyring load rather than failing, so every
+previously issued token and cookie breaks. Whether that is silent depends on **which** half
+went missing: losing the protecting root while the keyring rows survive is reported loudly,
+at `Error` and `Warning`, but losing the keyring itself produces a log profile identical to
+a legitimate first boot. The second case is the one no log can catch, and it is why the
+gate compares against an *expected* value rather than watching for an event (ADR-0012, and
+[12 key management](../design/12-key-management.md) section 5.8 for the measured profiles).
 
 Two traps are load-bearing. **Every rotation signing key must be an `X509SecurityKey`**,
 because OpenIddict's comparator demotes not-yet-valid keys and prefers the furthest

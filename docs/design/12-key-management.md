@@ -416,17 +416,44 @@ ever soft-deleted under purge-protection. Soft-delete and purge-protection are r
 **all three key layers**, the signing certificate, the encryption certificate, and the key
 that wraps the keyring, not on the Data Protection keyring alone (ADR-0006).
 
-The failure mode this guards against is specific and verified: if the keyring or `rootCert`
-is lost while `SigningKeys` survives, ASP.NET Data Protection **silently regenerates** a
-new key on keyring load rather than at per-payload `Unprotect`; an undecryptable key is
-skipped rather than throwing, the decision is logged only at debug level (an
-error-unprotecting-key line naming the `kid`), and the visible result is that all old
-tokens and sessions break with nothing having failed loudly. Two countermeasures follow.
-The readiness probe asserts the active `kid` **matches the expected persisted `kid`**,
-because a bare protect-and-unprotect round trip would pass on a freshly regenerated key and
-mask the loss. And the DR-restore validation runs its probe with
-`DisableAutomaticKeyGeneration()`, so a missing protector fails loudly, scoped to the DR
-path only so it does not block a legitimate empty-ring cold-start seed.
+The failure mode this guards against is specific, and it has **two shapes that log
+completely differently**. Both end the same way, with Data Protection regenerating a key on
+keyring load rather than failing, so every previously issued cookie and every DP-wrapped
+signing key becomes undecryptable. Only one of them is quiet, and it is the quiet one that
+sets the design.
+
+Measured on .NET 10.0.9 (see the [Data Protection regeneration probe](../kb/notes/data-protection-keyring-regeneration-log-levels.md)
+for the method and the full output):
+
+| Shape | What survives | Log profile per load | Detectable from logs |
+|---|---|---|---|
+| **A. Protector lost, keyring rows survive** | the keyring XML, not the root that encrypts it | **11 x `Error`** (`XmlKeyManager: An exception occurred while processing the key element '<key id="..." />'`), **2 x `Warning`** (`DefaultKeyResolver: Key {...} is ineligible to be the default key because its CreateEncryptor method failed after the maximum number of retries`), then `Information` `XmlKeyManager: Creating key {kid} ...` | **yes, loudly and unambiguously** |
+| **B. Keyring itself lost** | the key store, not the ring | `Trace 1 / Debug 12 / Information 2 / Warning 0 / Error 0` | **no** |
+
+**Shape B is byte-for-byte indistinguishable from a legitimate first boot.** The probe ran
+an empty-ring cold start and a wiped-keyring restore and got **identical** level counts and
+the same two `Information` lines. That is the whole reason the readiness probe asserts the
+active `kid` **matches the expected persisted `kid`** rather than watching logs or running a
+protect-and-unprotect round trip: the round trip passes on the freshly regenerated key, and
+no log line distinguishes "restored without the ring" from "first pod ever". Only a
+comparison against an *expected* value can, because only that carries the knowledge that a
+ring was supposed to exist.
+
+Two corrections to what this section previously said, both from the probe. Regeneration is
+**not** logged at debug level: `XmlKeyManager: Creating key {kid} with creation date ...` is
+at **`Information`** in every case. And shape A does not fail silently at all; it emits
+eleven `Error` lines before regenerating, and a subsequent `Unprotect` of an old payload
+**throws** `CryptographicException` rather than being skipped. The "skipped rather than
+throwing" behaviour is real but belongs to the **key-ring load**, not to per-payload
+unprotect, and conflating the two understated how much signal shape A actually gives.
+
+Three countermeasures follow, and they are deliberately layered because no single one
+covers both shapes. The readiness `kid`-match gate above is the only detector for **shape B**.
+The alert family in [19](19-observability-capacity-slo.md) section 5.8 pages on the shape-A
+error and warning lines, which the gate would otherwise catch only at the next pod start.
+And the DR-restore validation runs its probe with `DisableAutomaticKeyGeneration()`, so a
+missing protector fails loudly, scoped to the DR path only so it does not block a legitimate
+empty-ring cold-start seed.
 
 The RTO under 15 minutes and RPO under 5 minutes targets bind to **each store** (keyring,
 certificates, operational database, session store) rather than to the system as a whole,
