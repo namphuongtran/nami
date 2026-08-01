@@ -132,6 +132,7 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0084](../adr/0084-membership-removal-semantics.md) | Define what removing a person from a tenant guarantees, befor... | 06, 18 |
 | [0085](../adr/0085-telemetry-instrument-naming.md) | Namespace every custom instrument `nami.identity.` and freeze... | 16 |
 | [0086](../adr/0086-pin-ci-actions-by-commit-sha.md) | Pin every CI action by commit SHA, never by tag | 11 |
+| [0087](../adr/0087-http-surface-snapshot-gate.md) | Lock the HTTP surface with a committed snapshot of the genera... | 18 |
 
 ## 3. What the shape of that table says
 
@@ -155,9 +156,9 @@ model turns up in sixteen views, including context, data, runtime, security, per
 reliability, schema, observability, and operations, because almost every other decision
 eventually has to say how fast a change of mind takes effect.
 
-**Two decisions are cited by no view, and both zeros are correct. Two more were, and were
-defects.** All four were judged by one test, the question this page exists to answer: if the
-decision changed, would any view become wrong?
+**Three decisions are cited by no view, and all three zeros are correct. Two more were, and
+were defects.** All five were judged by one test, the question this page exists to answer: if
+the decision changed, would any view become wrong?
 
 **ADR-0045** (coordinated vulnerability disclosure) and **ADR-0079** (the Admin API's HTTP
 conventions) keep their zeros. A disclosure process is governance, not architecture, so it has
@@ -171,6 +172,18 @@ decisions that are substance without a view belong; **ADR-0079 is not, and delib
 since an HTTP convention is not governance and filing it there to give it a home would be the
 wrong-owner attribution this layer keeps having to correct. Its home is the contract itself,
 and this row is the pointer.
+
+**ADR-0087** (the HTTP-surface snapshot gate) joins ADR-0079 for the same measured reason and
+was the harder call of the three. Reversing it would not make any view false, because no view
+says the HTTP surface is locked; it says nothing about the HTTP surface at all. One candidate
+was considered and rejected: concern **C10** in
+[02-stakeholders-and-concerns](02-stakeholders-and-concerns.md), "protocol conformance and a
+stable consumer contract", which points at ADR-0021 and ADR-0044. ADR-0087 does serve that
+concern, and adding it there would have been defensible on its own. It was declined because
+ADR-0079 serves C10 by the same argument and is not listed either, so adding one and not the
+other would have made this page inconsistent with the verdict directly above it. If C10 is
+ever expanded to name the HTTP contract, **both** belong in it, and the two rows move
+together.
 
 **ADR-0080** (the probe contract) and **ADR-0084** (what removing a person from a tenant
 guarantees) were **not** correct zeros, and the ADR-0080 case is the instructive one. Two views
