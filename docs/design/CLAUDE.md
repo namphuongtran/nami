@@ -49,15 +49,37 @@ judgement.** `Art.17(3)`, `AC-2(2)`, `PostgreSQL 18`, `.NET 10`, `FromHours(8)`,
 `FromMinutes(15)`, `section N`, `runtime view N`, and `p(95)` all match a
 document-pointer pattern. Extract by machine, then read every hit.
 
-## Two counts in this folder that are known not to reconcile
+## The count that would not reconcile, resolved 2026-08-01, and how it resolved
 
-Recorded here so the next reader does not spend the sweep again, and **not** silently
-adjusted, because it is not established which reading was intended:
+This section used to record two unreconciled counts in `22-openiddict-seam-catalogue.md`
+section 9: that it claimed **nine** seams had no contract test while its rows named
+**eight**, and that five seams (S5, S28, S29, S30, S32) appeared in no row at all. It said
+resolving either meant deciding what the section was counting rather than fixing a typo.
+That was right, and the resolution is worth keeping because **the arithmetic was the wrong
+end to pull**.
 
-- `22-openiddict-seam-catalogue.md:419` states that **nine** of the thirty-seven seams
-  have no contract test yet, while the two "to build" rows in that section list **eight**
-  (S11 to S15, and S25, S26, S31).
-- Seams S5, S28, S29, S30 and S32 appear nowhere in that document's section 9 table.
+- **The nine was correct and the rows were incomplete.** S5 carries a `Test` column naming a
+  "key-load test", that string occurs nowhere else in the repository, and `12-key-management.md`
+  section 9 lists eight test groups to build of which none loads a certificate. S5 is the ninth
+  untested seam and its row had never been written. Lowering nine to eight, which is what
+  checking the arithmetic alone suggests, would have deleted a real gap.
+- **The five were absent for four different reasons, so "five seams appear in no row" was one
+  finding only in shape.** One was the omission above. S30 is a grouping over S6 to S9 and
+  would double-count. S29's condition is not met, self-service client registration being v2.1.
+  S28 and S32 are tested elsewhere, as an acceptance test and in `07-authorization.md` section
+  9 respectively.
+- **What was actually broken was a claim, not a number:** section 9 said it mapped **one to
+  one** onto the registry, and it covered thirty-two of thirty-seven, not even the same
+  thirty-two, since it dropped S5 and added S31. Five of the thirty-seven carry no `Test`
+  column at all, because the build-interims table has different columns.
 
-Resolving either one means deciding what the section is counting, which is a change to the
-document's claim rather than a typo fix.
+Two habits generalise from it. **A count and a list are different artifacts and disagreeing
+means one of them was derived and the other transcribed**, so find out which before trusting
+either. And **an absence proved by grep is only as good as the pattern**: S32 was nearly filed
+as an untested seam because a search for the word actor and for `act` followed by a space
+missed an assertion that writes `` `act` `` in backticks under a "confused deputy" label. That
+near miss is recorded in that document's section 10.
+
+Note also that the pointer this section used to carry, `:419`, had drifted to section 8 by the
+time it was resolved. **Prefer a section number to a line number when citing inside this
+folder**, since these documents grow in the middle.

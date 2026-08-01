@@ -432,8 +432,24 @@ A-4 rather than by argument.
 
 ## 9. Testing
 
-The contract-regression suite maps **one to one** onto section 5.2 and runs on every bump of
-the engine or any co-versioned library.
+The contract-regression suite covers **thirty-three** of the thirty-seven registry rows, and it
+runs on every bump of the engine or any co-versioned library. The scope is the thirty-two rows
+that carry a **`Test` column**, plus **S31**. The other five rows sit in the build-interims
+table, whose columns are owner, isolation, and decommission marker rather than tier and test,
+because what a build-interim owes is a marker that trips when native arrives rather than a
+behaviour contract on the current version.
+
+**S31 is the one build-interim in the suite, and the reason is not that telemetry is special.**
+ADR-0085 freezes the instrument names as public API, so there is a contract a test can pin;
+the other four interims have no comparable surface, only a marker to watch.
+
+**Corrected 2026-08-01: that sentence read "maps one to one onto section 5.2", and it did not.**
+The table below covered thirty-two rows, and the registry carries exactly thirty-two rows with a
+`Test` column, so **the two totals agreed while the two sets did not**: the table had dropped
+S5 and added S31. Adding S31 was right, for the reason above; dropping S5 was the defect, and a
+numeric coincidence is what let it survive every reading that checked a total. A one-to-one
+claim of this shape describes the intention accurately, so the only way to catch it is to
+enumerate both sides and compare them as sets.
 
 | Group | Status |
 |---|---|
@@ -446,12 +462,29 @@ the engine or any co-versioned library.
 | Pipeline order, S33 | specified, the snapshot test |
 | Degraded mode, S34 | specified, the start-up test |
 | Private-claim carriage, S35 | specified, in [04](04-core-protocol.md) section 9 |
+| **Certificate loading, S5** | **to build**, and this is the row whose absence made the count below look wrong. Its registry entry names a "key-load test" and no design specifies one: [12](12-key-management.md) section 9 lists eight test groups to build and not one of them loads a certificate |
 | **Cache, entry validation, leeway, family revoke, refresh interval, S11 to S15** | **to build** |
 | **Prune scope S25, pin check S26, telemetry surface S31** | **to build** |
 
-Nine of the thirty-seven seams therefore have no contract test yet, and they are named rather
-than glossed: a registry that reported itself complete would be worse than one that reports
-its own gaps.
+**Nine of the thirty-seven seams have no contract test yet**: the eight in the final two grouped
+rows, plus S5 in the row above them. They are named rather than glossed, because a registry that
+reported itself complete would be worse than one that reports its own gaps.
+
+**The nine was right before this correction and the rows were not**, which is why a row was
+added rather than the number lowered to eight. The count was reached by counting seams and the
+rows by listing groups, so the S5 group was simply never written, and every reader who checked
+the arithmetic instead of the coverage would have concluded the opposite.
+
+**Where the remaining four rows are, and why none of them is a tenth.** S30 is a grouping over
+S6 to S9 for decommission tracking, so its contract tests are the sender-constraint row's and a
+row of its own would double-count. S29 is conditional and the condition is not met: ADR-0035
+puts self-service client registration at v2.1 and chooses an Admin-API CRUD over the standard
+registration endpoint, so there is no interim to test. S28 and S32 are both tested, just not by
+this suite: S28's fan-out in [11](11-login-consent-ui.md) and [20](20-testing.md) section 5.7 as
+an acceptance test, and S32's actor resolution in [07](07-authorization.md) section 9, where the
+confused-deputy case is asserted in three parts. So the four are absent for four different
+reasons and none of them is an uncounted gap, which is worth stating because "five seams appear
+in no row" reads like one finding and is not.
 
 ## 10. Open and build-time items
 
@@ -459,6 +492,15 @@ its own gaps.
   specified tests and adding the nine listed above.
 * **Write the pipeline-order constants and the snapshot baseline** (S33), and attach the
   decommission markers in code as well as here (S28 to S32).
+* **Not an open item, recorded because it was nearly filed as one on 2026-08-01.** While
+  reconciling section 9's coverage, S32 looked like a seam with no test anywhere. It is not:
+  [07](07-authorization.md) section 9 asserts the confused-deputy case in three parts, a
+  self-issued cross-tenant token missing `act` giving 403, an on-behalf-of token with no `act`
+  and a valid grant allowed, and a same-tenant call with no `act` allowed with the initiator
+  taken from `sub`. The search that missed it looked for the word actor and for `act` followed
+  by a space, and the assertion writes the claim in backticks under a "confused deputy" label.
+  A grep narrow enough to miss the evidence reads exactly like a grep that proves absence,
+  which is why this is written down rather than quietly dropped.
 * **Run the readiness spike, R6**, against a preview of the next major, and report which
   seams break. This is the highest-value open item in this document.
 * **Re-verify the roadmap quarterly**, on the same schedule as the runtime lifecycle watch
