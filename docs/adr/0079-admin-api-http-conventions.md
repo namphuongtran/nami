@@ -81,22 +81,49 @@ Delete. **"Revoke" is not one of them**, so that second rule does not literally
 reach this case and is not cited as though it does. Note also that both are
 **"should"**, so this is guidance adopted deliberately, not a mandate being obeyed.
 
-### 2. A collection is tenant-scoped if and only if its entity carries the tenant discriminator
+### 2. A collection is tenant-scoped if and only if its entity carries a tenant column
 
 `/tenants/{tenantId}/{collection}` is correct exactly when the underlying entity is
-`.IsMultiTenant()` per the data design. `Application`, `Authorization`, and `Token`
-qualify. **`Scope` does not**: ADR-0001 makes the scope catalog global, so `/scopes`
-is a root collection.
+**class A or class B** in the taxonomy under "Three classes of control-plane table"
+in the data design (`docs/design/02-data.md`). `Application`, `Authorization`, and
+`Token` are class A. `Memberships` and `DelegatedAdmin` are class B, and ADR-0084
+already publishes the first of them at `/tenants/{tenantId}/memberships`.
+**`Scope` does not qualify**: ADR-0001 makes the scope catalog global and it carries
+no tenant column at all, so `/scopes` is a root collection. **Class C does not
+qualify either**, for a different reason: a provisioning request runs before its
+tenant is usable, so there is no tenant to name in the path, which is why tenant
+creation is `POST /tenants`.
 
 Placing a table with no tenant column under a tenant path misstates ownership, and
-the mistake survives review because the path *reads* plausible. Anchoring the rule
-to `.IsMultiTenant()` makes it checkable against the data design rather than
-arguable.
+the mistake survives review because the path *reads* plausible.
+
+**The anchor is the table class, not `.IsMultiTenant()`, and the correction is not
+cosmetic (2026-08-01).** This rule first read "exactly when the underlying entity is
+`.IsMultiTenant()`", which is true of class A and **false of class B by design**:
+class B carries a real `TenantId` but is deliberately kept outside Finbuckle's filter
+so that authorization queries can read it, and the data design says in the same table
+that it "must not be 'fixed' into class A". Read literally, the `.IsMultiTenant()`
+anchor evicted `Memberships` and `DelegatedAdmin` from the tenant path and so
+contradicted ADR-0084. The rule had been written as though entities were binary,
+tenant-scoped or global, while the data design defines three classes. The class
+column is still checkable against the data design, which is what the original anchor
+was reaching for.
 
 Root-level **item** routes (`/applications/{id}`, `/users/{id}`) stay root-level and
 are guarded by the object-level authorization filter instead. The rule differs
 between collection and item because a collection has no identifier from which an
 owner could be derived.
+
+**The path parameter is named `tenantId` wherever the tenant is the scope, and `id`
+only where the tenant is itself the resource being addressed.** So `/tenants/{id}`
+and `PUT /tenants/{id}` take `id`, while every `/tenants/{tenantId}/{collection}`
+takes `tenantId`. This is stated because it is not decorative on either side. The
+route is a wire contract frozen under ADR-0044, so the name is public and changing it
+later is a breaking change. And the admin design keys its tenant-scope authorization
+policy to `{tenantId}` by name, so a route declared with a different parameter name is
+not the route that policy is written against. It is stated here rather than left to
+the examples because leaving it to the examples is what produced the drift recorded in
+Confirmation below.
 
 ### 3. Paging is `?page=&pageSize=` with a body envelope, and no count header
 
@@ -167,6 +194,19 @@ rather than partially written down.
   `?page=&size=` with `X-Total-Count`; `If-Match` was stated as required on **every**
   mutation, which would have put a `428` on the revocation path; and `POST /proposals`
   existed.
+* **A sixth drift was found on 2026-08-01, and the sentence above is why it took a
+  second pass.** "Five drifts were found, and all five are fixed" is a true record of
+  what that pass caught and reads as a statement that the design was then clean. It
+  was not: the tenant path parameter was spelled **three ways** in one document,
+  `{t}` five times, `{id}` on four sub-collection routes, and `{tenantId}` in the two
+  places that state the authorization rule (`docs/design/15-admin-api.md`). Nine route
+  declarations therefore disagreed with rule 2 above, with ADR-0084's
+  `/tenants/{tenantId}/memberships`, and with two sentences in their own file. The
+  first pass read the design against the rules **as the rules were written**, and the
+  parameter name was only ever shown in examples, never stated, so there was nothing
+  to read it against. That gap is closed by the naming paragraph in rule 2. The count
+  in the bullet above is left as written, because it is what that pass found; what is
+  corrected is treating a count of findings as a measure of coverage.
 * Tests: a contract check that every published path is registered and every reference
   resolves; an assertion that the `If-Match` split matches this table rather than a
   blanket rule; and a negative test that no route accepts a caller-supplied proposal
@@ -206,8 +246,12 @@ rather than partially written down.
 * Mechanism and the endpoint-by-endpoint surface: design
   [15](../design/15-admin-api.md). This ADR fixes the rules; that document applies
   them and remains the implementer source for the surface itself.
-* Related decisions: ADR-0001 (which entities carry the tenant discriminator, the
-  fact rule 2 is anchored to), ADR-0020 (the two deployables, which is what makes a
+* Rule 2 is anchored to the three-class table taxonomy in design
+  [02](../design/02-data.md), not to an ADR, because the class is a property of each
+  table that the data design already enumerates. ADR-0001 is what puts `Scope` outside
+  all three classes by making the catalog global, which is the one exclusion rule 2
+  states by name.
+* Related decisions: ADR-0020 (the two deployables, which is what makes a
   contract change expensive), ADR-0081 (the dual-control target guard that rule 4
   pairs with at execution time), ADR-0044 (the public-surface versioning discipline
   this sits inside), ADR-0080 (probe routes, deliberately outside these rules).

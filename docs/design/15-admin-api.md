@@ -65,9 +65,22 @@ reduces privilege so a lost update cannot escalate anything.
 **Revocation is `DELETE`, a state transition is `POST /{id}/{verb}`, and the two shapes
 coexist on purpose** (ADR-0079 rule 1). Do not tidy one into the other.
 
+**The tenant path parameter is `{tenantId}` when the tenant is the scope, and `{id}` only
+when the tenant is the resource** (ADR-0079 rule 2). So `GET/PUT /tenants/{id}` below takes
+`id`, and every `/tenants/{tenantId}/{collection}` takes `tenantId`. This is a contract, not
+a spelling preference: 5.1 keys the `Admin.TenantScope` policy to `{tenantId}` and states
+that tenant-scoped resources sit under `/tenants/{tenantId}/...`, so a route declared with a
+different parameter name is not the route the policy is written against. Whether a mismatch
+then fails loudly or binds nothing at all is a framework question to settle when the routes
+are written, and it is the wrong question to be asking: the two spellings should match.
+**Corrected 2026-08-01**, when this section spelled the same
+parameter three ways, `{t}` five times and `{id}` on four tenant-scoped routes, against the
+`{tenantId}` that 5.1 and ADR-0084 both use. Nothing about the resources changed; nine route
+declarations did.
+
 ### 3.1 Clients (Applications): the hardest screen
 
-`GET/POST /tenants/{t}/applications`, `GET/PUT /applications/{id}`, `DELETE`→proposal,
+`GET/POST /tenants/{tenantId}/applications`, `GET/PUT /applications/{id}`, `DELETE`→proposal,
 `POST /applications/{id}/secrets/rollover`, `PUT /applications/{id}/cors-origins`.
 
 **Deleting a client does not delete its tokens, and that is a security requirement rather
@@ -114,9 +127,9 @@ not model them); audiences are expressed via a scope's `Resources`.
 
 ### 3.3 Grants (Authorizations) and Tokens
 
-`GET /tenants/{t}/authorizations?subject=&client=`, `DELETE /authorizations/{id}`;
-`GET /tenants/{t}/tokens?subject=&client=&status=`, `DELETE /tokens/{id}`,
-`POST /tenants/{t}/tokens/revoke-all`→proposal. A single revoke is direct + audited; the
+`GET /tenants/{tenantId}/authorizations?subject=&client=`, `DELETE /authorizations/{id}`;
+`GET /tenants/{tenantId}/tokens?subject=&client=&status=`, `DELETE /tokens/{id}`,
+`POST /tenants/{tenantId}/tokens/revoke-all`→proposal. A single revoke is direct + audited; the
 subject-wide `revoke-all` is dual-control (it maps to `RevokeBySubjectAsync`, 08/13), never
 the single-token endpoint. `AuthorizationDto`/`TokenDto` are read-mostly: subject, client,
 type, status, scopes, created/expires.
@@ -144,9 +157,9 @@ model itself is 08's.
 
 `GET/POST /tenants` (provision → proposal), `GET/PUT /tenants/{id}` (rejects any `Identifier`
 change → 400 `tenant_identifier_immutable`), `DELETE`/`suspend`/`resume`→proposal,
-`GET/PUT /tenants/{id}/memberships`, `DELETE /tenants/{id}/memberships/{userId}`,
-`GET/POST /tenants/{id}/delegated-admin`,
-`DELETE /tenants/{id}/delegated-admin/{grantId}`.
+`GET/PUT /tenants/{tenantId}/memberships`, `DELETE /tenants/{tenantId}/memberships/{userId}`,
+`GET/POST /tenants/{tenantId}/delegated-admin`,
+`DELETE /tenants/{tenantId}/delegated-admin/{grantId}`.
 
 **Revoking a grant is specified rather than left to the implementer**, because "add a
 DELETE" understates the design content. It is a **soft delete** (`RevokedAt = now`, so the
@@ -194,7 +207,7 @@ the dual-control gate.
 
 ### 3.7 Tenant branding
 
-`GET/PUT /tenants/{t}/branding`. `TenantBrandingDto`: `TenantId`, `LogoUri?` (https-only,
+`GET/PUT /tenants/{tenantId}/branding`. `TenantBrandingDto`: `TenantId`, `LogoUri?` (https-only,
 SSRF-safe), `Theme?` (design tokens (colors/fonts) not raw CSS), `DisplayName?`,
 `UpdatedAtUtc`, `ETag`. PUT is direct + ETag + audit `tenant.branding.updated`.
 

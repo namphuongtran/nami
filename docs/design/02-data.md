@@ -111,6 +111,16 @@ never receive a `logout_token`. That is a failed logout, not a bookkeeping detai
 Both control-plane contexts share one physical database, so the class-A foreign keys to
 `Tenants` still resolve.
 
+**This table also decides a URL, so a class change is not a private matter.** ADR-0079
+rule 2 anchors the Admin API's tenant-scoped paths to it: a class A or class B entity is
+published at `/tenants/{tenantId}/{collection}`, a class C entity is not because its tenant
+does not exist yet, and an entity outside all three (`Scope`, global under ADR-0001) is a
+root collection. Reclassifying a table therefore moves a public route, which is a breaking
+change under ADR-0044. The rule was first written against `.IsMultiTenant()` alone, which
+silently excluded class B and so contradicted ADR-0084's
+`/tenants/{tenantId}/memberships`; re-anchoring it to this table is what fixed it on
+2026-08-01.
+
 > **Closed 2026-08-01, and the open item that stood here was itself wrong.** It claimed the
 > outbox-for-every-logout mechanism "has never been justified in this repository". It had
 > been, a week earlier: ADR-0019 gained two paragraphs on 2026-07-25 arguing the guarantee
