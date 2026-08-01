@@ -81,7 +81,21 @@ declarations did.
 ### 3.1 Clients (Applications): the hardest screen
 
 `GET/POST /tenants/{tenantId}/applications`, `GET/PUT /applications/{id}`, `DELETE`→proposal,
-`POST /applications/{id}/secrets/rollover`, `PUT /applications/{id}/cors-origins`.
+`POST /applications/{id}/secrets/rollover`,
+`DELETE /applications/{id}/secrets/{secretId}`→proposal,
+`PUT /applications/{id}/cors-origins`.
+
+**Revoking a credential has its own route, and it had none until 2026-08-01.** Everything
+around this operation was already specified: `secret-revoke` is a `mutate`-class dual-control
+action in ADR-0081, it sits in the destructive-action catalogue (07), the `If-Match` rule
+above names `secret` as a `DELETE` target that **requires** a precondition, and 5.3 states
+that revoking the old credential is a proposal. What was missing was the way to raise it, and
+ADR-0079 rule 5 means nothing generic could stand in: a proposal is created only by the
+endpoint it belongs to. The route carries a `{secretId}` because ADR-0009's model is
+**multi-key**, a client's `JsonWebKeySet` holding several credentials at once for zero-downtime
+migration, so a collection-level `DELETE` could not say which credential is being revoked, and
+a `mutate`-class target has to be an existing row whose ETag the executor re-checks at
+approval time.
 
 **Deleting a client does not delete its tokens, and that is a security requirement rather
 than housekeeping.** The engine maps `Application` to its `Tokens` and `Authorizations` as
@@ -214,7 +228,8 @@ SSRF-safe), `Theme?` (design tokens (colors/fonts) not raw CSS), `DisplayName?`,
 ### 3.8 Sessions and audit
 
 `GET /sessions?subject=`, `DELETE /sessions/{sid}` (`ITicketStore`, 02/08). `GET /audit`
-(filter by type/tenant/actor/from/to, paged), `GET /audit/chain-status`. `AuditEntryDto`:
+(filter by type/tenant/actor/from/to, paged), `GET /audit/chain-status`,
+`POST /audit/export` (gated, below). `AuditEntryDto`:
 `EntryId`, `Timestamp`, `EventType`, `ActorSub`, `TargetTenantId?`, `Capability?`, `Result?`,
 `CorrelationId`. `ChainStatusDto`: `Valid`, `LastVerifiedAt`, `FirstBrokenEntryId?`. The audit
 **read** path is itself audited (`audit_read`) and tenant-filtered deny-by-default on the
@@ -224,9 +239,24 @@ shared Pool store (below).
 data and actor identity, so a bulk egress is a genuine data-protection risk rather than a
 convenience: `audit-export` is in the destructive-action catalogue (07) whenever the request
 is full or unfiltered, spans more than 90 days, or exceeds 10k rows. A small filtered export
-goes direct and is still audited. There is deliberately no ungated bulk-export endpoint in
-v1; if one is added it routes through a keyed `IProposalExecutor` like every other catalogue
-action, and paged `GET /audit` is not a substitute for that gate.
+goes direct and is still audited. There is **no ungated** bulk export: `POST /audit/export`
+raises the `audit-export` proposal whenever the request crosses one of those thresholds and
+runs it through a keyed `IProposalExecutor` like every other catalogue action, and paged
+`GET /audit` is not a substitute for that gate.
+
+**That route was missing until 2026-08-01, and this section had talked itself out of it.**
+The text read "there is deliberately no ungated bulk-export endpoint in v1; **if one is
+added** it routes through a keyed `IProposalExecutor`", one sentence after saying that a
+small filtered export goes direct, which cannot happen through an endpoint that does not
+exist. The conditional lost the argument on evidence: ADR-0081 gives `audit-export` the only
+`query`-class row in its target-guard table, complete with executor semantics for a filter
+frozen in the payload that may not be widened, and ADR-0079 rule 5 forbids raising a proposal
+from a generic route, so this action can be raised from nowhere else. Read together, two
+accepted ADRs require the endpoint that this design left conditional. The failure mode is
+worth naming because it looks like caution: a gated action with no gate to walk through
+reads as the safe choice and is simply unreachable, and the machinery that would have
+governed it (the TargetClass row in 5.2, the digest, the threshold re-evaluation) sits
+complete and unused.
 
 ### 3.9 Proposals and meta
 
@@ -596,6 +626,16 @@ first-admin seed is idempotent and forces a change; Scalar performs a real OIDC 
 
 ## 10. Open and build-time items
 
+- **The direct export has no response shape yet, and no document owns the export itself.**
+  `POST /audit/export` above settles the route and the gate: over a threshold it raises the
+  `audit-export` proposal and answers `202` with a proposal id like every other catalogue
+  action (5.2). Under the threshold it "goes direct", and what *direct* returns is not
+  specified anywhere: format, whether it streams or is a job with a retrievable artifact,
+  and how long the artifact lives if there is one. Note also that [03](03-audit.md), which is
+  the authority for the audit subsystem, does not mention export at all, so the retention and
+  format questions currently have no owner. Raise it there rather than growing it here, and
+  keep it away from the DPO items in the pre-GA checklist, which govern *whether* an export
+  may happen rather than what it looks like.
 - `Admin.TenantScope` rehome (move its set-tenant-context side effect before retiring it, 07).
 - **Verify at build (ADR-0084): does a tenant-scoped subject revoke actually honour the tenant
   filter?** Step 3 of the membership-removal cascade revokes that subject's tokens and
