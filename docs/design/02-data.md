@@ -519,6 +519,25 @@ CREATE TABLE "AuditLog" (
 );
 -- append-only: INSERT grant only, plus REVOKE UPDATE, DELETE, TRUNCATE and a block trigger
 
+-- Detector indexes: measured, not assumed. The design corpus ran spike A-11 (verification
+--   record V30, 5/5, 2026-07-29) against 300,000 rows and dropped two of its own four
+--   candidates.
+CREATE INDEX "IX_Audit_EventType_Timestamp" ON "AuditLog" ("EventType", "Timestamp");
+-- OPTIONAL, re-measure on target hardware before adding:
+--   ("ClientId", "Timestamp")     marginal, +7 ms across all seven detector rules
+-- DO NOT CREATE:
+--   ("SubjectRef", "Timestamp")   +1 ms
+--   ("SourceIpHash", "Timestamp") +1 ms
+-- Why two of four were dropped, since the grouping columns look like the obvious index:
+--   every rule filters on EventType plus a short Timestamp window FIRST, and that filter is
+--   selective enough that the GROUP BY then runs over an already-small set, so an index on
+--   the GROUPING column has almost nothing left to contribute. The assumption was about the
+--   grouping column; the cost was in the filter. Same shape as A-6, where an index was
+--   nearly added for a cost that sat elsewhere.
+-- This table is append-only and on the audit write path, so an unjustified index is a
+--   PERMANENT write cost on every audited event, bought for about a millisecond on a job
+--   that runs on an interval.
+
 -- Signing keys (rotation state machine in 12) ---------------------------------
 CREATE TABLE "SigningKeys" (
   "Id"                text PRIMARY KEY,                     -- the JWK kid; RFC 7517 defines it as a string

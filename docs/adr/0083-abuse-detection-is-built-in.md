@@ -102,7 +102,13 @@ window and discarding it is a **smaller** privacy footprint than persisting a ke
 hash. So **per-IP detection is unconditional**, and only durable per-IP *attribution*
 depends on the ratification answer.
 
-The cost is stated rather than hidden: an in-memory window is **per-node**, so a
+**"Bounded" is a measured property, not an intention.** An unbounded dictionary keyed by
+source address would make the detector the memory-exhaustion vector it exists to detect,
+so the corpus's spike A-11 asserted it directly (V30, case T5): two million distinct
+addresses, and the window held its ten-thousand cap while a repeat offender inside the
+retained set was still counted.
+
+The cost is then stated rather than hidden: an in-memory window is **per-node**, so a
 distributed attack is undercounted by roughly the node count. Thresholds are therefore
 expressed per-node, and the cross-node view comes from the persisted path where it is
 permitted. A per-node window is also a second reason this cannot be the enforcement
@@ -143,9 +149,14 @@ themselves are a pre-GA ratification item for Security, not an architecture cons
 * Bad, because **we now own a detection engine** and must tune thresholds and absorb
   false positives. Accepted deliberately: the alternative is an identity provider
   whose brute-force detection works only if the customer wires an external product.
-* Bad, because it puts read queries on a hot append-only table. **Unmeasured,
-  therefore gated by a spike** rather than assumed. This is recorded as an open item
-  and not as a design claim.
+* Bad, because it puts read queries on a hot append-only table. **Measured rather than
+  assumed, and it held**: the design corpus ran the gate spike (A-11, verification
+  record V30, 5/5, 2026-07-29) and found the direct queries adequate with no rollup
+  table needed, and no detectable cost on the append path. The measurement also
+  **removed two of the four indexes the design had assumed it would need**, which is
+  the more valuable half of the result, because this table is on the audit write path
+  where an unjustified index is a permanent write cost. What remains is a build-time
+  re-measurement on target hardware, not an open design question.
 * Bad, because per-node windows undercount distributed attacks. Bounded by design and
   stated in the threshold definition; it is a detection aid and never an enforcement
   control.
@@ -164,10 +175,11 @@ themselves are a pre-GA ratification item for Security, not an architecture cons
   window fires while nothing is persisted, asserted by inspecting the audit row for an
   absent `SourceIpHash` when emission is disabled; and the detector is asserted **not**
   to reject a request, so it cannot quietly acquire enforcement behaviour.
-* Open item: the read-query cost against the append-only audit table is a spike, and
-  the rule thresholds are a Security ratification item. Both are named rather than
-  guessed, because a threshold invented here would be an architecture constant
-  pretending to be a security decision.
+* **The read-query cost is settled and the thresholds are not, and the two were
+  deliberately separated.** The corpus's spike A-11 closed the cost question (V30,
+  above). The rule thresholds remain a Security ratification item, because a threshold
+  invented here would be an architecture constant pretending to be a security
+  decision. Recorded so the closure of one is not read as the closure of both.
 
 ## Pros and Cons of the Options
 
@@ -216,3 +228,11 @@ themselves are a pre-GA ratification item for Security, not an architecture cons
   corpus pairs it with its lane decision on the same day and says to read the two
   together; that pairing is preserved here deliberately, because the record of what
   the first decision left unfinished is the most reusable part of it.
+* **This record shipped stating an open spike that had already closed, and the gap is
+  worth naming rather than quietly overwriting.** The corpus ran A-11 on 2026-07-29;
+  this ADR was written on 2026-08-01 from the corpus decision text, which still
+  described the spike as pending, and the verification record that closed it was in a
+  different folder. Nothing here was wrong when the corpus wrote it. The reusable
+  lesson is that importing a decision means importing whatever ran against it since,
+  because a decision and its evidence age at different rates and only the decision is
+  where an importer looks.

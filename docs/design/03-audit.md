@@ -417,13 +417,21 @@ what worked is useless for incident response and for abuse detection alike.
 
 ## 10. Open and build-time items
 
-* **Spike, not an assumption: the cost of the abuse-detector's read queries against this
-  append-only table** (ADR-0083). The detector groups over `SubjectRef`, `TargetTenantId`
-  and `ClientId` on a table whose whole write pattern is append-only and hot. Whether that
-  needs an index, and which, is **unmeasured**, and this repository has already learned that
-  an assumed index need can be wrong: spike A-6 found the prune index it presumed was not
-  required. So the query plan is measured before an index is added, rather than an index
-  added because grouping sounds expensive.
+* **Measured, and the answer shrank the index list** (ADR-0083). The design corpus ran
+  spike A-11 (verification record V30, 5/5, 2026-07-29): the detector's direct queries are
+  adequate, so no write-maintained rollup table is needed, and the detector does not
+  measurably slow the append path. **Two of the four candidate indexes were dropped**, and
+  the reason is the reusable part: every rule filters on `EventType` plus a short time
+  window first, and that filter is selective enough that the `GROUP BY` then runs over an
+  already-small set, so an index on the **grouping** column contributes almost nothing. The
+  assumption was about the grouping column; the cost was in the filter. That is the A-6
+  shape a second time, and it matters here because this table is append-only on the audit
+  write path, where an unjustified index is a permanent write cost on every audited event.
+  The surviving index and the two rejected ones are in [02](02-data.md).
+* **Build-time, the one residual:** the `("ClientId", "Timestamp")` index is marginal
+  (+7 ms across all seven rules) and is re-measured on target hardware rather than added on
+  the corpus's container figure. The absolute millisecond numbers do not transfer; the
+  verdict and the mechanism do.
 * **DPO and Security ratify** the minimum event catalog, the retention window (obligation-bound
   under Article 17(3) and Recital 65, explicitly **not** "keep forever"), the redaction policy,
   and the concrete write-once or SIEM destination (ADR-0008, and the pre-GA checklist).

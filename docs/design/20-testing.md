@@ -223,6 +223,7 @@ and an obligation with no suite is an assertion.
 | Admin API: optimistic-concurrency 409 on a stale ETag, application-delete revoking before delete, client-secret rollover with no downtime | [15](15-admin-api.md) |
 | Dual-control (proposer not approver, step-up, target changed, BOLA) | [15](15-admin-api.md), [07](07-authorization.md) |
 | Audit hash-chain integrity, delivery, two-lane independence | [03](03-audit.md) |
+| Abuse detector: a simulated credential-stuffing pattern produces exactly one `abuse.detected` event and one counter increment tagged `{rule, severity}` and nothing else, asserted against the ADR-0077 allow-list so the bridge cannot regress into a forbidden tag; a per-address burst fires inside one node's window while **nothing is persisted**, with the in-memory window asserted to hold its cap rather than grow; and the detector is asserted **not** to reject a request, so it cannot quietly acquire enforcement behaviour | [03](03-audit.md), [19](19-observability-capacity-slo.md) |
 | Playwright admin end-to-end (propose, second-user step-up approve, no token in browser) | [16 app](16-admin-app.md) |
 | Erasure erase-set plus chain-verify gate | [17 erasure](17-erasure-and-data-subject-rights.md) |
 | Federation security (SSRF egress, RFC 9207 `iss` and mix-up, anti-takeover linking, external-claim allow-list) | [09](09-federation-and-claims-profile.md) |
