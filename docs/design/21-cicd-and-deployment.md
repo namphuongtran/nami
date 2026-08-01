@@ -37,6 +37,7 @@ dual-control proposal machinery ([15 Admin API](15-admin-api.md)).
 | ADR-0023 | OpenTofu as the IaC tool (MPL-2.0, drop-in, state encryption), Helm for the app, a per-cloud adapter |
 | ADR-0031 | The 12/15-factor baseline with four tightened invariants (config, concurrency, disposability, logs) enforced by tests and a CI gate |
 | ADR-0051 | Keyless cosign signing, SLSA provenance, a CycloneDX SBOM per release, digest-pinned base with a re-scan/re-sign cadence, and signing only in the dual-controlled release pipeline |
+| ADR-0086 | Every `uses:` in a workflow is a commit SHA with the version as a trailing comment, and the markdownlint action's bundled linter version is coupled to the one contributors run locally |
 | ADR-0046 (ref) | Dual-control (two-person approval) on the irreversible sign-and-publish step |
 
 ## Component and interface design
@@ -85,6 +86,13 @@ image, never a mutable tag) and is on a scheduled and on-CVE **rebuild then re-s
 re-sign then re-attest** cadence (a dependency bot bumps the digest) so a base-image CVE
 appearing after a release is caught rather than shipped silently. Signing happens only in
 the gated release pipeline; pull-request CI never signs or publishes.
+
+**The same never-a-mutable-tag rule applies one step earlier, to the actions themselves**
+(ADR-0086). Every `uses:` is a full commit SHA with the version as a trailing comment,
+because an action executes in the runner with the repository checked out, so it runs before
+and with more access than the image the paragraph above pins. The rule was adopted after a
+floating major tag on the markdown-lint action moved and silently changed the linter
+version out from under the version this repository documents for local use.
 
 The CD scans are SAST (CodeQL/Semgrep), a **blocking** dependency scan (Trivy/OWASP
 Dependency-Check), a gitleaks secret scan, the container scan (Trivy/Grype), and a DAST

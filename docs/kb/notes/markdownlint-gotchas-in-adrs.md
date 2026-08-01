@@ -37,7 +37,7 @@ directory trees, `bash` for shell, `yaml` for frontmatter.
 ## Verify locally before pushing
 
 ```bash
-npx --yes markdownlint-cli2@0.23.0 "**/*.md"
+npx --yes markdownlint-cli2@0.23.1 "**/*.md"
 ```
 
 Expect `Summary: 0 error(s)`. Running the pinned version matches CI exactly.

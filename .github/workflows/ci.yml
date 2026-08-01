@@ -14,9 +14,13 @@ jobs:
     name: Docs lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Actions are pinned by commit SHA, never by tag (ADR-0086). The trailing
+      # comment is the human-readable version and is not what resolves.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Markdown lint
-        uses: DavidAnson/markdownlint-cli2-action@v24
+        # v24.1.0 bundles markdownlint-cli2 0.23.1 / markdownlint 0.41.1. Keep this
+        # in step with the version CLAUDE.md tells a contributor to run locally.
+        uses: DavidAnson/markdownlint-cli2-action@3b11e4c3e2eac5207914843511bd517908954018 # v24.1.0
         with:
           globs: "**/*.md"
 
@@ -24,7 +28,7 @@ jobs:
     name: ADR/docs guardrail
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: ADR/docs hygiene checks
         run: bash scripts/check-adrs.sh
 

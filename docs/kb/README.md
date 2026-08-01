@@ -37,7 +37,7 @@ related: [[some-note]], [[0021-openiddict-version-adaptation]]
 - Do not add an H1 heading; the frontmatter `title` is the note's title.
 - Link notes and ADRs with `[[slug]]` (the ADR slug is its filename without
   the extension).
-- Keep it lint-clean: `npx --yes markdownlint-cli2@0.23.0 "**/*.md"` must
+- Keep it lint-clean: `npx --yes markdownlint-cli2@0.23.1 "**/*.md"` must
   report 0 errors (the pinned version matches CI).
 
 ## Raw capture

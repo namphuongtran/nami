@@ -23,8 +23,9 @@ govern, accepted ADRs are binding until superseded.
 # Docs guardrail: the CI gate. Must pass before any docs/ADR change merges.
 bash scripts/check-adrs.sh
 
-# Markdown lint: same pinned version CI runs (do not float this version).
-npx --yes markdownlint-cli2@0.23.0 "**/*.md"
+# Markdown lint. This version is not a preference: it is the version bundled by the
+# SHA-pinned action in ci.yml (ADR-0086), so bump both or neither.
+npx --yes markdownlint-cli2@0.23.1 "**/*.md"
 
 # Enable the opt-in local pre-commit hook (guardrail + local name-scrub). Per clone.
 git config core.hooksPath scripts/hooks
