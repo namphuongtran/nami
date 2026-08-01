@@ -18,6 +18,14 @@ Run locally:
 bash scripts/check-adrs.sh
 ```
 
+The checks that read the tracked markdown set (1, 2, 5, 6) get that set from
+`git ls-files`, so a file that has never been `git add`-ed is not read at all. The script
+prints a `coverage warning:` listing any untracked markdown **above** its verdict, in both
+the passing and the failing case, so a green is never mistaken for coverage it did not
+have. It warns rather than fails, because an untracked work-in-progress file is legitimate
+mid-edit; staging is still what makes the verdict cover it. CI cannot reach this case, its
+checkout being tracked-only.
+
 ## Pre-commit hook (opt-in, maintainers)
 
 Enable once per clone:

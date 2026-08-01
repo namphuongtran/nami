@@ -61,17 +61,24 @@ govern, accepted ADRs are binding until superseded.
 ## Commands
 
 ```bash
-# Docs guardrail: the CI gate. Must pass before any docs/ADR change merges.
-# `git add` first: it reads tracked files, so a new file is invisible until staged.
-bash scripts/check-adrs.sh
+# The whole local gate, in one place. Also available as the /gate slash command.
+bash scripts/hooks/pre-commit                          # guardrail + local name scrub
+npx --yes markdownlint-cli2@0.23.1 "**/*.md"           # the one thing the hook omits
 
-# Markdown lint. This version is not a preference: it is the version bundled by the
-# SHA-pinned action in ci.yml (ADR-0086), so bump both or neither.
-npx --yes markdownlint-cli2@0.23.1 "**/*.md"
+# Docs guardrail alone: the CI gate. Must pass before any docs/ADR change merges.
+# It reads tracked files, so `git add` first. It now warns when untracked markdown
+# exists rather than reporting a green that covered nothing.
+bash scripts/check-adrs.sh
 
 # Enable the opt-in local pre-commit hook (guardrail + local name-scrub). Per clone.
 git config core.hooksPath scripts/hooks
 ```
+
+The lint version is not a preference: it is the version bundled by the SHA-pinned
+action in `ci.yml` (ADR-0086), so bump both or neither. `.markdownlint-cli2.jsonc`
+sets `gitignore: true` so the glob reads the same file set CI reads; without it the
+same command also walks the git-ignored draft areas and reports errors CI can never
+see.
 
 There is no build or test suite yet; the .NET build/test/license-scan CI gates are
 added when the solution lands (see the comment at the end of `.github/workflows/ci.yml`).

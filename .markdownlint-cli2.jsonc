@@ -1,0 +1,22 @@
+{
+  // Skip anything .gitignore skips, so a local run of the documented command
+  //   npx --yes markdownlint-cli2@0.23.1 "**/*.md"
+  // reads the same file set CI reads. Without this the glob also walks the
+  // git-ignored working areas (docs/superpowers/, .superpowers/,
+  // docs/kb/.scratch/), which are drafts held to no lint standard, so a local
+  // run reported ~20 errors that CI could never see. A command that always
+  // fails is a command whose output stops being read, which is how a real
+  // error hides in the noise.
+  //
+  // This option lives here and NOT in .markdownlint.jsonc, and the placement is
+  // load-bearing rather than stylistic: `gitignore` is a markdownlint-cli2
+  // option, while .markdownlint.jsonc is the rule configuration. Verified on
+  // 2026-08-01 against cli2 0.23.1: placed in .markdownlint.jsonc it is silently
+  // ignored and the ignored files are linted anyway. The two files coexist, and
+  // the rule config in .markdownlint.jsonc still applies (verified in the same
+  // check), so do not merge them.
+  //
+  // No tracked file matches .gitignore (`git ls-files -i -c --exclude-standard`
+  // is empty), so this narrows nothing that CI checks.
+  "gitignore": true
+}

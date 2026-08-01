@@ -9,12 +9,34 @@ live at the root because the file that gets wrongly edited is a document, not a 
 does, on how to run them, and on the opt-in pre-commit hook with its git-ignored denylist
 and allowlist. Read it. What follows is what it does not carry.
 
-## Run `git add` before you run the guardrail, or its green means nothing
+## Run `git add` before you run the guardrail, or its green covers less than it looks
 
 `check-adrs.sh:27` builds its input as `md=$(git ls-files '*.md')`, which lists the **git
 index**. A markdown file that has never been added is therefore invisible to Checks 1, 2,
-5 and 6, and the script prints `ADR/docs guardrail OK.` while having read nothing you just
-wrote. This is a false green, not a limitation, and it has fired.
+5 and 6, and the script used to print `ADR/docs guardrail OK.` while having read nothing
+you just wrote. That false green fired once, and the script now **announces the gap**
+instead: it lists untracked markdown above the verdict, in both the passing and the
+failing case, because a FAILED list is equally incomplete.
+
+It warns rather than fails, deliberately. An untracked work-in-progress file is legitimate
+mid-edit, and failing on one would make the script unrunnable exactly when it is most
+useful, which is how a check gets skipped. **The warning is not a substitute for staging**:
+until you `git add`, the verdict genuinely says nothing about those files.
+
+Proven on 2026-08-01 rather than assumed: an untracked file containing both an em dash and
+an `ADR-` reference whose four digits match no file produced **no problem at all**, and the
+same file staged produced both. A check that has never been run against the bug it exists
+for is not known to work.
+
+That last sentence is written without a literal dangling reference on purpose, and the
+reason generalises. **Check 2 has no escape hatch, so prose cannot quote a broken
+reference as an example.** Describe the shape instead. The same constraint already shaped
+three other files: `README.md` beside this one names the corpus test-label families by
+prefix "because writing a whole identifier would trip this very check", the root
+`CLAUDE.md` describes the placeholder tokens without their braces, and Check 5's pattern is
+built from a codepoint so the script stays ASCII. Rewording an illustration is not the
+forbidden move: what is forbidden is weakening a **claim** to pass a check, which is what
+cost `scripts/review/` its life below.
 
 The exception, and it is easy to mistake for coverage: Checks 2, 3, 4 and 7 enumerate ADR
 *files* with on-disk globs rather than through git, so a **new ADR** is seen even before it

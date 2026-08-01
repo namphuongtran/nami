@@ -135,6 +135,24 @@ else
   add "missing ${archidx} (Check 7 cannot run)"
 fi
 
+# --- Coverage warning: untracked markdown is not read at all ---
+# Checks 1, 2, 5 and 6 read `git ls-files`, which lists the index. A markdown file
+# that has never been `git add`-ed is therefore not read, and without this warning
+# the script prints OK while having ignored it: a false green, which has fired. CI
+# cannot hit it (its checkout is tracked-only), so this exists for local runs.
+# It warns rather than fails on purpose. An untracked work-in-progress file is
+# legitimate mid-edit, and failing on one would make the script unrunnable exactly
+# when it is most useful, which trains people to skip it. Printed before the verdict
+# in both outcomes, because the caveat applies to a FAILED run just as much: the
+# listed problems may not be all of them.
+untrackedmd=$(git ls-files --others --exclude-standard '*.md' 2>/dev/null || true)
+if [ -n "$untrackedmd" ]; then
+  n=$(printf '%s\n' "$untrackedmd" | wc -l | tr -d ' ')
+  echo "coverage warning: ${n} untracked markdown file(s) were NOT read by Checks 1, 2, 5, 6."
+  printf '%s\n' "$untrackedmd" | sed 's/^/  ? /'
+  echo "  Run 'git add' on them and re-run, or this verdict says nothing about their contents."
+fi
+
 # --- Report ---
 if [ "${#problems[@]}" -gt 0 ]; then
   echo "ADR/docs guardrail FAILED: ${#problems[@]} problem(s):"

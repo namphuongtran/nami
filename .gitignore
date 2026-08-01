@@ -439,3 +439,12 @@ docs/kb/.scratch/
 
 # Local-only guardrail denylist (never committed)
 scripts/.local/
+
+# Claude Code. The shared project instruction files (CLAUDE.md, per folder) and the
+# shared slash commands (.claude/commands/) ARE committed: they are project tooling.
+# Per-developer settings are not. settings.local.json holds one developer's tool
+# permission grants, so committing it would push a personal allow-list to everyone
+# and would go stale silently (the copy in this clone still names a design file that
+# was renamed). Ignored here rather than relying on a developer's global gitignore,
+# which is how it was being excluded until 2026-08-01 and would not protect anyone else.
+.claude/settings.local.json
