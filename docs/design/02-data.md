@@ -414,7 +414,8 @@ CREATE TABLE "DualControlProposals" (
   "TargetId"        text NOT NULL,
   "TenantId"        uuid NULL,
   "PayloadJson"     jsonb NOT NULL,
-  "TargetETag"      text NOT NULL,                          -- TOCTOU guard, re-checked at execute
+  "TargetClass"     text NOT NULL,                          -- 'mutate' | 'create' | 'query' (ADR-0081)
+  "TargetETag"      text NULL,                              -- guard, re-checked at execute; required for 'mutate'
   "Justification"   text NOT NULL,
   "ProposedBy"      uuid NOT NULL,
   "ProposedAt"      timestamptz NOT NULL,
@@ -426,12 +427,22 @@ CREATE TABLE "DualControlProposals" (
   "FailDetail"      jsonb NULL,                             -- the expected and the observed ETag
   "PriorProposalId" uuid NULL,                              -- lineage: replaces a failed proposal
   "ExpiresAt"       timestamptz NOT NULL,                   -- 72h
-  "CorrelationId"   uuid NOT NULL
+  "CorrelationId"   uuid NOT NULL,
   -- xmin: optimistic concurrency
+  CONSTRAINT "CK_DualControlProposals_class"
+    CHECK ("TargetClass" IN ('mutate','create','query')),
+  CONSTRAINT "CK_DualControlProposals_mutate_needs_etag"
+    CHECK ("TargetClass" <> 'mutate' OR "TargetETag" IS NOT NULL)
 );
 CREATE INDEX "IX_DualControlProposals_status"   ON "DualControlProposals" ("Status", "ExpiresAt");
 CREATE INDEX "IX_DualControlProposals_proposer" ON "DualControlProposals" ("ProposedBy");
 CREATE INDEX "IX_DualControlProposals_tenant"   ON "DualControlProposals" ("TenantId");
+-- Open item (ADR-0081, 2026-08-01): `TargetId text NOT NULL` carries the same shape of
+-- problem the `TargetETag` change just fixed. For class 'create' the column reads naturally
+-- as the identifier of the thing to be created (the proposed tenant `Identifier`, the
+-- grantee). For class 'query' there is no row to name at all, and neither ADR-0081 nor the
+-- corpus decision it came from rules on it. Left NOT NULL and flagged rather than given an
+-- invented semantic; decide it when the `audit-export` executor is written.
 
 -- Audit (mechanism in 03) -----------------------------------------------------
 CREATE TABLE "AuditLog" (

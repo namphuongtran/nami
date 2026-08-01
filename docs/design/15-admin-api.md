@@ -43,12 +43,27 @@ static host-level configuration (08).
 
 ## 3. Interfaces and contract
 
-Conventions: `?page=&size=` paging with `X-Total-Count`; explicit filtering (no OData);
-ISO-8601 UTC; ETag on every resource (from `xmin`), `If-Match` required on mutation (missing
-→ 428, mismatch → 409); an `Idempotency-Key` header on proposal creation; ProblemDetails
+Conventions, all six governed by **ADR-0079**, which is the authority when this section and
+that ADR disagree: `?page=&pageSize=` paging with a **body envelope**
+`PageMeta { page, pageSize, total }` and **no** `X-Total-Count` header; explicit filtering
+(no OData); ISO-8601 UTC; ETag on every resource (from `xmin`), with `If-Match`
+**required on a state edit** and **deliberately absent on a revocation** (see below, and
+note this is not "required on every mutation": that phrasing put a `428` on the incident
+path); an `Idempotency-Key` header on proposal creation; ProblemDetails
 (RFC 9457) with a machine `code` on every error. DTOs are immutable records, enum-as-string,
 versioned under `V1`. Secrets are never returned in a DTO (a create/rollover returns the
 value exactly once).
+
+**The `If-Match` split, by intent rather than by verb.** A `PUT`, and a `DELETE` that raises
+a destructive proposal against an existing target (application, scope, tenant, secret),
+**require** `If-Match`: absent gives `428`, mismatch `409`, because an approver must be
+approving the object they looked at. A `DELETE` that **revokes** a session, token,
+authorization, or delegated-admin grant carries **no** precondition: that is the incident
+path, a `428` while cutting off a compromised principal is a hazard, and revocation only
+reduces privilege so a lost update cannot escalate anything.
+
+**Revocation is `DELETE`, a state transition is `POST /{id}/{verb}`, and the two shapes
+coexist on purpose** (ADR-0079 rule 1). Do not tidy one into the other.
 
 ### 3.1 Clients (Applications): the hardest screen
 
@@ -85,15 +100,19 @@ pattern (referenced, not a dependency; the CRUD is built).
 
 ### 3.2 Scopes
 
-`GET/POST /tenants/{t}/scopes`, `GET/PUT/DELETE /scopes/{id}` (DELETE → proposal).
+`GET/POST /scopes`, `GET/PUT/DELETE /scopes/{id}` (DELETE → proposal). The collection is
+**root-level, not under a tenant prefix**, because ADR-0001 makes the scope catalog global:
+`Scope` carries no tenant discriminator, so a tenant path would misstate ownership
+(ADR-0079 rule 2). This read as an inconsistency until the rule was written down, and it
+was in fact a contradiction with an accepted ADR.
 `ScopeDto`: `Id`, `Name`, `DisplayName`, `Description`, `Resources[]` (the audiences the
 scope maps to), `ETag`. There is no API-Resource / Identity-Resource concept (OpenIddict does
 not model them); audiences are expressed via a scope's `Resources`.
 
 ### 3.3 Grants (Authorizations) and Tokens
 
-`GET /tenants/{t}/authorizations?subject=&client=`, `POST /authorizations/{id}/revoke`;
-`GET /tenants/{t}/tokens?subject=&client=&status=`, `POST /tokens/{id}/revoke`,
+`GET /tenants/{t}/authorizations?subject=&client=`, `DELETE /authorizations/{id}`;
+`GET /tenants/{t}/tokens?subject=&client=&status=`, `DELETE /tokens/{id}`,
 `POST /tenants/{t}/tokens/revoke-all`→proposal. A single revoke is direct + audited; the
 subject-wide `revoke-all` is dual-control (it maps to `RevokeBySubjectAsync`, 08/13), never
 the single-token endpoint. `AuthorizationDto`/`TokenDto` are read-mostly: subject, client,
@@ -138,7 +157,7 @@ SSRF-safe), `Theme?` (design tokens (colors/fonts) not raw CSS), `DisplayName?`,
 
 ### 3.8 Sessions and audit
 
-`GET /sessions?subject=`, `POST /sessions/{sid}/revoke` (`ITicketStore`, 02/08). `GET /audit`
+`GET /sessions?subject=`, `DELETE /sessions/{sid}` (`ITicketStore`, 02/08). `GET /audit`
 (filter by type/tenant/actor/from/to, paged), `GET /audit/chain-status`. `AuditEntryDto`:
 `EntryId`, `Timestamp`, `EventType`, `ActorSub`, `TargetTenantId?`, `Capability?`, `Result?`,
 `CorrelationId`. `ChainStatusDto`: `Valid`, `LastVerifiedAt`, `FirstBrokenEntryId?`. The audit
@@ -155,12 +174,28 @@ action, and paged `GET /audit` is not a substitute for that gate.
 
 ### 3.9 Proposals and meta
 
-`POST /proposals`, `GET /proposals?status=&mine=`, `GET /proposals/{id}`,
+**There is no `POST /proposals`** (ADR-0079 rule 5): a proposal is created only by the
+destructive endpoint it belongs to, which has already run that route's policy and capability
+check. A generic route taking a caller-supplied `ActionType` and `TargetId` would let a
+caller raise a proposal for an action whose own endpoint they may not call, and an approver
+would then execute it; the saga guards the executor, not the endpoint's authorization.
+Reading and deciding proposals is unaffected: `GET /proposals?status=&mine=`,
+`GET /proposals/{id}`,
 `POST /proposals/{id}/approve`, `POST /proposals/{id}/reject`, `POST /proposals/{id}/cancel`
 (cancel is proposer-only). `ProposalDto` carries `ProposalId`, `ActionType`, `TargetType`,
-`TargetId`, `TenantId?`, `Payload`, `TargetETag`, `Justification`, `ProposedBy`, `ProposedAt`,
+`TargetId`, `TenantId?`, `Payload`, `TargetClass`, `TargetETag?`, `Justification`,
+`ProposedBy`, `ProposedAt`,
 `Status`, `ApprovedBy?`, `DecidedAt?`, `ExecutedAt?`, `FailReason?`, `ExpiresAt`,
-`CorrelationId`, `ETag`; the saga behavior is below. Meta: `GET /health`, `GET /health/ready`.
+`CorrelationId`, `ETag`; the saga behavior is below.
+
+**Meta: `GET /health/live` and `GET /health/ready`, and both are anonymous** (ADR-0080).
+This host's probes are the **only** exemption from `RequireActor`, which otherwise rejects
+every token without a `sub`. The exemption is invisible at the call site, so an implementer
+applying the policy uniformly will produce a pod that never reaches Ready. Neither route
+returns a detail body: the status code alone is public, because the dependency report names
+internal state and the kubelet cannot present a token to earn it. This design previously
+listed `GET /health` plus `GET /health/ready`, which used a spelling nothing else in the
+repository used and omitted liveness altogether.
 
 ### 3.10 ProblemCodes
 
@@ -246,27 +281,53 @@ for execution: approve-and-execute is synchronous, transactional, and TOCTOU-saf
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Proposed: request a destructive action (captures TargetETag)
+  [*] --> Proposed: destructive action, captures the guard for its TargetClass
   Proposed --> Approved: approve (approver != proposer, step-up acr satisfied)
   Proposed --> Rejected: reject
   Proposed --> Cancelled: proposer cancels
   Proposed --> Expired: ExpiresAt (72h)
   Approved --> Executed: execute in a transaction, TOCTOU re-check passes
-  Approved --> Failed: target_changed (TERMINAL, single-use) or transient
+  Approved --> Failed: target_changed or precondition_failed (TERMINAL) or transient
   Executed --> [*]
   Rejected --> [*]
   Failed --> [*]: re-propose = a NEW proposal with PriorProposalId lineage
 ```
 
-The TOCTOU guard stores the target's `TargetETag` (the `xmin`-derived ETag) at propose time
-and re-checks it `FullyConsistent` before execution; a changed target becomes
-`Failed(target_changed)`, **terminal and single-use**: the transaction sets `FailReason` and
-`FailDetail` (expected/observed ETag), emits `proposal.failed`, and enqueues the proposer
-notification in the same transaction via `IEmailDispatcher` on the `ControlPlaneDbContext`
-(10's control-plane outbox home). Recovery is a new proposal with a fresh `TargetETag` and a
-`PriorProposalId` link; a *transient* failure stays retry-able while the `TargetETag` matches
-(the ETag guard, not terminal-ness, blocks stale retry). The constructive
-`approve-user-invite` reuses the same saga (gated per-tenant by `RequireInviteApproval`).
+**The guard depends on the proposal's `TargetClass`, because not every action has a target
+row** (ADR-0081, which is the authority for this taxonomy; the column and its two `CHECK`
+constraints are in [02](02-data.md)).
+
+| `TargetClass` | `TargetETag` | Re-checked before executing | Actions here |
+|---|---|---|---|
+| `mutate` | required | the ETag still matches | `delete-application`, `delete-scope`, `delete-tenant`, `suspend-tenant`, `resume-tenant`, `offboard-user`, `revoke-all-tokens`, `secret-revoke`, key purge, the Pool-to-Silo re-home, and `approve-user-invite` with a **server-filled** ETag |
+| `create` | NULL | the create preconditions still hold: uniqueness, every referenced principal still exists, and the endpoint's own admission rules | `provision-tenant`, a dangerous `delegated-admin-grant` |
+| `query` | NULL | the filter frozen in `PayloadJson` is authoritative and **may not be widened**, and the size or scope threshold that gated the approval is re-evaluated | bulk `audit-export` |
+
+For `mutate`, the guard stores the target's `xmin`-derived ETag at propose time and re-checks
+it `FullyConsistent` before execution. `TargetETag` need not come from `If-Match`: a client
+supplies it for a client-named target (ADR-0079 rule 4), and the **server** fills it for a
+target the server just created, which is why `approve-user-invite` is `mutate` rather than
+`create`.
+
+**Across all three classes the executor also re-checks that the proposer still holds the
+capability** through `ICheckAccess`. Approval authorises the action; it does not waive
+validation, and a 72-hour window is long enough for a grant to be revoked inside it.
+
+A failed guard becomes `Failed(target_changed)` for `mutate` or
+`Failed(precondition_failed)` for `create` and `query`, both **terminal and single-use**: the
+transaction sets `FailReason` and `FailDetail` (expected and observed), emits
+`proposal.failed`, and enqueues the proposer notification in the same transaction via
+`IEmailDispatcher` on the `ControlPlaneDbContext` (10's control-plane outbox home). Recovery
+is a new proposal with a fresh guard and a `PriorProposalId` link.
+
+**Retryability is decided by `FailReason`, not by the ETag.** Only a genuinely transient
+executor error is retryable, and for `mutate` it additionally requires the ETag to still
+match. A duplicate-key or precondition violation surfaces as `precondition_failed` and is
+never a transient error. The previous rule, "a transient failure stays retry-able while the
+`TargetETag` matches", was **vacuously true** for the three targetless actions, so a
+`provision-tenant` whose identifier had been taken would have been retried forever against
+something that can never succeed. The constructive `approve-user-invite` reuses the same
+saga (gated per-tenant by `RequireInviteApproval`).
 
 ```mermaid
 sequenceDiagram
@@ -415,7 +476,12 @@ this is the list an implementer should be able to point at a test for.
 - **Two ETag sources, never interchanged**: `xmin` for control-plane rows, the entity's own
   `ConcurrencyToken` for engine entities, read off the entity and not the descriptor
   (section 6).
-- **`If-Match` is required on every mutation**: absent gives 428, stale gives 409.
+- **`If-Match` is required on a state edit and deliberately absent on a revocation**
+  (ADR-0079 rule 4): on a `PUT` or a proposal-raising `DELETE`, absent gives 428 and stale
+  gives 409; on a `DELETE` that revokes a session, token, authorization, or grant there is
+  no precondition at all, because that is the incident path and a 428 there is a hazard.
+  The former wording, "required on every mutation", was a universal that several endpoints
+  correctly did not satisfy.
 - **Deleting a client revokes its tokens and authorizations first, in one transaction**,
   because the engine's relationships do not cascade (3.1).
 - **A tenant `Identifier` is immutable after provisioning**; a rename is a new-tenant
@@ -434,7 +500,8 @@ this is the list an implementer should be able to point at a test for.
   admin-surface problem cannot degrade token issuance; every mutation is on the hash-chain;
   secrets are never returned or logged. The whole surface is held to OWASP ASVS L2 (ADR-0062,
   owned by 21/CI), with BOLA/IDOR object-level authz a must-pass (07).
-- **Performance.** List endpoints are always paged (`X-Total-Count`, no unbounded scans); each
+- **Performance.** List endpoints are always paged (the `PageMeta` body envelope, no
+  unbounded scans); each
   request incurs one `ICheckAccess` call (DB-tier p95 < 30ms / p99 < 80ms, fail-closed at
   250ms, 07); reads go through the manager caches (per-request, no cross-node backplane, 13);
   the config/CORS cache is the FusionCache+Redis one (13), invalidated on a client change; the

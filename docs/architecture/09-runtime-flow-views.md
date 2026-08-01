@@ -95,14 +95,14 @@ sequenceDiagram
   P->>APP: request destructive action
   APP->>API: POST proposal, user-delegated token
   Note over API: RequireActor rejects an app-only token
-  API->>DB: create proposal, capture TargetETag, expiry 72h
+  API->>DB: create proposal, capture the guard for its TargetClass, expiry 72h
   A->>APP: open the approval inbox
   APP->>API: approve proposal
   API-->>APP: 401 insufficient_user_authentication, RFC 9470
   APP->>A: top-level OIDC re-auth, MFA
   A->>APP: re-authenticated, elevated acr
   APP->>API: approve, proposer not equal approver
-  API->>DB: re-check TargetETag, TOCTOU guard
+  API->>DB: re-check the class guard, and that the proposer still holds the capability
   API->>DB: execute atomically, append audit hash-chain
   API-->>APP: 200 executed
 ```
@@ -117,8 +117,13 @@ misconfiguration away from being the only line of defence. The approval is bound
 `request_hash = H(capability + target + params)`, single-use and time-boxed against
 that hash, and is itself step-up-gated. Proposer must not equal approver. Required
 assurance is `max(client default, scope, runtime)`, challenged per RFC 9470 with
-`acr_values` and `max_age`. `TargetETag` is re-checked at execution because approval
-and execution are separated in time. Execution and its audit append are one atomic
+`acr_values` and `max_age`. The target guard is re-checked at execution because approval and
+execution are separated by up to 72 hours, and **which** guard runs depends on the
+proposal's `TargetClass`: an ETag comparison for a `mutate`, the create preconditions for a
+`create`, the frozen filter and its thresholds for a `query` (ADR-0081). Three actions here
+have no target row at all, so a single ETag column could not have guarded them. The executor
+also re-checks that the **proposer** still holds the capability, because approval authorises
+the action and does not waive validation. Execution and its audit append are one atomic
 step. A client-supplied acting-for or subject is always discarded.
 
 ## 3. No-restart key rotation
@@ -814,7 +819,7 @@ sequence adds little above the component view. They are listed so the omission i
   ADR-0013 (the assurance producer), [07-authorization](../design/07-authorization.md)
   (`RequireActor`, the `request_hash` binding, the `max(client, scope, runtime)` rule),
   and [15-admin-api](../design/15-admin-api.md) (the 72-hour proposal expiry and the
-  `TargetETag` guard).
+  per-class target guard), ADR-0081 (the `TargetClass` taxonomy and the proposer re-check).
 * Flow 3: ADR-0011 (the custom options monitor, the 90/14/14 shape, the local-validation
   fix, spike A-2 / V19 / T3c / T3d), ADR-0007 (five-minute break-glass ejection),
   ADR-0021 (the 9.K6 contract-regression gate), ADR-0031 (exactly one clustered runner),
