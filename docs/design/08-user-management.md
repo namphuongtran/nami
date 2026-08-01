@@ -388,7 +388,34 @@ lockout-DoS mitigation and the risk-triggered challenge layer are ADR-0042.
 Self-service (profile, email/phone, MFA/passkey/password, sessions, membership) uses
 **custom endpoints, not `MapIdentityApi`**: `MapIdentityApi` exposes `/register`,
 `/login`, and similar as a parallel JSON attack surface that bypasses the UI flow,
-anti-enumeration, and the challenge layer. **Change-email is hardened** (the top
+anti-enumeration, and the challenge layer.
+
+**The membership full-list endpoint is `GET /me/memberships`, and it had no declaration
+until 2026-08-01.** Four documents already depended on it: [ADR-0005](../adr/0005-encryption-credential-lifecycle.md)
+caps the `memberships` claim "with a `memberships_truncated` flag and a self-service endpoint
+for the full list", [04](04-core-protocol.md) repeats the cap and the full-list endpoint,
+[09](09-federation-and-claims-profile.md) makes it the defined answer to
+`memberships_truncated: true` and says the answer is "never a larger token", and
+[11](11-login-consent-ui.md) has the tenant switcher call it when the claim is truncated.
+This document owns it and declared nothing, so the remedy for a truncation that a
+multi-tenant user will certainly hit existed only as four references to it.
+
+* **The response repeats the claim's own shape**, an array of `{tid, name?, roles?}` as
+  [09](09-federation-and-claims-profile.md) section 5.2 defines it, so the tenant switcher
+  binds one model whether it read the claim or called the endpoint. It carries no
+  truncation flag, because being complete is the entire reason it exists.
+* **`/me` rather than `/users/{id}/memberships`, and that is a security choice.** The subject
+  comes from the caller's token and there is no identifier in the path, so the endpoint
+  **cannot** be pointed at another user. The admin surface has the object-level
+  authorization filter that makes an id-route safe ([15](15-admin-api.md) section 5.1); this
+  surface does not, and adding an id here would mean either duplicating that machinery or
+  shipping the BOLA hole it exists to prevent.
+* **Open, and named rather than assumed: no ADR sets conventions for the self-service
+  surface.** ADR-0079 fixes the rules for the *admin* surface and says so in its first line.
+  This route follows its shape by analogy, not by rule, and if the self-service surface grows
+  past a handful of endpoints it needs the same treatment ADR-0079 gave the admin one, for
+  the same reason: a surface decided endpoint by endpoint becomes inconsistent without anyone
+  making a decision they would defend. **Change-email is hardened** (the top
 takeover surface): notify the old address (an informational tripwire with a support
 CTA and no actionable token or link), require step-up (acr >= aal2)
 before initiating, verify the new address before the switch takes effect (the old
