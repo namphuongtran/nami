@@ -82,9 +82,36 @@ requiring `amr` to include `mfa`, `otp`, `hwk`, or `swk` (so a passkey-only logi
 not mis-scored as aal1) and an aal2 freshness window of about 12 hours with 30-minute
 inactivity (NIST), capped by the 8h absolute session ceiling (ADR-0013) so an aged
 session downgrades; `amr` is stamped at sign-in via
-`SignInWithClaimsAsync(user, isPersistent, [amr claims])` and `auth_time` is sourced from
-`AuthenticationProperties.IssuedUtc`, emitted as a JSON
-number (the `long` overload, not a string).
+`SignInWithClaimsAsync(user, isPersistent, [amr claims])`, and **`auth_time` is stamped as
+an immutable claim in that same call**, emitted as a JSON number (the `long` overload, not
+a string).
+
+**`auth_time` is deliberately not taken from `AuthenticationProperties.IssuedUtc`, and this
+design said the opposite until 2026-08-01.** `IssuedUtc` is *ticket* metadata, not
+authentication metadata: Microsoft's shipped documentation defines it as "the time at which
+the **authentication ticket** was issued", and defines `SlidingExpiration` as instructing
+the handler "to **re-issue a new cookie with a new expiration time** any time it processes a
+request which is more than halfway through the expiration window". ADR-0003 sets a
+**sliding** 1-hour inactivity window, so the ticket is re-issued on ordinary traffic. An
+`auth_time` read from it therefore advances with no re-authentication, and everything that
+depends on freshness silently stops working: `max_age` never fires, `prompt=login` never
+fires, and the 12-hour aal2 window above never expires for an active user. The failure is
+invisible, because every value looks recent and plausible.
+
+*What is verified and what is not:* the two definitions above are read at Microsoft's own
+documentation shipped with the .NET 10.0.9 reference assemblies. That the handler assigns
+the refreshed instant back onto `properties.IssuedUtc` during renewal was read against
+`dotnet/aspnetcore` in the design corpus and is **not** re-verified here. The fix is chosen
+so that it does not depend on settling that: an immutable claim is the correct source
+either way, it is explicit rather than inferred, and it matches how `amr` is already
+handled. The sliding-renewal test in [20](20-testing.md) is the settling experiment, and it
+is a regression test regardless of the outcome: sign in, wait past half of `ExpireTimeSpan`
+to force a renewal, issue a token, assert `auth_time` is unchanged, with counter-branches
+asserting that `max_age` and `prompt=login` still fire.
+
+Consumers read the claim, never the property. Where the claim is absent from a cookie
+principal, the correct response is to **re-challenge**, not to infer a time from the
+ticket, since inferring is how the defect returns.
 
 **`amr` is a historical fact of one authentication, stamped once and never recomputed**,
 which is exactly why `acr` has to be recomputed instead: the factors used do not change,

@@ -208,6 +208,7 @@ and an obligation with no suite is an assertion.
 | Cross-tenant / RLS isolation (the blocking gate of section 5.3) | [02](02-data.md), [07](07-authorization.md), [04](04-core-protocol.md), [18](18-tenant-lifecycle.md) |
 | PKCE, discovery, per-tenant issuer, claims | [04](04-core-protocol.md) |
 | `id_token` claim shape: `auth_time` as a JSON number, `amr` as a JSON array, neither duplicated | [04](04-core-protocol.md), [09](09-federation-and-claims-profile.md) |
+| `auth_time` does not advance on a sliding-cookie renewal: sign in, wait past half of `ExpireTimeSpan` to force the re-issue, request a token, assert `auth_time` is unchanged, with counter-branches asserting `max_age` and `prompt=login` still fire. **This is the test that settles what the source read left open**, so it is a regression test whichever way the handler behaves | [08](08-user-management.md), [09](09-federation-and-claims-profile.md) |
 | Refresh concurrency inside and outside the reuse leeway, and family-revoke | [04](04-core-protocol.md) |
 | The 8h ceiling anchor: absent from both issued tokens, surviving rotation, rejecting on its own reason when absent, and **a second login on a reused consent older than 8h still refreshing** | [04](04-core-protocol.md) |
 | Session-liveness gate on the refresh grant: a deleted session row ends the chain, a `sid`-less client-credentials token is unaffected, and the resulting logout bound is asserted **through the refresh grant** rather than by waiting out the access token | [04](04-core-protocol.md), [11](11-login-consent-ui.md) |

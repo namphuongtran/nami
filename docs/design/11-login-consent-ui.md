@@ -141,9 +141,10 @@ external provider redirects straight through); and a client display ("sign in to
 «AppName»") from `IOpenIddictApplicationManager.FindByClientIdAsync` then
 `GetDisplayNameAsync`, with the external-provider list from `IAuthenticationSchemeProvider`.
 
-Two backend contracts the page must honor (owned by 08): sign-in stamps `amr` via
-`SignInWithClaimsAsync(user, isPersistent, [amr=pwd/otp/mfa])` with `auth_time` from
-`IssuedUtc`; and at the anonymous-to-authenticated primary auth the page mints a **new
+Two backend contracts the page must honor (owned by 08): sign-in stamps `amr` **and
+`auth_time`** as claims in the one `SignInWithClaimsAsync(user, isPersistent, [...])` call,
+never taking `auth_time` from the ticket's `IssuedUtc`, which a sliding cookie re-issues on
+ordinary traffic (08); and at the anonymous-to-authenticated primary auth the page mints a **new
 `sid`** and a new ticket-store row, discarding the pre-login session key (session-fixation
 defense). The external-button enumeration is the single v1-to-v2 touch point for dynamic
 per-tenant IdPs: v1 shows the static host-level set, and when v2 lands exactly one
