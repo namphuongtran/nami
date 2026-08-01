@@ -206,14 +206,20 @@ These are legal/OSS constraints and the CI guardrail + local hook enforce parts 
 
 ## The guardrail (`scripts/check-adrs.sh`)
 
-Neutral, public, run by CI (`adr-guardrail` job) and the local hook. Five checks:
+Neutral, public, run by CI (`adr-guardrail` job) and the local hook. Seven checks:
 placeholder tokens, ADR cross-reference integrity, index/status consistency,
-ADR-0061 stack-of-record table membership (bidirectional), and the no-em-dash style
-rule. Checks 1, 2, and 5 read **all tracked markdown**, not just `docs/adr/`: the
-architecture and design layers cite far more ADR numbers than the ADRs do, and a
-number that resolves nowhere is the same defect wherever it is written. Checks 3 and
-4 are ADR-corpus-scoped by nature. The em-dash pattern is built from its codepoint so
-the script stays pure ASCII and cannot trip its own check.
+ADR-0061 stack-of-record table membership (bidirectional), the no-em-dash style
+rule, design-corpus test identifiers, and architecture decisions-index membership
+(bidirectional). Checks 1, 2, 5, and 6 read **all tracked markdown**, not just
+`docs/adr/`: the architecture and design layers cite far more ADR numbers than the
+ADRs do, and a number that resolves nowhere is the same defect wherever it is
+written. Checks 3, 4, and 7 are ADR-corpus-scoped by nature. The em-dash pattern is
+built from its codepoint so the script stays pure ASCII and cannot trip its own
+check. **An ADR belongs to two indexes, not one**: `docs/adr/README.md` (Check 3) and
+`docs/architecture/18-decisions-index.md` (Check 7). Check 7 exists because nine ADRs
+drifted out of the second one while every other check stayed green, and it verifies
+membership only, never the "Views that cite it" column, which is regenerated from the
+views by the snippet in that file's own section 1.
 It is written for **portability to macOS bash 3.2 and the Ubuntu runner**: no
 `mapfile`, no associative arrays, no GNU-only flags; ADR enumeration uses on-disk
 globs. Preserve that portability if you edit it. The local hook

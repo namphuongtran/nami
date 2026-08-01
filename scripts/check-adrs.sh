@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ADR / docs guardrail (neutral, public). Run by CI and available locally.
 # Checks: template placeholders, ADR cross-reference integrity, ADR index/status,
-# ADR-0061 stack-of-record table membership, the no-em-dash style rule, and
-# design-corpus test identifiers.
+# ADR-0061 stack-of-record table membership, the no-em-dash style rule,
+# design-corpus test identifiers, and architecture decisions-index membership.
 # Contains no competitor/real-name logic; that is a local, git-ignored concern
 # (see scripts/README.md).
 #
@@ -106,6 +106,33 @@ fi
 corpustests=$(grep -nE '\b[0-9]{1,2}\.(T|K)[0-9]+[a-z]?\b|\b9\.[0-9]+[a-z]\b' $md 2>/dev/null || true)
 if [ -n "$corpustests" ]; then
   while IFS= read -r l; do add "design-corpus test identifier (name what the test asserts, and list it in the testing design): $l"; done <<< "$corpustests"
+fi
+
+# --- Check 7: architecture decisions-index membership (bidirectional) ---
+# docs/adr/README.md is not the only index an ADR must appear in. The SAD's
+# reverse index (docs/architecture/18-decisions-index.md) answers "which views
+# must I re-read when this decision changes", and an ADR with no row there is
+# indistinguishable from one that does not exist. Check 3 could not see this,
+# and nine ADRs (0078-0086) had drifted out of it while every other check
+# stayed green, which is precisely the shape of failure a second index has:
+# nothing fails, so nothing is noticed.
+# Only membership is checked, not the "Views that cite it" column. That column
+# is regenerated from the views themselves (the generator is printed in that
+# file's section 1), and re-implementing it here in portable bash would be a
+# second, weaker copy of a rule that already has one. State the limit so the
+# pass is not read as covering the cell contents.
+archidx="docs/architecture/18-decisions-index.md"
+if [ -f "$archidx" ]; then
+  for f in docs/adr/[0-9][0-9][0-9][0-9]-*.md; do
+    num=$(basename "$f" | cut -c1-4)
+    grep -qE "^\| \[${num}\]\(" "$archidx" || add "ADR ${num} (${f}) has no row in ${archidx}"
+  done
+  while IFS= read -r row; do
+    num=$(sed -E 's/^\| \[([0-9]{4})\].*/\1/' <<< "$row")
+    ls docs/adr/${num}-*.md >/dev/null 2>&1 || add "index row ADR ${num} in ${archidx} has no matching file"
+  done < <(grep -E '^\| \[[0-9]{4}\]\(' "$archidx")
+else
+  add "missing ${archidx} (Check 7 cannot run)"
 fi
 
 # --- Report ---

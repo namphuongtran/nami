@@ -28,9 +28,12 @@ Three things are first-class here by design:
   and observability, whose default runs offline on PostgreSQL with no cloud
   dependency (ADR-0006, ADR-0009, ADR-0038, ADR-0022).
 
-This layer exists to give one **coherent architectural picture** across a repository
-whose detail is spread over 72 ADRs and 18 detailed designs. It answers, at the
-architecture altitude:
+This layer exists to give one **coherent architectural picture** across a repository whose
+detail is spread over the decision corpus in [`docs/adr/`](../adr/README.md) and the
+per-feature designs in [`docs/design/`](../design/README.md). Neither is counted here on
+purpose: both indexes grow, and a number written into prose is a claim nothing checks. An
+earlier revision of this sentence published two counts and both had gone stale. It answers,
+at the architecture altitude:
 
 * What is the system, who uses it, and what does it depend on?
   ([04-system-context](04-system-context.md), [06-domain-model](06-domain-model.md))

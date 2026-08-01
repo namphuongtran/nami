@@ -48,7 +48,7 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0000](../adr/0000-use-markdown-architectural-decision-records.md) | Use Markdown Architectural Decision Records (MADR) with the f... | 11, 18 |
 | [0001](../adr/0001-multi-tenant-isolation-model.md) | Tiered multi-tenant isolation: global identity, pooled tenant... | 01, 03, 04, 05, 06, 07, 08, 09, 11, 12, 13, 14, 15, 18, 20, 23, 24 |
 | [0002](../adr/0002-federation-external-idp-integration.md) | Integrate external identity providers through ASP.NET Core Id... | 01, 04, 08, 14, 19 |
-| [0003](../adr/0003-server-side-sessions-are-core.md) | Server-side session store is a core feature, not an option | 01, 03, 06, 08, 09, 12, 13, 20, 21 |
+| [0003](../adr/0003-server-side-sessions-are-core.md) | Server-side session store is a core feature, not an option | 01, 03, 06, 08, 09, 12, 13, 20, 21, 23 |
 | [0004](../adr/0004-refresh-token-posture.md) | Keep OpenIddict's native refresh-token mechanics rather than... | 01, 03, 07, 09, 13, 16, 17, 20, 21, 23 |
 | [0005](../adr/0005-encryption-credential-lifecycle.md) | Track the encryption credential's lifecycle separately from t... | 03, 05, 07, 08, 09, 11, 13, 14, 21, 24 |
 | [0006](../adr/0006-disaster-recovery-key-material.md) | Make key-material storage and disaster recovery provider-agno... | 01, 03, 04, 07, 08, 10, 11, 12, 13, 15, 17, 18, 20, 21, 22, 23 |
@@ -56,7 +56,7 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0008](../adr/0008-audit-subsystem.md) | Make the audit subsystem first-class, tamper-evident, and del... | 01, 02, 03, 04, 05, 07, 08, 09, 10, 11, 12, 13, 14, 15, 16, 18, 22, 24 |
 | [0009](../adr/0009-secret-store-access-and-rollover.md) | Access the secret store with least-privilege workload identit... | 01, 03, 04, 07, 08, 10, 13, 14 |
 | [0010](../adr/0010-tenant-hierarchy-delegated-admin.md) | Administer child tenants through explicit, scoped delegated-a... | 01, 04, 06, 08, 09, 12, 13, 14, 17, 24 |
-| [0011](../adr/0011-no-restart-key-rotation.md) | Rotate signing and encryption keys without restarting, via a... | 01, 03, 05, 07, 08, 09, 10, 11, 13, 14, 17, 18, 20, 21, 22, 24 |
+| [0011](../adr/0011-no-restart-key-rotation.md) | Rotate signing and encryption keys without restarting, via th... | 01, 03, 05, 07, 08, 09, 10, 11, 13, 14, 17, 18, 20, 21, 22, 24 |
 | [0012](../adr/0012-key-bootstrap-and-dr-sequence.md) | Bootstrap keys by auto-seeding at cold start, root the keyrin... | 01, 03, 05, 08, 09, 10, 11, 12, 13, 16, 17, 18, 22, 24 |
 | [0013](../adr/0013-mfa-assurance-and-step-up.md) | Make MFA the producer of acr/amr/auth_time and enforce step-u... | 01, 08, 09, 14, 24 |
 | [0014](../adr/0014-advanced-protocol-scope.md) | Build both mTLS and DPoP sender-constrained tokens, and delib... | 01, 05, 07, 09, 10, 13, 14, 17, 18, 19, 21, 22, 23, 24 |
@@ -123,6 +123,15 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0075](../adr/0075-security-sensitive-port-invariants.md) | Treat security-sensitive ports as carrying non-weakenable inv... | 08, 09, 13, 14, 18, 23, 24 |
 | [0076](../adr/0076-application-transport-security.md) | Decide the application's own transport security: HSTS policy, the... | 03, 13, 18, 23 |
 | [0077](../adr/0077-metric-cardinality-and-telemetry-privacy.md) | Bound metric cardinality with an allow-listed tag set, and keep... | 14, 16, 18, 23 |
+| [0078](../adr/0078-load-test-tooling.md) | Adopt Apache JMeter as the load-test tool, replacing k6 and N... | 03 |
+| [0079](../adr/0079-admin-api-http-conventions.md) | Decide the Admin API's HTTP surface by rule rather than per e... | 18 |
+| [0080](../adr/0080-health-and-readiness-probe-contract.md) | Serve two anonymous probe routes, `/health/live` and `/health... | 18 |
+| [0081](../adr/0081-dual-control-target-guard-taxonomy.md) | Classify a dual-control proposal's target, so the guard check... | 09, 12 |
+| [0082](../adr/0082-abuse-detection-lanes-and-grouping-keys.md) | Give every abuse rule a lane that can answer it, and add the... | 13, 14 |
+| [0083](../adr/0083-abuse-detection-is-built-in.md) | Ship abuse detection as a built-in component rather than a SI... | 13, 14 |
+| [0084](../adr/0084-membership-removal-semantics.md) | Define what removing a person from a tenant guarantees, befor... | 18 |
+| [0085](../adr/0085-telemetry-instrument-naming.md) | Namespace every custom instrument `nami.identity.` and freeze... | 16 |
+| [0086](../adr/0086-pin-ci-actions-by-commit-sha.md) | Pin every CI action by commit SHA, never by tag | 18 |
 
 ## 3. What the shape of that table says
 
@@ -146,17 +155,28 @@ model turns up in sixteen views, including context, data, runtime, security, per
 reliability, schema, observability, and operations, because almost every other decision
 eventually has to say how fast a change of mind takes effect.
 
-**One decision is cited by no view at all: ADR-0045**, on coordinated vulnerability disclosure
-and CVE issuance. The honest reading is that the zero is **correct**: a disclosure process is
-governance rather than architecture, so it has no structural or operational view to land in. It
-is reachable through the governance row of
+**Five decisions are cited by no view at all, and they do not all mean the same thing.**
+ADR-0045, on coordinated vulnerability disclosure and CVE issuance, is the settled case: the
+zero is **correct**, because a disclosure process is governance rather than architecture, so it
+has no structural or operational view to land in. It is reachable through the governance row of
 [11-cross-cutting-concepts](11-cross-cutting-concepts.md), which is where decisions that are
 substance without a view belong. Recorded explicitly so the zero reads as a finding rather than
 an oversight.
 
-Three sit at a single view and are genuinely narrow rather than under-covered: the record format
-itself, the design-patterns vocabulary, and local-development TLS. Thirteen sit at two, and that
-tail is unremarkable: it is mostly the six demand-driven extensions, named where scope is set
+The other four are **not yet judged, and are recorded as open rather than rationalised**:
+ADR-0079 (the Admin API's HTTP conventions), ADR-0080 (the health and readiness probe
+contract), ADR-0084 (what removing a person from a tenant guarantees), and ADR-0086 (pinning
+CI actions by commit SHA). At least two of them look like coverage gaps rather than
+governance, since a probe contract is operational by nature and membership removal is a domain
+rule. Writing a rationale for each one here, before the views themselves are re-read, would be
+the exact failure this paragraph exists to prevent: a zero explained away instead of examined.
+So the finding stands open until each is judged against the views that would carry it.
+
+Five sit at a single view. Three are genuinely narrow rather than under-covered: the record
+format itself, the design-patterns vocabulary, and local-development TLS. The two that joined
+them, the load-test tool and the telemetry instrument namespace, arrived in the same batch as
+the four zeros above and carry the same unanswered question, so they are counted here and
+deliberately not characterised. Sixteen sit at two, and that tail is unremarkable: it is mostly the six demand-driven extensions, named where scope is set
 ([01-introduction-scope](01-introduction-scope.md)) and where their triggers are recorded
 ([19-evolution-and-extensions](19-evolution-and-extensions.md)), which is exactly the footprint
 a recorded-but-uncommitted option should have.
