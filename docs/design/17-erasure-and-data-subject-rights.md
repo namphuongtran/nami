@@ -210,7 +210,9 @@ carry the mechanism.
   audit hash-chain is **never rewritten**: rectification appends a `subject.rectified`
   correction-note rather than editing the original row.
 - **Restriction (Art.18).** A `ProcessingRestriction` state (defined below) puts the
-  subject into store-only mode: `CanSignInAsync` is false, no new token is issued, and
+  subject into store-only mode: the `CanSignInAsync` **override** returns false for a
+  restricted subject (the native call knows nothing of a restriction, so this is the third
+  condition that override carries, [08](08-user-management.md) section 7), no new token is issued, and
   the data is neither processed further nor erased. It is the alternative to erasure
   while a dispute is contested, so the erasure saga's intake consults it; lifting it is
   audited.

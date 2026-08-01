@@ -400,7 +400,8 @@ two of which (3 and 6) are checks in the same `HandleTokenRequest` refresh-grant
    `UtcNow - anchor > 8h + ClockSkewTolerance`. **An absent anchor is rejected with its own
    distinct reason**, never defaulted: see the fail-closed rule below.
 4. **Per-client `IssueRefreshToken`**, so an M2M client gets none.
-5. **Disabled-user handling** by gate-at-issuance (`CanSignInAsync`) plus force-revoke on
+5. **Disabled-user handling** by gate-at-issuance (Nami's `CanSignInAsync` **override**; the
+   native call knows no disabled state, [08](08-user-management.md) section 7) plus force-revoke on
    disable, accepting a 15-minute residual for an already-issued JWT.
 6. A **session-liveness gate**: the refresh grant reads the `sid` claim and rejects with
    `invalid_grant` when no live `ServerSideSessions` row matches. This is not a new control.

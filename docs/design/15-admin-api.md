@@ -85,6 +85,9 @@ posture avoids the situation entirely, which is why it is the default.
 `ApplicationType` (`web`|`native`), `ConsentType`
 (`explicit`|`implicit`|`external`|`systematic`), `RedirectUris[]`,
 `PostLogoutRedirectUris[]`, `AllowedCorsOrigins[]` (from `Application.Properties['cors_origins']`),
+`BackchannelLogoutUri?` (from `Application.Properties['backchannel_logout_uri']`, https-only
+and SSRF-validated; **nullable, and null is the meaningful value** declaring that this
+relying party accepts bounded logout, ADR-0019),
 `Permissions`, `Policy`, `ETag`.
 `ApplicationPermissionsDto`: `Endpoints[]` (authorization/token/introspection/revocation/
 end_session/device_authorization/pushed_authorization), `GrantTypes[]`, `ResponseTypes[]`,

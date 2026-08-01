@@ -104,7 +104,8 @@ classDiagram
 
 * **`IClaimsProfileService`** is the single choke point. Controllers call it and nothing
   else; no claim or destination logic exists anywhere on an issuance path. It gates with
-  `SignInManager.CanSignInAsync`, builds the identity, sets the bespoke claims, resolves
+  Nami's **override** of `SignInManager.CanSignInAsync` (the native call checks only the
+  confirmation flags, [08](08-user-management.md) section 7), builds the identity, sets the bespoke claims, resolves
   the audience from the granted scopes, and applies `GetDestinations`. Its deny-by-default
   destination rule is an invariant of ADR-0075, not a convention: a claim reaches a token
   only where a destination was declared for it, and the fallback returns nothing.
@@ -181,7 +182,7 @@ sequenceDiagram
   end
   U->>T: authorization code
   T->>CP: BuildIdentityAsync(principal, scopes, tenant)
-  CP->>UM: CanSignInAsync gate
+  CP->>UM: CanSignInAsync override gate
   CP->>CP: local claims, then acr, amr, auth_time, idp, memberships, sid, tenant
   CP->>CP: SetResources from the granted scopes, then SetDestinations
   T-->>U: tokens carrying only declared claims

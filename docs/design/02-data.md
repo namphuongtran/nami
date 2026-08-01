@@ -296,7 +296,7 @@ erDiagram
   TENANTAPPLICATION ||--o{ TENANTAUTHORIZATION : has
   TENANTAPPLICATION ||--o{ TENANTTOKEN : has
   TENANTAUTHORIZATION ||--o{ TENANTTOKEN : anchors
-  SERVERSIDESESSIONS ||--o{ SESSIONPARTICIPATINGCLIENTS : includes
+  TENANTS ||--o{ SESSIONPARTICIPATINGCLIENTS : locates
   TENANTS ||--o{ LOGOUTDELIVERYOUTBOX : scoped
   TENANTS ||--o{ SIGNINGKEYS : "scoped when Silo"
   TENANTS ||--o{ DUALCONTROLPROPOSALS : scoped
@@ -306,6 +306,12 @@ erDiagram
 
 `TenantScope` is a global catalog with no relationship to a tenant; `OutboxEmail`,
 `DataProtectionKeys`, `ErasureRequest`, and `SubjectDek` are standalone.
+
+`SessionParticipatingClients` has **no** foreign key to `ServerSideSessions`, and the
+absence is the design rather than an omission: it is keyed on the login chain so that it
+survives the `sid` rotation ADR-0003 performs on step-up, which a cascade from the session
+row would instead delete. Its only foreign key is the `TenantId` locator. See the table
+comment in the `ControlPlaneDbContext` DDL below.
 
 ### OpenIddictDbContext: the Nami-added columns
 

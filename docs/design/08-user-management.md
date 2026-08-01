@@ -510,10 +510,15 @@ user-management public surface is governed by the SemVer and deprecation policy
   `SignInManager<TUser>.CanSignInAsync` takes **only the user** (verified at the .NET 10.0.9
   reference assemblies: the signature carries a single parameter) and evaluates only the
   `Options.SignIn` confirmation flags. It takes no tenant, reads no membership row, and knows
-  nothing about a disabled state. So it cannot be the gate for tenant-scoped
-  pending-approval, and it cannot be the gate for disabled users; both are **build**. Nami
+  nothing about a disabled state or a processing restriction. So it cannot by itself be the
+  gate for any of the **three** conditions this system hangs on it: tenant-scoped
+  pending-approval (this design), the disabled state ([15](15-admin-api.md), ADR-0004), and
+  the Art.18 processing restriction ([17](17-erasure-and-data-subject-rights.md),
+  ADR-0053). All three are **build**. Nami
   overrides the method (it is `virtual`, wired through `.AddSignInManager<>()`) and calls
   `base` **first**, so the three native checks still run and the override only ever narrows.
+  Every document that says "`CanSignInAsync` is false" for one of those conditions means the
+  override; the native call has no way to express any of them.
   The danger is specific rather than theoretical: ADR-0004 deliberately de-scopes the
   per-validation active-user check and compensates with force-revoke-on-disable, so treating
   the native call as the gate removes the last one there is. A negative test belongs here:

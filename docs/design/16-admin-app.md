@@ -36,14 +36,14 @@ design). The end-user login/consent UI (11) is a different application.
 | Screen | Content | Note |
 |---|---|---|
 | Dashboard | health, audit chain-status badge, proposals awaiting me, key days-to-expiry | |
-| Clients (Applications) | list/search per tenant; grouped-checkbox Permissions form; secret-rollover wizard (parallel keys, no downtime); CORS-origins editor | hardest screen |
+| Clients (Applications) | list/search per tenant; grouped-checkbox Permissions form; secret-rollover wizard (parallel keys, no downtime); CORS-origins editor; **back-channel logout URI** (https-only, SSRF-validated, and an empty value shown as the explicit choice "this relying party accepts bounded logout" rather than as unset, ADR-0019) | hardest screen |
 | Scopes | CRUD + resources/audience | |
 | Grants and Tokens | list by subject/client; single revoke; revoke-all → proposal | |
 | Users | CRUD, lock/unlock, reset; **force-logout**; lifecycle **Invite** (+ pending-approval state), **Disable/Enable**, **Offboard** (dual-control, irreversible warning); **Passkeys panel** (metadata + remove-confirm) | lifecycle in 08 |
 | Roles | CRUD + claims | |
-| Tenants | registry; provision wizard (→ proposal, per-step status); **Suspend/Resume** (→ proposal, semantics warning); `Identifier` read-only post-provision; Memberships editor; Delegated-admin grant picker (capability + subtree + expiry; dangerous → proposal warning) | bodies in 18 |
+| Tenants | registry; provision wizard (→ proposal, per-step status); **Suspend/Resume** (→ proposal, semantics warning); `Identifier` read-only post-provision; Memberships editor; Delegated-admin grant picker (capability + subtree + expiry; dangerous → proposal warning) and grant **revoke**, which is single-actor and step-up gated rather than a proposal (ADR-0010), so the UI must not present it as needing a second approver | bodies in 18 |
 | Branding | design-token form (colors/fonts), https-only logo URL (ProblemDetails validation), live preview | |
-| Approval Inbox | proposals awaiting me / mine / history; diff + justification + `TargetETag`; **Approve = step-up**; Reject/Cancel | dual-control core |
+| Approval Inbox | proposals awaiting me / mine / history; diff + justification + **the guard appropriate to the proposal's `TargetClass`** (an ETag for `mutate`, the create preconditions for `create`, the frozen filter for `query`, ADR-0081), so the two thirds of action types that have no target ETag do not render an empty field; **Approve = step-up**; Reject/Cancel; a `precondition_failed` failure is presented exactly like `target_changed`, since both mean the world moved under the proposal | dual-control core |
 | Audit viewer | taxonomy filter; chain-verify badge; controlled export (a filtered request within 90 days and 10k rows goes direct and is still audited; full, unfiltered, longer or larger is dual-control, and the thresholds are org-configurable) | 15 / 07 |
 | Sessions | list / revoke server-side sessions | |
 | Account/StepUp | re-auth / MFA challenge landing | reuses 11's page |

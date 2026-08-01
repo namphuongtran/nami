@@ -381,7 +381,7 @@ constant-time anti-enumeration contract from 10.
 | # | State | Required UX |
 |---|---|---|
 | E1 | Lockout at login | uniform "invalid credentials", never "account locked"; any lockout notice goes by email |
-| E2 | Disabled user | same uniform message (`CanSignInAsync` gate, disable-not-delete) |
+| E2 | Disabled user | same uniform message (the `CanSignInAsync` **override** gate, 08 section 7; disable-not-delete) |
 | E3 | External-IdP callback failure | friendly retry / choose-another; log server-side, never dump the raw IdP error |
 | E4 | Expired/invalid confirm-email token | dedicated state plus resend (anti-enumeration) |
 | E5 | Expired/invalid reset token | dedicated state plus request-new link; no precise reason |
