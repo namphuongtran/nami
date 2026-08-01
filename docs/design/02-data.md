@@ -450,6 +450,16 @@ CREATE TABLE "AuditLog" (
   "Timestamp"         timestamptz NOT NULL,
   "EventType"         text NOT NULL,
   "ActorSub"          text NULL,                            -- ciphertext at write (crypto-shreddable)
+  "SubjectRef"        uuid NULL,                            -- deterministic subject surrogate: the groupable key
+                                                            --   for per-user abuse rules. Same surrogate as
+                                                            --   ProcessingRestriction and SubjectDek (ADR-0016),
+                                                            --   so erasure destroys ONE mapping. ActorSub cannot
+                                                            --   serve: it is per-subject ciphertext (ADR-0082)
+  "SourceIpHash"      bytea NULL,                            -- keyed HMAC-SHA256, NOT truncated (a collision in an
+                                                            --   abuse rule is false attribution). A pseudonym, not
+                                                            --   anonymisation. Nullable + emission-configurable:
+                                                            --   its DP basis is a pre-GA ratify item (ADR-0082)
+  "ClientId"          text NULL,                            -- registered application id, not PII; never a metric tag
   "ActorChainJson"    jsonb NULL,                           -- ciphertext at write
   "OnBehalfOfSubject" text NULL,                            -- ciphertext at write
   "ApproverSub"       text NULL,                            -- ciphertext at write

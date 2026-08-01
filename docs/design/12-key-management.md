@@ -441,7 +441,8 @@ the blast radius per token format so an operator can tell what a given loss actu
 ### 5.9 Key-health observability
 
 This design owns the key-specific instruments; the numeric SLO table itself is 19's. A
-`key_rotations` counter, a `keys_loaded` gauge, and a `signing_key_days_to_expiry`
+`nami.identity.key_rotations` counter, a `nami.identity.keys_loaded` gauge, and a
+`nami.identity.signing_key_days_to_expiry`
 observable gauge whose low-value alert routes to the key-rotation runbook, so an
 approaching expiry is a scheduled task rather than an incident. A JWKS-availability burn
 alert **pages**, because JWKS being down breaks every verification everywhere at once; its

@@ -237,7 +237,9 @@ this view deliberately stops at the mechanism.
   controls are added: a pluggable risk-triggered challenge, off in development, on the login,
   reset, device-verification, and signup paths; and **per-source-address failure scoping
   alongside per-account lockout** so fail-spam from one address cannot lock a victim out, with
-  a distinct alert for many lockouts on one account (ADR-0042).
+  a distinct alert for many lockouts on one account (ADR-0042), produced by the built-in
+  detector over the audit lane rather than by a metric rule, because a per-account
+  dimension is forbidden on the metric lane (ADR-0082, ADR-0083).
 * **Anti-enumeration covers latency, not just the response body.** The account-recovery
   endpoints return the same response **and the same latency** whether or not the account
   exists, with no HTTP or timing branch, and a latency-invariance test is a permanent

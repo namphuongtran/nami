@@ -88,6 +88,23 @@ name, which is consumer-facing.
 | `nami.identity.consent` | counter | `granted` or `denied` |
 | `nami.identity.client_secret_validation` | counter | `result` |
 | `nami.identity.user_logout` | counter | `scheme` |
+| `nami.identity.key_rotations` | counter | none |
+| `nami.identity.keys_loaded` | gauge | none |
+| `nami.identity.signing_key_days_to_expiry` | observable gauge | `kid`, bounded by the key count |
+| `nami.identity.abuse_detections` | counter | `rule`, `severity` |
+
+The last four were **absent from this table while being referenced elsewhere**, three of
+them unprefixed. ADR-0085 is the authority for the names and freezes them as public API;
+ADR-0077 remains the authority for the tags. `nami.identity.abuse_detections` is the
+ADR-0083 bridge, the bounded output of an unbounded input, which is how a per-principal
+abuse finding reaches an on-call pager without a forbidden tag on this lane.
+
+Built-in instruments are **never** prefixed: `http.server.request.duration`,
+`aspnetcore.rate_limiting.*`, `aspnetcore.authentication.*` and the Kestrel meters are
+semantic-convention names, and prefixing one is the clash the naming guidance warns about.
+The rate-limiting meter carries only `policy` and `result` and exports no partition key, so
+it is bounded by construction and usable here even though the limiter itself partitions by
+user, address, or client.
 
 `ActivitySource` spans wrap the same seams: authorize, token issuance,
 introspection, and revocation. A rename or removal of any name above is a breaking
@@ -95,8 +112,8 @@ change under the SemVer policy, and a migration to native instrumentation if Ope
 issue #1345 lands is handled under the same deprecation window (ADR-0044 section G,
 ADR-0021).
 
-Key-health gauges (`key_rotations`, `keys_loaded`, and
-`signing_key_days_to_expiry`, the last an `ObservableGauge` computing
+Key-health gauges (`nami.identity.key_rotations`, `nami.identity.keys_loaded`, and
+`nami.identity.signing_key_days_to_expiry`, the last an `ObservableGauge` computing
 `(keyExpiry - UtcNow).TotalDays`) are owned by [12](12-key-management.md); this design
 consumes them for alerting and does not define them.
 
@@ -388,8 +405,8 @@ this design fixes is the constraint, not the prose.
 |---|---|---|---|
 | Fast or mid-burn on token latency or availability | page | page on-call, auto-freeze | `rb-slo-burn` |
 | JWKS-availability burn | page | page on-call (JWKS down breaks every verify) | `rb-jwks-down` |
-| `keys_loaded` false, or readiness failing | page | page on-call | `rb-keys-not-loaded` |
-| `signing_key_days_to_expiry` low | ticket | ticket key-ops | `rb-key-rotation` |
+| `nami.identity.keys_loaded` false, or readiness failing | page | page on-call | `rb-keys-not-loaded` |
+| `nami.identity.signing_key_days_to_expiry` low | ticket | ticket key-ops | `rb-key-rotation` |
 | Stale scheduler run heartbeat (no successful run in more than two intervals) | ticket | ticket | `rb-scheduler-stale` |
 | Slow burn on any SLI | ticket, plus feature freeze | ticket | `rb-slo-budget` |
 | Sustained rate-limit or load-shed 503 spike | ticket, escalating to page | investigate saturation | `rb-load-shed` |
@@ -570,7 +587,7 @@ re-verified here:
 - A collector-outage test proves p99 `/token` is unchanged and the audit lane does not drop; a `View`-attached assertion proves the cardinality cap is live.
 - **Redaction assurance** runs after an erasure saga for a subject and scans the diagnostic, log, trace, and metric-tag output **including the SIEM forward lane**, asserting no PII of the erased subject remains; the short-TTL expiry of the diagnostic lane reconciles the residual rather than a second erasure pass ([17](17-erasure-and-data-subject-rights.md)).
 - The external canary fails and pages when JWKS publication, a certificate, or DNS breaks even while all pods report ready; a game-day injects error to drive the budget fast (page plus freeze) and slow (ticket plus feature-freeze); a CI check confirms every page-severity alert links a runbook.
-- The Silo fan-out scenario asserts the connection count stays inside `max_connections` behind PgBouncer, and `keys_loaded=false` fails `/health/ready` so the platform holds traffic.
+- The Silo fan-out scenario asserts the connection count stays inside `max_connections` behind PgBouncer, and `nami.identity.keys_loaded=false` fails `/health/ready` so the platform holds traffic.
 - Chaos scenarios measure SLO impact under fault: AZ loss, PostgreSQL and PgBouncer failover, pod-kill mid-issuance, and a Redis outage under load that verifies **the carve-out rather than a blanket fail-open**, namely that ordinary caches fail open while the distrusted-kid set and the DPoP `jti` store fail **closed** (ADR-0040, ADR-0039; [13](13-revocation-propagation-and-caching.md), [06](06-sender-constrained-tokens.md)).
 - A mixed-version rolling-deploy compatibility test, and a JWKS output-cache eviction-after-rotation test which must also show that the cache TTL and eviction do not stretch the out-of-JWKS window past the 5-minute break-glass SLO of ADR-0007.
 
@@ -583,7 +600,7 @@ re-verified here:
 - **Verify before build**: the load-test gate on the target hardware; the per-core RSA and ECDSA signing rate measured on the target node rather than quoted; PgBouncer pool tuning under the Silo fan-out scenario; and the exact .NET 10 API surface of `Microsoft.Extensions.Telemetry` and `Microsoft.Extensions.Compliance.Redaction`, which ADR-0022 also lists as pending.
 - **Decommission marker (ADR-0021)**: retire the custom meter for native instrumentation if OpenIddict issue #1345 lands.
 - **Consumer monitoring and metrics reference (build-time, M1)**: publish an operator-facing reference that documents enablement and OTLP export configuration and then catalogs every emitted metric (name, instrument type, unit, description, and its bounded attributes) plus the standard attributes, so an operator can point their own Collector at Nami and know exactly what it provides. The metrics themselves are the stable contract fixed by ADR-0044 section G and named per ADR-0065; the reference is finalized against the real instruments when code lands, with a docs-code-sync check asserting every emitted instrument appears in it.
-- **Cross-doc consistency (with [12](12-key-management.md))**: the keys-health gauge names owned by 12 (`key_rotations`, `keys_loaded`, `signing_key_days_to_expiry`) do not carry the `nami.`-rooted prefix that the telemetry-naming rule (ADR-0065) requires, and should, for full contract conformance; raised here, to be reconciled when 12 is next revised, rather than renamed across a committed doc from here.
+- **Cross-doc consistency (with [12](12-key-management.md)): resolved 2026-08-01 by ADR-0085.** This bullet used to record the key-health gauge names as unprefixed, correctly attribute the rule to ADR-0065, and defer the rename. The attribution was right and the deferral is why it never closed: ADR-0065 states that metric names are contract under a `nami.`-rooted scheme and points at ADR-0022 and ADR-0044, ADR-0044 section G says the names are versioned without saying which names, and ADR-0022 scopes itself out. **Three ADRs asserted the rule and none held the list**, so there was nothing to rename *against*. ADR-0085 supplies the catalogue and all sixteen unprefixed occurrences are now fixed. The cost of leaving it was concrete rather than cosmetic: the cap below attaches by name, and a view selector matching no instrument is silently inert.
 
 ## 11. Sources
 

@@ -75,6 +75,9 @@ classDiagram
     +string EventType
     +string Outcome
     +string ActorSubCiphertext
+    +Guid? SubjectRef
+    +byte[]? SourceIpHash
+    +string? ClientId
     +Guid TargetTenantId
     +Guid CorrelationId
   }
@@ -93,6 +96,32 @@ classDiagram
 * **`ISecurityEventSink`** records security events: a login failure, a token reject, a replay,
   degraded mode enabled, break-glass. `Outcome` is a field rather than part of `EventType`,
   so a query for "every denial" does not depend on parsing names.
+
+**The three grouping keys, and why the obvious field does not serve** (ADR-0082). Abuse
+rules are per-user, per-client, or per-address, and none of those can be a metric tag under
+ADR-0077, so they must be answerable here. They were not.
+
+* **`SubjectRef`** is the groupable subject key. `ActorSubCiphertext` cannot serve: it is
+  per-subject ciphertext under the crypto-shred default below, so two events for one person
+  need not share a value, and making the encryption deterministic to allow grouping would
+  weaken the shred. `SubjectRef` is the **same** surrogate the processing-restriction table
+  and the `SubjectDek` vault already use (ADR-0016), deliberately, so erasure still has
+  exactly one mapping to destroy. After that destruction the value is an opaque orphan:
+  history still groups, nobody resolves it to a person.
+* **`SourceIpHash`** is a keyed HMAC-SHA256 and is **not truncated**. Truncation buys no real
+  privacy against an input space this small and creates collisions, and a collision in an
+  abuse rule is false attribution, which is worse than none. It is a **pseudonym, not
+  anonymisation**: anyone holding the key can brute-force the address space, so the
+  protection is key custody plus access control, not the hash. Nullable and
+  emission-configurable, because its data-protection basis is a pre-GA ratification item;
+  per-address **detection** does not depend on it (ADR-0083 evaluates the address in a
+  bounded in-memory window that stores nothing).
+* **`ClientId`** is a registered application identifier, not personal data, so it is stored
+  plainly. It stays off the metric lane regardless, because it is unbounded there.
+
+All three are in the **canonical hashed field set from genesis**. Adding one later is a chain
+schema version rather than an ordinary migration, which is the reason they are decided before
+the first rule is written rather than when one is needed.
 
 Both are cloud-agnostic ports (ADR-0006). The default adapter writes to `AuditLog` plus the
 outbox; per-target adapters cover an immutable log store or a SIEM.
@@ -190,6 +219,15 @@ each answers a different attack:
 * **Canonical TEXT.** PostgreSQL `jsonb` does not preserve input byte order, so hashing the
   stored column would produce a hash that depends on the database's internal representation.
   The same canonicalisation is reused if a field is later scrubbed.
+
+**The field set is fixed from genesis, which is why the ADR-0082 grouping keys are added
+now.** `canonical(fields)` covers a specific list, and changing that list changes every
+subsequent record hash: a chain written under one field set cannot be verified under another,
+so introducing a column later is a chain **schema version** with a migration of its own, not
+an ordinary `ALTER TABLE`. `SubjectRef`, `SourceIpHash`, and `ClientId` are therefore in the
+set from the start even though no rule reads them yet. A nullable column that is always null
+costs a null marker in the canonical form; a column added after go-live costs a versioned
+chain.
 
 Storage is append-only: an insert grant only, with update, delete, and truncate revoked, plus
 a blocking trigger as a backstop. **This does not stop a superuser, which is precisely why

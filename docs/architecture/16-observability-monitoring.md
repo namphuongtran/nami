@@ -71,8 +71,11 @@ inventory itself is fixed in the observability design, not in an ADR.
   rejected connections, plus the HTTP client, database, and runtime meters.
 * **Custom**: tokens issued and issue duration, validation latency, revocations, login
   outcomes, consent, client-secret validation, logout, key rotations, and two that exist
-  specifically to make operational failure visible, **`keys_loaded`** and
-  **`signing_key_days_to_expiry`** as an observable gauge.
+  specifically to make operational failure visible, **`nami.identity.keys_loaded`** and
+  **`nami.identity.signing_key_days_to_expiry`** as an observable gauge. Every custom
+  instrument carries the `nami.identity.` namespace, including in the alert table below,
+  because a cardinality cap and an alert rule both bind by name and a name that matches
+  nothing fails silently (ADR-0085).
 * **Operational signals** that no protocol meter would produce: load-shed 503 count,
   connection-pool saturation, Redis fail-open count, the **scheduler last-successful-run
   heartbeat**, node clock offset, and the continuous recovery-point metrics (archiving lag,
@@ -128,8 +131,8 @@ runbook is a defect blocked in CI** (ADR-0041).
 |---|---|---|
 | Fast or mid burn on token latency or availability | Page | Burn-rate response |
 | JWKS availability burn | Page | JWKS unavailable |
-| `keys_loaded` false, or readiness failing | Page | Keys not loaded |
-| `signing_key_days_to_expiry` low | Ticket | Key rotation overdue |
+| `nami.identity.keys_loaded` false, or readiness failing | Page | Keys not loaded |
+| `nami.identity.signing_key_days_to_expiry` low | Ticket | Key rotation overdue |
 | Stale scheduler heartbeat | Ticket | Scheduler stale |
 | Slow burn on any SLI | Ticket, plus feature freeze | Burn-rate response |
 | Sustained rate-limit or load-shed 503 pattern | Ticket, escalating to page | Load shed sustained |
