@@ -63,6 +63,7 @@ is distributed, not what may be relied on during development, so the shipped rel
 | `Duende.AccessTokenManagement` | Apache-2.0 | Section E naming rule: recorded by its real package identifier even though the identifier carries the name of a vendor whose commercial products this project does not name. Concealing it would make the dependency record wrong and defeat the section C gate, which matches on exact package IDs. Published from the vendor's separate FOSS repository, not its commercial line. | Architect | 2026-07-25 |
 | `Duende.AccessTokenManagement.OpenIdConnect` | Apache-2.0 | As above. | Architect | 2026-07-25 |
 | `Duende.IdentityModel` | Apache-2.0 | As above; transitive through the two packages above. | Architect | 2026-07-25 |
+| `Yarp.ReverseProxy` | MIT | Not an exception to the policy: recorded because it was named as a dependency in ADR-0029, ADR-0024, ADR-0061 and design [24](design/24-bff.md) with its licence asserted only in prose, which is blind spot 2 above. Read at the `.nuspec` (`<license type="expression">MIT</license>`, version 2.3.0, repository `github.com/dotnet/yarp`) rather than from a badge. | Architect | 2026-08-01 |
 
 Licences for the three above were verified at nuget.org on 2026-07-25 at versions 4.2.0 and
 8.1.0. See ADR-0026 section E for the exact scope of that naming exception and what it does not

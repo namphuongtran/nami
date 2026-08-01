@@ -12,7 +12,7 @@ tags: [design, admin, ui, bff, razor, mvc, step-up]
 |---|---|
 | ADR-0020 | The Admin App is a presentation-only MVC Razor BFF that consumes the Admin API; no business logic, no direct data access |
 | ADR-0029 | Confidential-client BFF built on the shared `Nami.Identity.Bff` package; token stays server-side; antiforgery mandatory |
-| ADR-0003 / ADR-0019 | Server-side session cookie; receives back-channel logout |
+| ADR-0003 (ref) / ADR-0019 | The App's **own** RP session cookie, correlated to the OP session by `sid` rather than sharing its store ([24](24-bff.md)); receives back-channel logout |
 | ADR-0013 (ref) | Consumes the 401 step-up challenge (RFC 9470) during approvals |
 
 ## 2. Purpose and scope
@@ -28,8 +28,9 @@ the front-end security (antiforgery, CSP, no-token-in-browser, back-channel logo
 
 Out of scope, referenced not redefined: the API surface, DTOs, CRUD semantics, dual-control
 saga, RBAC, bootstrap, and break-glass ([Admin API](15-admin-api.md)); the step-up *enforcement*
-and the challenge *page mechanics* (07 / 11); the BFF package internals (ADR-0029 / the BFF
-design). The end-user login/consent UI (11) is a different application.
+and the challenge *page mechanics* (07 / 11); the BFF package internals, including the two
+anti-forgery profiles, the proxy allow-list, the logout-CSRF guard and the silent-renew 401
+contract ([24](24-bff.md)). The end-user login/consent UI (11) is a different application.
 
 ## 3. Interfaces and contract
 
@@ -65,8 +66,11 @@ behind those DTOs is 02's.
 
 The App is a **confidential OIDC client of the IdP** (dogfooding): authorization code + PKCE,
 `client_secret` migrating to `private_key_jwt`, scopes `openid profile admin-api`, exact-match
-redirect URIs. The session is a `__Host-` HttpOnly/Secure/SameSite=Lax cookie over the
-server-side session store (ADR-0003); it receives back-channel logout (validating
+redirect URIs. The session is a `__Host-` HttpOnly/Secure/SameSite=Lax cookie over the App's **own**
+RP-side ticket store, which is not the ADR-0003 server-side session store: that one is the
+OP's, keyed by a `sid` no relying party mints, and the very fact that this App must
+*receive* a back-channel logout to end its session is what shows the two are separate
+objects ([24](24-bff.md)). It receives back-channel logout (validating
 the signature, `iss`, `aud`, `sid`, and the `events` member, requiring **no `nonce`**, and
 deduplicating on `jti`) so an admin's IdP logout ends the console session. Token management uses `Duende.AccessTokenManagement.OpenIdConnect` (Apache-2.0,
 provider-agnostic, ADR-0026 section D): `AddOpenIdConnectAccessTokenManagement()` plus

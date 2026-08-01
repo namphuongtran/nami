@@ -193,7 +193,7 @@ than running on their own. The ratified set (ADR-0065):
 | `Nami.Identity.Keys` (+ `.Keys.Azure`, `.Keys.Aws`, `.Keys.Gcp`, `.Keys.Vault`) | Key store and rotation, with optional cloud adapters (ADR-0011, ADR-0006) |
 | `Nami.Identity.OpenTelemetry` | Telemetry wiring (ADR-0022) |
 | `Nami.Identity.Validation` | The resource-server validation edge, embedded in the **consumer's** API process (ADR-0049) |
-| `Nami.Identity.Bff` (+ `.Bff.Yarp`) | Backend-for-frontend, with the remote proxy as its own package (ADR-0029) |
+| `Nami.Identity.Bff` (+ `.Bff.Yarp`) | Backend-for-frontend, with the remote proxy as its own package (ADR-0029); the RP-side contract is design [24](../design/24-bff.md) |
 | `Nami.Identity.Contracts` | DTOs shared with the core IdP; zero dependencies |
 | `Nami.Identity.Admin.Contracts` | Admin request and response DTOs plus problem codes; referenced only by the two admin projects |
 

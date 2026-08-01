@@ -228,6 +228,7 @@ and an obligation with no suite is an assertion.
 | Federation security (SSRF egress, RFC 9207 `iss` and mix-up, anti-takeover linking, external-claim allow-list) | [09](09-federation-and-claims-profile.md) |
 | Breached-password check with fail-open behavior | [08](08-user-management.md) |
 | Abuse defense (risk-triggered challenge, lockout-DoS scoping) | [11](11-login-consent-ui.md) |
+| BFF package: no token in any response; anti-forgery profile A blocking both a missing custom header **and** a cross-site simple-content-type POST, which is the bypass a presence-only check allows; profile B letting a server-rendered admin form POST through; `/bff/logout` rejected without a session-bound `sid`; the proxy refusing a backend that is not allow-listed; a renew failure past the ceiling turning `/bff/user` and `/api/*` into `401`; and a `logout_token` ending the correlated session with its `jti` replay guard | [24](24-bff.md), [16](16-admin-app.md) |
 | Load/SLO gate, external canary, collector-outage, chaos | [19](19-observability-capacity-slo.md) |
 
 Because the taxonomy is confirmed against the real suites when the test projects land at

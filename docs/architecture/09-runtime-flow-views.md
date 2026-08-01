@@ -851,8 +851,10 @@ sequence adds little above the component view. They are listed so the omission i
   [14-advanced-flows](../design/14-advanced-flows.md) (the `ath` asymmetry and refresh
   binding).
 * Flow 6: ADR-0029 (the composed BFF, the two anti-forgery profiles, the allow-listed
-  proxy), ADR-0020 (the admin app as the second consumer), ADR-0003 (the session cookie
-  and store).
+  proxy), ADR-0020 (the admin app as the second consumer),
+  [24-bff](../design/24-bff.md) (the RP-side contract, including the ticket store the
+  cookie actually sits over, which is the BFF's own and **not** ADR-0003's), and
+  ADR-0003 only for the OP session that the `sid` here correlates to.
 * Flow 7: ADR-0017 (the saga, the readiness gate, identifier immutability, suspension
   versus deprovision), ADR-0012 and ADR-0033 (key-set establishment per tier), ADR-0054
   (residency), ADR-0010 (the dual-control class).
