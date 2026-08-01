@@ -63,8 +63,12 @@ rather than re-deciding it.
 `xmin` concurrency, and `uuidv7()` are PostgreSQL-specific, so dev equals test equals the
 production engine (PostgreSQL 18). The assertion library is an open build-time pick under
 the permissive-only policy (ADR-0026); FluentAssertions is excluded because it became
-commercially licensed, so an MIT/BSD assertion library is chosen when the test projects
-land.
+commercially licensed, so a library from ADR-0026 section A's permissive set is chosen when
+the test projects land. Two candidates are verified at source with dates in
+[`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 5. **Not "MIT/BSD"**, which is
+how this sentence and two others read until 2026-08-01: the policy also allows Apache-2.0,
+and the narrower phrasing would have ruled out the leading candidate on a constraint no ADR
+imposes.
 
 ### 3.2 What a test must state
 
@@ -306,7 +310,7 @@ Not verified offline, to be confirmed by the ADR-0026 license-scan gate:
 | Component | Purpose | License as stated | ADR |
 |---|---|---|---|
 | OIDF conformance suite | OpenID conformance gate (self-hosted container image, not a compiled dependency) | **MIT**, read at `openid/conformance-suite` `LICENSE.txt` on 2026-08-01 | ADR-0027 |
-| (assertion library) | Fluent assertions | MIT/BSD, chosen at M1 (not FluentAssertions, now commercial) | ADR-0026 |
+| (assertion library) | Fluent assertions | Any of ADR-0026 section A's permissive set, chosen at M1 (not FluentAssertions, now commercial). Verified candidates with dates: [`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 5 | ADR-0026 |
 
 > **Patterns applied (ADR-0066).** Behavior-first tests as an application of Separation
 > of Concerns (assert the contract, not the internals); the test pyramid (many unit, fewer

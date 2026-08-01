@@ -468,8 +468,12 @@ mechanics themselves are [02](02-data.md).
 * **The version tool is settled**, not open: ADR-0027 fixes package versions as generated
   from a single git tag by MinVer. What remains is wiring it, not choosing it.
 * **The assertion library must be permissive** (ADR-0026). A widely used one moved to a
-  commercial licence at its version 8, so it is out; an MIT or BSD alternative is picked at
-  M1, the same licence caution ADR-0020 raised for a mediator library.
+  commercial licence at its version 8, so it is out; an alternative from ADR-0026 section A's
+  permissive set is picked at M1, the same licence caution ADR-0020 raised for a mediator
+  library. Two candidates are already verified at source and recorded in
+  [`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 5, so the pick is a decision
+  and not a research task. This bullet previously said "an MIT or BSD alternative", which is
+  narrower than the policy it cites and would have excluded the Apache-2.0 candidate.
 * **The default continuous-integration provider** is the hosted one for the open-source
   reference; consumers may swap it (ADR-0027).
 * **Standing up a public reference host for certification** is an operations ratification

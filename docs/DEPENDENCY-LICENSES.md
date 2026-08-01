@@ -79,7 +79,7 @@ repository as acceptable.
 |---|---|---|---|---|---|
 | NBomber | Apache-2.0 | **NBomber License Agreement v3.0**, commercial | `LICENSE` inside the NBomber 6.5.0 nupkg | 2026-08-01 | Removed, [ADR-0078](adr/0078-load-test-tooling.md) |
 | k6 | AGPL, kept as "a dev-time tool, not a dependency" with no decision behind it | **AGPL-3.0**, section 13 present. Correctly identified, but the carve-out was never decided | `grafana/k6/LICENSE.md` | 2026-08-01 | Removed rather than carved out, [ADR-0078](adr/0078-load-test-tooling.md) |
-| FluentAssertions | (already excluded) | Commercial from v8 | Excluded before this log existed | 2026-07 | Not taken; assertion library is an M1 pick under section A |
+| FluentAssertions | (already excluded) | Commercial from v8 | Excluded before this log existed | 2026-07 | Not taken; the assertion library is an M1 pick under section A, from the verified candidates in section 5 |
 | Gatling | Apache-2.0, per repository metadata | Core Apache-2.0, **but the standard report module is proprietary**: "No code modification is authorised, no re-use of the code, no copying of all or any part of the code is allowed" | `license/LICENSE.gatling-highcharts.specific.txt` | 2026-08-01 | Not taken, [ADR-0078](adr/0078-load-test-tooling.md) |
 | MediatR, AutoMapper, MassTransit | n/a | Moved to commercial licensing | ADR-0026 section A | 2026-07-04 | Forbidden by name, ADR-0026 |
 
@@ -95,7 +95,38 @@ The three quoted verbatim details matter:
 * **Gatling**: the trap was one directory below the root `LICENSE.txt`. A repository-metadata
   API reported the project as Apache-2.0 and was not wrong about the file it read.
 
-## 5. Maintenance rule
+## 5. Verified alternatives, not yet taken
+
+A package can be verified before it is needed, and recording that verification is worth more
+than repeating it. The rows below are **not adopted**: the assertion library is still an open
+M1 pick under ADR-0026 section A. They exist so the pick is a decision rather than a research
+task, and so nobody re-derives a licence this project has already read.
+
+| Package | Version read | Licence | Read at | Date | Status |
+|---|---|---|---|---|---|
+| `AwesomeAssertions` | 9.5.0 | Apache-2.0 | `<license type="expression">Apache-2.0</license>` in the `.nuspec` inside the distributed nupkg (repository `github.com/AwesomeAssertions/AwesomeAssertions`, commit `bff44eb6`) | 2026-08-01 | Verified, not taken |
+| `Shouldly` | 4.3.0 | BSD-3-Clause | `<license type="expression">BSD-3-Clause</license>` in the `.nuspec` inside the distributed nupkg (repository `github.com/shouldly/shouldly`, commit `cb48f40b`) | 2026-08-01 | Verified, not taken |
+
+Two details are recorded because of what this project has already been caught by.
+
+* **Both declare an SPDX expression, not a licence file.** NBomber in section 4 declared
+  `<license type="file">`, which is what let a commercial licence sit behind a permissive
+  assumption. An SPDX expression is machine-readable and is what the section C scan can act on,
+  so the declaration *form* is itself a signal and is recorded here alongside the value.
+* **`AwesomeAssertions` states an intent never to relicense**, in the README shipped inside the
+  package: "The license will never change, not even to MIT. We will only maintain the original
+  Apache 2.0 license." It also describes itself as "a fork of FluentAssertions controlled by the
+  community", which is why it is the natural fallback for the package section 4 rejected. **A
+  stated intent is not an assurance**, and it does not replace the re-verify-at-adopt-time rule
+  below; it is recorded as a promise, with its wording, so a later reader can weigh it as one.
+
+Apache-2.0 is inside ADR-0026 section A's permissive set ("MIT, Apache-2.0, BSD-2/3-Clause,
+MS-PL, the PostgreSQL License, Unlicense/CC0"). This is worth stating because three documents
+had narrowed the assertion-library constraint to "MIT or BSD", which would have excluded the
+Apache-2.0 candidate above for no reason the policy gives. Those were corrected in the same
+change as this section.
+
+## 6. Maintenance rule
 
 * A new dependency or tool is added to this file **in the same change** that introduces it, with
   the licence read at source and the date recorded. Not "verify later".
