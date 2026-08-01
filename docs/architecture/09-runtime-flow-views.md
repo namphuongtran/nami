@@ -110,7 +110,9 @@ sequenceDiagram
 **Invariants.** `RequireActor` is a **precondition to any capability check**: the
 request must carry a real user (a `sub` plus **`auth_time`** on the `admin-api`
 audience; `amr` must never be used here, because it is id_token-only and so is never on
-the access token this policy inspects), and an app-only or client-credentials token is rejected with 403
+the access token this policy inspects, and both of those destinations are frozen from v1.0
+by ADR-0088, so this invariant cannot be undone by a claim quietly changing token), and an
+app-only or client-credentials token is rejected with 403
 `admin_requires_actor`. **The policy has exactly one exemption and it is deliberate**:
 the two anonymous probe routes, `/health/live` and `/health/ready` (ADR-0080). A kubelet
 carries no bearer token, so requiring one there is not a stricter posture but a pod that

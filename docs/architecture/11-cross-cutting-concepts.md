@@ -44,6 +44,8 @@ view.
    key, so isolation rests on issuer and audience and the `tenant` claim, never on the
    signature. Dropping it re-opens cross-tenant token acceptance
    ([13-security-architecture](13-security-architecture.md) section 2, ADR-0033, ADR-0049).
+   The `tenant` claim this rests on is frozen by name and destination from v1.0 (ADR-0088),
+   which is why an invariant may name it.
 2. **Every subsystem is classified into one of three failure postures, and there is exactly
    one carve-out.** Performance caches fail open, the diagnostic telemetry path fails open for
    a different reason, and security checks fail closed. The carve-out is the email anti-abuse

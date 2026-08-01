@@ -135,7 +135,9 @@ security rather than by having its own per-tenant deployment.
   ADR-0007 and ADR-0015 (the two break-glass paths and their differing control status).
 * ADR-0009 (machine-to-machine `private_key_jwt`), ADR-0019 (back-channel logout),
   ADR-0048 (introspection and audience confinement), ADR-0049 and ADR-0033 (the tenant
-  boundary invariant, the shared pool-group keyset, and spike A-7 / V27).
+  boundary invariant, the shared pool-group keyset, and spike A-7 / V27), ADR-0088 (the
+  `tenant` claim this view has a resource server bind on is frozen by name and destination
+  from v1.0, which is what makes "bind on the `tenant` claim" safe to write here).
 * ADR-0002 and ADR-0034 (static and dynamic external federation, RFC 9207),
   ADR-0038 (email behind a port with an outbox), ADR-0006 and ADR-0009 (the key and
   secret ports and the database-backed default), ADR-0022 and ADR-0008 (the two

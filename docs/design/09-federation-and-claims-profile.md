@@ -202,9 +202,26 @@ audience is derived from what was actually granted rather than configured per cl
 
 This is the single definition of every bespoke Nami claim. Other designs reference it and
 none redefine it; adding a first-party claim means editing this table **and** the
-`GetDestinations` switch in [04](04-core-protocol.md) in the same change, which the
-regression test in [20](20-testing.md) enforces by asserting that an undeclared claim
-reaches no token.
+`GetDestinations` switch in [04](04-core-protocol.md) in the same change.
+
+**This table is the contract of record, and it is a published consumer surface from v1.0**
+(ADR-0088). What may change and what may not is split by who owns the name: `memberships`,
+`memberships_truncated` and `tenant` are Nami's in full, while `acr`, `amr`, `auth_time`,
+`idp` and `sid` carry a narrower promise, that Nami emits them, to which tokens, and the
+values it supplies where those are Nami's, above all the `urn:nami.identity:aalN` values.
+Removing a claim, renaming one, changing its JSON type or **removing** a destination is a
+major change; **widening** a destination breaks no consumer and still needs an ADR, because
+it puts data into a token ADR-0005 keeps minimal.
+
+**Two assertions guard the table, and only one of them existed before 2026-08-01.** ADR-0075
+makes destinations deny-by-default through the `IClaimsProfileService` choke point and
+publishes a port contract test asserting that a claim with no declared destination is absent
+from an issued token, which catches a claim that should **not** be there. The converse, that
+every claim here reaches exactly its declared destinations and no others, is ADR-0088's and
+catches a claim that should be there and is not. This paragraph previously credited the
+first assertion to the test catalogue in [20](20-testing.md), which contains no such row and
+no mention of ADR-0075 at all; the citation resolved and did not support. Corrected here,
+and the catalogue now carries a row for both directions.
 
 | Claim | JSON shape | Destination | Producer | Consumer |
 |---|---|---|---|---|

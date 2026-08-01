@@ -133,6 +133,7 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0085](../adr/0085-telemetry-instrument-naming.md) | Namespace every custom instrument `nami.identity.` and freeze... | 16 |
 | [0086](../adr/0086-pin-ci-actions-by-commit-sha.md) | Pin every CI action by commit SHA, never by tag | 11 |
 | [0087](../adr/0087-http-surface-snapshot-gate.md) | Lock the HTTP surface with a committed snapshot of the genera... | 18 |
+| [0088](../adr/0088-claims-contract-stability.md) | Freeze the claims contract as a consumer surface, and promise... | 04, 09, 11 |
 
 ## 3. What the shape of that table says
 
