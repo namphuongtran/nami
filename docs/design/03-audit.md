@@ -97,6 +97,9 @@ classDiagram
   degraded mode enabled, break-glass. `Outcome` is a field rather than part of `EventType`,
   so a query for "every denial" does not depend on parsing names.
 
+Both are cloud-agnostic ports (ADR-0006). The default adapter writes to `AuditLog` plus the
+outbox; per-target adapters cover an immutable log store or a SIEM.
+
 **The three grouping keys, and why the obvious field does not serve** (ADR-0082). Abuse
 rules are per-user, per-client, or per-address, and none of those can be a metric tag under
 ADR-0077, so they must be answerable here. They were not.
@@ -122,9 +125,6 @@ ADR-0077, so they must be answerable here. They were not.
 All three are in the **canonical hashed field set from genesis**. Adding one later is a chain
 schema version rather than an ordinary migration, which is the reason they are decided before
 the first rule is written rather than when one is needed.
-
-Both are cloud-agnostic ports (ADR-0006). The default adapter writes to `AuditLog` plus the
-outbox; per-target adapters cover an immutable log store or a SIEM.
 
 **Three anti-patterns are forbidden, and each has been seen in the wild:**
 
@@ -415,6 +415,13 @@ what worked is useless for incident response and for abuse detection alike.
 
 ## 10. Open and build-time items
 
+* **Spike, not an assumption: the cost of the abuse-detector's read queries against this
+  append-only table** (ADR-0083). The detector groups over `SubjectRef`, `TargetTenantId`
+  and `ClientId` on a table whose whole write pattern is append-only and hot. Whether that
+  needs an index, and which, is **unmeasured**, and this repository has already learned that
+  an assumed index need can be wrong: spike A-6 found the prune index it presumed was not
+  required. So the query plan is measured before an index is added, rather than an index
+  added because grouping sounds expensive.
 * **DPO and Security ratify** the minimum event catalog, the retention window (obligation-bound
   under Article 17(3) and Recital 65, explicitly **not** "keep forever"), the redaction policy,
   and the concrete write-once or SIEM destination (ADR-0008, and the pre-GA checklist).

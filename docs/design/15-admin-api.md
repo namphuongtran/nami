@@ -566,6 +566,23 @@ first-admin seed is idempotent and forces a change; Scalar performs a real OIDC 
 ## 10. Open and build-time items
 
 - `Admin.TenantScope` rehome (move its set-tenant-context side effect before retiring it, 07).
+- **Verify at build (ADR-0084): does a tenant-scoped subject revoke actually honour the tenant
+  filter?** Step 3 of the membership-removal cascade revokes that subject's tokens and
+  authorizations **scoped to this tenant**, which presumes the store query applies the
+  Finbuckle filter when the ambient tenant is set. Spike A-4 proved the filter applies to
+  store queries in general, but **not specifically for the subject-wide revoke API**, so this
+  is asserted by a test rather than by this document. If it turns out not to hold, the
+  cascade needs an explicit tenant predicate, not a wider revoke: a subject-wide revoke would
+  cut the person out of every tenant, which is a different operation.
+- **Open, needs a decision (ADR-0081): what `TargetId` holds for a `query`-class proposal.**
+  The column is `NOT NULL` and a bulk `audit-export` has no row to name. For `create` the
+  column reads naturally as the identifier of the thing to be created; only `query` is
+  genuinely stuck. The corpus this taxonomy came from left `TargetId NOT NULL` untouched
+  while relaxing `TargetETag` for the same reason, so it is inconsistent on exactly this
+  point rather than a decision to inherit. Candidate: a stable digest of the filter frozen
+  in `PayloadJson`, which keeps the column non-null, identifies *which* export, and gives
+  dedup and idempotency for free. Not adopted here, because inventing a semantic for a
+  column is how an unsourced claim enters the schema.
 - Proposed catalog additions (`proposal.*`, `audit_read`) into the ADR-0008 minimum-catalog gate.
 - 02 schema: `DualControlProposals` gains `FailReason`/`FailDetail` + the lifecycle timestamps
   (added in 02).
