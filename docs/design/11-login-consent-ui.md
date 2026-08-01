@@ -228,6 +228,27 @@ over the `SessionParticipatingClients` rows, mints a fresh `logout_token` on eac
 retries with backoff (attempt cap about five, total about ten minutes), and dead-letters.
 Interactive logout never blocks on the fan-out.
 
+**Two ordering rules carry the guarantee, and both are easy to lose in implementation.**
+First, the delivery rows are enqueued **in the same transaction as the session revoke**, the
+same boundary the email design takes for its critical flows (ADR-0038): if the revoke
+commits and the rows do not, the session is gone and no relying party is ever told. That is
+not a local exception to the one-aggregate-per-transaction rule either; ADR-0059 already
+names "the transactional-outbox write of an audit or outbox record within that same
+transaction" as the deliberate atomic-capture exception, an infrastructure concern rather
+than a second aggregate. Second,
+**the immediate dispatch runs after the response is written, never before** (ADR-0019).
+
+**The immediate dispatch is best-effort and deliberately has no retry of its own.** Once the
+rows are committed, the logout handler fires one parallel POST attempt per participating
+relying party and does not wait for the results before completing the response, so the
+common case is near-immediate without adding the N-call latency the outbox exists to remove.
+A success marks its row `delivered`; anything else is simply left `pending` for the relay.
+The dispatch attempts **at most once per relying party**: every retry, backoff and
+dead-letter decision belongs to the relay alone, because two delivery paths with two retry
+policies would let one relying party receive logout tokens governed by different rules. A
+dispatch that never runs at all, because the pod died first, costs nothing but latency, and
+that is the property that makes the guarantee independent of it.
+
 "Log out everywhere" maps to the built `RevokeBySubjectAsync` (owned by 08 / revocation
 propagation 13) plus session revocation, never the single-token `/connect/revoke` endpoint.
 Force-logout is a ticket-store row removal, effective on the next request on any node with

@@ -111,12 +111,15 @@ never receive a `logout_token`. That is a failed logout, not a bookkeeping detai
 Both control-plane contexts share one physical database, so the class-A foreign keys to
 `Tenants` still resolve.
 
-> **Open item, recorded rather than closed.** The outbox-for-every-logout mechanism itself
-> has never been justified in this repository: ADR-0019 lists "at-least-once delivery with
-> retry" as a cost without arguing why at-least-once needs a durable queue in front of
-> **every** logout rather than in front of failures only. The class-B correction above fixes
-> the isolation defect and deliberately leaves the mechanism unchanged. Revisiting it is a
-> decision for ADR-0019, not for this design.
+> **Closed 2026-08-01, and the open item that stood here was itself wrong.** It claimed the
+> outbox-for-every-logout mechanism "has never been justified in this repository". It had
+> been, a week earlier: ADR-0019 gained two paragraphs on 2026-07-25 arguing the guarantee
+> and recording the direct-post posture Nami deliberately rejects. The false claim was
+> written here on 2026-08-01 by carrying the design corpus's framing across without
+> re-reading this repository's own ADR-0019, which is the defect this repository keeps
+> finding in others. The mechanism is now settled in ADR-0019: the outbox stays and carries
+> the guarantee, with a best-effort immediate dispatch after the response for the common
+> case. The class-B correction above remains the fix for the isolation defect.
 
 ```mermaid
 graph LR
@@ -129,7 +132,7 @@ graph LR
   id[(IdentityDbContext<br/>global: users, roles, claims)]:::store
   dp[(DataProtectionDbContext<br/>global: DP keyring)]:::store
   cp[(ControlPlaneDbContext<br/>global, pooled: tenants, memberships,<br/>delegated admin, audit, keys, sessions)]:::store
-  cpt[(ControlPlaneTenantDbContext<br/>tenant-scoped, non-pooled: logout outbox,<br/>email outbox, suppression, branding, restrictions)]:::store
+  cpt[(ControlPlaneTenantDbContext<br/>tenant-scoped, non-pooled: email outbox,<br/>suppression, branding, restrictions)]:::store
 
   ent -->|IsolationMode Pool| pool
   ent -->|IsolationMode Silo| silo

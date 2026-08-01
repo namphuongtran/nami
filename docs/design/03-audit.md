@@ -256,7 +256,9 @@ kept minimal and everything expensive runs behind it.
 * **The tenant is captured at emission**, from the request's resolved tenant or the target
   tenant of an admin action, and stored as `TargetTenantId`. The store is global and
   tenant-tagged, so the forwarder reads globally and preserves each row's tag; it does **not**
-  rely on an ambient tenant at forward time, unlike the tenant-scoped mail and logout outbox.
+  rely on an ambient tenant at forward time, unlike the tenant-scoped mail outbox. (The
+  logout delivery table is **not** tenant-scoped: it is class B global, because one `sid`
+  spans a tenant switch, see [02](02-data.md) section 1.)
   A missing tag fails the write rather than defaulting to a wrong tenant.
 
 These are elaborations within ADR-0008, not a new decision. Going fully asynchronous for the

@@ -658,8 +658,11 @@ sequenceDiagram
   Note over LO: also triggered by revoke or absolute expiry
   LO->>SS: revoke the session row, sid
   LO->>OB: enqueue delivery intent per participating client
+  Note over LO,OB: one transaction, so a committed revoke always has its rows
   LO-->>U: top-level redirect, does not block on fan-out
-  RB->>OB: claim intent, SKIP LOCKED
+  LO->>RP: best-effort dispatch after the response, one attempt, no retry
+  RP-->>LO: 200 marks delivered, anything else stays pending
+  RB->>OB: claim whatever is still pending, SKIP LOCKED
   RB->>RB: mint a fresh logout_token, typ logout+jwt, jti, exp under 2 min
   RB->>RP: POST logout_token
   RP-->>RB: 200, mark delivered, else backoff then dead-letter
@@ -670,7 +673,12 @@ sequenceDiagram
 That ordering matters: a minted token queued at enqueue time would be a bearer credential
 sitting at rest, and it would already be near expiry by the time a retry ran. The trigger
 is **session end by any cause**, active logout, revoke, or absolute expiry, not only an
-end-session call. Interactive logout **never blocks** on the fan-out. The token carries
+end-session call. Interactive logout **never blocks** on the fan-out, which is why the
+best-effort dispatch runs **after** the response is written and takes **one** attempt with
+no retry of its own: the guarantee comes entirely from the committed rows, so a dispatch
+that never runs costs latency and nothing else, and a second retrying path would let one
+relying party be governed by two policies (ADR-0019). The rows are committed in the **same
+transaction** as the session revoke, or a committed revoke could leave nobody to notify. The token carries
 `typ=logout+jwt`, the `backchannel-logout` events member, `iat`, a `jti` replay guard, no
 `nonce`, and an `exp` under about two minutes; the spec permits `sub` and/or `sid`, and
 Nami uses **`sid`**, so a logout ends exactly the one session that ended rather than every
