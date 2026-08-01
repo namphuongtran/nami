@@ -26,6 +26,26 @@ have. It warns rather than fails, because an untracked work-in-progress file is 
 mid-edit; staging is still what makes the verdict cover it. CI cannot reach this case, its
 checkout being tracked-only.
 
+## check-decisions-index.py
+
+Checks the architecture layer's reverse index,
+[`docs/architecture/18-decisions-index.md`](../docs/architecture/18-decisions-index.md),
+against the files it is derived from. `check-adrs.sh` Check 7 verifies only that every ADR
+has a **row** there; this verifies what the row says, which is the part a second index gets
+wrong. It compares the "Views that cite it" column against the numbered views, and the
+`Decision` column against each ADR's own H1 title, since that column quotes the title rather
+than paraphrasing it.
+
+```bash
+python3 scripts/check-decisions-index.py                # compare; exits 1 on drift
+python3 scripts/check-decisions-index.py --print-table   # emit the correct rows
+```
+
+It never writes to the index. Python 3 with no third-party packages, kept separate from
+`check-adrs.sh` rather than folded into it: that script is deliberately portable bash, and
+comparing two derived tables in bash 3.2 would be a weaker copy of a rule that can be
+written once here. Not currently a CI gate, though it exits non-zero so it can become one.
+
 ## Pre-commit hook (opt-in, maintainers)
 
 Enable once per clone:

@@ -37,10 +37,20 @@ views must I re-read when this decision changes".
 
 Two things follow for anyone editing a view here:
 
-- **Section 2's table is regenerated from the views, not hand-maintained.** The generator
-  is printed in that file's section 1. Adding or removing an `ADR-NNNN` mention anywhere in
-  a view changes what the generator would produce, so **run the generator and diff**;
-  a spot-check has given a false green here before.
+- **Section 2's table is derived from the views, not hand-maintained.** Adding or removing
+  an ADR reference anywhere in a view changes what it should contain, so **run the
+  checker**, which compares rather than prints:
+
+  ```bash
+  python3 scripts/check-decisions-index.py
+  ```
+
+  A spot-check of a few rows has given a false green here before, which is why the printed
+  snippet that used to live in section 1 was replaced by a script that exits non-zero.
+  **Do not write a concrete four-digit ADR reference into this file.** The old snippet
+  globbed every markdown file in this folder, so one written here emitted `CLAUDE.md` as a
+  phantom view; the script excludes it, but the habit is what the numbered-view rule
+  protects.
 - Check 7 verifies **membership only**, never the "Views that cite it" column. Its green
   says nothing about whether the cell contents are current.
 

@@ -22,24 +22,39 @@ wins and the view is the bug**, because an accepted decision binds until superse
 
 ## 1. How this table stays true
 
-It is **generated from the views' `Sources` sections**, not hand-maintained, so it cannot
-silently drift from them. Regenerate and diff with:
+It is **derived from the views**, not hand-maintained. Check it, and regenerate the rows,
+with:
 
 ```bash
-python3 - <<'EOF'
-import re,glob,os
-v={os.path.basename(p):set(re.findall(r'ADR-(\d{4})',open(p).read()))
-   for p in glob.glob('docs/architecture/*.md') if 'README' not in p}
-for p in sorted(glob.glob('docs/adr/[0-9][0-9][0-9][0-9]-*.md')):
-    n=os.path.basename(p)[:4]
-    print(n, sorted(f.split('-')[0] for f in v if n in v[f]) or 'NONE')
-EOF
+python3 scripts/check-decisions-index.py                # compare; exits 1 on drift
+python3 scripts/check-decisions-index.py --print-table   # emit the correct rows
 ```
 
-A caveat worth stating rather than hiding: the generator counts **any** mention of an ADR
-number in a view, including one inside that view's own `Sources` list or in a passing
-cross-reference. So a listed view is one that **touches** the decision, not necessarily one
-that depends on it. For the "what must I re-read" question that is the right side to err on.
+It compares the "Views that cite it" column against the views, and the `Decision` column
+against each ADR's own H1 title, since that column quotes the title rather than paraphrasing
+it. Guardrail Check 7 covers only **membership**, that every ADR has a row here and every row
+resolves, and says nothing about either column's contents.
+
+**This replaced an inline generator on 2026-08-01, and the two sentences it replaced were
+both wrong.** The first claimed the table was generated "from the views' `Sources` sections",
+which the caveat below already contradicts. The second claimed that being generated meant it
+"cannot silently drift", but the snippet only *printed* ninety lines and left the comparison
+to the reader's eye, so drift was exactly as silent as if nothing existed; a spot-check of a
+few rows had already returned a false green. The snippet had also become quietly wrong: it
+globbed `docs/architecture/*.md` excluding only `README`, so
+[`CLAUDE.md`](CLAUDE.md) joined its input the day that file was created, and a single
+four-digit ADR reference written there would have emitted `CLAUDE.md` as a view. Verified on
+2026-08-01 by adding one: the old snippet printed `0057 ['01', '19', 'CLAUDE.md']` where the
+script prints `01, 19`. The script takes only the numbered `NN-` views.
+
+A caveat worth stating rather than hiding, and unchanged because changing it would change
+what this table means: a mention is **any** occurrence of an ADR number in a view, including
+one inside that view's own `Sources` list or in a passing cross-reference. So a listed view
+is one that **touches** the decision, not necessarily one that depends on it. For the "what
+must I re-read" question that is the right side to err on.
+
+Not yet a CI gate. The script exits non-zero so it can become one, and until it does this
+table's column is only as current as the last person who ran it.
 
 ## 2. ADR to view
 
