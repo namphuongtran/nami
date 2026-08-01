@@ -55,8 +55,17 @@ rate-limiting/load-shedding and revocation mechanisms
 (ADR-0006, ADR-0074), whose continuous-monitoring metrics this pipeline carries but
 whose thresholds belong to [12](12-key-management.md). Content-Security-Policy
 finalization is a security-hardening concern, not an observability one, and is deferred to
-[20 testing](20-testing.md); note that **no ADR in this repository owns the policy
-values**, which 20 records as an open item rather than a citation.
+[20 testing](20-testing.md). **Corrected 2026-08-01:** this sentence continued "note that
+**no ADR in this repository owns the policy values**, which 20 records as an open item rather
+than a citation". That was true when written and is not now:
+[ADR-0091](../adr/0091-browser-facing-response-headers.md) owns the values, the framing
+posture, and the rest of the browser-facing set, and 20 section 10 records the item as closed.
+One part of that decision belongs to **this** document rather than only to 20. ADR-0091
+parameter H ships **no report collector**: a policy-violation report goes to an
+operator-configured endpoint, so it is not a lane this pipeline carries. An unauthenticated
+report sink on an identity provider would be a new ingest surface and a new personal-data
+path, and it is named here so that nobody adds one on the assumption that violation reports
+are observability.
 
 ## 3. Interfaces and contract
 

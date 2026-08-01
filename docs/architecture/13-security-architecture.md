@@ -251,11 +251,13 @@ this view deliberately stops at the mechanism.
   discarded, and the identifier rotates again on step-up (ADR-0003).
 * CORS is **per-client through a policy provider**, not one static global policy (ADR-0050).
   A TLS floor applies both at the edge and in the application (ADR-0073, ADR-0076), and the
-  edge additionally carries the controls ADR-0073 parameter A lists, which are transport and
-  volumetric rather than browser-facing. The browser-facing headers are a separate axis: the
-  **strictness** of the Content Security Policy is ADR-0072 parameter C, a rendering-stack
-  decision rather than an edge one, while its concrete directive values are decided nowhere
-  and the [testing design](../design/20-testing.md) section 10 carries that as an open item.
+  edge additionally carries the five other controls ADR-0073 parameter A lists, of which the
+  only response header is strict transport security. The browser-facing headers are a separate
+  axis, and both halves of it now have an owner: the **strictness** of the Content Security
+  Policy is ADR-0072 parameter C, a rendering-stack decision rather than an edge one, and the
+  concrete directive values, the anti-framing posture, and the rest of the browser-facing set
+  are ADR-0091, which fixes them as three profiles selected by response class and lands two
+  invariants in ADR-0043.
   The application emits its own strict-transport-security header
   rather than relying on the edge to, with a one-year `max-age` and with `includeSubDomains` and
   `preload` left **off and owned by the operator**, because both reach domains Nami does not own.
@@ -333,8 +335,9 @@ A short list, not the threat model. Each row names the control rather than the i
   is added, latency-uniform anti-enumeration, session-fixation defence, per-client CORS),
   ADR-0051 and ADR-0026 (supply-chain integrity and the license gate), ADR-0062 (the ASVS
   baseline), ADR-0072 parameter C (the Content Security Policy's strictness, which is a
-  rendering-stack decision and not an edge or transport one; the directive values are decided
-  nowhere).
+  rendering-stack decision and not an edge or transport one), and ADR-0091 (the browser-facing
+  response-header baseline: the directive values ADR-0072 left open, the three response
+  profiles, and the outright denial of framing).
 * Reconciled against the design corpus's security view on 2026-07-25. Taken from it: the
   four-boundary trust diagram, the three-layer isolation framing with the signature caveat as
   its centrepiece, the token and key protection inventories, the administration controls, the
@@ -359,9 +362,22 @@ A short list, not the threat model. Each row names the control rather than the i
   requirement while never mentioning a content-security policy. That is the compound-sentence
   shape the repository conventions name as the first place to look, where a pointer at the end
   attaches to the wrong clause, and this layer is the one that may not introduce a claim. The
-  policy's real owner for **strictness** is ADR-0072 parameter C; its **values** have no owner,
-  which the [testing design](../design/20-testing.md) section 10 records. Neither the count of
-  items nor the count of citations was wrong, which is why nothing flagged it.
+  policy's real owner for **strictness** is ADR-0072 parameter C; its **values** had no owner at
+  that point, which the [testing design](../design/20-testing.md) section 10 recorded and
+  ADR-0091 closed later the same day. Neither the count of items nor the count of citations was
+  wrong, which is why nothing flagged it.
+* **The replacement written on 2026-08-01 was itself wrong, in the same shape, and this is the
+  second correction to one bullet in one day.** It read that the edge "carries the controls
+  ADR-0073 parameter A lists, which are transport and volumetric rather than browser-facing".
+  Parameter A's list contains **strict transport security**, which is a browser-facing response
+  header, so the characterisation was false about one of its six items and false in the direction
+  that mattered, since the sentence existed to separate the two axes. It was found while writing
+  ADR-0091, whose parameter A needed the same distinction and states it as what it is: the only
+  response header on the edge's list is strict transport security, and ADR-0076 parameter A
+  already places that one in the application's own pipeline. The lesson is not about this
+  sentence. **A summarising adjective over an enumerated list is a claim about every member of
+  it**, so it has to be checked member by member, and a correction is exactly where that check
+  gets skipped because the attention is on the thing being fixed.
 
 ---
 

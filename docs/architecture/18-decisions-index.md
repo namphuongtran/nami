@@ -151,7 +151,7 @@ table's column is only as current as the last person who ran it.
 | [0088](../adr/0088-claims-contract-stability.md) | Freeze the claims contract as a consumer surface, and promise... | 04, 09, 11, 18 |
 | [0089](../adr/0089-self-service-surface-conventions.md) | Give the self-service surface its own conventions, while it s... | 18 |
 | [0090](../adr/0090-versioned-api-base-path.md) | Serve Nami's own APIs under the base path `/api/v1`, and rule... | 18 |
-| [0091](../adr/0091-browser-facing-response-headers.md) | Fix the browser-facing response-header baseline as three prof... | 18 |
+| [0091](../adr/0091-browser-facing-response-headers.md) | Fix the browser-facing response-header baseline as three prof... | 13, 18 |
 
 ## 3. What the shape of that table says
 
@@ -169,10 +169,9 @@ the other.
 > view (ADR-0079, ADR-0087, ADR-0089, ADR-0090), not the five the paragraph on zeros claims:
 > ADR-0045 is counted there as a zero while its own row reads `11, 18` and the same paragraph
 > says it is reachable through view 11's governance row, so the two halves of that paragraph
-> contradict each other. **ADR-0091 joins that set on the same date and takes the measured
-> figure to five**, and it leaves again when the security view cites it in the companion change
-> that reconciles the layers to it, so it is a work in progress rather than a finding like the
-> four above. And **eight** decisions sit at a single view (ADR-0000, ADR-0045,
+> contradict each other. ADR-0091 briefly joined that set when it was written and left it in the
+> companion change, which is why the figure is still four. And **eight** decisions sit at a
+> single view (ADR-0000, ADR-0045,
 > ADR-0066, ADR-0070, ADR-0078, ADR-0084, ADR-0085, ADR-0086), not the five named at the end of
 > this section; ADR-0084 moved from zero to one when its gap was closed and the tally did not
 > follow. The sixteen at two views is correct. Both stale figures are the count-versus-list

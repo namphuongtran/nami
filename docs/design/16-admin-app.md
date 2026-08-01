@@ -14,6 +14,7 @@ tags: [design, admin, ui, bff, razor, mvc, step-up]
 | ADR-0029 | Confidential-client BFF built on the shared `Nami.Identity.Bff` package; token stays server-side; antiforgery mandatory |
 | ADR-0003 (ref) / ADR-0019 | The App's **own** RP session cookie, correlated to the OP session by `sid` rather than sharing its store ([24](24-bff.md)); receives back-channel logout |
 | ADR-0013 (ref) | Consumes the 401 step-up challenge (RFC 9470) during approvals |
+| ADR-0072 / ADR-0091 (ref) | MVC Razor with no client runtime; this console takes the UI response profile, and the branding live preview is the one surface that applies style from the client, so it must use `setProperty` rather than `cssText` (section 5.2) |
 
 ## 2. Purpose and scope
 
@@ -106,8 +107,22 @@ package (which must not depend on the `Admin.*` assemblies).
   not *applied* to the console itself. The Branding
   screen has a client-side **live preview** that renders a sample login card from the entered
   design tokens (never executing tenant CSS). The CSP stays strict (no `unsafe-inline`;
-  CSS-variable-driven, ADR-0072 parameter C), reusing the `SecurityHeadersAttribute` posture
-  from 11.
+  CSS-variable-driven, ADR-0072 parameter C, with the concrete directives now fixed by
+  [ADR-0091](../adr/0091-browser-facing-response-headers.md)), reusing the
+  `SecurityHeadersAttribute` posture from [11](11-login-consent-ui.md) section 7.4.
+
+  **The preview has exactly one implementable form, and the natural way to write it is the one
+  that breaks.** It cannot be a served stylesheet, because the token values are being typed and
+  are not saved yet, and ADR-0091 parameter D admits no nonce anywhere. What survives a strict
+  `style-src` is writing CSS custom properties through the style object,
+  `element.style.setProperty('--nami-primary', value)`, which the policy does not govern.
+  What the policy **blocks** is `element.setAttribute('style', ...)` and, the trap,
+  `element.style.cssText = ...`. Assigning `cssText` is the obvious way to apply a whole token
+  set in one statement, so it is what an implementer reaches for first, and it fails as a
+  silently unstyled preview rather than as an error. Recorded here because this is the only
+  surface in the product that applies style from the client at all. The distinction is
+  documented at MDN and is **not** stated in the CSP specification text, so ADR-0091 carries it
+  with a browser test rather than on the reading alone.
 - **Accessibility and feedback.** Semantic HTML, labelled form controls, keyboard-navigable
   tables and dialogs; every result surfaces a correlation id for audit tracing; secrets and key
   material are never displayed (a newly created secret is shown once, not stored client-side).
@@ -205,9 +220,11 @@ product. Everything else on this surface is ASP.NET Core MVC, Razor, and Bootstr
   `access_token` appears in any response.
 - **Antiforgery** on every state-changing form POST (the server-rendered-form profile, distinct
   from the JS/SPA custom-header CSRF profile, ADR-0029).
-- **Strict CSP** (no `unsafe-inline`, ADR-0072 parameter C), `SecurityHeadersAttribute` reused
-  from 11, whose section 7.4 carries which half of the policy is decided and which is still a
-  build-time task; open-redirect guard (`IsLocalUrl`/allow-list) on every `returnUrl`.
+- **Strict CSP** (no `unsafe-inline`, ADR-0072 parameter C; the directive values, the framing
+  denial, and the rest of the browser-facing set are ADR-0091), `SecurityHeadersAttribute` reused
+  from [11](11-login-consent-ui.md) section 7.4, which now carries the full policy rather than
+  half of it. This console takes the **UI** profile of ADR-0091 parameter B, the same one as the
+  end-user surface; open-redirect guard (`IsLocalUrl`/allow-list) on every `returnUrl`.
 - **No secret/key display;** a newly created secret is shown once and not persisted
   client-side; the live-preview never executes tenant-supplied CSS.
 - **Back-channel logout receiver** ends the console session when the IdP revokes it.

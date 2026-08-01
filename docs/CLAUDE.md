@@ -57,8 +57,10 @@ layers treat insertion as a deliberate act for this reason, and `design/` chose 
 ADR does not contain the claim. A sweep of every `ADR-NNNN` citation in `design/` and
 `architecture/` on 2026-07-29 (`cc982f3`), **2606 of them at that point**, found this class
 three times, and one of them was invented outright: the
-concrete Content-Security-Policy was cited to ADR-0062, which never mentions it, and **no
-ADR fixes the directive values**. The other two were true facts with the wrong owner, which is the
+concrete Content-Security-Policy was cited to ADR-0062, which never mentions it, and at that
+point **no ADR fixed the directive values** (ADR-0091 does, from 2026-08-01; the tense here is
+deliberate, because a finding dated to a sweep should not silently become a claim about today).
+The other two were true facts with the wrong owner, which is the
 same defect at lower cost: the audit chain key cited to ADR-0009 when ADR-0008 is what
 requires it, and a closure-maintenance choice cited to ADR-0024 when no ADR rules on it.
 

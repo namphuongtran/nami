@@ -21,6 +21,7 @@ tags: [design, ui, login, consent, logout, razor, theming, localization]
 | ADR-0053 / ADR-0008 | A hash-chained consent receipt on grant and `consent.revoked` on revoke; branding changes are an `admin_config_change` security event |
 | ADR-0042 / ADR-0038 | Risk-triggered `IChallengeProvider` on login/reset/device/signup (off in Development); per-IP plus per-account lockout; constant-time anti-enumeration |
 | ADR-0062 | OWASP ASVS 5.0 L2 baseline for this whole surface, with each security test tagged to its requirement id |
+| ADR-0072 / ADR-0091 | Razor Pages with no client runtime, and the browser-facing response headers as three profiles: the `SecurityHeadersAttribute` applies the UI profile, `form_post` takes its own, framing is denied outright, and no nonce is available to theming (section 7.4) |
 
 ## 2. Purpose and scope
 
@@ -373,7 +374,13 @@ templates are **not** in v1. Tenant-supplied raw CSS is likewise not in the v1 s
 (`ThemeJson` carries design tokens); if it is ever added, it inherits the same sandbox
 conditions the email templating engine has: a `<style>` block only, no `<script>` and no
 inline event handlers, a controlled CSP `style-src`, and no `url()` to a foreign host,
-since that is an exfiltration and tracking channel. A branding change is
+since that is an exfiltration and tracking channel. **One of those conditions was
+foreclosed on 2026-08-01 and is left in place as the record of a constraint that tightened**:
+ADR-0091 parameter D admits no nonce and no hash on `style-src`, so "a `<style>` block only"
+is no longer available. Tenant raw CSS, if it is ever added, has to arrive the same way the
+tokens now do, as a served stylesheet under `style-src 'self'`, or reopen ADR-0091. That is
+the stricter and cheaper of the two, because a served response can be validated once before
+it is stored rather than on every render. A branding change is
 an `admin_config_change` security event committed synchronously in the same transaction
 (03 / ADR-0008), and branding is per-tenant data under tenant isolation. Asset URLs are
 https-only with SSRF and mixed-content guards.
@@ -520,11 +527,36 @@ Policy" and that a theme requiring `unsafe-inline` is "rejected rather than acco
 and that ADR's consequences commit the login surface to "no `unsafe-inline`, no
 `unsafe-eval`, no `wasm-unsafe-eval` in `script-src`". That is the whole reason the rendering
 stack is server-rendered Razor with no client runtime, so the sentence above is ADR-0072
-being applied here, not a rule this design invents. The **concrete directive values** remain
-unowned and are a build-time task, tracked in [20](20-testing.md) section 10; so does the
-anti-framing posture, since **no ADR names `X-Frame-Options`, `frame-ancestors`, or
-clickjacking** (measured over `docs/adr/` on 2026-08-01), so the header above is applied by
-this design on no recorded decision about what it should contain.
+being applied here, not a rule this design invents.
+
+**The other half was closed later the same day by
+[ADR-0091](../adr/0091-browser-facing-response-headers.md), and the paragraph above understated
+what was missing.** It said the concrete directive values remained unowned and that no ADR named
+`X-Frame-Options`, `frame-ancestors`, or clickjacking, which was accurate as a measurement over
+`docs/adr/` that morning. What it did not know is that the obvious strict policy **breaks this
+page's own protocol**: `response_mode=form_post` returns HTML the engine writes, ending in an
+inline submit script and posting cross-origin to the client, so `script-src 'self'` and
+`form-action 'self'` each stop authorization dead with a blank page and a clean server log.
+ADR-0091 therefore replaces the single policy this section assumed with **three profiles**
+selected by response class, and four consequences land directly on this design:
+
+- The `SecurityHeadersAttribute` named above applies the **UI** profile, not one global policy,
+  and the `form_post` response takes the Protocol HTML profile instead.
+- `frame-ancestors 'none'` with `X-Frame-Options: DENY`, on the strength of ADR-0014 and
+  ADR-0019 having already removed every iframe this design once had (section 5.3). A per-tenant
+  framing allowlist is rejected rather than deferred, so `TenantBranding` gains no such field.
+- The theming clause above offers "CSS variables **or a nonce**". The nonce half is now
+  foreclosed: ADR-0091 parameter D admits no nonce anywhere, and the per-tenant tokens of
+  section 5.5 are served as a **stylesheet response** rather than an inline `<style>` block, which
+  is ADR-0072 parameter E's external-files rule applied to style.
+- Two of ADR-0043's startup invariants now assert the policy, so a consumer who weakens it
+  through configuration fails startup rather than serving.
+- The deferral in the first paragraph, that the values "are finalized in the
+  observability/security hardening phase", is **discharged**. They are decided at ADR level
+  instead, which is where they belonged: a build-time task with no owner is how this sat open for
+  a month. Two residuals survive as a single Pre-GA checklist entry under Security, the
+  enumerated `Permissions-Policy` allowlist and the acceptance of `img-src` admitting any https
+  origin so the external `LogoUri` of section 4 renders.
 
 ## 8. Security and multi-tenancy notes
 
@@ -579,8 +611,11 @@ this design on no recorded decision about what it should contain.
   attestation policy (ADR-0028); challenge/abuse thresholds (ADR-0042/0038); consent
   policy-version governance driving the receipt hash (ADR-0053); redirect_uri guardrail
   thresholds (ADR-0035); ASVS L2 coverage sign-off (ADR-0062).
-- **Deferred to other docs:** the CSP policy values (hardening phase); the consent-receipt
-  schema (17 / ADR-0053).
+- **Deferred to other docs:** the consent-receipt schema (17 / ADR-0053). **The CSP policy
+  values left this list on 2026-08-01**: they were deferred to "the hardening phase", which was
+  not a document and not an owner, and [ADR-0091](../adr/0091-browser-facing-response-headers.md)
+  decides them instead (section 7.4). The two residuals are a Pre-GA checklist entry, not a
+  deferral to another document.
 - **Deferred to v2:** dynamic per-tenant IdP (the single login call-site through
   `IExternalProviderQuery`, ADR-0034); logout extensibility (ADR-0019).
 
