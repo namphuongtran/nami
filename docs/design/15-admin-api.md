@@ -141,7 +141,17 @@ model itself is 08's.
 `GET/POST /tenants` (provision → proposal), `GET/PUT /tenants/{id}` (rejects any `Identifier`
 change → 400 `tenant_identifier_immutable`), `DELETE`/`suspend`/`resume`→proposal,
 `GET/PUT /tenants/{id}/memberships`, `DELETE /tenants/{id}/memberships/{userId}`,
-`GET/POST/DELETE /tenants/{id}/delegated-admin`.
+`GET/POST /tenants/{id}/delegated-admin`,
+`DELETE /tenants/{id}/delegated-admin/{grantId}`.
+
+**Revoking a grant is specified rather than left to the implementer**, because "add a
+DELETE" understates the design content. It is a **soft delete** (`RevokedAt = now`, so the
+row survives and the provenance in `DelegatedAdminGrantDto` is not erased); **idempotent**,
+so a second revoke is also success, since incident-time retries must be safe; **`404` and
+not `403`** for a grant belonging to another tenant, so the endpoint does not confirm the
+grant exists; **step-up gated but not dual-control** (ADR-0010), and **no `If-Match`**
+(ADR-0079), because it is a revocation and a `428` mid-incident is a hazard rather than a
+safeguard.
 
 **Removing a membership is a compound operation, and ADR-0084 is the authority for what
 it guarantees.** There was no `DELETE` here at all until 2026-08-01, so nothing in the
@@ -294,9 +304,13 @@ both deny-by-default:
 The **first admin** is created by the bootstrap seeder (below). After that, granting admin is
 itself an admin action: assigning a global admin role or issuing a delegated-admin grant goes
 through the Admin API under `Admin.Users`/`re_delegate`, and a *dangerous* delegated-admin
-grant is a dual-control proposal (07). Issuing or revoking a delegated-admin grant requires
-`re_delegate` held **directly** on the root tenant plus dual-control (this closes chain
-re-delegation). Admin login requires MFA; sensitive actions require step-up to aal2/aal3.
+grant is a dual-control proposal (07). Issuing **or** revoking a delegated-admin grant
+requires `re_delegate` held **directly** on the root tenant (this closes chain
+re-delegation), but **only issuing is dual-controlled**: revoke is single-actor and step-up
+gated, so one responder can cut off a compromised delegated admin without waiting for a
+second pair of eyes that the attacker may be holding (ADR-0010, and section 3.6 for the
+endpoint's other properties). Admin login requires MFA; sensitive actions require step-up
+to aal2/aal3.
 
 ### 5.2 The dual-control saga (the workflow; the gating rule is 07's)
 

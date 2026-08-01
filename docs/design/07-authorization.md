@@ -159,7 +159,7 @@ Two families, distinguished by one flag:
 | Capability | Inheritable | Meaning |
 |---|---|---|
 | `manage_users`, `manage_clients`, `manage_scopes`, `view_audit`, `view_config` | yes, cascades down the subtree | routine tenant administration |
-| `delete_tenant`, `data_export`, `iam_change`, `re_delegate` | **no**, direct grant only | dangerous or irreversible; additionally gated by step-up and dual-control |
+| `delete_tenant`, `data_export`, `iam_change`, `re_delegate` | **no**, direct grant only | dangerous or irreversible; additionally gated by step-up, and by dual-control on every action that **confers** privilege. Actions that only *reduce* privilege (revoking a grant, removing a membership) are step-up gated and single-actor, because they are the incident path |
 
 **The v1 model is purely additive, so read ADR-0010's "inheritance only narrows" as an
 outcome rather than a rule.** There is no scoped deny row and no parent-deny override: a
@@ -350,10 +350,19 @@ parameters; a different principal approves, itself step-up gated, single-use and
 against that hash; then the action executes. A constructive variant, `approve-user-invite`,
 reuses the same four-eyes saga, gated per tenant by `RequireInviteApproval`.
 
-**Issuing or revoking a delegated-admin grant is itself gated**: it requires `re_delegate`
-held **directly** on the root tenant, plus dual-control. That is the anti-escalation gate
-which makes `re_delegate` meaningful, because without it a delegated administrator could
-mint sub-grants and quietly widen their own reach.
+**Issuing or revoking a delegated-admin grant is itself gated**: both require `re_delegate`
+held **directly** on the root tenant. That is the anti-escalation gate which makes
+`re_delegate` meaningful, because without it a delegated administrator could mint sub-grants
+and quietly widen their own reach.
+
+**Dual-control applies to issuing and deliberately not to revoking** (ADR-0010). Two eyes
+exist to stop authority being *manufactured*; revoke only *destroys* authority, so the same
+control applied there buys nothing and costs the one thing an incident cannot spare. A
+two-person revoke means **no single responder can cut off a delegated admin whose account is
+compromised**, and worse, an attacker sitting on a hijacked admin session could refuse to
+approve their own removal. Revoke is still **step-up gated**, which is the distinction worth
+holding: dual-control costs a second *person*, step-up costs the responder *seconds*.
+Dropping step-up as well would turn a safety control into an attack tool.
 
 The saga aggregate lives in [02](02-data.md) and its workflow and executor registry in
 [15](15-admin-api.md). This design owns the decision and the gating rule.
@@ -440,7 +449,9 @@ permissive licences, and their consistency APIs are a version-dependent seam (AD
 * **Fail-closed on timeout.** A check exceeding the budget returns `Deny`.
 * **No global super-admin and no automatic inheritance.** Every grant anchors to a concrete
   root, and dangerous capabilities never cascade.
-* **Grant management is gated** on `re_delegate` held directly, plus dual-control.
+* **Grant management is gated** on `re_delegate` held directly. Dual-control on **issuing**
+  only; **revoking** is single-actor and step-up gated, so one responder can cut off a
+  compromised delegated admin (ADR-0010).
 * **Confused deputy**: a self-issued cross-tenant token missing `act` is rejected with 403
   and **never** falls back to `sub`, which in a delegation token is the target. An
   on-behalf-of token legitimately has no `act` and is resolved through the mapped
