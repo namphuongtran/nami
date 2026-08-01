@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ADR / docs guardrail (neutral, public). Run by CI and available locally.
 # Checks: template placeholders, ADR cross-reference integrity, ADR index/status,
-# ADR-0061 stack-of-record table membership, and the no-em-dash style rule.
+# ADR-0061 stack-of-record table membership, the no-em-dash style rule, and
+# design-corpus test identifiers.
 # Contains no competitor/real-name logic; that is a local, git-ignored concern
 # (see scripts/README.md).
 #
@@ -12,7 +13,7 @@
 # ADR-file existence/enumeration (Checks 2-3) uses on-disk globs, not git
 # ls-files: identical to CI's tracked-only checkout, and locally it also
 # surfaces an untracked ADR before it is committed. Where a check reads
-# *references* rather than ADR files (Checks 1, 2, 5) the input is the tracked
+# *references* rather than ADR files (Checks 1, 2, 5, 6) the input is the tracked
 # markdown set, so a dangling ADR number is caught in any layer that cites one.
 set -uo pipefail
 
@@ -83,6 +84,28 @@ emdash=$(printf '\xe2\x80\x94')
 em=$(grep -Fn -e "$emdash" $md 2>/dev/null || true)
 if [ -n "$em" ]; then
   while IFS= read -r l; do add "em dash (use a comma, colon, or parentheses): $l"; done <<< "$em"
+fi
+
+# --- Check 6: no design-corpus test identifiers in tracked markdown ---
+# Shapes like 9.T16, 9.K6, 8.K3a, 25.T1 and 9.6c are the design corpus's test
+# labels. They read as pointers into a numbered test register this repository does
+# not have, and unlike a dangling ADR-NNNN nothing else can see them. State an
+# obligation by what it asserts and list it in docs/design/20-testing.md instead;
+# the convention is in docs/adr/README.md.
+# The NN.T / NN.K limb is deliberately NOT restricted to the "9." family. The
+# corpus numbers its test labels by owning document, so 8.K* (key management) and
+# 25.T* (admin API) exist alongside 9.T*/9.K*, and the two halves are written on
+# the same line there: the corpus ADR-0011 reads "tasks 8.K3a/b/c, 9.K3/9.K6". An
+# import that took only the 9.K half is exactly how the 8.K half arrives next time.
+# A digit-dot-T/K-digit shape cannot collide with a version number or a section
+# reference, so widening this limb costs no false positives.
+# Deliberately NOT matched, so the zero above is readable: a bare "9.5" or "8.0"
+# (version numbers), "section 5.6" (a real section), and any N.NN task number,
+# because those overlap with legitimate prose and would be false positives. The
+# trailing-letter limb stays scoped to "9." for that reason.
+corpustests=$(grep -nE '\b[0-9]{1,2}\.(T|K)[0-9]+[a-z]?\b|\b9\.[0-9]+[a-z]\b' $md 2>/dev/null || true)
+if [ -n "$corpustests" ]; then
+  while IFS= read -r l; do add "design-corpus test identifier (name what the test asserts, and list it in the testing design): $l"; done <<< "$corpustests"
 fi
 
 # --- Report ---

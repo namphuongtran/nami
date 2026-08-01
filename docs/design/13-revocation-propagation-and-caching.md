@@ -332,10 +332,10 @@ Redis is never the sole source of truth (consistent with the `ITicketStore` prin
 ## 9. Testing
 
 - **Cross-node propagation:** a revoke on node A is enforced on node B within the path's
-  SLO, the distrusted-kid set within 60 seconds (9.T16), config within 30 seconds (9.T18),
+  SLO, the distrusted-kid set within 60 seconds, config within 30 seconds,
   a reference-token revoke DB-fresh with no lag, and force-logout on the next request.
-- **Redis-down fail-closed:** with Redis unreachable, the distrusted-kid check rejects
-  (9.T17), and paths (a) to (d) continue DB-fresh.
+- **Redis-down fail-closed:** with Redis unreachable, the distrusted-kid check rejects,
+  and paths (a) to (d) continue DB-fresh.
 - **No hot-path Redis:** the 10k-CCU token path issues and validates with Redis down (no
   5xx, latency only).
 - **Cross-tenant revoke and introspect:** a caller in one tenant cannot revoke or

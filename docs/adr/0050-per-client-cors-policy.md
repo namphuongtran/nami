@@ -63,6 +63,6 @@ Chosen option: "Per-client dynamic CORS through a custom `ICorsPolicyProvider`".
 
 ## More Information
 
-* Decided 2026-06-29 (per-client, dynamic; "Posture B"). Recorded from the core-protocol design (doc 03 §9bis, tasks 3.16a-d) and the configuration design (doc 13 §3a/§3b, task 13.9).
+* Decided 2026-06-29 (per-client, dynamic; "Posture B"). Recorded from the **design corpus's** core-protocol and configuration designs (its doc 03 §9bis and doc 13 §3a/§3b, tasks 3.16a-d and 13.9). Those numbers are the corpus's; in this repository the owners are [04](../design/04-core-protocol.md) and [23](../design/23-configuration-and-client-declaration.md), and the digits deliberately do not line up.
 * Related decisions: ADR-0001 (per-tenant isolation and the ambient context the refresh runs under), ADR-0035 (self-service client registration that adds the SPA clients whose origins this serves), ADR-0039 (the config-change cache reused for the origin-set), and ADR-0021 (the version-sensitive `Application.Properties`/`ICorsPolicyProvider` seam re-verified per bump). The `AllowedCorsOrigins` field is part of the client-definition config mapper recorded with the configuration-ergonomics decision.
 * Authored in this repository in 2026-07 to record the settled CORS decision as an ADR; a comparison to commercial identity servers' per-client CORS was generalized (no vendor named), and OpenIddict (with its public issue #28), FusionCache, Redis, and the ASP.NET Core CORS contract are named factually for identification only.

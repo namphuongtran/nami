@@ -38,7 +38,7 @@ Fixed parameters of the decision:
 
 * **Diagnostic logging** is `Microsoft.Extensions.Logging` (`ILogger`) with source-generated `LoggerMessage` (structured and low-allocation).
 * **Unified export through OpenTelemetry**: `builder.Logging.AddOpenTelemetry()` plus `OpenTelemetry.Exporter.OpenTelemetryProtocol.Logs`, so logs, metrics, and traces travel through one OTLP pipeline (vendor-neutral and cloud-agnostic, matching ADR-0006/0009). Trace-to-log correlation is native, because OpenTelemetry attaches the trace/span context to each log record.
-* **PII/secret redaction** (acceptance requirement 9.14a) uses `Microsoft.Extensions.Telemetry` (redaction and enrichment), so no Serilog enricher is needed.
+* **PII/secret redaction** uses `Microsoft.Extensions.Telemetry` (redaction and enrichment), so no Serilog enricher is needed.
 * **Audit is unchanged**: it remains the first-class `ISecurityEventSink` (ADR-0008), strictly separate from diagnostic logging and never routed through the OpenTelemetry/`ILogger` pipeline, which lacks tamper-evidence and a delivery guarantee; the two lanes join only by a correlation/trace id.
 * **Dev and on-premises without a collector**: the native console logger, or OTLP to a local collector, or native file logging if needed.
 

@@ -63,8 +63,8 @@ The invariants split into two kinds. Some are the executable enforcement of a de
 
 ### Confirmation
 
-* Test 9.6e (xUnit + `WebApplicationFactory`) asserts the self-check runs at startup and fails fast on each drift (symmetric key added, `plain` re-enabled, implicit on, rolling refresh off).
-* Test 9.6h (OWASP ASVS Level 2 V3) asserts the core cookie carries `Secure` + `HttpOnly` + pinned `SameSite` + the `__Host-`/`__Secure-` prefix, does not break the `form_post` POST-back, and is reissued after primary authentication.
+* A test (xUnit + `WebApplicationFactory`) asserts the self-check runs at startup and fails fast on each drift (symmetric key added, `plain` re-enabled, implicit on, rolling refresh off).
+* A test (OWASP ASVS Level 2 V3) asserts the core cookie carries `Secure` + `HttpOnly` + pinned `SameSite` + the `__Host-`/`__Secure-` prefix, does not break the `form_post` POST-back, and is reissued after primary authentication.
 * Verify-before-build: confirm the `OpenIddictServerOptions` member names the check reads on the pinned version, tracked under ADR-0021.
 
 ## Pros and Cons of the Options
@@ -86,6 +86,6 @@ The invariants split into two kinds. Some are the executable enforcement of a de
 
 ## More Information
 
-* The invariant set and the `AssertSecureInvariants` mechanism are recorded in the testing/deployment design (doc 09 §1.1, task 9.6e; the cookie invariant and its ASVS test are task 9.6h, from the 2026-07-05 review). The `pkce-no-plain` and `jwe-enc-cbc` invariants were fixed in the same review (R2 #2 and #3).
+* The invariant set and the `AssertSecureInvariants` mechanism are recorded in the [testing design](../design/20-testing.md) section 5.2. They came from the **design corpus's** testing/observability/deployment document, whose startup secure-invariant self-check section carries both the mechanism and the cookie invariant added by its 2026-07-05 review; that document's own section and task numbers are the corpus's and resolve to nothing here. The `pkce-no-plain` and `jwe-enc-cbc` invariants were fixed in the same review (R2 #2 and #3).
 * Related decisions: ADR-0003 (server-side sessions, whose cookies the cookie invariant hardens), ADR-0004 (refresh posture, enforced by the rolling-refresh invariant), ADR-0005 (encryption credential lifecycle and asymmetric signing, enforced by the no-symmetric-key and JWE invariants), ADR-0014 (the sender-constrained and advanced-protocol scope this posture sits within), ADR-0021 (the seam catalogue and contract-regression that pin the version-sensitive option members this check reads), and ADR-0062 (the OWASP ASVS baseline this invariant set and its ASVS-tagged tests roll up to).
 * Authored in this repository in 2026-07 to record the settled hardening-invariant decisions as an ADR; standards and libraries (RFC 9700, OWASP ASVS, OpenIddict) are named factually for identification only, and no commercial competitor is named.

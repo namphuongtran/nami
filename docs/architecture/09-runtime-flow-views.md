@@ -198,7 +198,7 @@ validation change-tokens firing while the static manager stayed put; the proven 
 (test T3c) is a custom non-static `IConfigurationManager<OpenIddictConfiguration>`
 reading the live key store, and test T3d confirmed old and new tokens both validate
 during the overlap. The seam itself is maintainer-endorsed but **not in the official
-documentation** (issue #1434), which is why a contract-regression test (9.K6) gates
+documentation** (issue #1434), which is why a contract-regression test gates
 every OpenIddict bump (ADR-0021).
 
 Break-glass compromise is the same machinery run fast: mark the key revoked, push it to
@@ -835,7 +835,7 @@ sequence adds little above the component view. They are listed so the omission i
   per-class target guard), ADR-0081 (the `TargetClass` taxonomy and the proposer re-check).
 * Flow 3: ADR-0011 (the #1434 options seam, the 90/14/14 shape, the local-validation
   fix, spike A-2 / V19 / T3c / T3d), ADR-0007 (five-minute break-glass ejection),
-  ADR-0021 (the 9.K6 contract-regression gate), ADR-0031 (exactly one clustered runner),
+  ADR-0021 (the contract-regression gate), ADR-0031 (exactly one clustered runner),
   ADR-0012 (the readiness `kid` assertion and the silent-keyring-regeneration failure it
   guards), and [12-key-management](../design/12-key-management.md) (the default values,
   the 12-hour client JWKS refresh, the `X509SecurityKey` ordering invariant, and the

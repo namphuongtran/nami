@@ -39,7 +39,7 @@ Fixed parameters of the decision:
 * **`sid` lifecycle**: stable across passive or silent refresh; **rotated on step-up** (MFA or elevation, ADR-0013). A separate session-fixation guard mints a fresh `sid` on the anonymous-to-authenticated transition; that guard is enforced in the core protocol pipeline rather than by this store.
 * **Strict timeouts** (sensitive-data posture): inactivity (sliding) 1 hour, absolute 8 hours; past the absolute limit, re-authentication is required.
 * Authorization and refresh requests are denied once the session row is gone. **Where the refresh half is executed, added 2026-08-01:** design [04](../design/04-core-protocol.md), in the same `HandleTokenRequest` block as the ADR-0004 ceiling. This clause was accepted with this ADR but no design carried it, which is why several documents described a "bounded logout" bound that nothing enforced (see ADR-0019). Two consequences of the row-delete semantics above follow directly: no new claim is needed, because `sid` already travels on the refresh token; and, because row-absence cannot distinguish revoked from expired, the effective refresh lifetime is `min(the ADR-0004 ceiling, the session still being alive)`, so the 1-hour inactivity window ends the refresh chain too. That is intended at the strictness this ADR chose, and it must not be softened by re-introducing the `revoked` column the row-delete bullet above rules out.
-* **Concurrent-session cap**: a per-user `MaxConcurrentSessions` limit, overridable per tenant, enforced on login by counting the user's rows by `SubjectId` and evicting the oldest (ordered by `Created`) when the cap is exceeded. The shipped default is an illustrative 5 rather than a fixed policy number; the acceptance test for the cap is 9.T19.
+* **Concurrent-session cap**: a per-user `MaxConcurrentSessions` limit, overridable per tenant, enforced on login by counting the user's rows by `SubjectId` and evicting the oldest (ordered by `Created`) when the cap is exceeded. The shipped default is an illustrative 5 rather than a fixed policy number; the acceptance test asserting evict-oldest and the per-tenant override is listed in the [testing design](../design/20-testing.md) section 5.7.
 
 ### Consequences
 
@@ -49,7 +49,7 @@ Fixed parameters of the decision:
 
 ### Confirmation
 
-* Integration tests: deleting a session row denies the authorize and refresh endpoints within one validation interval; logout-everywhere removes all of a user's session rows; absolute expiry forces re-authentication; and test 9.T19 covers the concurrent-session cap evicting the oldest session.
+* Integration tests: deleting a session row denies the authorize and refresh endpoints within one validation interval; logout-everywhere removes all of a user's session rows; absolute expiry forces re-authentication; and the concurrent-session cap evicts the oldest session.
 * Kill-propagation across nodes is a stated NFR with a target below 2 minutes (finalized with the validation interval during implementation).
 * Code review confirms the session store remains global and PostgreSQL-backed per this ADR.
 

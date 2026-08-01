@@ -46,7 +46,7 @@ Chosen option: "Two resource-server shapes", rejecting both a scheme-per-tenant 
 ### Confirmation
 
 * The A-7 spike (V27, run 2026-07-09, 4/4 passing) proves the core at the `TokenValidationParameters` layer: reject on issuer mismatch (T1); under the ADR-0033 shared key the signature does not isolate, only issuer binding does (T2); multi-issuer validation plus the `tenant` claim plus RLS isolates even under a shared signing key (T3); and DPoP `cnf.jkt` composes with per-tenant validation (T4).
-* Phase-03 integration test 9.6j wires the real OpenIddict.Validation plus Finbuckle `ConfigurePerTenant` (confirming the API at Finbuckle 10.1.x or using a custom resolver), introspection for reference tokens, and Silo per-tenant keys end to end.
+* The integration test that closes this wires the real OpenIddict.Validation plus Finbuckle `ConfigurePerTenant` (confirming the API at Finbuckle 10.1.x or using a custom resolver), introspection for reference tokens, and Silo per-tenant keys end to end.
 
 ## Pros and Cons of the Options
 

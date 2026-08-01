@@ -6,6 +6,32 @@ Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000]
 
 Several ADRs defer a policy, threshold, or human sign-off before general availability; those are consolidated as one release gate in the [Pre-GA Ratification Checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 
+## Identifiers borrowed from the design corpus
+
+Imported ADRs cite the corpus they came from, and a few of those citations are **numbers
+that belong to that corpus and resolve to nothing here**. In a "More Information" or
+"Confirmation" section, treat these as external provenance, never as a pointer into this
+repository:
+
+| Shape | Example | What it is |
+|---|---|---|
+| `doc NN §x` | "the productization design (doc 28 §9.1)" | a corpus root document. **The digits do not transfer**: the same number names a different document in each repository, so the topic named alongside it is the part that identifies it |
+| `task N.NN` | "tasks 3.16a-d" | a corpus build task |
+| `A-n`, `Vnn`, `Rnn`, `Tn` | "A-2/V19 with tests T3c and T3d" | a corpus spike, verification record, research record, or a test **inside** a spike harness |
+
+**Test identifiers of the shape `NN.Txx`, `NN.Kxx` or `9.Nx` were removed on 2026-08-01 and
+must not be reintroduced.** They read as pointers into a numbered test register that this
+repository does not have. A test obligation is instead stated by **what it asserts** and
+listed in the [testing design](../design/20-testing.md) against its owning document, which
+is the same convention the rest of that document already uses.
+
+The corpus numbers these labels by **owning document**, not in one series, so the `8.K`
+family (its key management) and the `25.T` family (its admin API) exist alongside `9.T` and
+`9.K`. Its own ADR-0011 and ADR-0012 each cite a `8.K` group and a `9.K` group in one
+breath, on a single line, and the import that produced this repository took the `9.K` half
+and left the other. That is how the other half arrives next time, which is why guardrail
+Check 6 screens the whole `NN.T` / `NN.K` shape rather than a single family.
+
 ## Index
 
 | ADR | Title | Status |
