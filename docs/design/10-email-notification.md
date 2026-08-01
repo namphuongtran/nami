@@ -52,7 +52,12 @@ account exists.
 The outbox chassis defined here is reused by the back-channel `logout_token` delivery over
 `LogoutDeliveryOutbox` (a table defined in 02, storing delivery *intent* rather than a
 payload), whose fan-out behaviour belongs to 11. This design owns the chassis, not that
-fan-out.
+fan-out. **One difference from this design's own tables matters to the relay:**
+`LogoutDeliveryOutbox` is **class B, global** (02 section 1), not tenant-scoped. A session is
+keyed by a global `sid` that can span a tenant switch, so the table carries no ambient-tenant
+filter and no row-level security, and its `TenantId` is data rather than a discriminator. A
+drain loop written for this design's tenant-scoped tables must therefore **not** be reused
+verbatim for it: iterating per tenant would drop the deliveries for a session's other tenants.
 
 ## 3. Interfaces and contract
 

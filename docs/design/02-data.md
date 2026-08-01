@@ -84,6 +84,40 @@ for **global** tables that reference a tenant as data (`Memberships`,
 **discriminator** for tenant-scoped, Finbuckle-managed tables, and it is what
 `ITenantInfo.Id` carries. Both are in use on purpose; do not "unify" them.
 
+### Three classes of control-plane table
+
+**A table's class decides four things at once: its tenant column, whether it is
+`.IsMultiTenant()`, whether it takes row-level security, and which context owns it.**
+Getting the class wrong is the isolation bug this whole design guards against, so it is
+stated here rather than left to be inferred from a DDL comment, an RLS list, and a context
+table in three different places.
+
+| Class | Context | Tenant column | Finbuckle | RLS | Tables |
+|---|---|---|---|---|---|
+| **A. Tenant-scoped** | `ControlPlaneTenantDbContext` (non-pooled) | `varchar(64)` = `Tenants.Identifier` | `.IsMultiTenant()` | ENABLE + FORCE | `OutboxEmail` (control-plane variant), `SuppressionEntry`, `ProcessingRestriction`, `TenantBranding` (as its PK), and the v2 change-event outbox (ADR-0071) |
+| **B. Tenant-as-data** | `ControlPlaneDbContext` (pooled) | `uuid` referencing `Tenants(TenantId)` | **no**, deliberately visible to authorization queries | **no** | `Memberships`, `DelegatedAdmin.RootTenantId`, `TenantClosure`, `DualControlProposals.TenantId`, `SigningKeys.TenantId`, `AuditLog.TargetTenantId`, `LogoutDeliveryOutbox.TenantId` |
+| **C. Pre-tenant lifecycle** | `ControlPlaneDbContext` (pooled) | `uuid` referencing `Tenants(TenantId)` | **no**, because it runs before the tenant is usable so there may be no ambient tenant to filter on | optional, per its own threat analysis | `ProvisioningRequest`, and any deprovisioning counterpart |
+
+Class A is `varchar(64)` for the mechanical reason in section 4: `.IsMultiTenant()` composes
+only against a string column. Class B is **not** an oversight and must not be "fixed" into
+class A: those columns are query data that authorization reads directly, and hiding them
+behind an ambient-tenant filter would break the queries. `LogoutDeliveryOutbox` is the
+subtle member of class B and the reason is worth stating, because its name suggests
+otherwise: a session is global and keyed by `sid`, one `sid` legitimately spans a tenant
+switch, and at logout there is exactly one ambient tenant, so a tenant filter here would
+silently drop the deliveries for the session's other tenants and those relying parties would
+never receive a `logout_token`. That is a failed logout, not a bookkeeping detail.
+
+Both control-plane contexts share one physical database, so the class-A foreign keys to
+`Tenants` still resolve.
+
+> **Open item, recorded rather than closed.** The outbox-for-every-logout mechanism itself
+> has never been justified in this repository: ADR-0019 lists "at-least-once delivery with
+> retry" as a cost without arguing why at-least-once needs a durable queue in front of
+> **every** logout rather than in front of failures only. The class-B correction above fixes
+> the isolation defect and deliberately leaves the mechanism unchanged. Revisiting it is a
+> decision for ADR-0019, not for this design.
+
 ```mermaid
 graph LR
   subgraph oi[OpenIddictDbContext, tenant-scoped]
@@ -473,11 +507,16 @@ CREATE TABLE "SessionParticipatingClients" (
   PRIMARY KEY ("SessionKey", "ClientId")
 );
 
--- Back-channel logout delivery outbox (tenant-scoped, RLS) --------------------
+-- Back-channel logout delivery outbox (class B: GLOBAL, tenant-as-data) -------
+-- A session is global and keyed by sid, and one sid legitimately spans a tenant
+-- switch (see the ServerSideSessions note in the architecture data view). At logout
+-- there is exactly one ambient tenant, so filtering this table by it would drop the
+-- rows for RPs in the session's OTHER tenants and those RPs would never receive a
+-- logout_token. So this table is deliberately NOT tenant-scoped.
 CREATE TABLE "LogoutDeliveryOutbox" (
   "Id"             uuid PRIMARY KEY,
-  "TenantId"       varchar(64) NOT NULL,                    -- the Tenants.Identifier discriminator; .IsMultiTenant() + FORCE RLS
-  "Sid"            text NOT NULL,
+  "TenantId"       uuid NULL REFERENCES "Tenants"("TenantId"),  -- DATA only (audit, per-tenant reporting): no .IsMultiTenant(), no RLS. Nullable, because an RP's tenant may not be resolvable at enqueue time
+  "Sid"            text NOT NULL,                           -- the GLOBAL session id
   "ClientId"       text NOT NULL,
   "LogoutUri"      text NOT NULL,
   "Status"         text NOT NULL,                           -- 'pending' | 'delivered' | 'failed'
@@ -615,8 +654,10 @@ both together and why restoring one alone leaves unreadable key material (12).
 ### Row-level security (the Pool backstop)
 
 RLS is **not in the EF model**. It is a raw-SQL migration step applied after
-`CREATE TABLE` (spike A-4/T17), covering the three tenant-scoped OpenIddict tables and
-the tenant-scoped control-plane tables.
+`CREATE TABLE` (spike A-4/T17), covering the three tenant-scoped OpenIddict tables and the
+four class-A control-plane tables (`OutboxEmail`, `SuppressionEntry`, `ProcessingRestriction`,
+`TenantBranding`). **`LogoutDeliveryOutbox` is deliberately not in that list**, because it is
+class B: see the class table in section 1.
 
 ```sql
 ALTER TABLE "OpenIddictApplications" ENABLE ROW LEVEL SECURITY;

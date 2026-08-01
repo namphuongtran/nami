@@ -37,7 +37,7 @@ graph TB
 
   subgraph TS[Tenant-scoped, non-pooled]
     oi[(OpenIddict context<br/>Applications, Authorizations, Tokens<br/>Scope is a GLOBAL catalog)]:::store
-    cpt[(Control-plane tenant context<br/>LogoutDeliveryOutbox, OutboxEmail,<br/>SuppressionEntry, TenantBranding,<br/>ProcessingRestriction)]:::store
+    cpt[(Control-plane tenant context<br/>OutboxEmail, SuppressionEntry,<br/>TenantBranding, ProcessingRestriction)]:::store
   end
   subgraph GL[Global, no tenant filter, pooled]
     direction LR
@@ -63,7 +63,7 @@ graph TB
 | **Identity** | Global | One human identity signs in to many tenants, so users and roles must not be partitioned by tenant. A user reaches tenants through a membership |
 | **Data Protection** | Global | The keyring is a root of trust for authentication, kept independent of Redis so a cache outage never breaks auth (ADR-0006) |
 | **Control-plane** | Global | Anchors everything that must not depend on any one tenant: the tenant registry and hierarchy, cross-tenant memberships and delegated admin, the audit chain, signing keys, and sessions. Pooled, because nothing here carries an ambient tenant |
-| **Control-plane tenant** | Tenant-scoped | The control-plane tables that genuinely belong to one tenant and are `.IsMultiTenant()` with row-level security: the logout and email delivery outboxes, suppression entries, branding, and processing restrictions. They are a **separate context because pooling is decided per context**: a pooled instance captures the ambient tenant once at construction, which is the topology spike A-4's T7 proved leaks, so these tables are non-pooled while the hot global tables above keep the pool (ADR-0018, ADR-0001) |
+| **Control-plane tenant** | Tenant-scoped | The control-plane tables that genuinely belong to one tenant and are `.IsMultiTenant()` with row-level security: the control-plane email outbox, suppression entries, branding, and processing restrictions. The back-channel **logout** delivery table is deliberately *not* here: a session is global and one `sid` spans a tenant switch, so filtering it by one ambient tenant would drop the deliveries for the session's other tenants. They are a **separate context because pooling is decided per context**: a pooled instance captures the ambient tenant once at construction, which is the topology spike A-4's T7 proved leaks, so these tables are non-pooled while the hot global tables above keep the pool (ADR-0018, ADR-0001) |
 
 Each context keeps its **own migrations-history table in a separate schema**, so the five can
 share one physical database without colliding, or be split apart later without a rewrite
