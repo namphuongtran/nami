@@ -86,6 +86,47 @@ CHECK ("TargetClass" <> 'mutate' OR "TargetETag" IS NOT NULL)
 | `create` | NULL | the create preconditions still hold: uniqueness, the existence of every referenced principal, and the endpoint's own admission rules | `provision-tenant`, a dangerous `delegated-admin-grant` |
 | `query` | NULL | the filter frozen in the payload is authoritative and **may not be widened**, and any size or scope threshold that gated the approval is re-evaluated | bulk `audit-export` |
 
+**`TargetId` is also `NOT NULL`, and the class is what says what it means.** The taxonomy
+above would otherwise have left the same shape of hole one column over: a targetless
+proposal has no more a target *identifier* than it has a target ETag. Rather than relax a
+second column, `TargetClass` disambiguates this one, which is what a class column is for.
+
+| `TargetClass` | `TargetId` holds |
+|---|---|
+| `mutate` | the identifier of the existing row, unchanged |
+| `create` | the identifier of the thing **to be created**: the proposed tenant `Identifier`, or the grantee for a grant, where the root tenant is already in the row's own `TenantId` |
+| `query` | a **digest of the frozen filter**, so the proposal names *which* export it authorises |
+
+The digest is specified rather than left to an implementer, because two details decide
+whether it works at all:
+
+* **It is computed over the canonical TEXT rendering of the payload, not over the stored
+  `jsonb`.** PostgreSQL `jsonb` does not preserve input byte order, so a digest of the
+  stored column would depend on the database's internal representation and two identical
+  filters could produce two digests. This is the same constraint the audit chain already
+  solved, and the same canonicalisation is reused rather than a second one invented
+  (design [03](../design/03-audit.md) section 5.2).
+* **It is a plain SHA-256, deliberately not keyed.** The purpose here is
+  **identification**, and integrity of the row is the audit chain's job. Using an HMAC as
+  the chain does would imply a tamper-evidence property this column does not provide, and
+  a security property that only looks present is the failure this whole ADR is about.
+
+Two useful properties fall out, and one non-property is worth naming. A digest is
+content-addressed, so two identical export proposals collide naturally, which gives dedup
+and a comparison the approval inbox can show. It **complements rather than replaces** the
+`Idempotency-Key` header on proposal creation: that header is client-supplied and
+per-request, this is server-derived and content-derived. And it is **not** a guard: a
+mismatch between the digest and the payload indicates a mishandled row, but the guard for
+a `query` proposal is the re-evaluation of the frozen filter and its thresholds, not a
+string comparison.
+
+*(This rule was added on 2026-08-01, hours after the rest of this ADR, once the question
+"was `TargetId` not already decided?" was checked at the source. It was not. The corpus
+this taxonomy came from relaxed `TargetETag` and left `TargetId NOT NULL` untouched, while
+its own stated premise, that three action types have no target at propose time, applies
+identically to both. So it is internally inconsistent at exactly that point rather than
+carrying a decision to inherit.)*
+
 **`TargetETag` does not have to come from `If-Match`.** For a client-named target the
 client supplies it through the header (ADR-0079 rule 4). For a **server-created**
 target the server fills it, because a client cannot hold an ETag for a row that did

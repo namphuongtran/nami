@@ -326,11 +326,11 @@ stateDiagram-v2
 row** (ADR-0081, which is the authority for this taxonomy; the column and its two `CHECK`
 constraints are in [02](02-data.md)).
 
-| `TargetClass` | `TargetETag` | Re-checked before executing | Actions here |
-|---|---|---|---|
-| `mutate` | required | the ETag still matches | `delete-application`, `delete-scope`, `delete-tenant`, `suspend-tenant`, `resume-tenant`, `offboard-user`, `revoke-all-tokens`, `secret-revoke`, key purge, the Pool-to-Silo re-home, and `approve-user-invite` with a **server-filled** ETag |
-| `create` | NULL | the create preconditions still hold: uniqueness, every referenced principal still exists, and the endpoint's own admission rules | `provision-tenant`, a dangerous `delegated-admin-grant` |
-| `query` | NULL | the filter frozen in `PayloadJson` is authoritative and **may not be widened**, and the size or scope threshold that gated the approval is re-evaluated | bulk `audit-export` |
+| `TargetClass` | `TargetETag` | `TargetId` holds | Re-checked before executing | Actions here |
+|---|---|---|---|---|
+| `mutate` | required | the existing row's id | the ETag still matches | `delete-application`, `delete-scope`, `delete-tenant`, `suspend-tenant`, `resume-tenant`, `offboard-user`, `revoke-all-tokens`, `secret-revoke`, key purge, the Pool-to-Silo re-home, and `approve-user-invite` with a **server-filled** ETag |
+| `create` | NULL | the id of the thing **to be created** | the create preconditions still hold: uniqueness, every referenced principal still exists, and the endpoint's own admission rules | `provision-tenant`, a dangerous `delegated-admin-grant` |
+| `query` | NULL | a SHA-256 digest of the frozen filter | the filter frozen in `PayloadJson` is authoritative and **may not be widened**, and the size or scope threshold that gated the approval is re-evaluated | bulk `audit-export` |
 
 For `mutate`, the guard stores the target's `xmin`-derived ETag at propose time and re-checks
 it `FullyConsistent` before execution. `TargetETag` need not come from `If-Match`: a client
@@ -574,15 +574,18 @@ first-admin seed is idempotent and forces a change; Scalar performs a real OIDC 
   is asserted by a test rather than by this document. If it turns out not to hold, the
   cascade needs an explicit tenant predicate, not a wider revoke: a subject-wide revoke would
   cut the person out of every tenant, which is a different operation.
-- **Open, needs a decision (ADR-0081): what `TargetId` holds for a `query`-class proposal.**
-  The column is `NOT NULL` and a bulk `audit-export` has no row to name. For `create` the
-  column reads naturally as the identifier of the thing to be created; only `query` is
-  genuinely stuck. The corpus this taxonomy came from left `TargetId NOT NULL` untouched
-  while relaxing `TargetETag` for the same reason, so it is inconsistent on exactly this
-  point rather than a decision to inherit. Candidate: a stable digest of the filter frozen
-  in `PayloadJson`, which keeps the column non-null, identifies *which* export, and gives
-  dedup and idempotency for free. Not adopted here, because inventing a semantic for a
-  column is how an unsourced claim enters the schema.
+- **Settled 2026-08-01 (ADR-0081), recorded because the reasoning is not recoverable from
+  the schema:** `TargetId` stays `NOT NULL` for all three classes and `TargetClass` says what
+  it means, rather than a second column being relaxed. For `query` it is a **SHA-256 digest
+  of the frozen filter**, computed over the **canonical TEXT** rendering of `PayloadJson` and
+  never over the stored `jsonb`, because `jsonb` does not preserve input byte order and two
+  identical filters would otherwise digest differently (the constraint [03](03-audit.md)
+  section 5.2 already solved for the chain; the same canonicalisation is reused). It is
+  **plain, not keyed**: this identifies an export, it does not attest to one, and an HMAC
+  would imply tamper-evidence the column does not carry. It complements the
+  `Idempotency-Key` header rather than replacing it, the header being client-supplied and
+  per-request against this being server-derived and content-derived, and it is **not** a
+  guard: the `query` guard is re-evaluating the filter and its thresholds.
 - Proposed catalog additions (`proposal.*`, `audit_read`) into the ADR-0008 minimum-catalog gate.
 - 02 schema: `DualControlProposals` gains `FailReason`/`FailDetail` + the lifecycle timestamps
   (added in 02).

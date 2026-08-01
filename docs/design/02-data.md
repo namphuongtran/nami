@@ -437,12 +437,16 @@ CREATE TABLE "DualControlProposals" (
 CREATE INDEX "IX_DualControlProposals_status"   ON "DualControlProposals" ("Status", "ExpiresAt");
 CREATE INDEX "IX_DualControlProposals_proposer" ON "DualControlProposals" ("ProposedBy");
 CREATE INDEX "IX_DualControlProposals_tenant"   ON "DualControlProposals" ("TenantId");
--- Open item (ADR-0081, 2026-08-01): `TargetId text NOT NULL` carries the same shape of
--- problem the `TargetETag` change just fixed. For class 'create' the column reads naturally
--- as the identifier of the thing to be created (the proposed tenant `Identifier`, the
--- grantee). For class 'query' there is no row to name at all, and neither ADR-0081 nor the
--- corpus decision it came from rules on it. Left NOT NULL and flagged rather than given an
--- invented semantic; decide it when the `audit-export` executor is written.
+-- `TargetId` stays NOT NULL for every class, and `TargetClass` says what it means
+-- (ADR-0081): 'mutate' the existing row's id; 'create' the id of the thing to be created
+-- (the proposed tenant Identifier, or the grantee, whose root tenant is this row's own
+-- TenantId); 'query' a SHA-256 digest of the frozen filter, so the proposal names WHICH
+-- export it authorises. The digest is over the CANONICAL TEXT rendering of PayloadJson and
+-- never over the stored jsonb, for the reason in 03 section 5.2: jsonb does not preserve
+-- input byte order, so hashing the stored column would make two identical filters produce
+-- two digests. Plain SHA-256, NOT keyed: this identifies, it does not attest. The audit
+-- chain owns integrity, and an HMAC here would imply tamper-evidence this column does not
+-- provide.
 
 -- Audit (mechanism in 03) -----------------------------------------------------
 CREATE TABLE "AuditLog" (
