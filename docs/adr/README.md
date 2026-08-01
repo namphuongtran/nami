@@ -2,7 +2,7 @@
 
 Nami's architecture was designed decision-first: every significant choice is recorded as an ADR with its context, the options considered, and the rationale. Accepted ADRs are binding until superseded.
 
-Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000](0000-use-markdown-architectural-decision-records.md)). Files are named `NNNN-short-title-with-dashes.md`. ADRs `0001`-`0035` are being imported and translated from the original design corpus, keeping their original numbering one-to-one; new decisions continue from `0036`.
+Format: [MADR 4.0.0](https://adr.github.io/madr/), full template (see [ADR-0000](0000-use-markdown-architectural-decision-records.md)). Files are named `NNNN-short-title-with-dashes.md`. ADRs `0001`-`0035` were imported and translated from the original design corpus, keeping their original numbering one-to-one, and all 35 are now accepted; new decisions continue from `0036`. `0000` is this repository's own decision, not an import.
 
 Several ADRs defer a policy, threshold, or human sign-off before general availability; those are consolidated as one release gate in the [Pre-GA Ratification Checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 

@@ -1,6 +1,47 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in
+this repository. It carries the rules that are true **everywhere**. The rules that are
+true only inside one folder live in that folder, and the next section says where.
+
+## Where the rest of the rules live
+
+Claude Code reads this file at the start of a session, and reads a `CLAUDE.md` in a
+subdirectory when it reads a file in that subdirectory. A rule placed in a folder
+therefore does not exist until you are working in that folder, which fixes the split:
+
+**A rule belongs in a folder's `CLAUDE.md` only if the mistake it prevents is made while
+editing a file in that folder.** A rule whose mistake is made somewhere else stays here,
+however specialised it looks. "Never edit a document to silence a checker" is a rule
+about checkers and it lives here, not in `scripts/`, because the file that gets edited
+is a document.
+
+**Each folder's `README.md` is the authority on that layer's own conventions, and the
+`CLAUDE.md` beside it does not restate them.** Two summaries of one thing drift and the
+shorter one wins by being read first, which is stated at
+`docs/architecture/11-cross-cutting-concepts.md:12-16` and was demonstrated by this file:
+until 2026-08-01 it said ADRs `0000`-`0035` were imported from the design corpus, while
+`docs/adr/0000-use-markdown-architectural-decision-records.md:37` says `0000` is this
+repository's own decision and the imported range is `0001`-`0035`. So a folder's
+`CLAUDE.md` carries only what its README does not: the traps learned by getting
+something wrong. Read both.
+
+| Working in | Instruction file | Authority on the layer itself |
+|---|---|---|
+| anywhere under `docs/` | [`docs/CLAUDE.md`](docs/CLAUDE.md) | [`docs/README.md`](docs/README.md) |
+| `docs/adr/` | [`docs/adr/CLAUDE.md`](docs/adr/CLAUDE.md) | [`docs/adr/README.md`](docs/adr/README.md) |
+| `docs/architecture/` | [`docs/architecture/CLAUDE.md`](docs/architecture/CLAUDE.md) | [`docs/architecture/README.md`](docs/architecture/README.md) |
+| `docs/design/` | [`docs/design/CLAUDE.md`](docs/design/CLAUDE.md) | [`docs/design/README.md`](docs/design/README.md) |
+| `docs/kb/` | none, deliberately | [`docs/kb/README.md`](docs/kb/README.md) |
+| `scripts/` | [`scripts/CLAUDE.md`](scripts/CLAUDE.md) | [`scripts/README.md`](scripts/README.md) |
+| `src/` | none yet, lands with the first code at M1 | ADR-0065, and design `01` section 3.1 |
+
+`docs/kb/` has no `CLAUDE.md` on purpose: its README already carries the frontmatter
+shape, the no-H1 rule, the `[[slug]]` link form, and the routing rule, and a file whose
+only content is "read the README" is a drift surface that buys nothing.
+
+Because a subdirectory file may load without its parent, each `CLAUDE.md` under `docs/`
+names `docs/CLAUDE.md` explicitly rather than assuming it is already in context.
 
 ## What this repository is
 
@@ -21,6 +62,7 @@ govern, accepted ADRs are binding until superseded.
 
 ```bash
 # Docs guardrail: the CI gate. Must pass before any docs/ADR change merges.
+# `git add` first: it reads tracked files, so a new file is invisible until staged.
 bash scripts/check-adrs.sh
 
 # Markdown lint. This version is not a preference: it is the version bundled by the
@@ -34,36 +76,6 @@ git config core.hooksPath scripts/hooks
 There is no build or test suite yet; the .NET build/test/license-scan CI gates are
 added when the solution lands (see the comment at the end of `.github/workflows/ci.yml`).
 
-## The ADR corpus (the core of the repo)
-
-- **Format:** [MADR 4.0.0](https://adr.github.io/madr/) full template. Start from
-  `docs/adr/0000-*.md`. Files are `NNNN-short-title-with-dashes.md`.
-- **Numbering:** `0000`–`0035` were imported one-to-one from the original design
-  corpus and keep their original numbers; **new decisions continue from `0036`**.
-  Never renumber an existing ADR.
-- **Frontmatter** carries `status:` (`"accepted"` or `"proposed"`), `date`,
-  `decision-makers`, `consulted`, `informed`. The `status` value must match the
-  ADR's row in the index; the guardrail enforces this.
-- **Index:** every ADR has a row in `docs/adr/README.md` with a Status column.
-  Adding an ADR means adding its index row in the same change.
-- **Deferred gates:** several ADRs defer a policy, threshold, or human sign-off to
-  before GA. Those are consolidated in `docs/PRE-GA-RATIFICATION-CHECKLIST.md`.
-  When an ADR defers something, add or update its checklist entry.
-- **Cross-references** use `ADR-NNNN`. Every such reference must resolve to a real
-  `docs/adr/NNNN-*.md` file (guardrail-enforced). Do not forward-reference an ADR
-  number that has not been written yet.
-
-### Authoring conventions for ADRs (learned constraints)
-
-- **Verify at source, don't copy verbatim.** When importing or citing, re-check the
-  fact and correct stale cross-references rather than transcribing.
-- **Proposed / deferred ADRs stay implementation-open.** Do not pin a specific
-  third-party library in a `proposed` ADR ("consider to build later if needed"):
-  record the decision, leave the mechanism open.
-- **Deferrals are decisions** worth their own ADR or a checklist entry, not silent gaps.
-- Confirm granularity and status with the user before drafting; prefer one focused
-  ADR per decision over grab-bag documents.
-
 ## Evidence rule (non-negotiable, applies to every layer)
 
 **Never write a claim you have not read at its source, and never infer one from a
@@ -76,6 +88,14 @@ later reader cannot tell the two apart.
   not merely adjacent to its subject. Attribution is part of the claim: a true fact
   with the wrong owner is a defect, and it has been the single most common defect in
   this repository.
+- **The dangerous citation is the one that resolves.** A pointer to a file that exists
+  passes every mechanical check; what fails is that the file does not contain the claim.
+  So a green checker is not evidence about a citation's content, and the two shapes that
+  deserve suspicion before any tool runs are a citation at the end of a **compound**
+  sentence, where the pointer silently attaches to the wrong clause, and a bundle of
+  several items behind one reference, where usually one of them belongs elsewhere. The
+  counts and the three instances found in this repository are in
+  [`docs/CLAUDE.md`](docs/CLAUDE.md).
 - **Show the evidence before making the change.** When reconciling, contradicting, or
   correcting anything, present both sides with file and line before editing. The user
   decides on evidence, not on a summary.
@@ -93,84 +113,17 @@ later reader cannot tell the two apart.
   default is weaker" is a *second* claim needing a *second* source, and it is the shape
   self-generated errors take here: the source stated a value, the rationale was invented
   around it. Read the default, or say only what the source says.
-- **Renumbering invalidates every cross-reference, including the prose ones.** A `(07)`
-  written in text is a citation with no link checker behind it. After any renumber, re-read
-  each numeric pointer against the index and confirm the *topic* matches, since a pointer
-  to a file that exists but is the wrong one passes every mechanical check.
-- **A document number is layer-scoped, so the same digits name different documents.** `21`
-  is performance-and-scalability in `docs/architecture/` and CI/CD-and-deployment in
-  `docs/design/`. A bare number is therefore only readable inside its own layer, and a
-  cross-layer reference has to be judged against its target's *directory*, not its digits.
-  Two consequences, both already paid for: a reader who crosses layers mis-resolves the
-  number, and a checker that assumes one layer reports clean on the other. Prefer the
-  slug form for cross-layer links, and note that a slug label encodes the number twice,
-  so it goes stale twice.
-- **Audit a numeric pointer against the target's *topic*, and start with the file's
-  self-contradictions.** A sweep of all 271 bare numeric pointers in `docs/design/` found
-  five wrong, and the cheapest signal in every case was a document disagreeing with itself:
-  `13` gave path (c) to `06` in its table and to `08` in the heading eight lines later, and
-  `08` cited the email subsystem as `10` in prose and `07` inside a mermaid participant.
-  Two of the five sat where no link checker can reach, one inside a fenced block and one as
-  a bare number in prose. Also expect regex noise, since `Art.17(3)`, `AC-2(2)`,
-  `PostgreSQL 18`, `.NET 10`, and `FromHours(8)` all look like pointers: extract by machine,
-  then judge every hit by reading, and never let the extractor's count stand in for the
-  judgement.
-- **A checker's anchor is part of its coverage claim.** A pattern that requires the target
-  to start where the link opens matches same-directory links and silently passes every
-  `../other-layer/` one. State what a screen does *not* match, in the screen, or its zero
-  will be read as absence.
-- **The dangerous citation is the one that resolves.** `ADR-0062` passes every mechanical check
-  because the file exists; what fails is that the ADR does not contain the claim. A sweep of all
-  2606 `ADR-NNNN` citations in `docs/design/` and `docs/architecture/` found this class three
-  times, and one of them was invented outright: the concrete Content-Security-Policy was cited
-  to ADR-0062, which never mentions it, and **no ADR in the corpus does**. The other two were
-  true facts with the wrong owner, which is the same defect at lower cost: the audit chain key
-  cited to ADR-0009 when ADR-0008 is what requires it, and a closure-maintenance choice cited to
-  ADR-0024 when no ADR rules on it. Screen by keyword overlap between the citing sentence and
-  the cited ADR to *rank* candidates, then read every hit, since overlap cannot tell a wrong
-  claim written in its ADR's own vocabulary from a right one. Two shapes deserve suspicion before
-  any screen runs: a claim whose citation sits at the end of a **compound** sentence, where the
-  pointer silently attaches to the wrong clause, and a bundle of several items behind one ADR,
-  where usually one of them belongs elsewhere.
-- **Prefer a markdown link to a bare number, and the architecture layer is the proof.** The same
-  sweep found **155** bare cross-document pointers in `docs/design/` and **zero** in
-  `docs/architecture/`, which links every cross-reference. One design pointer was wrong and two
-  were single digits ambiguous between a document and a section. A screen also cannot distinguish
-  `(6)` meaning document 06 from `(6)` meaning section 6 without reading, and `section N`,
-  `runtime view N`, `FromMinutes(15)`, `Article 17(3)`, and `p(95)` all match a document-pointer
-  pattern, so write `(section 6)` when a section is meant.
-- **Never edit a document to silence a checker.** This is the rule the deleted `scripts/review/`
-  screens were removed for breaking: a keyword check flagged a correct citation, and the
-  response was to drop `: true` from the claim value `memberships_truncated: true` so the
-  check would pass. The document became less implementable to make a tool quieter. If a
-  checker is wrong, fix the checker or record the finding as legitimate; if neither is cheap,
-  delete the checker. A tool that bends the evidence it exists to protect is worse than none.
+- **Never edit a document to silence a checker.** This is the rule the deleted
+  `scripts/review/` screens were removed for breaking: a keyword check flagged a correct
+  citation, and the response was to drop `: true` from the claim value
+  `memberships_truncated: true` so the check would pass. The document became less
+  implementable to make a tool quieter. If a checker is wrong, fix the checker or record
+  the finding as legitimate; if neither is cheap, delete the checker. A tool that bends
+  the evidence it exists to protect is worse than none.
 - **A false positive in a checker is a defect in the checker**, not noise to work
   around, and the same holds for a claim that survives only because nobody checked it.
   A checker that stays green on the bug it was written for is worse than none, because it
   converts an unchecked claim into a confident one.
-- **Read the corpus root document, not its digest.** The design corpus has two layers: the
-  numbered root documents `01` to `34`, and the `DD/` folder that summarizes them. The
-  implementable detail lives in the root: `DD/` carries about 1400 lines of fenced code and
-  the root documents carry about 2500, and `DD-24` contains **none** of the DPoP defaults
-  that root `24-design-dpop.md` states. Reading `DD/` first and treating it as sufficient
-  silently drops values (a proof-validity window, a per-client flag, an advertised algorithm
-  set). `DD/` is an index of what exists and which decisions apply; the root document is the
-  source. Where the two disagree, follow the pointer to whichever document the corpus itself
-  names as owner and verify there, since the corpus contradicts itself in places.
-- **The corpus states its own reading order; follow it.** Its `CLAUDE.md` defines a **five-part
-  bundle** per phase, "phase-doc + mini-spec + ADR + verification V-file + register entry",
-  and warns that a phase's information is spread across all five. It also sets a strict
-  layering: root `01`-`31` are the implementer source (`01`-`09` phases, `10`-`16`
-  cross-cutting, `17`-`31` mini-specs), `adr/` holds the decisions with `decisions/` as their
-  MADR conversion, `PRODUCTION-READINESS-REGISTER.md` tracks open items by bucket (A spike,
-  B test, C ratify, D pick), and **`knowledge-based/` is evidence, not an implementer
-  source**. Two things are easy to miss and both matter: spike-proven reference code is
-  **embedded in the mini-specs** (and runnable under `spike-harness/`), and
-  **`reference/openiddict-source/` holds 23 files of OpenIddict 7.5.0 upstream source**,
-  checked in precisely so a claim can be read at source. The local NuGet cache carries only
-  7.4.0, so that tree is the only offline way to verify a 7.5.0 default. Use it: it settled
-  `RefreshTokenReuseLeeway`'s 30-second default on first use.
 
 ## Non-negotiable content rules
 
@@ -204,55 +157,10 @@ These are legal/OSS constraints and the CI guardrail + local hook enforce parts 
   code exists, a CI license-scan gate.
 - **No em dash** in prose you write for this project (user preference).
 
-## The guardrail (`scripts/check-adrs.sh`)
-
-Neutral, public, run by CI (`adr-guardrail` job) and the local hook. Seven checks:
-placeholder tokens, ADR cross-reference integrity, index/status consistency,
-ADR-0061 stack-of-record table membership (bidirectional), the no-em-dash style
-rule, design-corpus test identifiers, and architecture decisions-index membership
-(bidirectional). Checks 1, 2, 5, and 6 read **all tracked markdown**, not just
-`docs/adr/`: the architecture and design layers cite far more ADR numbers than the
-ADRs do, and a number that resolves nowhere is the same defect wherever it is
-written. Checks 3, 4, and 7 are ADR-corpus-scoped by nature. The em-dash pattern is
-built from its codepoint so the script stays pure ASCII and cannot trip its own
-check. **An ADR belongs to two indexes, not one**: `docs/adr/README.md` (Check 3) and
-`docs/architecture/18-decisions-index.md` (Check 7). Check 7 exists because nine ADRs
-drifted out of the second one while every other check stayed green, and it verifies
-membership only, never the "Views that cite it" column, which is regenerated from the
-views by the snippet in that file's own section 1.
-It is written for **portability to macOS bash 3.2 and the Ubuntu runner**: no
-`mapfile`, no associative arrays, no GNU-only flags; ADR enumeration uses on-disk
-globs. Preserve that portability if you edit it. The local hook
-(`scripts/hooks/pre-commit`) additionally runs the git-ignored name-scrub.
-
-## Docs layout and the KB boundary
-
-- `docs/adr/`, settled decisions (MADR). One decision → one ADR.
-- `docs/architecture/`, the SAD: the coherent picture across views. **24 files, `01` to
-  `24`, no gaps, covering the arc42 template's twelve sections in order** (problem,
-  solution strategy, C4 L1-L3 plus runtime and deployment, seven cross-cutting files,
-  decisions, quality, risks, glossary). arc42 is CC BY-SA 4.0 and is credited in
-  `docs/architecture/README.md`: only the section sequence is used, no arc42 text is
-  reproduced. It **never** introduces a decision; it synthesizes the ADRs and points
-  into the designs, and it is the bug when it disagrees with either. **The file number
-  is the reading order**, so inserting a chapter means renumbering the tail and
-  rewriting every link, which is a deliberate act, not a casual one.
-- `docs/architecture/24-glossary.md` is arc42 section 12 and defines vocabulary for
-  **all three layers**, not only for the architecture. It lives inside that folder
-  because arc42 puts the glossary in the architecture document; an entry names the
-  document of record rather than owning the term, so defining `stack of record` there
-  leaves ADR-0061 the authority. Do not narrow its scope to architecture terms.
-- `docs/design/`, per-feature detailed designs, the authority for implementation detail.
-- `docs/kb/notes/`, a lesson, how-something-works, or gotcha that is **not** a decision.
-- `docs/kb/research/`, deeper investigation, usually preceding an ADR, linking to it.
-- KB files use their own frontmatter (`title`, `tags`, `created`, `related`), no H1,
-  and link with `[[slug]]`. See `docs/kb/README.md`.
-- Rule of thumb: **decision → ADR; durable knowledge to reference → KB.**
-
 ## Git and contribution workflow
 
 - **DCO sign-off on every commit** (`git commit -s`); this repo uses the DCO, not a CLA.
-- **Conventional Commits** (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`, …);
+- **Conventional Commits** (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`, ...);
   the changelog is generated from these.
 - Branch for changes; commit or push only when asked. This project's convention is
   **one ADR per commit** when importing/authoring ADRs.

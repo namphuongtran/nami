@@ -65,8 +65,4 @@ transactional, never eventual (ADR-0020).
 
 ---
 
-[← Prev: Context](04-system-context.md) · [Index](README.md) · Next: [Containers (C4 L2) →](07-container-view.md)
-
----
-
 [Prev: Solution strategy](05-solution-strategy.md) · [Index](README.md) · Next: [Container view](07-container-view.md)
