@@ -106,7 +106,8 @@ package (which must not depend on the `Admin.*` assemblies).
   not *applied* to the console itself. The Branding
   screen has a client-side **live preview** that renders a sample login card from the entered
   design tokens (never executing tenant CSS). The CSP stays strict (no `unsafe-inline`;
-  CSS-variable-driven), reusing the `SecurityHeadersAttribute` posture from 11.
+  CSS-variable-driven, ADR-0072 parameter C), reusing the `SecurityHeadersAttribute` posture
+  from 11.
 - **Accessibility and feedback.** Semantic HTML, labelled form controls, keyboard-navigable
   tables and dialogs; every result surfaces a correlation id for audit tracing; secrets and key
   material are never displayed (a newly created secret is shown once, not stored client-side).
@@ -204,8 +205,9 @@ product. Everything else on this surface is ASP.NET Core MVC, Razor, and Bootstr
   `access_token` appears in any response.
 - **Antiforgery** on every state-changing form POST (the server-rendered-form profile, distinct
   from the JS/SPA custom-header CSRF profile, ADR-0029).
-- **Strict CSP** (no `unsafe-inline`), `SecurityHeadersAttribute` reused from 11; open-redirect
-  guard (`IsLocalUrl`/allow-list) on every `returnUrl`.
+- **Strict CSP** (no `unsafe-inline`, ADR-0072 parameter C), `SecurityHeadersAttribute` reused
+  from 11, whose section 7.4 carries which half of the policy is decided and which is still a
+  build-time task; open-redirect guard (`IsLocalUrl`/allow-list) on every `returnUrl`.
 - **No secret/key display;** a newly created secret is shown once and not persisted
   client-side; the live-preview never executes tenant-supplied CSS.
 - **Back-channel logout receiver** ends the console session when the IdP revokes it.

@@ -250,8 +250,13 @@ this view deliberately stops at the mechanism.
   session identifier is minted at primary authentication and the pre-login handle is
   discarded, and the identifier rotates again on step-up (ADR-0003).
 * CORS is **per-client through a policy provider**, not one static global policy (ADR-0050).
-  Security headers, a content-security policy, and a TLS floor apply at the edge (ADR-0073) and
-  in the application (ADR-0076). The application emits its own strict-transport-security header
+  A TLS floor applies both at the edge and in the application (ADR-0073, ADR-0076), and the
+  edge additionally carries the controls ADR-0073 parameter A lists, which are transport and
+  volumetric rather than browser-facing. The browser-facing headers are a separate axis: the
+  **strictness** of the Content Security Policy is ADR-0072 parameter C, a rendering-stack
+  decision rather than an edge one, while its concrete directive values are decided nowhere
+  and the [testing design](../design/20-testing.md) section 10 carries that as an open item.
+  The application emits its own strict-transport-security header
   rather than relying on the edge to, with a one-year `max-age` and with `includeSubDomains` and
   `preload` left **off and owned by the operator**, because both reach domains Nami does not own.
   Where the application terminates TLS itself, a startup assertion rejects any explicitly
@@ -327,7 +332,9 @@ A short list, not the threat model. Each row names the control rather than the i
   trusted proxies, overload versus abuse, why IP limits and lockout are insufficient and what
   is added, latency-uniform anti-enumeration, session-fixation defence, per-client CORS),
   ADR-0051 and ADR-0026 (supply-chain integrity and the license gate), ADR-0062 (the ASVS
-  baseline).
+  baseline), ADR-0072 parameter C (the Content Security Policy's strictness, which is a
+  rendering-stack decision and not an edge or transport one; the directive values are decided
+  nowhere).
 * Reconciled against the design corpus's security view on 2026-07-25. Taken from it: the
   four-boundary trust diagram, the three-layer isolation framing with the signature caveat as
   its centrepiece, the token and key protection inventories, the administration controls, the
@@ -343,6 +350,18 @@ A short list, not the threat model. Each row names the control rather than the i
   ADR-0009 also permits sign where the store signs and additionally forbids set; and the
   corpus says the session is regenerated on privilege change, where the design is more
   specific and stronger, that a pre-login handle is **never upgraded in place**.
+* **One of this view's own claims was corrected on 2026-08-01, and its shape is the reason it
+  is recorded rather than quietly fixed.** The hardening bullet in section 7 read "Security
+  headers, a content-security policy, and a TLS floor apply at the edge (ADR-0073) and in the
+  application (ADR-0076)". Three items sat behind two citations and the middle one was in
+  neither: ADR-0073 parameter A names strict transport security and no other header, and
+  ADR-0076 decides strict transport security, the TLS floor, and the transport-security
+  requirement while never mentioning a content-security policy. That is the compound-sentence
+  shape the repository conventions name as the first place to look, where a pointer at the end
+  attaches to the wrong clause, and this layer is the one that may not introduce a claim. The
+  policy's real owner for **strictness** is ADR-0072 parameter C; its **values** have no owner,
+  which the [testing design](../design/20-testing.md) section 10 records. Neither the count of
+  items nor the count of citations was wrong, which is why nothing flagged it.
 
 ---
 

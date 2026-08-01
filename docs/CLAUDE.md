@@ -58,7 +58,7 @@ ADR does not contain the claim. A sweep of every `ADR-NNNN` citation in `design/
 `architecture/` on 2026-07-29 (`cc982f3`), **2606 of them at that point**, found this class
 three times, and one of them was invented outright: the
 concrete Content-Security-Policy was cited to ADR-0062, which never mentions it, and **no
-ADR in the corpus does**. The other two were true facts with the wrong owner, which is the
+ADR fixes the directive values**. The other two were true facts with the wrong owner, which is the
 same defect at lower cost: the audit chain key cited to ADR-0009 when ADR-0008 is what
 requires it, and a closure-maintenance choice cited to ADR-0024 when no ADR rules on it.
 
@@ -78,6 +78,20 @@ the total until the split on 2026-08-01 re-counted it.
 to start where the link opens matches same-directory links and silently passes every
 `../other-layer/` one. State what a screen does *not* match, in the screen, or its zero
 will be read as absence.
+
+**"No ADR says X" is a claim about a search, and it inherits that search's blind spots.**
+It is the mirror image of the resolving citation and it is harder to catch, because the
+reader has nothing to open. `design/20-testing.md` carried "no ADR in this repository
+mentions Content-Security-Policy" until 2026-08-01 while ADR-0072 named it on five lines,
+one of them a binding parameter, for a reason that no amount of re-reading `design/20`
+would surface: **ADR-0072 spells it "Content Security Policy" unhyphenated and never
+abbreviates it**, so a search for the hyphenated header name or for `CSP` returns nothing.
+So before writing that nothing says X, enumerate the spellings X can take (hyphenated,
+spaced, abbreviated, and the vocabulary an author would use instead) and **write down which
+searches were run**, in the claim. An absence with its method attached can be re-checked; a
+bare absence gets quoted forward. The same failure in a single layer is recorded in
+`design/CLAUDE.md`, which reached it one increment earlier and caught it as a near miss
+rather than as a committed claim.
 
 ## Reading the external design corpus
 

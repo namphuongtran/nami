@@ -126,27 +126,27 @@ table's column is only as current as the last person who ran it.
 | [0063](../adr/0063-observability-backend-and-dev-visualization.md) | Keep the observability backend operator-chosen and run a self... | 11, 16 |
 | [0064](../adr/0064-mcp-authorization-server-support.md) | Support Nami as the OAuth authorization server for MCP servers | 01, 19 |
 | [0065](../adr/0065-coding-and-naming-conventions.md) | Adopt the Microsoft naming and C# coding conventions as an en... | 07, 09, 10, 12, 16, 18, 23, 24 |
-| [0066](../adr/0066-design-patterns-vocabulary-and-pragmatic-use.md) | Adopt design patterns as a shared vocabulary applied pragmati... | 03 |
+| [0066](../adr/0066-design-patterns-vocabulary-and-pragmatic-use.md) | Adopt design patterns as a shared vocabulary applied pragmati... | 03, 18 |
 | [0067](../adr/0067-ai-assisted-development-governance.md) | Adopt an AI-assisted development policy: human-accountable, d... | 11, 17 |
 | [0068](../adr/0068-continuous-access-evaluation-shared-signals.md) | Support continuous access evaluation via the OpenID Shared Si... | 01, 19 |
 | [0069](../adr/0069-verifiable-credentials-openid4vc.md) | Support issuing Verifiable Credentials via OpenID4VC (Nami as... | 01, 19 |
-| [0070](../adr/0070-local-development-tls.md) | Serve HTTPS in local development with a locally-trusted cert... | 10 |
+| [0070](../adr/0070-local-development-tls.md) | Serve HTTPS in local development with a locally-trusted cert... | 10, 18 |
 | [0071](../adr/0071-identity-change-event-publishing.md) | Publish identity change events outward through a transactiona... | 01, 03, 04, 05, 07, 08, 09, 14, 15, 19, 24 |
-| [0072](../adr/0072-ui-rendering-stack.md) | Render the human-facing UI as server-rendered Razor with no c... | 01, 07, 08, 11, 21, 22 |
+| [0072](../adr/0072-ui-rendering-stack.md) | Render the human-facing UI as server-rendered Razor with no c... | 01, 07, 08, 11, 13, 21, 22 |
 | [0073](../adr/0073-edge-posture-and-forwarded-headers.md) | Assume an L7 edge in front of the deployment, define the dire... | 03, 04, 07, 09, 10, 11, 13, 17, 18, 21 |
 | [0074](../adr/0074-database-ha-and-cache-durability.md) | Adopt a primary-plus-standby PostgreSQL topology with automat... | 05, 09, 10, 11, 12, 13, 14, 16, 17, 20, 21, 22 |
 | [0075](../adr/0075-security-sensitive-port-invariants.md) | Treat security-sensitive ports as carrying non-weakenable inv... | 08, 09, 13, 14, 18, 23, 24 |
 | [0076](../adr/0076-application-transport-security.md) | Decide the application's own transport security: HSTS policy, the... | 03, 13, 18, 23 |
 | [0077](../adr/0077-metric-cardinality-and-telemetry-privacy.md) | Bound metric cardinality with an allow-listed tag set, and keep... | 14, 16, 18, 23 |
-| [0078](../adr/0078-load-test-tooling.md) | Adopt Apache JMeter as the load-test tool, replacing k6 and N... | 03 |
+| [0078](../adr/0078-load-test-tooling.md) | Adopt Apache JMeter as the load-test tool, replacing k6 and N... | 03, 18 |
 | [0079](../adr/0079-admin-api-http-conventions.md) | Decide the Admin API's HTTP surface by rule rather than per e... | 18 |
 | [0080](../adr/0080-health-and-readiness-probe-contract.md) | Serve two anonymous probe routes, `/health/live` and `/health... | 09, 10, 18, 24 |
 | [0081](../adr/0081-dual-control-target-guard-taxonomy.md) | Classify a dual-control proposal's target, so the guard check... | 09, 12 |
 | [0082](../adr/0082-abuse-detection-lanes-and-grouping-keys.md) | Give every abuse rule a lane that can answer it, and add the... | 13, 14 |
 | [0083](../adr/0083-abuse-detection-is-built-in.md) | Ship abuse detection as a built-in component rather than a SI... | 13, 14 |
 | [0084](../adr/0084-membership-removal-semantics.md) | Define what removing a person from a tenant guarantees, befor... | 06, 18 |
-| [0085](../adr/0085-telemetry-instrument-naming.md) | Namespace every custom instrument `nami.identity.` and freeze... | 16 |
-| [0086](../adr/0086-pin-ci-actions-by-commit-sha.md) | Pin every CI action by commit SHA, never by tag | 11 |
+| [0085](../adr/0085-telemetry-instrument-naming.md) | Namespace every custom instrument `nami.identity.` and freeze... | 16, 18 |
+| [0086](../adr/0086-pin-ci-actions-by-commit-sha.md) | Pin every CI action by commit SHA, never by tag | 11, 18 |
 | [0087](../adr/0087-http-surface-snapshot-gate.md) | Lock the HTTP surface with a committed snapshot of the genera... | 18 |
 | [0088](../adr/0088-claims-contract-stability.md) | Freeze the claims contract as a consumer surface, and promise... | 04, 09, 11, 18 |
 | [0089](../adr/0089-self-service-surface-conventions.md) | Give the self-service surface its own conventions, while it s... | 18 |
@@ -162,6 +162,22 @@ numbers below are therefore computed over the **other 23 views**, which is also 
 measure: it counts views that depend on a decision rather than views that mention it. Recompute
 them with the same exclusion whenever section 2 is regenerated, and never regenerate one without
 the other.
+
+> **Two counts below are known stale as of 2026-08-01, measured and left for a separate
+> change.** A recompute run for an unrelated edit found that **four** decisions are cited by no
+> view (ADR-0079, ADR-0087, ADR-0089, ADR-0090), not the five the paragraph on zeros claims:
+> ADR-0045 is counted there as a zero while its own row reads `11, 18` and the same paragraph
+> says it is reachable through view 11's governance row, so the two halves of that paragraph
+> contradict each other. And **eight** decisions sit at a single view (ADR-0000, ADR-0045,
+> ADR-0066, ADR-0070, ADR-0078, ADR-0084, ADR-0085, ADR-0086), not the five named at the end of
+> this section; ADR-0084 moved from zero to one when its gap was closed and the tally did not
+> follow. The sixteen at two views is correct. Both stale figures are the count-versus-list
+> shape recorded in [`../design/CLAUDE.md`](../design/CLAUDE.md): the count was derived once and
+> the list transcribed separately, so they drifted apart rather than together. Resolving them
+> means re-judging what "cited by no view" should mean when the only citation is the
+> cross-cutting register that exists for decisions with no view, which is a change to this
+> section's claim and not a fix to its arithmetic. **Do not quote either figure forward until
+> then.**
 
 **The genuinely cross-cutting decisions are not the ones a reader would guess.** ADR-0008 leads
 at 17 views, then ADR-0001 and ADR-0039 at 16, ADR-0006 and ADR-0011 at 15, and five at 14:

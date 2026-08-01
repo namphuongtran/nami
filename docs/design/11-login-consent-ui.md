@@ -513,6 +513,19 @@ to all UI pages; the concrete CSP policy values are finalized in the observabili
 hardening phase (referenced, deferred). Theming must not loosen the CSP (no
 `unsafe-inline`; colors come from CSS variables or a nonce).
 
+**Who owns which half of that, because until 2026-08-01 this section named no owner and
+[20](20-testing.md) section 10 recorded the policy as ownerless.** The **strictness** is
+decided: ADR-0072 parameter C rules that "theming must never loosen the Content Security
+Policy" and that a theme requiring `unsafe-inline` is "rejected rather than accommodated",
+and that ADR's consequences commit the login surface to "no `unsafe-inline`, no
+`unsafe-eval`, no `wasm-unsafe-eval` in `script-src`". That is the whole reason the rendering
+stack is server-rendered Razor with no client runtime, so the sentence above is ADR-0072
+being applied here, not a rule this design invents. The **concrete directive values** remain
+unowned and are a build-time task, tracked in [20](20-testing.md) section 10; so does the
+anti-framing posture, since **no ADR names `X-Frame-Options`, `frame-ancestors`, or
+clickjacking** (measured over `docs/adr/` on 2026-08-01), so the header above is applied by
+this design on no recorded decision about what it should contain.
+
 ## 8. Security and multi-tenancy notes
 
 - **Open redirect** is the classic login/logout/consent vulnerability; `returnUrl` and
