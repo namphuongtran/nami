@@ -664,7 +664,13 @@ sequenceDiagram
 The issuer is inferred per request from scheme plus host plus path base, with **no static
 `SetIssuer`** (spike A-5, V20). Host-based tenancy infers `iss` automatically from the
 request; path-based tenancy sets `Request.PathBase` to `/t/<tenant>` in the resolve
-middleware, or configures options per tenant. An unresolved tenant fails fast with
+middleware, or configures options per tenant. **Only one mechanism may set it.**
+Finbuckle's `WithBasePathStrategy()` resolves the tenant from the path but does not rebase
+`PathBase` by itself, because `BasePathStrategyOptions.RebaseAspNetCorePathBase` defaults
+to `false` ([02](02-data.md) records the read and its version caveat). Enabling that
+option on top of this middleware prefixes `PathBase` twice, the issuer silently becomes
+wrong, and local self-validation then rejects our own tokens. The two are alternatives,
+never a pair. An unresolved tenant fails fast with
 `tenant_not_resolved` at 400, rather than surfacing as a null reference later. Discovery
 and JWKS are served per tenant issuer, and keys are per deployment (ADR-0033 option B)
 while the issuer is per request.

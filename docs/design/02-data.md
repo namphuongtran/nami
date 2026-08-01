@@ -1037,7 +1037,7 @@ services.AddDbContextPool<DataProtectionDbContext>(o => o.UseNpgsql(dataProtecti
 
 services.AddMultiTenant<NamiTenantInfo>()
         .WithHostStrategy()          // acme.id.example.com
-        .WithBasePathStrategy()      // /t/acme
+        .WithBasePathStrategy()      // resolves /t/acme; does NOT rebase PathBase, see below
         .WithStore<TenantStore>();
 ```
 
@@ -1045,6 +1045,22 @@ services.AddMultiTenant<NamiTenantInfo>()
 `ControlPlaneTenantDbContext`, and a comment saying why belongs at each call site: this is
 the single most consequential line in the tier, and to anyone who does not know about T7 it
 looks like a missed optimization.
+
+**Exactly one mechanism may put the tenant segment into `Request.PathBase`, and this
+registration is not it.** `WithBasePathStrategy()` resolves the tenant from the first path
+segment; whether it *also* rebases `PathBase` is a separate option,
+`BasePathStrategyOptions.RebaseAspNetCorePathBase`, which **defaults to `false`**. Read on
+2026-08-01 by reflecting a fresh instance off the shipped
+`Finbuckle.MultiTenant.AspNetCore` assembly, **version 10.0.5**, which is what was
+available offline; the rest of this design reads Finbuckle at v10.1.2 and this one default
+was not re-read there. The rebase is done by our own resolve middleware instead
+([04](04-core-protocol.md)), proven by spike A-5 (V20). Turning the Finbuckle option on as
+well prefixes `PathBase` twice, `/t/acme/t/acme`, and that is not cosmetic: the engine
+infers the per-request issuer from `PathBase`, building `BaseUri` as
+`BuildAbsolute(scheme, host, request.PathBase)` deliberately without `request.Path`, which
+the adjacent line building `RequestUri` **with** `Path` confirms. A doubled prefix
+therefore produces a wrong `iss`, and a token minted under it fails the server's own local
+self-validation.
 
 **`TenantStore` must map `ITenantInfo.Id` to `Tenants.Identifier`, not to
 `Tenants.TenantId`.** This is the load-bearing line of the whole isolation model and it is

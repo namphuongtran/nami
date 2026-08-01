@@ -207,6 +207,7 @@ and an obligation with no suite is an assertion.
 |---|---|
 | Cross-tenant / RLS isolation (the blocking gate of section 5.3) | [02](02-data.md), [07](07-authorization.md), [04](04-core-protocol.md), [18](18-tenant-lifecycle.md) |
 | PKCE, discovery, per-tenant issuer, claims | [04](04-core-protocol.md) |
+| Path-based tenancy sets `PathBase` exactly once: `iss` is `https://host/t/{tenant}` and the token self-validates locally, and the assertion that catches the real failure is that `PathBase` is **not** prefixed twice when both our resolve middleware and Finbuckle's rebase option are in play | [04](04-core-protocol.md), [02](02-data.md) |
 | `id_token` claim shape: `auth_time` as a JSON number, `amr` as a JSON array, neither duplicated | [04](04-core-protocol.md), [09](09-federation-and-claims-profile.md) |
 | `auth_time` does not advance on a sliding-cookie renewal: sign in, wait past half of `ExpireTimeSpan` to force the re-issue, request a token, assert `auth_time` is unchanged, with counter-branches asserting `max_age` and `prompt=login` still fire. **This is the test that settles what the source read left open**, so it is a regression test whichever way the handler behaves | [08](08-user-management.md), [09](09-federation-and-claims-profile.md) |
 | Refresh concurrency inside and outside the reuse leeway, and family-revoke | [04](04-core-protocol.md) |
