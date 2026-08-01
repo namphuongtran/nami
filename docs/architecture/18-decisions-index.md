@@ -90,7 +90,7 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0042](../adr/0042-abuse-and-bot-defense.md) | Add a layered anti-automation and abuse-defense posture beyon... | 03, 04, 10, 11, 13, 14, 16, 17 |
 | [0043](../adr/0043-security-hardening-invariants-startup-check.md) | Enforce security hardening invariants with a fail-fast startu... | 03, 08, 11, 13, 14 |
 | [0044](../adr/0044-public-api-stability-and-semver.md) | Treat the public API as a versioned seam governed by an analy... | 02, 03, 16, 18, 23 |
-| [0045](../adr/0045-security-disclosure-and-cve-policy.md) | Handle security vulnerabilities through private coordinated d... | 18 |
+| [0045](../adr/0045-security-disclosure-and-cve-policy.md) | Handle security vulnerabilities through private coordinated d... | 11, 18 |
 | [0046](../adr/0046-governance-and-contribution-model.md) | Adopt an ADR-driven, DCO-based OSS governance and contributio... | 10, 11 |
 | [0047](../adr/0047-authorization-decision-engine.md) | Compute authorization with a DB-first engine behind a consist... | 08, 09, 14 |
 | [0048](../adr/0048-introspection-revocation-endpoint-isolation.md) | Isolate the introspection and revocation endpoints with clien... | 03, 04, 07, 09, 11, 13, 14, 21, 24 |
@@ -125,13 +125,13 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0077](../adr/0077-metric-cardinality-and-telemetry-privacy.md) | Bound metric cardinality with an allow-listed tag set, and keep... | 14, 16, 18, 23 |
 | [0078](../adr/0078-load-test-tooling.md) | Adopt Apache JMeter as the load-test tool, replacing k6 and N... | 03 |
 | [0079](../adr/0079-admin-api-http-conventions.md) | Decide the Admin API's HTTP surface by rule rather than per e... | 18 |
-| [0080](../adr/0080-health-and-readiness-probe-contract.md) | Serve two anonymous probe routes, `/health/live` and `/health... | 18 |
+| [0080](../adr/0080-health-and-readiness-probe-contract.md) | Serve two anonymous probe routes, `/health/live` and `/health... | 09, 10, 18, 24 |
 | [0081](../adr/0081-dual-control-target-guard-taxonomy.md) | Classify a dual-control proposal's target, so the guard check... | 09, 12 |
 | [0082](../adr/0082-abuse-detection-lanes-and-grouping-keys.md) | Give every abuse rule a lane that can answer it, and add the... | 13, 14 |
 | [0083](../adr/0083-abuse-detection-is-built-in.md) | Ship abuse detection as a built-in component rather than a SI... | 13, 14 |
-| [0084](../adr/0084-membership-removal-semantics.md) | Define what removing a person from a tenant guarantees, befor... | 18 |
+| [0084](../adr/0084-membership-removal-semantics.md) | Define what removing a person from a tenant guarantees, befor... | 06, 18 |
 | [0085](../adr/0085-telemetry-instrument-naming.md) | Namespace every custom instrument `nami.identity.` and freeze... | 16 |
-| [0086](../adr/0086-pin-ci-actions-by-commit-sha.md) | Pin every CI action by commit SHA, never by tag | 18 |
+| [0086](../adr/0086-pin-ci-actions-by-commit-sha.md) | Pin every CI action by commit SHA, never by tag | 11 |
 
 ## 3. What the shape of that table says
 
@@ -155,28 +155,38 @@ model turns up in sixteen views, including context, data, runtime, security, per
 reliability, schema, observability, and operations, because almost every other decision
 eventually has to say how fast a change of mind takes effect.
 
-**Five decisions are cited by no view at all, and they do not all mean the same thing.**
-ADR-0045, on coordinated vulnerability disclosure and CVE issuance, is the settled case: the
-zero is **correct**, because a disclosure process is governance rather than architecture, so it
-has no structural or operational view to land in. It is reachable through the governance row of
-[11-cross-cutting-concepts](11-cross-cutting-concepts.md), which is where decisions that are
-substance without a view belong. Recorded explicitly so the zero reads as a finding rather than
-an oversight.
+**Two decisions are cited by no view, and both zeros are correct. Two more were, and were
+defects.** All four were judged by one test, the question this page exists to answer: if the
+decision changed, would any view become wrong?
 
-The other four are **not yet judged, and are recorded as open rather than rationalised**:
-ADR-0079 (the Admin API's HTTP conventions), ADR-0080 (the health and readiness probe
-contract), ADR-0084 (what removing a person from a tenant guarantees), and ADR-0086 (pinning
-CI actions by commit SHA). At least two of them look like coverage gaps rather than
-governance, since a probe contract is operational by nature and membership removal is a domain
-rule. Writing a rationale for each one here, before the views themselves are re-read, would be
-the exact failure this paragraph exists to prevent: a zero explained away instead of examined.
-So the finding stands open until each is judged against the views that would carry it.
+**ADR-0045** (coordinated vulnerability disclosure) and **ADR-0079** (the Admin API's HTTP
+conventions) keep their zeros. A disclosure process is governance, not architecture, so it has
+no structural or operational view to land in. ADR-0079's case is different and is **measured
+rather than argued**: the architecture layer carries no HTTP verb and no admin path anywhere,
+so a rule about tenant prefixes and about whether revoking is a `DELETE` invalidates nothing
+here. Its sibling ADR-0044 is cited in four views because it is a product-shape driver; a
+convention for one contract sits a layer below that. ADR-0045 is reachable through the
+governance row of [11-cross-cutting-concepts](11-cross-cutting-concepts.md), which is where
+decisions that are substance without a view belong; **ADR-0079 is not, and deliberately so**,
+since an HTTP convention is not governance and filing it there to give it a home would be the
+wrong-owner attribution this layer keeps having to correct. Its home is the contract itself,
+and this row is the pointer.
+
+**ADR-0080** (the probe contract) and **ADR-0084** (what removing a person from a tenant
+guarantees) were **not** correct zeros, and the ADR-0080 case is the instructive one. Two views
+already stated parts of the probe contract without an owner, which is only untidy. The real
+defect was the opposite shape: the runtime view's admin invariant and the glossary entry both
+stated `RequireActor` as universal, while ADR-0080 creates exactly one exemption from it, the
+anonymous probe routes. So the layer was not merely silent, it was teaching the reading that
+makes a pod never reach Ready, which is the failure that ADR exists to prevent. ADR-0084 was a
+plain coverage gap: the domain model defined Membership and never said that ending one leaves
+the delegated-admin grant intact, which is a statement about aggregate independence and belongs
+in the domain model rather than in an endpoint description.
 
 Five sit at a single view. Three are genuinely narrow rather than under-covered: the record
 format itself, the design-patterns vocabulary, and local-development TLS. The two that joined
-them, the load-test tool and the telemetry instrument namespace, arrived in the same batch as
-the four zeros above and carry the same unanswered question, so they are counted here and
-deliberately not characterised. Sixteen sit at two, and that tail is unremarkable: it is mostly the six demand-driven extensions, named where scope is set
+them, the load-test tool and the telemetry instrument namespace, are narrow for the same
+reason and were checked with the same test. Sixteen sit at two, and that tail is unremarkable: it is mostly the six demand-driven extensions, named where scope is set
 ([01-introduction-scope](01-introduction-scope.md)) and where their triggers are recorded
 ([19-evolution-and-extensions](19-evolution-and-extensions.md)), which is exactly the footprint
 a recorded-but-uncommitted option should have.

@@ -188,7 +188,7 @@ F53).
 | `rollingUpdate` (`maxUnavailable`, `maxSurge`) | Zero-downtime deploys, timed against graceful shutdown |
 | Resource requests and limits | Stable scheduling and no OOM-kill. Size them from the measured profile, **not** from a signing budget: signing CPU is explicitly **not** the binding constraint, at roughly 0.07 of a core for the 10k-concurrent-user goal (ADR-0041 and the capacity model) |
 | `preStop` sleep, plus readiness flip, plus graceful shutdown | On SIGTERM readiness flips to NotReady and the `preStop` sleep lets the load balancer drain **before** Kestrel stops accepting, with `terminationGracePeriodSeconds` greater than the `preStop` sleep plus the shutdown timeout |
-| **Liveness never probes `/health/ready`** | A draining pod reports NotReady on purpose. If liveness watched readiness, the platform would kill the pod mid-drain and turn a clean rollout into dropped requests |
+| **Liveness never probes `/health/ready`** | A draining pod reports NotReady on purpose. If liveness watched readiness, the platform would kill the pod mid-drain and turn a clean rollout into dropped requests. The two-route split, the route names, and the rule that liveness touches no readiness dependency are the probe contract (ADR-0080); **both hosts get their own pair**, because the Admin API deploys separately and must not be judged ready by the runtime's state |
 
 Readiness gates on three conditions, all of them: at least one active signing key, at least
 one encryption key, and a successful data-protection unprotect whose check compares the

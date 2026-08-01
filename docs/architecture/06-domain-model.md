@@ -55,7 +55,7 @@ transactional, never eventual (ADR-0020).
 | Term | Meaning |
 |---|---|
 | Tenant | An isolated customer boundary; Pool (shared DB) or Silo (own DB) (ADR-0001) |
-| Membership | A user's belonging and roles within a tenant; identity itself is global (ADR-0001) |
+| Membership | A user's belonging and roles within a tenant; identity itself is global (ADR-0001). **Independent of the delegated-admin grant below, which is the part that surprises**: the authorization decision query never joins memberships, so ending a membership leaves every capability the person held alive, and the coarse role also rides an already-issued access token. Removal is therefore immediate on the Admin API, which re-reads live, and delayed on a resource server until the token expires (ADR-0084) |
 | Delegated-admin grant | A scoped, time-bound capability to administer a tenant subtree (ADR-0010) |
 | Capability | A named, auditable permission in the catalog, some inheritable down the tenant tree (ADR-0010) |
 | Proposal | The dual-control aggregate: a destructive action awaiting a second approver, TOCTOU-safe (ADR-0020) |

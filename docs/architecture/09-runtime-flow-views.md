@@ -111,7 +111,12 @@ sequenceDiagram
 request must carry a real user (a `sub` plus **`auth_time`** on the `admin-api`
 audience; `amr` must never be used here, because it is id_token-only and so is never on
 the access token this policy inspects), and an app-only or client-credentials token is rejected with 403
-`admin_requires_actor`. It is paired with an **issuance-time** invariant that no
+`admin_requires_actor`. **The policy has exactly one exemption and it is deliberate**:
+the two anonymous probe routes, `/health/live` and `/health/ready` (ADR-0080). A kubelet
+carries no bearer token, so requiring one there is not a stricter posture but a pod that
+never reaches Ready. The exemption is stated here because the invariant above reads as
+universal and nothing in a `MapHealthChecks` call announces that it is the one route on
+the host without the policy. It is paired with an **issuance-time** invariant that no
 client-credentials client is ever granted the `admin-api` scope, so an app-only token
 for the admin API cannot exist in the first place; the runtime check alone would be one
 misconfiguration away from being the only line of defence. The approval is bound to

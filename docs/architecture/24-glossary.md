@@ -140,7 +140,8 @@ restating it.
   Never autonomous (ADR-0020).
 * **`RequireActor`.** The rule that the Admin API accepts only a user-delegated token, rejecting
   an app-only or client-credentials token, paired with an issuance-time invariant that no such
-  client is ever granted the admin scope (ADR-0020).
+  client is ever granted the admin scope (ADR-0020). It has **one** exemption, the two anonymous
+  probe routes, because a kubelet carries no token (ADR-0080).
 * **Break-glass.** Two unrelated emergency paths that are easy to conflate. **Key-compromise
   break-glass** ejects a compromised key (ADR-0007). **Admin break-glass** is an
   OIDC-independent path for when Nami cannot issue tokens at all (ADR-0015).
