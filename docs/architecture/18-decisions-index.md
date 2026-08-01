@@ -78,7 +78,7 @@ table's column is only as current as the last person who ran it.
 | [0015](../adr/0015-admin-break-glass-and-first-admin-bootstrap.md) | Provide an OIDC-independent admin break-glass path and a one-... | 01, 04, 10, 13, 14, 17, 24 |
 | [0016](../adr/0016-right-to-erasure.md) | Reconcile GDPR right-to-erasure with the immutable audit chai... | 01, 02, 03, 05, 09, 11, 12, 13, 15, 16, 18, 20, 22, 23, 24 |
 | [0017](../adr/0017-tenant-provisioning-and-silo-migration.md) | Orchestrate the tenant lifecycle with build-artifact migratio... | 01, 09, 10, 12, 15, 17, 20, 24 |
-| [0018](../adr/0018-dbcontext-pooling-for-pool-mode.md) | Register the Pool-mode OpenIddict DbContext non-pooled in v1,... | 03, 07, 08, 09, 10, 11, 12, 21, 22, 23 |
+| [0018](../adr/0018-dbcontext-pooling-for-pool-mode.md) | Register the Pool-mode OpenIddict DbContext non-pooled in v1,... | 03, 07, 08, 09, 10, 11, 12, 21, 22, 23, 24 |
 | [0019](../adr/0019-single-logout-strategy.md) | Achieve single logout with an interim back-channel logout on... | 01, 03, 04, 07, 08, 09, 12, 17, 19, 23, 24 |
 | [0020](../adr/0020-admin-architecture.md) | Split admin into a REST API and an MVC Razor BFF app, enforce... | 01, 05, 06, 07, 08, 09, 12, 13, 14, 17, 24 |
 | [0021](../adr/0021-openiddict-version-adaptation.md) | Adapt to OpenIddict version upgrades with seam isolation, per... | 02, 03, 05, 08, 09, 11, 15, 16, 17, 18, 20, 23, 24 |

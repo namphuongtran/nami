@@ -46,7 +46,8 @@ restating it.
   (ADR-0013).
 * **Step-up.** Demanding stronger authentication for a sensitive action. The response is
   **`401` with `insufficient_user_authentication`** (RFC 9470), not `403`: the caller may be
-  entitled, they simply have not proved enough yet.
+  entitled, they simply have not proved enough yet. Nami's assurance model, including this
+  response, is ADR-0013.
 * **PAR.** Pushed authorization request (RFC 9126): the client pushes parameters
   server-to-server and receives a `request_uri` to use in the browser redirect.
 * **Device flow.** The device authorization grant (RFC 8628) for input-constrained devices.
@@ -67,7 +68,9 @@ restating it.
 * **DPoP.** Demonstrating proof-of-possession (RFC 9449): the client signs a per-request proof
   with a key whose thumbprint the token carries. Built on both sides, because the engine has
   neither issuance nor validation (ADR-0014).
-* **mTLS-bound token.** A token bound to the client's TLS certificate (RFC 8705). Native.
+* **mTLS-bound token.** A token bound to the client's TLS certificate (RFC 8705). **Native**
+  where DPoP is not, on a verdict read from the engine's source rather than inferred
+  (ADR-0014).
 * **cnf, jkt, x5t#S256.** The confirmation claim and its two binding forms: a JWK thumbprint
   for DPoP and a certificate thumbprint for mTLS.
 
@@ -76,15 +79,31 @@ restating it.
 * **Pool and Silo.** The two tenancy modes. **Pool** shares a schema with a tenant
   discriminator and row-level isolation; **Silo** gives a tenant its own database and keyset.
   Pool is the default (ADR-0001).
-* **Per-tenant issuer.** Each tenant's tokens carry a tenant-specific `iss`, inferred from host
-  or path rather than configured statically, and discovery must advertise the same value.
+* **Per-tenant issuer.** Each tenant's tokens carry a tenant-specific `iss`, inferred per
+  request from scheme, host, and path base rather than configured statically, and discovery and
+  JWKS are served per tenant issuer. Resolution is **by host or path and never by a claim**
+  (ADR-0001 section C, which gives the reason: a claim would need a database query at the token
+  endpoint); the per-request inference and the no-static-issuer rule are the
+  [core-protocol design](../design/04-core-protocol.md).
 * **Row-level security, and `FORCE`.** The database-level second layer: a policy confining reads
   and bulk writes to the current tenant, under a **de-privileged** role. The role matters: a
   privileged connection bypasses the policy, which silently removes the layer (ADR-0037).
 * **`SET LOCAL`.** How the current tenant is set, inside the request transaction, so it cannot
-  leak across a pooled connection. The session-scoped form is forbidden for that reason.
+  leak across a pooled connection. The session-scoped form is forbidden for that reason
+  (ADR-0037; ADR-0018 is the pooling topology that makes the leak reachable).
 * **Ambient tenant.** The resolved tenant for the current request. **Absence fails closed**, a
-  throw or zero rows, never an unfiltered read.
+  throw or zero rows, never an unfiltered read. That was proven by a runnable spike rather than
+  assumed, which is why it is stated as a property and not as an intention (ADR-0001).
+* **Tenant resolution versus tenant as operation target.** Two different things that both put a
+  tenant into a request, and taking them for one thing is why either can read as a duplicate of
+  the other. **Resolution** answers *who a request is for*: it selects the tenant whose issuer
+  serves it, from the host or the path and never from a claim, and a token belongs to exactly
+  one (ADR-0001 section C). **Operation target** answers *what a request is about*: an
+  administrator acts on a tenant that is named rather than resolved, and it cannot be ambient,
+  because a delegated grant is scoped to a subtree so one actor holds authority over many
+  tenants at once (ADR-0010). The URL shapes each of them takes, and the order the two compose
+  in, are decisions rather than definitions and are deliberately not restated here; the
+  [admin API design](../design/15-admin-api.md) section 3 is where an implementer meets both.
 * **Issuer and tenant binding.** The mechanism that actually isolates tenants at a resource
   server. **The signature does not isolate**: Pool tenants share a keyset, so a valid signature
   proves only that Nami issued the token, not for whom. Issuer, audience, and the `tenant`
@@ -107,7 +126,8 @@ restating it.
   (ADR-0011) and a non-static configuration manager
   reading the live key store (ADR-0011).
 * **KEK and DEK.** Key-encryption key and data-encryption key. A **per-subject DEK** is what
-  makes crypto-shred possible.
+  makes crypto-shred possible, and **ADR-0016 defines it**: the general key-management decision
+  it relies on does not, which ADR-0016 says of its own citation.
 * **Crypto-shred.** Erasing a subject by destroying their data-encryption key, so ciphertext
   becomes unrecoverable **without deleting any row**. This is what lets erasure coexist with an
   append-only audit chain and with immutable backups (ADR-0016).
@@ -130,7 +150,7 @@ restating it.
   stored value rather than prose. Checked live at the Admin API, never baked into a token,
   because a grant is revocable and a claim is not (ADR-0010).
 * **Delegated admin.** A tenant-scoped, time-bound, revocable administrative grant. **There is
-  no super-admin.**
+  no super-admin** (ADR-0010).
 * **Forbidden cascade.** The control that makes "no super-admin" real: dangerous capabilities
   do not inherit down the tenant tree even from an ancestor grant, so they need a direct grant
   on the exact tenant. In v1 the grant model is **purely additive**, with no deny row and no
@@ -155,7 +175,8 @@ restating it.
   The budget is deliberately expressed as a **formula rather than a figure**, because it drives
   the release freeze and the availability target is not yet ratified (ADR-0041).
 * **Burn rate.** How fast the error budget is being consumed. Alerting is on burn rate rather
-  than on instantaneous latency, and the burn tier drives an **automatic** freeze.
+  than on instantaneous latency, and the burn tier drives a freeze that is **an automatic
+  consequence of the tier, not a manual decision** (ADR-0041).
 * **Rate limiting versus load shedding.** Different controls: rate limiting answers "this caller
   is asking too often" with `429`; load shedding answers "the service is past capacity" with
   `503` (ADR-0040).
@@ -184,7 +205,8 @@ restating it.
 ## Conventions of this project
 
 * **Native versus build.** Whether a capability comes from the protocol engine or must be
-  written. Each verdict traces to a verification record, and each is re-checked on every bump.
+  written. Each verdict traces to a verification record, and each is re-checked on every engine
+  or runtime bump by the contract-regression suite (ADR-0021).
 * **Spike, and gate spike.** A runnable experiment that proves a risky mechanism before it is
   committed to. A **gate** spike blocks the decision until it passes. Several changed their
   design rather than confirming it, which is the point.
@@ -198,14 +220,25 @@ restating it.
   (see the [checklist](../PRE-GA-RATIFICATION-CHECKLIST.md)).
 * **Naming.** Assemblies sit under `Nami.Identity.*`; configuration keys are `Nami:Section:Key`
   with `Nami__Section__Key` as the environment form and a short `NAMI_X` alias (ADR-0065).
-* **The authority order.** Decision records bind, detailed designs are the authority for
-  implementation detail, and the architecture layer synthesises both and **introduces
-  nothing**. When it disagrees with either, the architecture is the bug.
+* **The authority order.** Decision records bind ([adr](../adr/README.md)), detailed designs
+  realize them and are the authority for implementation detail
+  ([design](../design/README.md)), and the architecture layer synthesises both and
+  **introduces nothing**: when it disagrees with either, this layer is the bug
+  ([architecture](README.md)). Each of the three states its own part and none states all of it,
+  which is why the pointer is to three documents rather than to one.
 
 ## Sources
 
-* Terms trace to the ADR or design named inline; where none is named the term is general
-  ecosystem vocabulary defined here for consistency.
+* Terms trace to the ADR or design named inline. Where none is named there are **two** cases
+  rather than one, and reading the rule as though there were only the first is what let unowned
+  claims sit here: a term of the wider ecosystem, defined here for consistency, and a
+  **convention of this project with no single owning document**, which is why those have a
+  section of their own rather than being mixed in. **A Nami decision stated here with no owner
+  named is a defect in this file**, of the shape section 3 of
+  [18-decisions-index](18-decisions-index.md) calls "only untidy" when a view states part of a
+  contract without an owner. A sweep on 2026-08-01 read every entry against that test and found
+  **ten**, each now carrying the owner verified at source rather than the owner it looked
+  adjacent to.
 * Reconciled against the design corpus's glossary on 2026-07-26. Taken from it: the section
   structure, the protocol and sender-constrained vocabulary, the isolation and key terms, and
   the practice of defining project conventions rather than assuming them. Three groups were
