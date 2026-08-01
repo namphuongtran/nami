@@ -78,8 +78,10 @@ OpenIddict has no profile-service equivalent, so a single `IClaimsProfileService
 choke-point owned by 04, with the claim contract in 09) is where session claims are
 produced: `acr` is
 **recomputed per token-request** from `amr` plus session age, with the aal2 predicate
-requiring `amr` to include `mfa`, `otp`, `hwk`, or `swk` (so a passkey-only login is
-not mis-scored as aal1) and an aal2 freshness window of about 12 hours with 30-minute
+requiring `amr` to include `mfa` or `otp`, **or** `hwk`/`swk` **with user verification
+recorded for that assertion** (so a passkey-only login is not mis-scored as aal1, and a
+passkey used without user verification is not mis-scored as aal2 either, section 5.2)
+and an aal2 freshness window of about 12 hours with 30-minute
 inactivity (NIST), capped by the 8h absolute session ceiling (ADR-0013) so an aged
 session downgrades; `amr` is stamped at sign-in via
 `SignInWithClaimsAsync(user, isPersistent, [amr claims])`, and **`auth_time` is stamped as
@@ -173,8 +175,43 @@ unset); and an **AAL seam** that persists `UserPasskeyInfo.Aaguid` and an
 `AttestationTrust` column, with an `IAttestationValidator` port and an `AaguidAalPolicy`
 bound in `AssuranceOptions` through `IOptionsMonitor` (hot-reload of the aal3 allow-list
 without a restart).
-**v1 ships attestation off, so every passkey is `aal2`** (the only honest tier when
-attestation is unvalidated); the aal3 allow-list is empty, ready to enable
+**v1 ships attestation off, so no passkey reaches `aal3`, and a passkey reaches `aal2` only
+when user verification actually happened.** Until 2026-08-01 this design said "every passkey
+is `aal2`", which was wrong in the direction that grants assurance rather than withholding
+it. A cryptographic authenticator used **without** user verification proves possession of
+the credential and nothing else, which is one factor; the PIN or biometric that UV performs
+is what supplies the second. So a non-UV assertion is a single-factor login, and scoring it
+`aal2` meant the per-scope `RequiredAcr` gate passed on it and RFC 9470 step-up saw `aal2`
+already satisfied and never challenged. It also interacts with the `amr` predicate in
+section 5: a passkey stamps `hwk`/`swk`, and that value alone must not be read as
+multi-factor.
+
+Three rules follow, and .NET 10 supplies what each needs:
+
+* **Require UV in both ceremonies.** `IdentityPasskeyOptions.UserVerificationRequirement`
+  applies to creating a new passkey and to requesting an existing one, takes `"required"`,
+  `"preferred"` or `"discouraged"`, and its **default is `"required"`** (read at the .NET
+  10.0.9 reference assemblies). Nami sets it explicitly anyway, because a security-relevant
+  default that nothing states is a default that a future upgrade may change silently.
+* **Assert the flag, do not trust the request.** The requirement travels to the client as a
+  ceremony parameter, so it expresses intent; the authenticator's own UV result is the fact.
+  Read `UserPasskeyInfo.IsUserVerified`, which exists on the .NET 10 type and is reachable
+  from `PasskeyAssertionResult<T>.Passkey`, documented as "the **updated** passkey
+  information when assertion succeeds".
+* **Make the `aal2` branch conditional** on that flag rather than unconditional on the
+  credential being a passkey.
+
+**Not verified here, and deliberately named:** whether the framework *enforces*
+`UserVerificationRequirement` server-side. The documentation for the sibling
+`ResidentKeyRequirement` says explicitly that it "is **not enforced on the server**", and
+`UserVerificationRequirement` carries no such sentence, but an absent caveat is not a
+statement, and this design does not treat it as one. Asserting `IsUserVerified` makes the
+question moot at the point that matters, which is why the assertion is a rule rather than a
+belt-and-braces extra. The AAL2 two-factor definition itself should be confirmed against the
+mandated revision of NIST SP 800-63B, alongside the freshness numbers ADR-0013 already
+parks there.
+
+The aal3 allow-list is empty, ready to enable
 hardware-attested aal3 later as config plus an MDS adapter (`fido2-net-lib`, MIT). A
 **backup-eligible (synced) credential is never aal3** (the rule keys off
 `IsBackupEligible`, not `IsBackedUp`, so a credential that can sync is disqualified
@@ -199,8 +236,9 @@ sequenceDiagram
   SM-->>U: creation options, navigator.credentials.create
   U->>SM: PerformPasskeyAttestationAsync with the credential
   SM->>UM: AddOrUpdatePasskeyAsync, persist Aaguid and AttestationTrust
-  Note over CP: ComputeAcr resolves aaguid, trust, IsBackupEligible to a tier
-  Note over CP: v1 attestation off so aal2, aal3 allow-list empty, backup-eligible never aal3
+  Note over CP: ComputeAcr resolves aaguid, trust, IsBackupEligible, IsUserVerified to a tier
+  Note over CP: no UV means one factor so aal1, never aal2
+  Note over CP: v1 attestation off so at most aal2, aal3 allow-list empty, backup-eligible never aal3
 ```
 
 #### Passkey recovery (lost all devices)

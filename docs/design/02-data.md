@@ -657,9 +657,12 @@ Two notes on columns above whose failure mode is subtle:
 `AspNetRoles`, `AspNetUserRoles`, `AspNetUserClaims`, `AspNetUserLogins`,
 `AspNetUserTokens`, `AspNetRoleClaims`) with `ApplicationUser : IdentityUser<Guid>` and
 UUIDv7 keys. Passkeys use the **native .NET 10 passkey store**, whose `UserPasskeyInfo`
-carries `CredentialId`, `PublicKey`, `Aaguid`, `IsBackupEligible`, `IsBackedUp`, and the
-signature counter; Nami adds exactly **one** column, `AttestationTrust`, which is the
-seam the authenticator-assurance policy reads (ADR-0028, detailed in 08). There is no
+carries `CredentialId`, `PublicKey`, `Aaguid`, `IsBackupEligible`, `IsBackedUp`,
+**`IsUserVerified`**, and the signature counter; Nami adds exactly **one** column,
+`AttestationTrust`, which is the seam the authenticator-assurance policy reads (ADR-0028,
+detailed in 08). `IsUserVerified` is listed explicitly because the assurance tier depends
+on it (08 section 5.2) and it is **native**, so the dependency costs no column and no
+migration; verified present on `UserPasskeyInfo` at the .NET 10.0.9 reference assemblies. There is no
 tenant filter: identity is global (ADR-0001). A global `OutboxEmail` variant without
 `TenantId` also lives here, for confirm and reset mail.
 
