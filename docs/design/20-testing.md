@@ -209,6 +209,8 @@ and an obligation with no suite is an assertion.
 | PKCE, discovery, per-tenant issuer, claims | [04](04-core-protocol.md) |
 | `id_token` claim shape: `auth_time` as a JSON number, `amr` as a JSON array, neither duplicated | [04](04-core-protocol.md), [09](09-federation-and-claims-profile.md) |
 | Refresh concurrency inside and outside the reuse leeway, and family-revoke | [04](04-core-protocol.md) |
+| The 8h ceiling anchor: absent from both issued tokens, surviving rotation, rejecting on its own reason when absent, and **a second login on a reused consent older than 8h still refreshing** | [04](04-core-protocol.md) |
+| Session-liveness gate on the refresh grant: a deleted session row ends the chain, a `sid`-less client-credentials token is unaffected, and the resulting logout bound is asserted **through the refresh grant** rather than by waiting out the access token | [04](04-core-protocol.md), [11](11-login-consent-ui.md) |
 | mTLS spoofed-header rejection, DPoP | [06](06-sender-constrained-tokens.md), [04](04-core-protocol.md) for the issuance-side wiring |
 | Resource-server per-tenant validation, shared-key-does-not-isolate | [05](05-resource-server-validation.md) |
 | Device backoff, PAR flood and PAR enforcement | [14](14-advanced-flows.md) |

@@ -15,11 +15,11 @@ tags: [design, seams, version-adaptation, openiddict, contract-tests]
 
 ADR-0021 does not merely recommend a catalogue, it names one as a deliverable: *"Maintain
 an OpenIddict seam catalogue (a deliverable design document) listing every dependency on
-OpenIddict (S1-S34), each tagged with a risk tier ... pointing to a source-verify file, a
+OpenIddict (numbered `S1` onward), each tagged with a risk tier ... pointing to a source-verify file, a
 contract test, an isolation port, and a decommission marker."* This is that document.
 
 The problem it solves is specific. Nami pins one engine version and depends on it in
-thirty-four distinct places, and those places are not equally safe. Some are documented API
+thirty-five distinct places, and those places are not equally safe. Some are documented API
 that breaks loudly with a release note. Some are internal behaviour that breaks **silently**,
 where a bump changes a sort order or removes an internal throw and nothing fails until a
 token is wrong in production. A catalogue that does not distinguish those two is decoration.
@@ -40,7 +40,7 @@ token is wrong in production. A catalogue that does not distinguish those two is
 
 ## 2. Purpose and scope
 
-In scope: the risk-tier taxonomy, the registry of all thirty-four seams with owner and
+In scope: the risk-tier taxonomy, the registry of all thirty-five seams with owner and
 contract test, the contract-regression mapping, the per-bump playbook, the decommission
 rules, and the readiness work for the next major.
 
@@ -128,7 +128,7 @@ arrives with documentation. A T2 or T3 break arrives as a wrong token.
 
 ### 5.2 The registry
 
-Thirty-four seams. **Owner** is the design that holds the mechanism; **test** is the
+Thirty-five seams. **Owner** is the design that holds the mechanism; **test** is the
 contract test that must pass on every bump.
 
 **Signing and key rotation** (owner [12](12-key-management.md), ADR-0011 and ADR-0012)
@@ -200,11 +200,28 @@ contract test that must pass on every bump.
 | S33 | Every custom handler anchors by **named descriptor**, never a literal order number | **T4** | one file of order constants | the pipeline-order snapshot | none |
 | S34 | Degraded mode is forbidden where real tokens are issued, enforced by a fail-fast startup guard | T1 | the startup guard, which also emits a security event | startup test | none |
 
+**Private-claim carriage** (owner [04](04-core-protocol.md), ADR-0004 and ADR-0003)
+
+| # | Seam | Tier | Isolation | Test | Decommission |
+|---|---|---|---|---|---|
+| S35 | Two engine-internal behaviours carry the refresh-ceiling anchor and the session gate: private claims are dropped from the access and id tokens **above and independently of** the destination check, and the refresh token includes **every** claim except six named ones, consulting no destinations at all | **T3** | one claim-name constant; and the anchor's fail-closed reject, which converts the second half of this seam from a silent break into a named one | the anchor and session-gate tests in [04](04-core-protocol.md) section 9, cases (b) and (e) in particular | none |
+
+Registered 2026-08-01, when the anchor moved onto a private claim. The two halves fail
+differently and that asymmetry is the whole reason this seam is cheap to hold. If the
+**first** breaks, the anchor starts appearing in issued access tokens and nothing complains,
+which is the classic T3 shape and is why a test asserts the claim's **absence** from both
+tokens rather than only its presence on the refresh token. If the **second** breaks, the
+anchor and `sid` stop arriving at the refresh grant, the fail-closed branch rejects with
+"anchor missing", and the failure is loud and correctly named on the first request. A
+design that had written `?? "0"` would have converted that same break into a silent
+total outage, so the fail-closed rule is not only a correctness choice, it is what makes
+half of this seam self-reporting.
+
 ### 5.3 What was read at source, and what was not
 
-Four registry claims were re-read against the engine's own source at the pinned version on
-2026-07-27, rather than carried on the corpus's word. This is the standard the rest of the
-registry should reach before GA, not a claim that it already has.
+Five registry claims were re-read against the engine's own source at the pinned version, four
+on 2026-07-27 and S35 on 2026-08-01, rather than carried on the corpus's word. This is the
+standard the rest of the registry should reach before GA, not a claim that it already has.
 
 | Seam | Read at | What it says |
 |---|---|---|
@@ -212,6 +229,7 @@ registry should reach before GA, not a claim that it already has.
 | S3 | the key-set discovery handler | the loop over credentials filters on **algorithm only**; there is no validity-window filter, which is exactly what makes publish-before-sign work |
 | S9 | the validation protection handlers | the confirmation check reads only the certificate thumbprint and otherwise throws a specific internal error, which is why the custom handler must run first |
 | S13 | the server options | the reuse leeway is initialized to 30 seconds and documented as the default, confirming ADR-0004's wording rather than assuming it |
+| S35 | the server handlers and the constants file | the private prefix is `oi_` (`OpenIddictConstants.cs:121`); `PrepareAccessTokenPrincipal` (`:3571`) and `PrepareIdentityTokenPrincipal` (`:4557`) both drop private claims with a `return false` **above** the `HasDestination` check; `PrepareRefreshTokenPrincipal` (`:4374-4384`) excludes six claims by name and then returns true unconditionally, "other claims are always included in the refresh token, even private claims" (`:4383`); and the claim value-type switch (`:2846-2900`) ends in `_ => true`, so a name outside its well-known list never throws ID0424. **The corpus's citations for the third of these point at `:3675` and `:4333`, which are class declarations rather than the sentences; reading them is what surfaced the discrepancy** |
 
 **Not verified here**, and marked so deliberately: whether the server-side signing path has
 a handler identical to S2's, because the checked-in source excerpt covers the validation
@@ -373,16 +391,17 @@ the engine or any co-versioned library.
 | Migration behaviour, S27 | specified |
 | Pipeline order, S33 | specified, the snapshot test |
 | Degraded mode, S34 | specified, the start-up test |
+| Private-claim carriage, S35 | specified, in [04](04-core-protocol.md) section 9 |
 | **Cache, entry validation, leeway, family revoke, refresh interval, S11 to S15** | **to build** |
 | **Prune scope S25, pin check S26, telemetry surface S31** | **to build** |
 
-Nine of the thirty-four seams therefore have no contract test yet, and they are named rather
+Nine of the thirty-five seams therefore have no contract test yet, and they are named rather
 than glossed: a registry that reported itself complete would be worse than one that reports
 its own gaps.
 
 ## 10. Open and build-time items
 
-* **Build the contract-regression project** covering all thirty-four seams, extending the
+* **Build the contract-regression project** covering all thirty-five seams, extending the
   specified tests and adding the nine listed above.
 * **Write the pipeline-order constants and the snapshot baseline** (S33), and attach the
   decommission markers in code as well as here (S28 to S32).
@@ -403,7 +422,7 @@ its own gaps.
 
 ## 11. Sources
 
-* **ADRs:** 0021 (the owning decision, and the source of the S1-S34 scope and the tier
+* **ADRs:** 0021 (the owning decision, and the source of the seam-registry scope and the tier
   vocabulary), 0024 (the extension axes), 0030 (the sibling runtime playbook), 0011, 0014,
   0018, 0019, 0022 (the seam owners), 0075 (the security-sensitive port invariants), 0004
   (the leeway value), 0026 (the license gate that a new dependency would trip).

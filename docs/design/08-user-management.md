@@ -234,7 +234,9 @@ ticket and the cookie carries only a handle. Keyed by `sid`; inactivity 1h, abso
 8h; a re-validation interval of 1-2 minutes; a per-user `MaxConcurrentSessions` cap
 (default ~5, per-tenant overridable) evicting the oldest on login; authorize and
 refresh are denied when the session is revoked (revocation deletes the session row,
-so row-absence is the revoked state the deny check tests). The interim
+so row-absence is the revoked state the deny check tests; the refresh half of that check
+is executed in [04](04-core-protocol.md), and because row-absence cannot distinguish
+revoked from expired, the 1-hour inactivity window ends a refresh chain as well). The interim
 back-channel-logout emitter and the first-party-SPA BFF receiver (ADR-0019) build on
 this store and consume the `sid`/`logout_token` contract, their fan-out owned by the
 logout design (11). The `sid` is stable across passive

@@ -257,13 +257,42 @@ handler. Discovery and JWKS are served per tenant issuer.
 ## 4. Data and structure
 
 No new tables: the engine uses the OpenIddict entities defined in [02 data](02-data.md).
-This design writes three property anchors, and their placement is load-bearing:
+This design writes two property anchors plus one private claim, and every placement here is
+load-bearing:
 
 | Anchor | Where | Why there |
 |---|---|---|
-| `refresh_anchor` | `Authorization.Properties` | The absolute 8h ceiling timestamp. On the authorization, so it survives token rotation; **never as a claim**, which would leak the anchor into the access token |
+| `oi_nami_refresh_anchor` | a **private claim** on the principal, not on any entity | The absolute 8h ceiling timestamp. Scoped to the **login chain**, which is what the ceiling bounds. See the correction below: an entity property is the wrong scope here |
 | `access_token_type` | `Application.Properties` | Per-client `jwt` or `reference` selection, read by the generate-token handler |
 | `cors_origins` | `Application.Properties` | The per-client allowed origin set, and the system of record for the origin cache |
+
+> **Corrected 2026-08-01. This anchor was specified on `Authorization.Properties`, and both
+> the placement and the reason given for it were wrong.** The reason first, because it is the
+> part that would otherwise defeat the fix: this table said the anchor must **never** be a
+> claim, "which would leak the anchor into the access token". That is true of an **ordinary**
+> claim and false of a **private** one. The private prefix is `oi_`
+> (`OpenIddictConstants.cs:121`), and both `PrepareAccessTokenPrincipal`
+> (`OpenIddictServerHandlers.cs:3571`) and `PrepareIdentityTokenPrincipal` (`:4557`) drop
+> private claims with a bare `return false` that sits **above, and independent of**, the
+> `HasDestination` check in the same filter. Leaking is therefore not merely unlikely, it is
+> unreachable, and it stays unreachable even if the `GetDestinations` switch in section 3 is
+> later edited wrongly. Left standing, that sentence was an argument in this repository's own
+> voice against the correct placement.
+>
+> The placement second. An `Authorization` here is **`Permanent` and reused across logins**
+> (section 5 finds it with `FindAsync` and states that it does not expire), so it outlives the
+> refresh chain the ceiling is supposed to bound. An anchor stamped on that row makes the
+> ceiling "8h per consent, forever" rather than "8h per login chain": once 8h had passed since
+> a consent's first refresh token, every later login on that consent would be rejected at its
+> first refresh, and re-consenting would not help because the same row is reused. That is the
+> opposite of ADR-0004's "the hard 8-hour ceiling forces re-authentication". A fresh principal
+> per login gives a fresh anchor per chain with no re-stamp logic and no bookkeeping about
+> whether an authorization was reused.
+>
+> Imported from the design corpus (its core-protocol document, section 6, review finding
+> B-02). **Only one of that finding's two defects existed here:** the corpus also had a read
+> side that read a claim the write side never wrote, which rejected every refresh; this
+> document never had a read side, so it carried the scoping defect alone.
 
 ## 5. Behaviour
 
@@ -355,8 +384,8 @@ sequenceDiagram
 ### Refresh posture: native, observation only
 
 Rolling refresh, one-time use, reuse and replay detection, and family or chain
-revocation are default-on in OpenIddict and are **not disabled**. Nami adds only five
-things:
+revocation are default-on in OpenIddict and are **not disabled**. Nami adds six things,
+two of which (3 and 6) are checks in the same `HandleTokenRequest` refresh-grant block:
 
 1. A **30-second reuse leeway**, not 15, because 15 sits below the network-timeout band
    and a legitimate retry would trigger family revoke and a spurious logout.
@@ -365,17 +394,54 @@ things:
    audit event. It does **not** call `RevokeByAuthorizationIdAsync` again: the engine has
    already revoked the siblings, and it deliberately keeps the `Authorization` so a fresh
    flow can start.
-3. An **absolute 8h ceiling**, stamped as `refresh_anchor` on `Authorization.Properties`
-   at first issuance so it survives rotation, and enforced in the token request against
-   `UtcNow - anchor > 8h + ClockSkewTolerance`.
+3. An **absolute 8h ceiling**, stamped **at sign-in, once per login chain**, as the private
+   claim `oi_nami_refresh_anchor` (section 4), and enforced in the refresh grant against
+   `UtcNow - anchor > 8h + ClockSkewTolerance`. **An absent anchor is rejected with its own
+   distinct reason**, never defaulted: see the fail-closed rule below.
 4. **Per-client `IssueRefreshToken`**, so an M2M client gets none.
 5. **Disabled-user handling** by gate-at-issuance (`CanSignInAsync`) plus force-revoke on
    disable, accepting a 15-minute residual for an already-issued JWT.
+6. A **session-liveness gate**: the refresh grant reads the `sid` claim and rejects with
+   `invalid_grant` when no live `ServerSideSessions` row matches. This is not a new control.
+   ADR-0003 already requires that "authorization and refresh requests are denied once the
+   session row is gone"; until now no design carried it, and the paragraph below is where it
+   is executed.
 
 Cross-node timestamp comparisons use one named constant,
 `ProtocolConstants.ClockSkewTolerance`, at 60 seconds, on NTP-synced nodes. It covers
 both the 8h ceiling and `max_age` versus `auth_time` for step-up (08). It is independent
-of the 30-second reuse leeway, and the two **compose** rather than merge.
+of the 30-second reuse leeway, and the two **compose** rather than merge. The anchor's claim
+name is likewise a single constant, `ProtocolConstants.RefreshAnchorClaim`, so the literal
+appears once.
+
+**The fail-closed rule, and why it is a decision rather than a detail.** Reading the anchor
+as `long.Parse(claim ?? "0")` turns a missing anchor into a 1970 timestamp, which makes the
+ceiling comparison unconditionally true and rejects **every** refresh, while building cleanly
+and throwing nothing. The only symptom is "every user is signed out after fifteen minutes",
+with nothing in the logs distinguishing it from a chain that legitimately expired. So a
+missing anchor rejects on its own branch with its own reason, and `?? "0"` is forbidden here.
+This also buys something at the seam: if a future engine version stopped carrying the claim
+across rotation, the failure would be loud and correctly named instead of silent (S35).
+
+**Why the session gate needs no new claim, which is the non-obvious part.** `sid` is already
+on the refresh token. The `GetDestinations` switch in section 3 sends `sid` to the id token
+only, and that is correct and must not be changed, because
+`PrepareRefreshTokenPrincipal` (`OpenIddictServerHandlers.cs:4374-4384`) filters out exactly
+six claims (`jti`, `oi_tkn_id`, `exp`, `iat`, `nbf`, `cnf`) and then returns true for
+everything else, **without consulting destinations at all**: "other claims are always
+included in the refresh token, even private claims" (`:4383`). Adding `sid` to a refresh
+destination would be both unnecessary and meaningless. The lookup is one hit on the unique
+`Key` column (ADR-0003). A principal with **no** `sid` is a non-browser flow such as
+client-credentials, and skips the check rather than failing it.
+
+**The consequence this gate carries, which is real and intended.** ADR-0003 revokes by
+deleting the row and deliberately has no `revoked` column, so row-absence cannot distinguish
+"revoked" from "expired". The effective refresh lifetime therefore becomes
+**min(the 8h ceiling, the session still being alive)**, which means the **1-hour inactivity
+window also ends the refresh chain**. That follows from ADR-0003's existing choice rather
+than from this gate, and it matches the strictness ADR-0003 selected. Do **not** soften it by
+adding a tombstone column: that would contradict ADR-0003's "no `revoked` column" clause
+directly, and re-create the two-sources-of-truth problem that clause exists to prevent.
 
 ```mermaid
 sequenceDiagram
@@ -383,6 +449,7 @@ sequenceDiagram
   participant C as Client
   participant T as Token endpoint
   participant Eng as OpenIddict engine
+  participant SS as Session store
   participant AL as Audit
   C->>T: refresh_token grant
   T->>Eng: validate, native rolling rotation
@@ -391,8 +458,19 @@ sequenceDiagram
     Eng->>AL: emit refresh_reuse_detected, no double-revoke
     Eng-->>C: invalid_grant
   else valid or within leeway
-    Eng->>Eng: check the absolute 8h ceiling anchor
-    Eng-->>C: new access JWT plus rotated refresh JWE
+    Eng->>Eng: read oi_nami_refresh_anchor from the principal
+    alt anchor absent
+      Eng-->>C: invalid_grant, anchor missing, its own reason
+    else past 8h plus ClockSkewTolerance
+      Eng-->>C: invalid_grant, chain expired
+    else within the ceiling
+      Eng->>SS: sid present, is the session row still there
+      alt session gone
+        Eng-->>C: invalid_grant, originating session ended
+      else session live, or no sid on a non-browser flow
+        Eng-->>C: new access JWT plus rotated refresh JWE
+      end
+    end
   end
 ```
 
@@ -732,6 +810,21 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
 * **Refresh.** Replaying a redeemed token outside the leeway returns `invalid_grant` and
   revokes the authorization's siblings but not the `Authorization`; a within-leeway
   concurrent retry succeeds; multi-tab and mobile concurrency are covered (ADR-0004).
+* **The 8h ceiling and its anchor**, five cases, and the last two are the ones that would
+  have failed before the 2026-08-01 correction. (a) A refresh immediately after login
+  succeeds. (b) `oi_nami_refresh_anchor` appears in **neither** the access token nor the id
+  token, and **does** survive at least two rotations. (c) An anchor at 8h minus one second
+  passes and at 8h plus 61 seconds returns `invalid_grant`, which pins the
+  `ClockSkewTolerance` boundary. (d) An **absent** anchor is rejected under its own distinct
+  reason, asserted on the reason and not merely on the status, since the whole point is that
+  it is not "chain expired". (e) A **second login reusing an authorization whose consent is
+  older than 8h** refreshes successfully, which is the assertion that fails if the anchor
+  ever moves back onto `Authorization.Properties`.
+* **Session-liveness gate.** Deleting the `ServerSideSessions` row makes the next refresh
+  return `invalid_grant`; a client-credentials token carrying no `sid` refreshes normally;
+  and, because ADR-0003 has no `revoked` column, a session that lapsed through the 1-hour
+  inactivity window ends the refresh chain too, which is asserted as **intended** behaviour
+  rather than treated as a defect.
 * **Claims.** An undeclared claim, for example `SecurityStamp`, never reaches any token;
   the access token carries only the minimal set and no profile personal data.
 * **Introspection.** A cross-client introspect or revoke is refused; `active:false` is
@@ -844,9 +937,9 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
 * Reconciled against the design corpus's core-protocol design on 2026-07-26. Taken from
   it: the `AddOpenIddict` configuration block, the `GetDestinations` switch, the three
   controller responsibilities, the token-pipeline and consent diagrams, the named
-  `ClockSkewTolerance` constant, the `refresh_anchor` placement with its "never as a
-  claim" rule, and the step-up and session-fixation behaviours that this document had
-  previously deferred entirely. **One claim was corrected against the source on both
+  `ClockSkewTolerance` constant, the refresh-anchor placement with its "never as a
+  claim" rule (**both since retracted, see the 2026-08-01 entry below**), and the step-up
+  and session-fixation behaviours that this document had previously deferred entirely. **One claim was corrected against the source on both
   sides:** the corpus lists the device endpoint under pass-through, and this document's
   endpoint table put `connect/deviceauthorization` and the verification endpoint in one
   pass-through row; the source has a pass-through option for end-user verification only,
@@ -857,6 +950,32 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
   `AttachApplicationClaims` narrowing, the enrich-or-inactive DPoP introspection
   invariant, the CORS middleware order and the null-on-non-match behaviour, the
   `UseScopedHandler` rationale, and the prune-versus-replay-window reconciliation.
+* **2026-08-01, the refresh-grant block was corrected twice over, from two different
+  findings that land in the same handler.** The **anchor** moved from
+  `Authorization.Properties` to the private claim `oi_nami_refresh_anchor`, because an
+  authorization here is `Permanent` and reused across logins and so outlives the chain the
+  ceiling bounds (corpus core-protocol document section 6, finding B-02; the read-side half
+  of that finding never existed here). The **session-liveness gate** was added, because
+  ADR-0003 has required since it was accepted that refresh be denied once the session row is
+  gone, and no design carried the requirement (corpus finding H-33). Both were verified
+  against `reference/openiddict-source/` at the pinned 7.5.0 rather than taken on the
+  corpus's word, and that verification corrected two of its line citations and changed one
+  of its choices:
+  * The corpus cites `:3675` and `:4333` for "other claims are always included ..., even
+    private claims". Those lines are the **class declarations**; the sentences are at
+    `:3725` and `:4383`. This document cites the latter.
+  * The corpus names the claim `oi_refresh_anchor` and mitigates the risk of a future engine
+    version shipping the same name with a re-check at every bump. This document uses
+    `oi_nami_refresh_anchor` instead, which the corpus itself offers as the safer
+    alternative. All thirty-seven `Claims.Private.*` constants are `oi_`-prefixed and
+    abbreviated (`oi_au_id`, `oi_reft_lft`, `oi_cd_chlg_meth`), so the extra segment costs
+    nothing and none of the three behaviours the design relies on changes: the prefix strip
+    tests `StartsWith("oi_")`, the value-type switch returns `_ => true` for any name outside
+    its well-known list, and the refresh-token filter excludes by exact name. The point of
+    the change is to replace a control that must be **remembered on every bump** with one
+    that **cannot fail**, which is a different class of guarantee. The engine-behaviour
+    dependency underneath is still registered as a seam,
+    [22](22-openiddict-seam-catalogue.md) S35, because that part is genuinely version-pinned.
 
 ---
 

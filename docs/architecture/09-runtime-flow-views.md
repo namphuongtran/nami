@@ -494,19 +494,25 @@ sequenceDiagram
   participant C as Client
   participant IDP as Nami.Identity.Host
   participant M as OpenIddict token manager
+  participant SS as Session store
   participant AU as Audit sink
   C->>IDP: connect/token, grant_type refresh_token, RT n
   IDP->>M: look up RT n, 30s reuse leeway
   alt RT n valid and not yet redeemed
-    IDP->>IDP: check the absolute ceiling anchor, 8h
+    IDP->>IDP: read the ceiling anchor, a private claim on the principal
+    IDP->>SS: sid present, is the session row still live
     IDP->>M: mark RT n redeemed, issue RT n+1, rolling
     IDP-->>C: new access and refresh token
   else RT n already redeemed, outside the leeway
     Note over M: the engine revokes the sibling tokens itself
     M->>AU: Nami adds only an audit event
     IDP-->>C: invalid_grant
-  else absolute ceiling passed
+  else anchor absent
+    IDP-->>C: invalid_grant, its own reason, never defaulted to zero
+  else absolute ceiling passed, 8h plus skew
     IDP-->>C: invalid_grant, re-authentication required
+  else originating session ended
+    IDP-->>C: invalid_grant, this is what bounds logout
   end
 ```
 
@@ -522,9 +528,18 @@ start a fresh flow, and a test must not assert otherwise. The reuse leeway is **
 seconds**, corrected upward from an earlier 15 seconds on 2026-07-01 because 15 seconds
 sits *below* typical network timeouts: a client would time out, retry outside the leeway,
 trigger family-revoke, and log the user out spuriously. Rolling gives a sliding lifetime
-only, so a hard **8-hour absolute ceiling** is stamped as an anchor on
-`Authorization.Properties` and enforced in the token-request handler, matching the
-ADR-0003 absolute session limit. Access-token TTL is 15 minutes, which is also the
+only, so a hard **8-hour absolute ceiling** is enforced in the token-request handler,
+matching the ADR-0003 absolute session limit. Its anchor is a **private claim stamped at
+sign-in**, once per login chain, and **not** a property on the `Authorization`: an
+authorization here is permanent and reused across logins, so an anchor on that row would
+bound the *consent* rather than the *chain*. An **absent** anchor rejects on its own branch
+and is never defaulted, because defaulting it to zero rejects every refresh silently.
+Alongside the ceiling, the same handler denies a refresh whose **originating session is
+gone**, which is a requirement ADR-0003 has always carried and is what makes the
+"bounded logout" figure in runtime view 14 true. Because sessions are revoked by row delete
+with no `revoked` column, the effective refresh lifetime is the lesser of the ceiling and
+the session's own life, so the 1-hour inactivity window ends a refresh chain too. Mechanism
+and source citations: design [04](../design/04-core-protocol.md). Access-token TTL is 15 minutes, which is also the
 residual window for a disabled user's already-issued JWT. Machine-to-machine clients are
 issued no refresh token. The prune job's `MinimumTokenLifespan` must exceed the longest
 refresh lifetime or entries still needed for reuse detection are pruned early, and
@@ -656,13 +671,19 @@ over about ten minutes) and then dead-letters, and the retry classification is n
 a **4xx is non-retryable** and dead-letters immediately, since a relying party rejecting
 the token will reject it identically on every attempt, while transient errors retry. On
 exhaustion the flow emits a security event and **falls back to bounded logout**, so that
-relying party is bounded at the access-token TTL rather than silently left signed in. `sid` is in `claims_supported`, and
+relying party is bounded at the access-token TTL rather than silently left signed in.
+**That bound comes from the refresh grant, not from the access token expiring.** A logout
+revokes the session and not the relying party's tokens, so the fifteen minutes hold only
+because the refresh grant denies a token whose session row is gone (ADR-0003, executed in
+design [04](../design/04-core-protocol.md) alongside the ADR-0004 ceiling). Without that
+gate the relying party refreshes its way to the 8-hour ceiling instead, which is what this
+document asserted before 2026-08-01. `sid` is in `claims_supported`, and
 `backchannel_logout_supported` and `backchannel_logout_session_supported` are advertised
 so relying parties can correlate. Front-channel logout and `check_session_iframe` are
 **dropped as dead** under third-party-cookie blocking (verification V11), with end-session
 and tenant-switch both top-level redirects. A legacy front-channel-only relying party
-falls back to bounded logout at the access-token TTL, which is a **stated parity
-boundary, not a defect**. "Log out everywhere" maps to the built `RevokeBySubjectAsync`
+falls back to bounded logout at the access-token TTL, on the same session gate, which is a
+**stated parity boundary, not a defect**. "Log out everywhere" maps to the built `RevokeBySubjectAsync`
 plus session revocation, never the single-token revocation endpoint. This is a build
 interim carrying a decommission marker for OpenIddict 8.0's native implementation
 (ADR-0021, issue #2175).
@@ -828,8 +849,10 @@ sequence adds little above the component view. They are listed so the omission i
   the verification step), ADR-0008 (the chain), ADR-0053 and ADR-0054 (the wider
   data-subject-rights suite and residency).
 * Flow 11: ADR-0004 (defaults not to disable, the engine's sibling revoke, the 30-second
-  leeway and its 2026-07-01 correction, the 8-hour anchor, the per-client refresh policy,
-  the prune reconciliation), ADR-0003 (the matching absolute session limit).
+  leeway and its 2026-07-01 correction, the 8-hour ceiling with its anchor relocated to a
+  private claim on 2026-08-01, the per-client refresh policy, the prune reconciliation),
+  ADR-0003 (the matching absolute session limit, and the session-liveness gate this flow
+  now shows, which that ADR required from the start and no design carried until 2026-08-01).
 * Flow 12: ADR-0004 (`SetAuthorizationId`, the deliberately unbounded consent lifetime),
   ADR-0019 (tenant-switch as a top-level redirect), ADR-0053 (the consent receipt),
   [11-login-consent-ui](../design/11-login-consent-ui.md) (the consent page and receipt

@@ -154,7 +154,9 @@ lookups are all tenant-bound. Because a shared Pool signature is not a tenant bo
 the `tenant` claim, and a DPoP `cnf` composes on top *after* that per-tenant validation
 (ADR-0049). Two adopter-visible parity boundaries are stated deliberately, not treated as
 bugs: immediate single-logout is available only to BFF and back-channel-registered RPs (a
-non-BFF SPA's session is bounded at the access-token TTL, and such SPAs are recommended to
+non-BFF SPA's session is bounded at the access-token TTL **because the refresh grant denies
+a token whose session row is gone**, [04](04-core-protocol.md); without that gate the bound
+would be the 8-hour refresh ceiling, and such SPAs are recommended to
 adopt the BFF); and dynamic per-tenant external IdP federation is deferred post-v1, gated
 on a "no-restart-scheme" feasibility spike (v1 supports multi-tenant identities but not
 per-tenant runtime federation; ADR-0034; the v2 dynamic-provider design is not in this layer yet).
