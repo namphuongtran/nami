@@ -150,6 +150,7 @@ table's column is only as current as the last person who ran it.
 | [0087](../adr/0087-http-surface-snapshot-gate.md) | Lock the HTTP surface with a committed snapshot of the genera... | 18 |
 | [0088](../adr/0088-claims-contract-stability.md) | Freeze the claims contract as a consumer surface, and promise... | 04, 09, 11, 18 |
 | [0089](../adr/0089-self-service-surface-conventions.md) | Give the self-service surface its own conventions, while it s... | 18 |
+| [0090](../adr/0090-versioned-api-base-path.md) | Serve Nami's own APIs under the base path `/api/v1`, and rule... | 18 |
 
 ## 3. What the shape of that table says
 
@@ -173,8 +174,8 @@ model turns up in sixteen views, including context, data, runtime, security, per
 reliability, schema, observability, and operations, because almost every other decision
 eventually has to say how fast a change of mind takes effect.
 
-**Four decisions are cited by no view, and all four zeros are correct. Two more were, and
-were defects.** All six were judged by one test, the question this page exists to answer: if
+**Five decisions are cited by no view, and all five zeros are correct. Two more were, and
+were defects.** All seven were judged by one test, the question this page exists to answer: if
 the decision changed, would any view become wrong?
 
 **ADR-0045** (coordinated vulnerability disclosure) and **ADR-0079** (the Admin API's HTTP
@@ -203,14 +204,32 @@ ever expanded to name the HTTP contract, **both** belong in it, and the two rows
 together.
 
 **ADR-0089** (the self-service surface's conventions) is the fourth, and its zero is the
-least surprising: the architecture layer carries no HTTP path anywhere, the same measurement
-that settled ADR-0079 and ADR-0087, and this decision governs a surface with one declared
-endpoint. The contrast with **ADR-0088**, decided the same day and deliberately **not** a
+least surprising: the architecture layer names no HTTP path but the probe routes, the same
+measurement that settled ADR-0079 and ADR-0087, and this decision governs a surface with one
+declared endpoint. (**Tightened 2026-08-01.** This clause read "carries no HTTP path
+anywhere", which widened the measurement it cites: the ADR-0079 verdict above states it as
+"no HTTP verb and no admin path", and the probe paths enumerated in the ADR-0090 paragraph
+below are HTTP paths. The conclusion is unaffected, none of them being a self-service route,
+but a paraphrase that grows on retelling is how a measured claim becomes an argued one.) The contrast with **ADR-0088**, decided the same day and deliberately **not** a
 zero, is what makes the pair worth keeping together. A resource server binding on the
 `tenant` claim is an architectural statement and three views make it, so freezing that claim
 reaches them; the spelling of the route a user calls to reset their own password is not, and
 reaches none. Same test, same day, opposite answers, which is the evidence that it
 discriminates rather than defaults.
+
+**ADR-0090** (the versioned API base path) is the fifth, and it is the one whose zero was
+measured against the paths this layer **does** name rather than against a claim that it names
+none. Enumerated on 2026-08-01 across the twenty-three views other than this one, under the
+same exclusion the counts above use, they are `/health/live` and
+`/health/ready` ([09-runtime-flow-views](09-runtime-flow-views.md) at line 117,
+[10-deployment-infrastructure](10-deployment-infrastructure.md) at line 191, and
+[22-reliability-backup-dr](22-reliability-backup-dr.md) at line 28), plus `/bff/login` and
+`/api/orders` in one BFF sequence (09 at lines 319 and 323). **Every one of them is a family
+that ADR-0090 rule 2 leaves unversioned**: the probes fail its second and third clauses and
+keep the host root, and `/api/orders` is an adopter's own backend route reached through the
+proxy, which fails the first. So the decision cannot make a path on this page wrong, because
+it changes none of the paths on this page. Its base path reaches the two custom surfaces,
+both of which live a layer below, which is the same place ADR-0079 and ADR-0089 were sent.
 
 **ADR-0080** (the probe contract) and **ADR-0084** (what removing a person from a tenant
 guarantees) were **not** correct zeros, and the ADR-0080 case is the instructive one. Two views

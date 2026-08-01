@@ -43,6 +43,24 @@ static host-level configuration (08).
 
 ## 3. Interfaces and contract
 
+**Every route below is relative to the base path `/api/v1`**
+([ADR-0090](../adr/0090-versioned-api-base-path.md)), so `GET /tenants/{tenantId}/applications`
+is served at `https://{adminHost}/api/v1/tenants/{tenantId}/applications`. The templates are
+written relative on purpose: the version is then declared once and cannot drift between them,
+and the base path is part of what the ADR-0087 snapshot locks. Two things this host does
+**not** do, both of which read as plausible:
+
+- the probe routes in 3.9 sit at the **host root**, not under the base path (ADR-0080, and
+  ADR-0090 rule 2, whose test asserts both directions);
+- this host has no `/t/{tenant}` path prefix at all, and **`/tenants/{tenantId}` below is not
+  that prefix under another name.** `/t/{tenant}` *resolves* which tenant's issuer serves a
+  request on the runtime host; `{tenantId}` *names the tenant an operation targets*. An admin
+  actor holds authority over many tenants at once, a delegated-admin grant being
+  subtree-scoped (ADR-0010), so the target cannot be ambient in the request and has to be
+  named per route. The tenant therefore comes from the **route parameter** (5.1), and nothing
+  on this host may touch `Request.PathBase`, which [02](02-data.md) restricts to a single
+  mechanism on the runtime host. ADR-0090 rule 3 carries the full comparison.
+
 Conventions, all six governed by **ADR-0079**, which is the authority when this section and
 that ADR disagree: `?page=&pageSize=` paging with a **body envelope**
 `PageMeta { page, pageSize, total }` and **no** `X-Total-Count` header; explicit filtering

@@ -253,8 +253,20 @@ rather than partially written down.
   states by name.
 * Related decisions: ADR-0020 (the two deployables, which is what makes a
   contract change expensive), ADR-0081 (the dual-control target guard that rule 4
-  pairs with at execution time), ADR-0044 (the public-surface versioning discipline
-  this sits inside), ADR-0080 (probe routes, deliberately outside these rules).
+  pairs with at execution time), ADR-0044 (the SemVer, deprecation and port-evolution
+  discipline for the **assemblies and the wire DTO types**), ADR-0090 (the versioned base
+  path the relative route templates in this ADR's design hang off, and which route families
+  carry a version), ADR-0080 (probe routes, deliberately outside these rules).
+* **Correction, 2026-08-01: the parenthetical on ADR-0044 above read "the public-surface
+  versioning discipline this sits inside", and that is a citation which resolves without
+  supporting the claim.** Read at source, ADR-0044 contains **no** occurrence of route,
+  endpoint, HTTP, verb or status code, and its only URL-shaped string is the
+  `<migration url>` placeholder in its section C example. Its section F versions the DTO
+  **assembly** and its `V1` namespace, which is a set of types rather than a URL. So these
+  conventions did not sit inside any recorded versioning discipline for the URL at all:
+  that is the same hole ADR-0087 found on the locking side and ADR-0090 closes on the
+  scheme side. Corrected here rather than rewritten silently, because a true fact with the
+  wrong owner is the defect shape this repository has paid for most often.
 * Imported from the design corpus's HTTP-conventions decision on 2026-08-01, with
   the AIP-136 citation re-read at source and narrowed, and rule 5 kept verbatim in
   substance because it is a security rule rather than a style one.

@@ -92,6 +92,15 @@ different artifact rather than a new discipline to learn.
   disabled. The snapshot is therefore compared in a **canonical, normalised form**; the exact
   normaliser is a build-time choice and is deliberately not pinned here.
 
+  **Extended on 2026-08-01 by [ADR-0090](0090-versioned-api-base-path.md): the locked set
+  also includes the base path of each `servers` entry**, the host itself being deployment
+  configuration and normalised out. The enumeration above omitted it, and the omission was
+  not cosmetic: in an OpenAPI document the version prefix lives in `servers` rather than in a
+  path template, so the single most breaking change available to this surface, moving every
+  operation's URL at once, was invisible to the gate written to make breaking changes appear
+  in a diff. Section E applies to the addition unchanged, so it counts as present only once a
+  negative self-test moves the base path and shows CI red.
+
 * **C. A route change is classified by ADR-0044 section B, not by a new scale.** Adding an
   operation or an optional field is MINOR. Removing or renaming an operation, renaming a path
   parameter, adding a required parameter or header, or changing a success status code is

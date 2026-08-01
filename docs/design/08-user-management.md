@@ -439,6 +439,16 @@ own names in its camelCase, on a surface whose defining property is that `MapIde
 casing as lowercase kebab-case, matching every admin path segment, and both are declared
 here on 2026-08-01.
 
+**These two routes, and `GET /me/memberships` above, are relative to the base path
+`/api/v1`** ([ADR-0090](../adr/0090-versioned-api-base-path.md) rule 2, which puts this
+surface under the same base as the admin one because a consumer writes code against both).
+**One gap that decision met and deliberately did not close: no document records which host
+serves this surface.** A base path is host-relative so the rule holds either way, but the
+host is this document's to state, and until it does an implementer has to infer it. If it
+turns out to be the runtime host and path-based tenancy is in use, the tenant segment
+composes **outside** the version, `/t/{tenant}/api/v1/me`, because the resolve middleware
+matches the leading `/t/` and the issuer is built from `PathBase` (ADR-0090 rule 3).
+
 ```mermaid
 sequenceDiagram
   autonumber

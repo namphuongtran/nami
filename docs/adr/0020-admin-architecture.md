@@ -63,7 +63,8 @@ Architecture style is hybrid: each style used where it fits, none as the backbon
 * Boundary tests: a compile failure if the core references `Nami.Identity.Admin.Contracts`, and an ArchUnitNET failure if `Admin.Api/Application/` references ASP.NET/HTTP/EF.
 * Anti-bypass: no client-credentials client carries an admin-api scope, asserted at startup (`no-app-only-admin`, ADR-0043); `RequireActor` requires `sub` **plus `auth_time`** and the `admin-api` audience, `auth_time` being the part that actually distinguishes a user-delegated token; and a destructive action cannot execute outside the proposal saga.
 * Folder layout is flat `src/` (no `admin/` subfolder; grouping by name prefix, `Nami.Identity.*` versus `Nami.Identity.Admin.*`, with IDE solution folders for visual grouping only).
-* Build-time follow-ups: an API versioning scheme (path `/v1` proposed); OpenAPI exposure in production (recommended dev-only); and a capability-to-`acr` map per destructive action for step-up on approval.
+* Build-time follow-ups: OpenAPI exposure in production (recommended dev-only); and a capability-to-`acr` map per destructive action for step-up on approval.
+* **The API versioning scheme, which the bullet above listed as "an API versioning scheme (path `/v1` proposed)" until 2026-08-01, was settled on that date by [ADR-0090](0090-versioned-api-base-path.md).** It chose the base path **`/api/v1`** rather than the bare `/v1` proposed here, and rules per route family which URLs carry a version. The original wording is quoted rather than silently dropped, because this clause was the scheme's **only** trace anywhere in this repository: nothing else cited it, so a build-time follow-up with no owner stayed open for a month without anything failing.
 
 ## Pros and Cons of the Options
 
