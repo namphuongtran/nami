@@ -7,7 +7,7 @@ consulted: verification of the OpenIddict 7.5.0 source and a running spike (see 
 informed: all contributors, via this repository
 ---
 
-# Rotate signing and encryption keys without restarting, via a custom OpenIddict options monitor
+# Rotate signing and encryption keys without restarting, via the OpenIddict options change-token seam
 
 ## Context and Problem Statement
 
@@ -24,16 +24,25 @@ OpenIddict has no native signing-key store or automatic rotation (see openiddict
 
 * Rolling restart every 90 days
 * An `IOptionsMonitorCache.Clear()` workaround
-* A custom `IOptionsMonitor<OpenIddictServerOptions>` plus `ISigningKeyStore`, a TTL cache, and a tripped change-token (maintainer-endorsed, issue #1434)
+* The framework options monitor driven by a custom `IConfigureOptions<OpenIddictServerOptions>` plus `ISigningKeyStore`, a TTL cache, and a tripped change-token (maintainer-endorsed, issue #1434)
 * Buying a commercial key-rotation component
 
 ## Decision Outcome
 
-Chosen option: "A custom `IOptionsMonitor<OpenIddictServerOptions>` plus `ISigningKeyStore`, a TTL cache, and a tripped change-token", because it rotates keys with no restart, uses a maintainer-endorsed seam, and stays OSS and cloud-agnostic.
+Chosen option: "The framework options monitor driven by a custom `IConfigureOptions<OpenIddictServerOptions>` plus `ISigningKeyStore`, a TTL cache, and a tripped change-token" (the #1434 seam), because it rotates keys with no restart, uses a maintainer-endorsed seam, and stays OSS and cloud-agnostic.
 
 Fixed parameters of the decision:
 
-* The mechanism is a custom `IOptionsMonitor<OpenIddictServerOptions>` plus an `IConfigureOptions` that reads from `ISigningKeyStore`, an in-memory TTL cache, and a tripped `IOptionsChangeTokenSource`.
+* **The mechanism is the framework `IOptionsMonitor<OpenIddictServerOptions>`, driven by a custom `IConfigureOptions<OpenIddictServerOptions>` that reads from `ISigningKeyStore`, an in-memory TTL cache, and a custom `IOptionsChangeTokenSource` tripped on rotation.** Nami writes the configure-options and the change-token source; it does **not** write the monitor. This is called "the #1434 seam" where it needs a short name.
+
+  **Corrected 2026-08-01, and the old name was load-bearing rather than cosmetic.** This ADR previously said the mechanism *is* a custom `IOptionsMonitor`, and that phrasing had become the repository's canonical name for the whole approach. Reading issue #1434 that way and hand-building a monitor would break four things at once, because `OpenIddictServerConfiguration` is an `IPostConfigureOptions<OpenIddictServerOptions>` (`OpenIddictServerConfiguration.cs:22`) that runs on **every** materialisation and, verified at the pinned 7.5.0 source, does all of the following:
+
+  1. sorts `options.Handlers` by `Order` (`:541`), so every `SetOrder` in this system (the DPoP handlers, the token-type handler) would silently run in registration order instead;
+  2. sorts the signing and encryption credentials (`:544-545`), so seam S2's rule that the signer is whichever credential is **first** would pick an arbitrary key, possibly one that is announced but not yet valid, or retired;
+  3. generates a `KeyId` for any key lacking one (`:550-552`), so JWKS entries would lose their `kid` and a resource server could not select a key;
+  4. populates `TokenValidationParameters.IssuerSigningKeys` and `TokenDecryptionKeys` (`:556`, `:561`), so `UseLocalServer` self-validation would get an empty key set.
+
+  A monitor that constructs its own options instance skips all four, and none of them fails loudly. **So the rule, if a custom monitor is ever written anyway: it must obtain options through `IOptionsFactory.Create(name)` and never `new` an instance.**
 * The key store is an abstraction port with a **DB-backed default** (a `SigningKeys` table encrypted at rest via Data Protection); a cloud KMS/vault is optional (ADR-0006, ADR-0009).
 * **Key material never leaves the store into an unsanctioned destination.** Key configuration (vault or KMS coordinates) and certificate bytes stay inside the store and its adapters; they are never pasted into an issue, a chat, a log, or any other destination outside the sanctioned path. ADR-0009 governs store access, and ADR-0012 applies the same rule to the root certificate that protects the keyring.
 * A 90/14/14 state machine (announce → active → retire → delete), a common industry pattern; signing uses the certificate with the furthest `NotAfter` (a future-`NotBefore` certificate does not sign); the JWKS publishes all asymmetric keys; validation accepts any key by `kid`.
@@ -44,7 +53,7 @@ Fixed parameters of the decision:
 ### Consequences
 
 * Good, because keys rotate with no downtime and no restart, cloud-agnostically, comparable to the automatic key management of mature commercial servers.
-* Bad, because it relies on a seam that the OpenIddict maintainer endorses (issue #1434) but that is not in the official OpenIddict documentation, so it is fragile across OpenIddict minor upgrades; this mandates an "options-monitor contract regression test" (test 9.K6) on every bump (7.5 → 7.6 → 8.0) that fails the build if the contract breaks.
+* Bad, because it relies on a seam that the OpenIddict maintainer endorses (issue #1434) but that is not in the official OpenIddict documentation, so it is fragile across OpenIddict minor upgrades; this mandates an "options contract regression test" (test 9.K6) on every bump (7.5 → 7.6 → 8.0) that fails the build if the contract breaks.
 * This decision depends on ADR-0005 (separate encryption-credential lifecycle), ADR-0006 (DB-backed key store and DR), ADR-0007 (break-glass reuses this reload mechanism), ADR-0009 (store access), ADR-0026 (OSS-only, which the buy option would violate), and ADR-0033 (key-scope isolation, which amends `ISigningKeyStore.LoadAsync(ct)` to `LoadAsync(scope, ct)`).
 
 ### Confirmation
@@ -71,7 +80,7 @@ Clear the options cache to force a reload.
 * Good, because it needs no custom infrastructure.
 * Bad, because it is fragile, fights the framework, and is not an official extension seam.
 
-### A custom `IOptionsMonitor` plus `ISigningKeyStore`, TTL cache, and change-token (chosen)
+### The #1434 seam: framework monitor, custom `IConfigureOptions`, `ISigningKeyStore`, TTL cache, and change-token (chosen)
 
 The maintainer-endorsed dynamic-reload seam (issue #1434), with the local-validation fix above.
 

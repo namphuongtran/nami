@@ -32,7 +32,7 @@ Fixed parameters of the decision:
 * **SLO: a dirty key is out of the JWKS in under 5 minutes.**
 * Runbook steps (automation plus checklist):
   1. Provision a clean certificate/key through the key-store port and promote it to signer (DB adapter: insert the new key and mark it signer; cloud adapter: create it in the vault/KMS).
-  2. **Coordinated reload of every node**, reusing the rotation routine's reload mechanism (custom `IOptionsMonitor` plus a tripped change-token, no restart, per ADR-0011).
+  2. **Coordinated reload of every node**, reusing the rotation routine's reload mechanism (the #1434 seam: the framework options monitor plus a tripped change-token, no restart, per ADR-0011).
   3. **Un-register the dirty certificate** from the credential set.
   4. **Force-evict** the discovery and JWKS cache on every node (override the count-based cache and set downstream `Cache-Control`).
   5. **Purge server-side state** for the blast radius (the session store of ADR-0003).

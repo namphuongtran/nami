@@ -820,7 +820,7 @@ sequence adds little above the component view. They are listed so the omission i
   (`RequireActor`, the `request_hash` binding, the `max(client, scope, runtime)` rule),
   and [15-admin-api](../design/15-admin-api.md) (the 72-hour proposal expiry and the
   per-class target guard), ADR-0081 (the `TargetClass` taxonomy and the proposer re-check).
-* Flow 3: ADR-0011 (the custom options monitor, the 90/14/14 shape, the local-validation
+* Flow 3: ADR-0011 (the #1434 options seam, the 90/14/14 shape, the local-validation
   fix, spike A-2 / V19 / T3c / T3d), ADR-0007 (five-minute break-glass ejection),
   ADR-0021 (the 9.K6 contract-regression gate), ADR-0031 (exactly one clustered runner),
   ADR-0012 (the readiness `kid` assertion and the silent-keyring-regeneration failure it

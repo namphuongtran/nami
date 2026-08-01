@@ -135,7 +135,7 @@ contract test that must pass on every bump.
 
 | # | Seam | Tier | Isolation | Test | Decommission |
 |---|---|---|---|---|---|
-| S1 | A custom options monitor drives no-restart rotation, an endorsed pattern with no version guarantee | **T2** | `ISigningKeyStore` plus the key cache and the monitor | rotation contract test | none, this is a permanent seam |
+| S1 | No-restart rotation rides the **framework** options monitor, driven by a custom `IConfigureOptions` and a custom change-token source (the #1434 seam); an endorsed pattern with no version guarantee. Nami must **not** build its own monitor: ADR-0011 lists the four things `OpenIddictServerConfiguration` does on every materialisation that one would skip | **T2** | `ISigningKeyStore` plus the key cache and the configure-options | rotation contract test | none, this is a permanent seam |
 | S2 | The signer is whichever credential is **first** in the collection, with no selection logic in the engine | **T3** | follows S1 | rotation contract test (a) | none |
 | S3 | The key-set endpoint iterates **every** credential with no validity-window filter | **T3** | follows S1 | rotation contract test (b) | none |
 | S4 | `UseLocalServer` snapshots the keys into an **immutable** `StaticConfigurationManager`, so the change token does **not** refresh it and `RequestRefresh()` is a no-op against it | **T3** | none available at this seam; S4a is the fix | rotation contract test (c), which must sign with a freshly rotated key and self-validate | none |

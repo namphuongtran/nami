@@ -21,7 +21,7 @@ Several ADRs defer a policy, threshold, or human sign-off before general availab
 | [0008](0008-audit-subsystem.md) | Make the audit subsystem first-class, tamper-evident, and delivery-guaranteed | accepted |
 | [0009](0009-secret-store-access-and-rollover.md) | Access the secret store with least-privilege workload identity and rotate client credentials via private_key_jwt | accepted |
 | [0010](0010-tenant-hierarchy-delegated-admin.md) | Administer child tenants through explicit, scoped delegated-admin grants, not inherited seniority | accepted |
-| [0011](0011-no-restart-key-rotation.md) | Rotate signing and encryption keys without restarting, via a custom OpenIddict options monitor | accepted |
+| [0011](0011-no-restart-key-rotation.md) | Rotate signing and encryption keys without restarting, via the OpenIddict options change-token seam | accepted |
 | [0012](0012-key-bootstrap-and-dr-sequence.md) | Bootstrap keys by auto-seeding at cold start, root the keyring in an X.509 certificate, and restore both key stores together | accepted |
 | [0013](0013-mfa-assurance-and-step-up.md) | Make MFA the producer of acr/amr/auth_time and enforce step-up assurance | accepted |
 | [0014](0014-advanced-protocol-scope.md) | Build both mTLS and DPoP sender-constrained tokens, and deliberately de-scope FAPI-specific protocols | accepted |

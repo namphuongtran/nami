@@ -440,8 +440,8 @@ sequenceDiagram
 disable-not-delete by default and offboard invokes the gated erasure saga (17,
 dual-control and Art.17/DPO-gated, not automatic per offboard); every transition is
 audited with provenance (ADR-0008). The `pending-approval` state is gated by
-`CanSignInAsync` via a `Membership` status marker (approval is tenant-scoped even
-though identity is global) and is enabled by a per-tenant `RequireInviteApproval`
+an **override** of `CanSignInAsync` reading a `Membership` status marker (approval is
+tenant-scoped even though identity is global) and is enabled by a per-tenant `RequireInviteApproval`
 flag; approval reuses the dual-control saga (its catalogue entry in 07, its executor
 registry in 15) as a constructive-action variant (a new
 `approve-user-invite` `ActionType` plus its `IProposalExecutor`, with the saga executor
@@ -506,6 +506,19 @@ user-management public surface is governed by the SemVer and deprecation policy
 * **Account takeover via linking**: linking on an unverified email would allow
   takeover; the key is `(provider, sub)` and auto-link requires verified email on
   both sides.
+* **`CanSignInAsync` is an override, and crediting the native call is the trap.**
+  `SignInManager<TUser>.CanSignInAsync` takes **only the user** (verified at the .NET 10.0.9
+  reference assemblies: the signature carries a single parameter) and evaluates only the
+  `Options.SignIn` confirmation flags. It takes no tenant, reads no membership row, and knows
+  nothing about a disabled state. So it cannot be the gate for tenant-scoped
+  pending-approval, and it cannot be the gate for disabled users; both are **build**. Nami
+  overrides the method (it is `virtual`, wired through `.AddSignInManager<>()`) and calls
+  `base` **first**, so the three native checks still run and the override only ever narrows.
+  The danger is specific rather than theoretical: ADR-0004 deliberately de-scopes the
+  per-validation active-user check and compensates with force-revoke-on-disable, so treating
+  the native call as the gate removes the last one there is. A negative test belongs here:
+  revert to the native implementation and both the disabled and the pending-approval branch
+  must fail.
 * **`auth_time` serialization**: emitted as a JSON number (the `long` overload); a
   string violates OIDC.
 * **`amr` on refresh**: may be absent on silent refresh, so resource servers gate on

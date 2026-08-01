@@ -228,7 +228,7 @@ graph TB
   the credential with the furthest expiry, and a credential whose validity has not started
   does not sign; the JWKS publishes every asymmetric key so validation can accept any of
   them by `kid`, which is what makes the overlap window work (ADR-0011).
-* Rotation happens with **no process restart**, through a custom options monitor and a
+* Rotation happens with **no process restart**, through the #1434 options seam (ADR-0011) and a
   change token. This is a **maintainer-endorsed but undocumented seam** (the upstream issue
   that established it is catalogued in ADR-0021), which is why it carries a contract-regression
   test that re-runs on every engine bump rather than being trusted to keep working. One sharp caveat is designed around rather than assumed: when the

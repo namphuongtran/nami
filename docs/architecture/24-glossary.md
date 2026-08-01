@@ -103,7 +103,8 @@ restating it.
   clients that cache the JWKS have already seen it. One deliberate exception: the very first
   key at genesis activates immediately, because there is nothing yet to protect (ADR-0012).
 * **No-restart rotation.** Rotating the signing key with no process restart and no in-flight
-  validation failure, through a custom options monitor and a non-static configuration manager
+  validation failure, through the framework options monitor driven by a custom configure-options
+  (ADR-0011) and a non-static configuration manager
   reading the live key store (ADR-0011).
 * **KEK and DEK.** Key-encryption key and data-encryption key. A **per-subject DEK** is what
   makes crypto-shred possible.

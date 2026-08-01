@@ -10,7 +10,7 @@ tags: [design, keys, rotation, jwks, envelope, break-glass, disaster-recovery]
 
 | Decision | What this design applies |
 |---|---|
-| ADR-0011 | No-restart rotation via a custom `IOptionsMonitor<OpenIddictServerOptions>` + `ISigningKeyStore` + TTL cache; rolling-restart and `IOptionsMonitorCache.Clear()` rejected |
+| ADR-0011 | No-restart rotation via the #1434 seam (framework options monitor + custom `IConfigureOptions<OpenIddictServerOptions>` + custom change-token source) + `ISigningKeyStore` + TTL cache; rolling-restart and `IOptionsMonitorCache.Clear()` rejected. Nami does **not** write the monitor: see ADR-0011 for the four things `OpenIddictServerConfiguration` would skip |
 | ADR-0005 | Signing and encryption credentials have separate lifecycles; encryption retention floor covers live JWEs; RS256 baseline, ES256 config-selectable, EdDSA off |
 | ADR-0006 | Cloud-agnostic credential-source ports with a DB default; envelope encryption is the signing default, sign-in-HSM an optional adapter; DR restores keys + keyring + root cert together; RPO monitored continuously, not only at the drill |
 | ADR-0007 | Break-glass: a dirty key out of JWKS in under 5 minutes; scope-before-act; server-side session purge for the blast radius; dual-control plus IR notification on mass-revoke |
@@ -31,7 +31,7 @@ most sensitive subsystem in the product; key material never leaves the store or 
 sanctioned destination.
 
 In scope: the signing/encryption key store and cache, the no-restart integration seam
-(the custom `IOptionsMonitor` for signing/JWKS and the custom `IConfigurationManager` for
+(the #1434 seam for signing/JWKS and the custom `IConfigurationManager` for
 local self-validation), the rotation state machine, the encryption-credential lifecycle,
 envelope encryption and the optional HSM-sign adapter, key-scope isolation, the
 bootstrap/DR sequence, break-glass, store access, and key observability.

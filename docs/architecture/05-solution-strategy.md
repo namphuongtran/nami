@@ -125,7 +125,7 @@ rather than a design preference (ADR-0020).
 ### S6. Keys rotate without a restart
 
 Signing and encryption keys live in the database and are surfaced to the protocol engine through
-a custom options monitor, so rotation is a data change rather than a deployment (ADR-0011). The
+the #1434 options seam, so rotation is a data change rather than a deployment (ADR-0011). The
 overlap window is what makes it invisible: a new key is published before it signs, and a retired
 key is deleted only after any token it signed has expired.
 

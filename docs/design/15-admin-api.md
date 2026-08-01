@@ -128,8 +128,9 @@ force-logout}`; lifecycle `POST /users/invite`, `POST /users/{id}/{disable|enabl
 `InviteUserRequest`: `Email`, `DisplayName?`, `TenantId?`, `Roles[]` (if the tenant sets
 `RequireInviteApproval`, invite routes through the `approve-user-invite` proposal).
 `PasskeyDto`: `CredentialId`, `DeviceName?`, `CreatedAt`, `LastUsedAt?` (metadata only, never
-key material). Disable is `CanSignInAsync=false` + force-logout (not delete, and distinct
-from lock which auto-expires); offboard invokes the gated erasure saga (17). The lifecycle
+key material). Disable makes the overridden `CanSignInAsync` return false, plus force-logout (not delete,
+and distinct from lock which auto-expires; the override is required because the native call
+checks no disabled state, 08); offboard invokes the gated erasure saga (17). The lifecycle
 model itself is 08's.
 
 ### 3.5 Roles
