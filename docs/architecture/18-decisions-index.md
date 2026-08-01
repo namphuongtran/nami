@@ -66,7 +66,7 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0018](../adr/0018-dbcontext-pooling-for-pool-mode.md) | Register the Pool-mode OpenIddict DbContext non-pooled in v1,... | 03, 07, 08, 09, 10, 11, 12, 21, 22, 23 |
 | [0019](../adr/0019-single-logout-strategy.md) | Achieve single logout with an interim back-channel logout on... | 01, 03, 04, 07, 08, 09, 12, 17, 19, 23, 24 |
 | [0020](../adr/0020-admin-architecture.md) | Split admin into a REST API and an MVC Razor BFF app, enforce... | 01, 05, 06, 07, 08, 09, 12, 13, 14, 17, 24 |
-| [0021](../adr/0021-openiddict-version-adaptation.md) | Adapt to OpenIddict version upgrades with seam isolation, per... | 02, 03, 05, 08, 09, 11, 15, 16, 17, 20, 23, 24 |
+| [0021](../adr/0021-openiddict-version-adaptation.md) | Adapt to OpenIddict version upgrades with seam isolation, per... | 02, 03, 05, 08, 09, 11, 15, 16, 17, 18, 20, 23, 24 |
 | [0022](../adr/0022-logging-and-observability-stack.md) | Use native ILogger plus OpenTelemetry (OTLP) for logging and... | 01, 03, 04, 07, 08, 10, 11, 14, 16, 23, 24 |
 | [0023](../adr/0023-iac-tool-opentofu.md) | Use OpenTofu as the default infrastructure-as-code tool inste... | 03, 10 |
 | [0024](../adr/0024-architecture-style.md) | Adopt a hexagonal shell (dependency rule plus ports/adapters)... | 03, 05, 06, 07, 08, 10, 12 |
@@ -133,7 +133,8 @@ that depends on it. For the "what must I re-read" question that is the right sid
 | [0085](../adr/0085-telemetry-instrument-naming.md) | Namespace every custom instrument `nami.identity.` and freeze... | 16 |
 | [0086](../adr/0086-pin-ci-actions-by-commit-sha.md) | Pin every CI action by commit SHA, never by tag | 11 |
 | [0087](../adr/0087-http-surface-snapshot-gate.md) | Lock the HTTP surface with a committed snapshot of the genera... | 18 |
-| [0088](../adr/0088-claims-contract-stability.md) | Freeze the claims contract as a consumer surface, and promise... | 04, 09, 11 |
+| [0088](../adr/0088-claims-contract-stability.md) | Freeze the claims contract as a consumer surface, and promise... | 04, 09, 11, 18 |
+| [0089](../adr/0089-self-service-surface-conventions.md) | Give the self-service surface its own conventions, while it s... | 18 |
 
 ## 3. What the shape of that table says
 
@@ -157,8 +158,8 @@ model turns up in sixteen views, including context, data, runtime, security, per
 reliability, schema, observability, and operations, because almost every other decision
 eventually has to say how fast a change of mind takes effect.
 
-**Three decisions are cited by no view, and all three zeros are correct. Two more were, and
-were defects.** All five were judged by one test, the question this page exists to answer: if
+**Four decisions are cited by no view, and all four zeros are correct. Two more were, and
+were defects.** All six were judged by one test, the question this page exists to answer: if
 the decision changed, would any view become wrong?
 
 **ADR-0045** (coordinated vulnerability disclosure) and **ADR-0079** (the Admin API's HTTP
@@ -185,6 +186,16 @@ ADR-0079 serves C10 by the same argument and is not listed either, so adding one
 other would have made this page inconsistent with the verdict directly above it. If C10 is
 ever expanded to name the HTTP contract, **both** belong in it, and the two rows move
 together.
+
+**ADR-0089** (the self-service surface's conventions) is the fourth, and its zero is the
+least surprising: the architecture layer carries no HTTP path anywhere, the same measurement
+that settled ADR-0079 and ADR-0087, and this decision governs a surface with one declared
+endpoint. The contrast with **ADR-0088**, decided the same day and deliberately **not** a
+zero, is what makes the pair worth keeping together. A resource server binding on the
+`tenant` claim is an architectural statement and three views make it, so freezing that claim
+reaches them; the spelling of the route a user calls to reset their own password is not, and
+reaches none. Same test, same day, opposite answers, which is the evidence that it
+discriminates rather than defaults.
 
 **ADR-0080** (the probe contract) and **ADR-0084** (what removing a person from a tenant
 guarantees) were **not** correct zeros, and the ADR-0080 case is the instructive one. Two views

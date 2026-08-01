@@ -361,7 +361,7 @@ flowchart TD
 
 ### 5.3 Anti-enumeration on the reset and resend endpoints
 
-`/forgotPassword` and `/resendConfirmationEmail` **always return the same response with
+`/forgot-password` and `/resend-confirmation-email` **always return the same response with
 the same latency** whether or not the account exists or is confirmed: the handler runs
 `FindByEmailAsync` plus `IsEmailConfirmedAsync`, silently skips on failure, and never
 branches the HTTP result or the timing ("do not reveal that the user does not exist").
@@ -379,7 +379,7 @@ custom minimal endpoints (they are not OIDC endpoints in the endpoint catalogue,
 sequenceDiagram
   autonumber
   actor U as User
-  participant EP as /forgotPassword
+  participant EP as /forgot-password
   participant UM as UserManager
   participant OB as Outbox
 
@@ -600,7 +600,7 @@ Pre-GA checklist (ADR-0008) is where they land.
 - **Outbox atomicity:** a rolled-back user mutation leaves no outbox row (no orphan
   user with no mail); a committed one leaves exactly one; two concurrent relays never
   double-send (idempotency-key + `SKIP LOCKED`).
-- **Latency invariance:** `/forgotPassword` and `/resendConfirmationEmail` return
+- **Latency invariance:** `/forgot-password` and `/resend-confirmation-email` return
   identical response and timing for existing/confirmed, existing/unconfirmed, and
   missing accounts, a permanent invariant, and neither the per-recipient cap nor the
   suppression check runs before enqueue.

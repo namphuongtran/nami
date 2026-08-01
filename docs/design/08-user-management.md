@@ -410,12 +410,15 @@ multi-tenant user will certainly hit existed only as four references to it.
   authorization filter that makes an id-route safe ([15](15-admin-api.md) section 5.1); this
   surface does not, and adding an id here would mean either duplicating that machinery or
   shipping the BOLA hole it exists to prevent.
-* **Open, and named rather than assumed: no ADR sets conventions for the self-service
-  surface.** ADR-0079 fixes the rules for the *admin* surface and says so in its first line.
-  This route follows its shape by analogy, not by rule, and if the self-service surface grows
-  past a handful of endpoints it needs the same treatment ADR-0079 gave the admin one, for
-  the same reason: a surface decided endpoint by endpoint becomes inconsistent without anyone
-  making a decision they would defend. **Change-email is hardened** (the top
+* **Settled the same day it was raised: [ADR-0089](../adr/0089-self-service-surface-conventions.md)
+  now sets this surface's conventions.** The gap was real, ADR-0079 fixes the rules for the
+  *admin* surface and says so in its first line, so this route was following its shape by
+  analogy rather than by rule. ADR-0089 makes rule 1 of that surface the `/me` form, and does
+  so as a **security** rule rather than a style one: the admin surface can publish
+  `/users/{id}` because it has an object-level authorization filter (15 section 5.1) and this
+  surface has none, so an identifier in a self-service path means either duplicating that
+  machinery or shipping the hole it prevents. The route above was already in that form; what
+  changed is that it is now a rule instead of a judgement call. **Change-email is hardened** (the top
 takeover surface): notify the old address (an informational tripwire with a support
 CTA and no actionable token or link), require step-up (acr >= aal2)
 before initiating, verify the new address before the switch takes effect (the old
@@ -424,8 +427,17 @@ revoke the refresh-token family so existing sessions fall out.
 
 #### Password reset
 
-The Identity side; the email delivery, anti-enumeration timing, and token lifespan
-are the email subsystem (10).
+`POST /forgot-password` and `POST /resend-confirmation-email`. The Identity side; the email
+delivery, anti-enumeration timing, and token lifespan are the email subsystem (10).
+
+**Both were named before they were declared, and both were spelled wrong.** ADR-0038 section
+D and design 10 attach real obligations to them, a constant response and constant latency
+whether or not the account exists, while no document declared either as a route. They were
+also spelled `/forgotPassword` and `/resendConfirmationEmail`, which are `MapIdentityApi`'s
+own names in its camelCase, on a surface whose defining property is that `MapIdentityApi` is
+**not** mounted. [ADR-0089](../adr/0089-self-service-surface-conventions.md) settles the
+casing as lowercase kebab-case, matching every admin path segment, and both are declared
+here on 2026-08-01.
 
 ```mermaid
 sequenceDiagram
@@ -588,7 +600,7 @@ user-management public surface is governed by the SemVer and deprecation policy
 * Passkey register/login end-to-end; removing the last fallback is blocked;
   lost-all-devices recovery forces re-enroll and is not weaker than the replaced
   factor.
-* Anti-enumeration on `/forgotPassword` and resend (constant response and latency);
+* Anti-enumeration on `/forgot-password` and resend (constant response and latency);
   no `MapIdentityApi` surface exists.
 * External login: linking by `(provider, sub)`, rejection of unverified-email
   linking, external-claim allow-list, SSRF egress rejects private/link-local/metadata
