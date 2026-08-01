@@ -899,6 +899,126 @@ The A-4 harness is the reference implementation, and the Finbuckle plus OpenIddi
 EF Core triple is a version-pinned composition seam re-verified on every bump
 (ADR-0021).
 
+#### Reference implementation, quoted from the A-4 harness
+
+**Quoted from a run this repository did not perform.** From the design corpus's spike-A-4
+harness (`PoolDbContext.cs`, `SpikeHost.cs`, `PoolIsolationTests.cs`; 17 of 17 passing,
+verification records V17, V21, V22, V23, V25). Checked line by line on 2026-08-01: every
+quoted line matches the harness character for character once the enclosing indentation is
+removed. It is evidence of what executed, not code compiled here. The entity classes and the
+row-level-security policy are already stated in sections 1 and 4 of this design and are not
+repeated; what follows is the model configuration, which was described in prose above and had
+no shape.
+
+**Why this block differs from the corpus's rendering of the same code.** The corpus presents
+these snippets under a verbatim label with the comments **rewritten**: shortened, and with
+`ADR-01` renumbered and a decision date dropped. The statements were identical, so nothing was
+technically wrong, but a quotation whose comments have been improved is a paraphrase, and the
+comments are where a spike keeps its reasoning. The harness's own text is restored here, which
+is why `ADR-01` and `V08-2` appear below in the corpus's older numbering rather than this
+repository's. It was found by running the comparison rather than by reading, which is the
+argument for running it on every block.
+
+**The order inside `OnModelCreating` is the content.** Each step depends on the previous one
+having run, and the composite-index override has to come after the engine has declared the
+index it is replacing:
+
+```csharp
+protected override void OnModelCreating(ModelBuilder builder)
+{
+    base.OnModelCreating(builder);
+
+    // PRODUCTION topology (doc 19 §2): custom Tenant* entities via ReplaceDefaultEntities + 5-arg UseOpenIddict.
+    builder.UseOpenIddict<TenantApplication, TenantAuthorization, TenantScope, TenantToken, Guid>();
+
+    // OpenIddict does NOT mark its own entities tenant-scoped -> that is our job. These entities
+    // carry an EXPLICIT TenantId property; .IsMultiTenant() must use it (not add a shadow) - PROVEN here.
+    // Only 3 entities are tenant-scoped: Application, Authorization, Token.
+    builder.Entity<TenantApplication>().IsMultiTenant();
+    builder.Entity<TenantAuthorization>().IsMultiTenant();
+    builder.Entity<TenantToken>().IsMultiTenant();
+    // Scope is deliberately NOT .IsMultiTenant() -> GLOBAL product catalog (R18, decided 2026-07-08):
+    // one shared scope catalog across all tenants, Name stays globally unique, no TenantId, no filter.
+    // T15 proves a scope created under one tenant is visible under another (shared catalog).
+
+    // §E (ADR-01 §E / R2 #5): replace OpenIddict's global UNIQUE(ClientId) index with composite
+    // (TenantId, ClientId) so the SAME client_id can exist per-tenant in Pool mode.
+    if (CompositeClientIdIndex)
+    {
+        var app = builder.Entity<TenantApplication>().Metadata;
+        var globalClientIdIx = app.GetIndexes()
+            .FirstOrDefault(i => i.Properties.Count == 1 && i.Properties[0].Name == nameof(TenantApplication.ClientId));
+        if (globalClientIdIx is not null) app.RemoveIndex(globalClientIdIx);   // drop the global unique
+        builder.Entity<TenantApplication>()
+               .HasIndex(nameof(TenantApplication.TenantId), nameof(TenantApplication.ClientId))
+               .IsUnique();
+    }
+
+    // Soft-delete (doc 19 R2 #10): EF Core 10 NAMED query filter that must COEXIST with Finbuckle's
+    // tenant filter on the SAME entity (the untested composition). Named "soft_delete" so it can be
+    // ignored selectively without disturbing the tenant filter. T11 proves coexistence.
+    builder.Entity<TenantApplication>().HasQueryFilter("soft_delete", a => a.DeletedAtUtc == null);
+}
+```
+
+The `if (CompositeClientIdIndex)` guard is a harness flag rather than production shape:
+production always overrides. It is left in because the flag is what the next snippet exists
+for.
+
+**The constructor call, which is the part that is easy to omit** because deriving the
+multi-tenant context looks sufficient:
+
+```csharp
+public PoolDbContext(IMultiTenantContextAccessor accessor, DbContextOptions<PoolDbContext> options)
+    : base(accessor, options)
+{
+    // VERIFY-ON-PIN #2: EnforceMultiTenantOnTracking extension lives in
+    // Finbuckle.MultiTenant.EntityFrameworkCore. Called in the ctor per V08-2 so the
+    // stamp fires when OpenIddict's stores attach/track entities they created internally.
+    this.EnforceMultiTenantOnTracking();
+}
+```
+
+**Registration keeps the tenant-scoped context non-pooled**, with the reason at the call site:
+
+```csharp
+services.AddOpenIddict()
+    .AddCore(o => o.UseEntityFrameworkCore().UseDbContext<PoolDbContext>()
+        .ReplaceDefaultEntities<TenantApplication, TenantAuthorization, TenantScope, TenantToken, Guid>());
+```
+
+**A test-harness hazard worth carrying, because it made a passing test lie.** EF caches the
+model by context type. A harness that builds two model variants in one process reuses the
+first, so a test reading "composite index off" silently ran the composite-on model and
+reported the wrong answer:
+
+```csharp
+public sealed class FlagAwareModelCacheKeyFactory : IModelCacheKeyFactory
+{
+    public object Create(DbContext context, bool designTime)
+        => (context.GetType(), PoolDbContext.CompositeClientIdIndex, designTime);
+}
+```
+
+Production builds one model, so this is not production code. It is here because the regression
+suite this design commits to keeping needs it, and because a green test that exercised the
+wrong model is the kind of failure that reads as evidence.
+
+**What the harness asserted**, beyond what the prose above already states: a row created under
+one tenant is stamped and invisible to the other; a write made **inside** an OpenIddict store,
+such as a revoke, is still stamped; the same `client_id` works in two tenants **with** the
+composite override and fails with a uniqueness violation **without** it, which is what makes
+the override mandatory rather than a preference; the soft-delete and tenant filters coexist and
+disabling the named one does not leak across tenants; an entity carrying the wrong tenant is
+refused; no ambient tenant fails closed; and the scope catalog is visible across tenants while
+its `Name` stays globally unique.
+
+**Two of those deserve to be read as warnings rather than results.** The uniqueness assertion
+is only trustworthy because of the model-cache factory above. And the no-ambient-tenant case
+fails closed by throwing or returning nothing, which is the right outcome reached by an
+accident of the framework rather than by an explicit guard, so production should fail fast on
+purpose rather than rely on it.
+
 ### Silo composition and the global scope catalog
 
 A Silo tenant gets its own database through a per-tenant connection string resolved in

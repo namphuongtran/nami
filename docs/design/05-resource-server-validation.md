@@ -302,6 +302,86 @@ services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =
 `AddMultiTenant<NamiTenantInfo>()` in 02. The type argument must be a concrete
 `ITenantInfo` implementation.
 
+#### Reference implementation, adapted from the A-7 harness
+
+**Quoted from a run this repository did not perform, and adapted rather than verbatim.** From
+the design corpus's spike-A-7 harness (`A7RsValidationTests.cs`, 4 of 4 passing; verdict in
+its verification record V27). **Three changes were made and all three are declared:** the
+harness's two illustrative tenant names are company-like and are replaced here with `tenant-a`
+and `tenant-b`, with their identifiers renamed to match, because this repository does not carry
+organization-shaped names in public files; and two comments cite the key-scope decision as
+`ADR-33`, which is renumbered to `ADR-0033` for this repository's scheme. Everything else
+matches the harness character for character once indentation is removed. So this block is
+**adapted**, and the A-2, A-5, and DPoP blocks elsewhere are **verbatim**; the difference is
+stated because a reader is entitled to know which kind they are reading, and because the
+renumbering is precisely the sort of silent edit that turns a quotation into a paraphrase
+nobody can audit.
+
+**What it proves, and the layer it proves it at.** These parameters are the
+`TokenValidationParameters` layer, which is the layer both `OpenIddict.Validation` and
+`JwtBearer` are built on, so the security invariant is de-risked. The integration wiring above
+it, `ConfigurePerTenant` plus introspection for reference tokens, is **not** covered and stays
+a build-time verification.
+
+**The load-bearing case, and it is the one that reads as counter-intuitive.** Two pooled
+tenants share one signing key, so a valid signature says nothing about which tenant a token
+belongs to:
+
+```csharp
+// --- T2 (ADR-0033): shared pool-group key -> signature alone CANNOT isolate; iss binding does. ---
+var tokenA = Mint(PoolKey, IssA, "tenant-a");
+
+// Signature-only (no issuer validation): a tenant-a token passes against the shared key.
+var sigOnly = new TokenValidationParameters
+{
+    ValidateIssuer = false, ValidateAudience = false,
+    IssuerSigningKey = PoolKey, ValidateIssuerSigningKey = true,
+};
+var rSig = await Validate(tokenA, sigOnly);
+Assert.True(rSig.IsValid, "signature verifies against the shared pool-group key");
+
+// Prove the shared key does NOT distinguish tenants: a tenant-b token signed with the SAME key
+// ALSO passes signature-only. So signature is not an isolation boundary.
+var tokenB = Mint(PoolKey, IssB, "tenant-b");
+Assert.True((await Validate(tokenB, sigOnly)).IsValid, "tenant-b token (same key) also passes signature-only");
+
+// Only the IssuerValidator isolates: tenant-a token in tenant-b context is rejected DESPITE valid signature.
+var contextB = new TokenValidationParameters
+{
+    ValidateIssuer = true, ValidIssuer = IssB,
+    ValidateAudience = true, ValidAudience = Aud,
+    IssuerSigningKey = PoolKey, ValidateIssuerSigningKey = true,
+};
+var rBound = await Validate(tokenA, contextB);
+Assert.False(rBound.IsValid);   // iss binding is the isolator, NOT the signature (ADR-0033 load-bearing)
+```
+
+The shared-host shape, where one pipeline serves several tenants, then reduces to a validator
+over a **known** issuer set that throws on anything outside it, plus a key resolver:
+
+```csharp
+// Shared-host pipeline: accept iss in the known tenant-issuer set; resolve key (shared pool-group key).
+var knownIssuers = new HashSet<string> { IssA, IssB };
+var sharedHost = new TokenValidationParameters
+{
+    ValidateIssuer = true,
+    IssuerValidator = (iss, _, _) => knownIssuers.Contains(iss) ? iss
+                        : throw new SecurityTokenInvalidIssuerException($"unknown issuer {iss}"),
+    ValidateAudience = true, ValidAudience = Aud,
+    IssuerSigningKeyResolver = (_, _, _, _) => new[] { PoolKey },
+    ValidateIssuerSigningKey = true,
+};
+```
+
+**One harness helper is deliberately not reproduced.** Its post-validation read sets the
+row-level-security tenant with `set_config(..., false)`, which is session-scoped and correct
+only because the harness opens a fresh connection per test. Copying it into a pooled service
+pins a stale tenant on the connection, which is the cross-tenant read this whole design exists
+to prevent. The production form, `set_config($1, $2, true)` inside the per-request transaction,
+is in design [02](02-data.md) and design [04](04-core-protocol.md). Quoting a snippet whose
+shape is wrong for production, next to snippets labelled as reference code, would invite
+exactly the copy this note is refusing.
+
 **`Issuer` is assigned, not set through `SetIssuer`, and the distinction is the receiver.**
 `SetIssuer` exists and this document names it correctly at section 10: it is on
 **`OpenIddictValidationBuilder`**, with two overloads (`Uri` and `string`), so it is available

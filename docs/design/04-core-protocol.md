@@ -682,6 +682,84 @@ and 06 for the sender-constrained variants). A client is looked up and authentic
 **within the resolved tenant's store**, the Pool filter or the Silo connection, so a
 tenant-A client cannot authenticate at tenant B.
 
+#### Reference implementation, quoted from the A-5 harness
+
+**Quoted from a run this repository did not perform.** From the design corpus's spike-A-5
+harness (`IssuerHost.cs`, `IssuerTests.cs`; verdict in its verification record V20). Checked
+line by line on 2026-08-01: **35 of the 36 quoted lines match the harness character for
+character once the enclosing indentation is removed**, and the 36th is the `// ...` elision
+marker in the pipeline snippet, which is editorial rather than harness code. It is evidence of
+what executed, not code compiled here.
+
+The server is configured with the issuer **deliberately absent**, and the comment saying so is
+the point of the snippet:
+
+```csharp
+oi.AddServer(o =>
+{
+    o.SetTokenEndpointUris("connect/token");
+    o.SetConfigurationEndpointUris(".well-known/openid-configuration");
+    o.AllowClientCredentialsFlow();
+    o.AddEphemeralEncryptionKey();
+    o.DisableAccessTokenEncryption();
+    // 🔴 NO o.SetIssuer(...) - issuer is inferred per-request from scheme+host+pathbase (V01-B5 WRONG-API avoided)
+    o.UseAspNetCore().EnableTokenEndpointPassthrough().DisableTransportSecurityRequirement();
+    if (!dynamicSigning) o.AddEphemeralSigningKey();
+});
+```
+
+Path-based tenancy then needs one middleware, and this is the middleware the paragraph above
+refers to. It rewrites `PathBase` and `Path` so the engine's inference picks the tenant up:
+
+```csharp
+// Path-based tenancy: /t/{tenant}/... -> PathBase=/t/{tenant} so OpenIddict infers issuer = scheme+host+pathbase.
+public sealed class PathBaseTenantMiddleware(RequestDelegate next)
+{
+    public async Task Invoke(HttpContext ctx)
+    {
+        var path = ctx.Request.Path.Value ?? "";
+        if (path.StartsWith("/t/", StringComparison.Ordinal))
+        {
+            var seg = path.Split('/', StringSplitOptions.RemoveEmptyEntries);   // ["t","{tenant}",...]
+            if (seg.Length >= 2)
+            {
+                ctx.Request.PathBase = new PathString($"/t/{seg[1]}");
+                ctx.Request.Path = new PathString("/" + string.Join('/', seg.Skip(2)));
+            }
+        }
+        await next(ctx);
+    }
+}
+```
+
+**Its position in the pipeline is part of the contract**, not a detail: it must run before
+routing and before authentication, because the engine hooks in at authentication and reads
+`PathBase` as it finds it.
+
+```csharp
+.Configure(app =>
+{
+    app.UseMiddleware<PathBaseTenantMiddleware>();   // path-based tenancy (H2)
+    app.UseRouting();
+    app.UseAuthentication();   // OpenIddict server hooks in here (required before endpoints)
+    // ...
+});
+```
+
+**What the harness asserted.** Each host yields its own `iss` and the discovery document's
+`issuer` equals the token's `iss`, which matters because a relying party rejects the token
+otherwise. Path-based tenancy produces an issuer containing the tenant segment, again matching
+discovery. Rotating the signing key mid-test changes the `kid` and leaves the per-tenant issuer
+untouched, so this composes with the rotation seam in design [12](12-key-management.md) rather
+than competing with it. And interleaving two tenants over one shared pipeline keeps each
+issuer correct, which is the assertion that would catch a cross-tenant leak.
+
+**Two things the snippets do not settle**, stated so their absence is not read as coverage.
+`DisableTransportSecurityRequirement()` is a test-host and local-development setting and must
+never reach production. And this proves only the issuing side: that a resource server rejects
+a token whose `iss` belongs to another tenant is design
+[05](05-resource-server-validation.md), proven separately.
+
 The per-request row-level-security setting `app.current_tenant` is set here on the happy
 path, not only in background jobs, through `set_config(..., true)` inside the request
 transaction, which is PgBouncer transaction-mode safe and parameterized against

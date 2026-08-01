@@ -336,6 +336,100 @@ token server-side behind an HTTP-only cookie (ADR-0029, 16).
 Recording this is not pessimism. A design that presents DPoP as an answer to cross-site
 scripting would lead an adopter to skip the control that actually works.
 
+### Reference implementation, quoted from the A-1 and A-3 harness
+
+**Quoted from a run this repository did not perform.** From the design corpus's spike harness
+for A-1 and A-3 (`DpopSpike.cs`, `DpopTests.cs`; verdict in its verification record V18,
+OpenIddict 7.5.0, .NET 10). Checked line by line on 2026-08-01: every quoted line matches the
+harness character for character once the enclosing indentation is removed. It is evidence of
+what executed, not code compiled here.
+
+**Read what this proves narrowly.** The harness proved the **framework shape**: where the
+handlers anchor, that the confirmation claim survives as a nested object, and that the
+built-in proof handler can be stepped around without a 500. It did **not** run the proof
+cryptography, which is the boundary this design already records. The named handlers above are
+the full design; these are the two mechanisms that were actually exercised on a real pipeline.
+
+**Issuance.** The order and the target object are both load-bearing, and the comment records
+why:
+
+```csharp
+public sealed class StampCnfJkt(IHttpContextAccessor accessor)
+    : IOpenIddictServerHandler<OpenIddictServerEvents.ProcessSignInContext>
+{
+    public const string ThumbHeader = "X-Spike-Dpop-Jkt";  // simulates the jkt extracted from a validated proof
+
+    public static OpenIddictServerHandlerDescriptor Descriptor { get; } =
+        OpenIddictServerHandlerDescriptor.CreateBuilder<OpenIddictServerEvents.ProcessSignInContext>()
+            .UseScopedHandler<StampCnfJkt>()
+            // A-1 empirical (spike-run): must run AFTER PrepareAccessTokenPrincipal built the
+            // access-token principal, and stamp on context.AccessTokenPrincipal directly. Stamping
+            // on context.Principal before that handler is dropped (confirms doc 24 #2).
+            .SetOrder(OpenIddictServerHandlers.PrepareAccessTokenPrincipal.Descriptor.Order + 1_000)
+            .SetType(OpenIddictServerHandlerType.Custom)
+            .Build();
+
+    public ValueTask HandleAsync(OpenIddictServerEvents.ProcessSignInContext context)
+    {
+        var jkt = accessor.HttpContext?.Request.Headers[ThumbHeader].ToString();
+        if (string.IsNullOrEmpty(jkt)) return default;         // A-1 T3: no DPoP -> no-op, plain token
+        if (context.AccessTokenPrincipal is null) return default;
+
+        // Set cnf as a nested JSON object via a JsonElement-valued claim (the mechanism under test),
+        // directly on the access-token principal (no destination filtering needed here).
+        var cnf = JsonSerializer.SerializeToElement(new Dictionary<string, string> { ["jkt"] = jkt });
+        context.AccessTokenPrincipal.SetClaim(Claims.Confirmation, cnf);
+        return default;
+    }
+}
+```
+
+**Validation.** The custom handler runs before the built-in one and **consumes** the branch,
+removing the confirmation claim so the built-in handler never meets a `jkt`:
+
+```csharp
+public sealed class ConsumeJktPoP : IOpenIddictValidationHandler<OpenIddictValidationEvents.ValidateTokenContext>
+{
+    public static OpenIddictValidationHandlerDescriptor Descriptor { get; } =
+        OpenIddictValidationHandlerDescriptor.CreateBuilder<OpenIddictValidationEvents.ValidateTokenContext>()
+            .UseSingletonHandler<ConsumeJktPoP>()
+            .SetOrder(OpenIddictValidationHandlers.Protection.ValidateProofOfPossession.Descriptor.Order - 500)
+            .SetType(OpenIddictValidationHandlerType.Custom)
+            .Build();
+
+    public ValueTask HandleAsync(OpenIddictValidationEvents.ValidateTokenContext context)
+    {
+        var cnf = context.Principal?.GetClaim(Claims.Confirmation);
+        if (!string.IsNullOrEmpty(cnf) && cnf.Contains("jkt"))
+        {
+            // (spike) real impl validates the DPoP proof here (htm/htu/ath/sig/thumbprint/jti).
+            // Strip the confirmation claim so the built-in x5t#S256-only handler does not throw SR.ID2196.
+            var id = (ClaimsIdentity)context.Principal!.Identity!;
+            foreach (var c in id.FindAll(Claims.Confirmation).ToList()) id.RemoveClaim(c);
+        }
+        return default;
+    }
+}
+```
+
+Note which descriptor that order anchors to: `OpenIddictValidationHandlers.Protection`, the
+**validation** pipeline. That is the anchor with evidence behind it, and the two-handler table
+in section 5 is why the distinction has to be stated every time.
+
+**What the harness asserted.** The confirmation claim is emitted as a **nested object** rather
+than a double-serialised string or a flattened dotted key, which is the failure that a `string`
+value produces. With no proof header the handler is a no-op and the token carries no
+confirmation claim at all, so there is no half-bound token. Fed a `jkt`-bearing token with no
+custom handler installed, the raw pipeline does **not** authenticate, which is the positive
+proof that this is not native and must be built. With the handler installed, the resource
+server authenticates and nothing throws, so inserting before the built-in works and the
+heavier alternative of removing and replacing the built-in handler is unnecessary.
+
+**One setting in the harness is test-only**, and mixing it up with the neighbouring one is
+easy: `DisableTransportSecurityRequirement()` exists because the test host speaks plain HTTP
+and must never reach production, while `DisableAccessTokenEncryption()` **is** the production
+posture (ADR-0005) and is the reason a resource server can read the confirmation claim at all.
+
 ## 6. Dependencies and wiring
 
 ```csharp
