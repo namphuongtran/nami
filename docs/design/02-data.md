@@ -525,12 +525,32 @@ CREATE INDEX "IX_ServerSideSessions_Expires"   ON "ServerSideSessions" ("Expires
 CREATE INDEX "IX_ServerSideSessions_SubjectId" ON "ServerSideSessions" ("SubjectId");
 CREATE INDEX "IX_ServerSideSessions_SessionId" ON "ServerSideSessions" ("SessionId");
 
+-- Participating relying parties, the fan-out list for back-channel logout (ADR-0019).
+-- Deliberately NOT keyed on the sid. ADR-0003 rotates the sid on step-up, so a key
+-- cascading from ServerSideSessions("Key") would delete this list on every step-up and a
+-- later logout would fan out to ZERO RPs; updating the key in place instead strands every
+-- RP still holding the old sid. There is no third option, because the key itself was wrong.
+-- Keyed on the login chain instead, which is the same scope the 8h ceiling anchor uses
+-- (04 section 4) though not the same value: the anchor is a timestamp, this is an identity.
 CREATE TABLE "SessionParticipatingClients" (
-  "SessionKey" text NOT NULL
-    REFERENCES "ServerSideSessions"("Key") ON DELETE CASCADE,
-  "ClientId"   text NOT NULL,
-  PRIMARY KEY ("SessionKey", "ClientId")
+  "LineageId"     uuid NOT NULL,   -- the login chain; survives sid rotation, ends with the chain
+  "TenantId"      uuid NOT NULL REFERENCES "Tenants"("TenantId"),  -- locator only: under Silo the
+                                   -- application row lives in that tenant's own database
+  "ApplicationId" uuid NOT NULL,   -- NOT ClientId text: a client_id is unique only per tenant
+                                   -- under Pool (ADR-0001, composite (TenantId, ClientId)), so
+                                   -- the relay could not resolve one backchannel_logout_uri from
+                                   -- it. UUIDv7 keys are globally unique (ADR-0036), so this
+                                   -- identifies the application across both isolation modes.
+                                   -- No FK: applications live in the tenant-scoped OpenIddict
+                                   -- context, a different database under Silo.
+  "SidIssued"     text NOT NULL,   -- the sid THIS RP currently holds, refreshed when the RP
+                                   -- re-authorizes after a rotation. A logout_token must carry
+                                   -- the value its recipient stored, or the RP cannot match it
+                                   -- to a session and OIDC back-channel logout fails for it.
+  PRIMARY KEY ("LineageId", "ApplicationId")
 );
+CREATE INDEX "IX_SessionParticipatingClients_SidIssued"
+  ON "SessionParticipatingClients" ("SidIssued");
 
 -- Back-channel logout delivery outbox (class B: GLOBAL, tenant-as-data) -------
 -- A session is global and keyed by sid, and one sid legitimately spans a tenant

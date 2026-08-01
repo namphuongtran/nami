@@ -220,7 +220,8 @@ Front-channel iframe logout is dropped as a dead dependency (third-party-cookie 
 V11); end-session is a top-level redirect. The logout page invokes the backend (cookie
 sign-out, OIDC end-session, server-side session revoke) and initiates the **back-channel
 fan-out**, which this design owns. The fan-out reuses the shared outbox chassis from the
-email design (10): it stores delivery *intent* (`sid`, `sub`, `client_id`, `backchannel_logout_uri`)
+email design (10): it stores delivery *intent* (the recipient's own `SidIssued`, `sub`,
+`ApplicationId`, `backchannel_logout_uri`)
 over the `SessionParticipatingClients` rows, mints a fresh `logout_token` on each send
 (`typ=logout+jwt`, the `backchannel-logout` events member, `sub` and/or `sid`, `iat`,
 `jti` replay guard, no `nonce`, `exp` under about two minutes), claims with `SKIP LOCKED`,
@@ -249,7 +250,7 @@ sequenceDiagram
 
   U->>LO: POST logout (antiforgery-validated)
   LO->>SS: revoke session row (sid)
-  LO->>OB: enqueue intent per SessionParticipatingClients (sid, sub, client_id, uri)
+  LO->>OB: enqueue intent per SessionParticipatingClients (SidIssued, sub, ApplicationId, uri)
   LO-->>U: top-level redirect to signed-out (does not block on fan-out)
   RB->>OB: claim intent (SKIP LOCKED)
   RB->>RB: mint fresh logout_token (typ logout+jwt, jti, exp under 2 min)

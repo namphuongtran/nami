@@ -265,6 +265,7 @@ load-bearing:
 | `oi_nami_refresh_anchor` | a **private claim** on the principal, not on any entity | The absolute 8h ceiling timestamp. Scoped to the **login chain**, which is what the ceiling bounds. See the correction below: an entity property is the wrong scope here |
 | `access_token_type` | `Application.Properties` | Per-client `jwt` or `reference` selection, read by the generate-token handler |
 | `cors_origins` | `Application.Properties` | The per-client allowed origin set, and the system of record for the origin cache |
+| `backchannel_logout_uri` | `Application.Properties` | Where ADR-0019 pushes a relying party's `logout_token`. It is in the property bag because the engine has no native field for it: `OpenIddictApplicationDescriptor` exposes `PostLogoutRedirectUris` plus the `Properties` dictionary and nothing back-channel, so this needs **no migration**. https-only and SSRF-validated. An empty value is meaningful and means "this relying party accepts bounded logout" (ADR-0019) |
 
 > **Corrected 2026-08-01. This anchor was specified on `Authorization.Properties`, and both
 > the placement and the reason given for it were wrong.** The reason first, because it is the

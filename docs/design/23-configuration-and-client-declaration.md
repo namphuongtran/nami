@@ -150,11 +150,14 @@ and **where** a field lands is the part an implementer gets wrong.
 | `TenantId` | `Properties["tenant_id"]` | control metadata, not an engine concept |
 | `AllowedCorsOrigins` | `Properties["cors_origins"]` | the system of record for ADR-0050; the policy provider reads a derived cache, never this, on a preflight |
 | `AccessTokenType` | `Properties["access_token_type"]` | a built property, because the engine's own setting is global; see section 5.5 |
+| `BackchannelLogoutUri` | `Properties["backchannel_logout_uri"]` | where ADR-0019 pushes the `logout_token`. The engine has no native field: `OpenIddictApplicationDescriptor` exposes `PostLogoutRedirectUris` plus `Properties` and nothing back-channel, and `OpenIddictConstants.cs` carries no back-channel constant at all (both read at the pinned 7.5.0 source). https-only and SSRF-validated. **Nullable, and the null case is meaningful**: it declares that this relying party accepts bounded logout rather than being notified |
 | `AbsoluteRefreshLifetime` | per-client policy read at issuance | bounded by the system ceiling in ADR-0004 |
 
-Three of those land in the property bag rather than on the descriptor, and that is not a
-workaround: the engine's descriptor models the protocol, and tenant, CORS, and token-type
-are Nami's policy. The property bag is the engine's own extension point for exactly this.
+Four of those land in the property bag rather than on the descriptor, and that is not a
+workaround: the engine's descriptor models the protocol, and tenant, CORS, token-type and
+back-channel logout are Nami's policy or, in the last case, a protocol feature this engine
+version does not implement. The property bag is the engine's own extension point for
+exactly this, and using it means none of the four needs a migration.
 
 ## 5. Behaviour
 
