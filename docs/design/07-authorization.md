@@ -159,16 +159,35 @@ Two families, distinguished by one flag:
 | Capability | Inheritable | Meaning |
 |---|---|---|
 | `manage_users`, `manage_clients`, `manage_scopes`, `view_audit`, `view_config` | yes, cascades down the subtree | routine tenant administration |
-| `delete_tenant`, `data_export`, `iam_change`, `re_delegate` | **no**, direct grant only | dangerous or irreversible; additionally gated by step-up, and by dual-control on every action that **confers** privilege. Actions that only *reduce* privilege (revoking a grant, removing a membership) are step-up gated and single-actor, because they are the incident path |
+| `delete_tenant`, `data_export`, `iam_change`, `re_delegate` | **no**, direct grant only | dangerous or irreversible; additionally gated by step-up, and by dual-control on every action that **confers** privilege. Actions that only *reduce* privilege (revoking a grant, removing a membership) are step-up gated and single-actor, because they are the incident path. Note this column is about **cascade**, not about which grant creations need two eyes: that is keyed on reach, not on this label (section 5.2) |
 
 **The v1 model is purely additive, so read ADR-0010's "inheritance only narrows" as an
 outcome rather than a rule.** There is no scoped deny row and no parent-deny override: a
-grant grants, and nothing subtracts. The narrowing intent is delivered by three other
-mechanisms instead: least-privilege capabilities on each grant, `IsInheritable = false` for
-the dangerous family, and the non-cascading `re_delegate` gate on grant management. Nothing
-here may assume a child-cannot-exceed-parent ceiling is enforced, because it is not; a
-scoped deny override belongs to the relationship-engine era (ADR-0010 states this
-reconciliation at the decision level).
+grant grants, and nothing subtracts.
+
+**A grant-time ceiling is enforced, added 2026-08-01** (ADR-0010, which carries the vendor
+evidence). At grant creation the whole requested capability set is checked against what the
+actor holds:
+
+```text
+forall c in grant.capabilities : ICheckAccess(actor, c, routeTenant) == Allow
+```
+
+Batched, over the existing `ICheckAccess` port, so no new mechanism is introduced. A failure
+is **`403`, not `202`**: a request to grant authority the actor does not hold is refused
+structurally rather than queued for a human, because a reviewer cannot safely approve what
+the system already knows is escalation. A grant may also not outlive the grant it derives
+from. Alongside it, the narrowing intent is still carried by least-privilege capabilities on
+each grant, `IsInheritable = false` for the dangerous family, and the non-cascading
+`re_delegate` gate on grant management.
+
+**Two things this ceiling is not, and both matter here.** It is evaluated at **grant time**,
+so a delegator whose own grant is later narrowed leaves their issued grants intact until
+expiry or revoke; Kubernetes behaves the same way, AWS does not, and closing it needs a
+non-additive model. And it does not make the dual-control clauses redundant: an actor
+holding `manage_users` at a parent tenant **passes** the ceiling for a parent-rooted grant,
+so the ceiling cannot see that case and only the reach clause below makes it reviewable. A
+scoped deny override remains a relationship-engine-era consideration.
 
 ### 5.3 The decision query
 
@@ -475,9 +494,13 @@ time-bound, and revocable, and there is no global super-admin (ADR-0010).
 by `act`, so every cross-tenant action is attributable to a real person rather than to a
 service. That is what makes the provenance record meaningful.
 
-Dangerous and irreversible capabilities require a direct grant, plus dual-control, plus
-step-up. Approvals are single-use and bound to a request hash, so an approval cannot be
-replayed onto a different action.
+Dangerous and irreversible capabilities require a **direct grant** (they never cascade) plus
+step-up. Whether the action additionally needs **dual-control** is a separate question keyed
+on **reach**, not on that label: a grant creation opens a proposal when the capability set
+contains a no-cascade capability **or** the root tenant has descendants (ADR-0010, section
+5.2). Approvals are single-use and bound to a request hash, so an approval cannot be
+replayed onto a different action, and the grant-time ceiling runs **before** any of this, so
+an escalating request is refused `403` rather than reaching an approver at all.
 
 Consistency is in the contract, so a later engine swap cannot reintroduce
 stale-after-revoke authorization (ADR-0047). And the port carries a security invariant a

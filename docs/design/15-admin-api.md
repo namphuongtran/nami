@@ -187,7 +187,7 @@ privilege and it is on the incident path.
 `TenantDto`: `TenantId`, `ParentTenantId?`, `Identifier` (immutable post-provision), `Name`,
 `IsolationMode` (`Pool`|`Silo`), `KeyScope`, `Enabled`, `SchemaVersion?`,
 `RequireInviteApproval`, `ETag`. `DelegatedAdminGrantDto`: `GrantId`, `GranteeUserId`,
-`RootTenantId`, `Capabilities[]` (from the catalog; a dangerous capability → proposal),
+`RootTenantId`, `Capabilities[]` (from the catalog; a **no-cascade capability or a root tenant with descendants** opens a proposal, ADR-0010, not the "dangerous" label alone),
 `ValidFrom`, `ExpiresAt?`, `RevokedAt?`, `GrantedBy`, `ETag`. The provision/suspend/resume/
 delete saga **bodies** and their runtime semantics are 18's; this API is the entry point and
 the dual-control gate.
@@ -347,7 +347,7 @@ constraints are in [02](02-data.md)).
 | `TargetClass` | `TargetETag` | `TargetId` holds | Re-checked before executing | Actions here |
 |---|---|---|---|---|
 | `mutate` | required | the existing row's id | the ETag still matches | `delete-application`, `delete-scope`, `delete-tenant`, `suspend-tenant`, `resume-tenant`, `offboard-user`, `revoke-all-tokens`, `secret-revoke`, key purge, the Pool-to-Silo re-home, and `approve-user-invite` with a **server-filled** ETag |
-| `create` | NULL | the id of the thing **to be created** | the create preconditions still hold: uniqueness, every referenced principal still exists, and the endpoint's own admission rules | `provision-tenant`, a dangerous `delegated-admin-grant` |
+| `create` | NULL | the id of the thing **to be created** | the create preconditions still hold: uniqueness, every referenced principal still exists, and the endpoint's own admission rules | `provision-tenant`, a reach-gated `delegated-admin-grant` |
 | `query` | NULL | a SHA-256 digest of the frozen filter | the filter frozen in `PayloadJson` is authoritative and **may not be widened**, and the size or scope threshold that gated the approval is re-evaluated | bulk `audit-export` |
 
 For `mutate`, the guard stores the target's `xmin`-derived ETag at propose time and re-checks
