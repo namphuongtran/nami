@@ -209,6 +209,152 @@ not version alone**, even though one deployment serves a single scope: the monit
 version-only, but a cache that cannot name its scope cannot be reasoned about if a
 deployment ever serves more than one (ADR-0033).
 
+#### Reference implementation, quoted from the A-2 harness
+
+**This is quoted from a run this repository did not perform.** The code below is quoted from
+the design corpus's spike-A-2 harness (`RotationHost.cs`, `RotationTests.cs`; verdict in its
+verification record V19, `net10.0`, OpenIddict 7.5.0). It
+is **evidence of what executed**, not code this repository compiled: Nami has no harness tree
+and cannot re-run it here.
+
+**What was actually verified, stated precisely because the loose version of this claim was
+wrong.** Every quoted line was compared against the harness on 2026-08-01. **53 of the 54
+match the harness character for character once the enclosing indentation is removed**, since
+the corpus lifted class members and registration lines out of their surrounding block. The
+54th is `// ...`, which is the corpus's own elision marker between two registration lines and
+is not harness code. So this is verbatim modulo indentation and one marked elision, which is
+a weaker claim than "byte for byte" and is the true one. Where the spike simplified something,
+the delta is stated below rather than edited into the snippet, because silently rewriting a
+block labelled verbatim destroys the only thing it is good for. The `doc 18` pointers inside
+the comments are the corpus's own numbering and resolve here to section 5.3.
+
+**1. The live configuration manager.** This is the whole of the local-validation fix: it
+reads the store on every call rather than snapshotting.
+
+```csharp
+// ===== THE FIX (long-term, OSS): a NON-static, live ConfigurationManager for local self-validation.
+// Replaces the StaticConfigurationManager that UseLocalServer installs. GetConfigurationAsync returns
+// a config whose SigningKeys reflect the CURRENT key store on every call -> a token signed by a
+// freshly-rotated key self-validates with NO restart and NO change-token dance. =====
+public sealed class DynamicKeyConfigurationManager(KeyStore store, Uri issuer) : IConfigurationManager<OpenIddictConfiguration>
+{
+    public Task<OpenIddictConfiguration> GetConfigurationAsync(CancellationToken cancellationToken)
+    {
+        var config = new OpenIddictConfiguration { Issuer = issuer };
+        foreach (var key in store.ValidationKeys) config.SigningKeys.Add(key);   // ALL live keys (doc 18 §0: validate by any kid)
+        return Task.FromResult(config);
+    }
+    public void RequestRefresh() { }   // no cache to invalidate; always live
+}
+```
+
+**2. Swapping the frozen manager, and the ordering that makes it work.**
+
+```csharp
+// Runs after OpenIddict's own post-configure; swaps the frozen static manager for the live one.
+public sealed class SwapValidationConfigManager(KeyStore store) : IPostConfigureOptions<OpenIddictValidationOptions>
+{
+    public void PostConfigure(string? name, OpenIddictValidationOptions options)
+    {
+        options.Configuration = null;   // drop the static config that would build a StaticConfigurationManager
+        options.ConfigurationManager = new DynamicKeyConfigurationManager(store, new Uri("http://localhost/"));
+    }
+}
+```
+
+```csharp
+oi.AddValidation(o => { o.UseLocalServer(); o.UseAspNetCore(); });
+// ...
+if (useDynamicValidationManager)   // THE FIX - registered after AddValidation so it post-configures last
+    services.AddSingleton<IPostConfigureOptions<OpenIddictValidationOptions>, SwapValidationConfigManager>();
+```
+
+**3. The signing side, which is the issue-#1434 seam.**
+
+```csharp
+// Custom IConfigureOptions reading the mutable store (re-runs on every options rebuild).
+public sealed class ConfigureServerSigning(KeyStore store) : IConfigureOptions<OpenIddictServerOptions>
+{
+    public void Configure(OpenIddictServerOptions options) => options.SigningCredentials.Add(store.Active);  // sign with active
+}
+
+// Change-token source for the SERVER options (the #1434 seam).
+public sealed class ServerChangeTokenSource(KeyStore store) : IOptionsChangeTokenSource<OpenIddictServerOptions>
+{
+    public string Name => Options.DefaultName;
+    public IChangeToken GetChangeToken() => store.Token;
+}
+```
+
+```csharp
+// The #1434 seam: supply signing keys via IConfigureOptions + a change-token source.
+services.AddSingleton(keys);
+services.AddSingleton<IConfigureOptions<OpenIddictServerOptions>, ConfigureServerSigning>();
+services.AddSingleton<IOptionsChangeTokenSource<OpenIddictServerOptions>, ServerChangeTokenSource>();
+```
+
+**4. How the store trips the token, which is the part prose keeps losing.** The store owns a
+`CancellationTokenSource` and swaps it; there is no method on the change-token source to call.
+
+```csharp
+public IChangeToken Token => new CancellationChangeToken(_cts.Token);
+```
+
+```csharp
+// Promote 'next' to active, KEEP the old key in the validation set (overlap window) - doc 18 §0.
+public void Rotate(SigningCredentials next)
+{
+    lock (_lock) { _all.Add(next); _active = next; }
+    var old = Interlocked.Exchange(ref _cts, new CancellationTokenSource());
+    old.Cancel();   // trips options-reload so SIGNING picks up the new active key
+}
+```
+
+```csharp
+public SigningCredentials Active => _active;
+public SigningCredentials Current => _active;   // alias (existing tests)
+// ALL non-deleted keys for validation (retired keys stay until their tokens expire).
+public IReadOnlyList<SecurityKey> ValidationKeys { get { lock (_lock) return _all.Select(c => c.Key).ToList(); } }
+```
+
+**What the harness asserted**, so the claims above are read as results rather than intentions:
+the baseline key both signs and self-validates; after a rotation with no restart a token
+signed by the new key self-validates; a token signed by the **retired** key still validates,
+which is the overlap window; and, with the swap deliberately not registered, signing stays
+dynamic while local self-validation freezes with `ID2090`. That last case is a **tripwire**
+rather than a bug report: if a future OpenIddict refreshes `UseLocalServer` by itself, that
+assertion flips to success and this design is revisited.
+
+**Three wrong turns are recorded here because the correct code alone does not prevent them.**
+Each was written by someone reading a prose description of this same seam.
+
+- **`IOptionsChangeTokenSource<T>` has no `Trigger()`.** It declares `Name` and
+  `GetChangeToken()` and nothing else, and because it is covariant in `TOptions` a method
+  taking one is not expressible. The trip belongs to the store, as in snippet 4.
+- **Do not hand-build an `IOptionsMonitor<OpenIddictServerOptions>`.** The harness registers
+  the **framework** monitor plus a custom `IConfigureOptions` and change-token source. A
+  hand-constructed options instance skips `OpenIddictServerConfiguration`, which sorts the
+  handlers and the credentials, generates a missing `kid`, and fills the validation
+  parameters, so every `SetOrder` in this design stops meaning anything and JWKS loses its
+  `kid`. If a custom monitor is ever unavoidable it must obtain options through
+  `IOptionsFactory.Create(name)`, never `new`.
+- **`OpenIddictValidationOptions` has no `SetIssuer`.** `Issuer` is a property there; the
+  builder method exists only on the server side (design [05](05-resource-server-validation.md)).
+
+**Spike versus production, and the issuer line is the one to read twice.** Production
+replaces the harness's in-memory `KeyStore` with the `ISigningKeyStore` port plus
+`ISigningKeyCache` and its TTL, makes the manager scope-aware through `LoadAsync(scope)`
+(ADR-0033), and excludes a revoked key from the validation set during break-glass (5.7). The
+seam itself, the non-static `IConfigurationManager`, the `IPostConfigureOptions` swap, and the
+`IConfigureOptions` plus change-token pair, is unchanged. **The two lines that must not be
+copied** are the pinned `Issuer` in snippet 1 and the `new Uri("http://localhost/")` in
+snippet 2: a non-null `Configuration.Issuer` wins over the per-request base URI and pins
+issuer validation to one value, so a token carrying the per-tenant `iss` fails the server's
+own self-validation. The contract that replaces them, including why a null issuer is safe
+only inside a request, is in the seam catalogue at rows S4a and S4b
+([22](22-openiddict-seam-catalogue.md)), and the per-tenant issuer itself is design
+[04](04-core-protocol.md).
+
 ### 5.3 Key-selection invariants
 
 Three invariants govern which key signs, and all three exist because of how the engine
