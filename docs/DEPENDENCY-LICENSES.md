@@ -34,10 +34,19 @@ shipped inside any Nami artifact. Bundling any of them into a distribution artif
 reference host image, the Helm chart, the NuGet meta-package, the `dotnet new` template) would
 change the question from execution to conveying, and would need a new decision.
 
-| Tool | Role | Licence | Read at | Date | Decision |
-|---|---|---|---|---|---|
-| Apache JMeter | Load and soak testing, the SLO release gate | Apache-2.0 | `apache/jmeter` `master` `LICENSE` | 2026-08-01 | [ADR-0078](adr/0078-load-test-tooling.md) |
-| OIDF conformance suite | OpenID certification profiles, self-hosted image | MIT | `openid/conformance-suite` `LICENSE.txt` (GitLab, `master`) | 2026-08-01 | [ADR-0027](adr/0027-packaging-and-distribution.md) |
+| Tool | Role | Licence | Boundary | Read at | Date | Decision |
+|---|---|---|---|---|---|---|
+| Apache JMeter | Load and soak testing, the SLO release gate | Apache-2.0 | `execute-only` | `apache/jmeter` `master` `LICENSE` | 2026-08-01 | [ADR-0078](adr/0078-load-test-tooling.md) |
+| OIDF conformance suite | OpenID certification profiles, self-hosted image | MIT | `execute-only` | `openid/conformance-suite` `LICENSE.txt` (GitLab, `master`) | 2026-08-01 | [ADR-0027](adr/0027-packaging-and-distribution.md) |
+
+**The `Boundary` column is checked, not merely declared** (ADR-0026 section C). CI fails when a
+tool classified `execute-only` appears in the file list of a published artifact, and it fails
+when an executable used in the pipeline is **missing from this table**. The second direction is
+the one that catches the case this whole file exists for: a tool nobody recorded is exactly
+what the restore-graph scan reports clean on, so an inventory with no completeness check is
+another control that reads as coverage while inspecting nothing. Both tools above are
+`execute-only`; neither is permissive-only by luck, but the classification is what makes the
+distinction enforceable rather than a sentence someone has to remember.
 
 JMeter carries a second, structural assurance worth recording: it is an Apache Software
 Foundation project, and the ASF third-party policy states that "Apache projects may not

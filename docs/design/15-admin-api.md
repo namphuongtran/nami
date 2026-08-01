@@ -140,7 +140,36 @@ model itself is 08's.
 
 `GET/POST /tenants` (provision → proposal), `GET/PUT /tenants/{id}` (rejects any `Identifier`
 change → 400 `tenant_identifier_immutable`), `DELETE`/`suspend`/`resume`→proposal,
-`GET/PUT /tenants/{id}/memberships`, `GET/POST/DELETE /tenants/{id}/delegated-admin`.
+`GET/PUT /tenants/{id}/memberships`, `DELETE /tenants/{id}/memberships/{userId}`,
+`GET/POST/DELETE /tenants/{id}/delegated-admin`.
+
+**Removing a membership is a compound operation, and ADR-0084 is the authority for what
+it guarantees.** There was no `DELETE` here at all until 2026-08-01, so nothing in the
+contract revoked a person's access to one tenant. Adding the obvious route would have been
+wrong in two ways that both read as correct:
+
+- The decision query in [07](07-authorization.md) joins `DelegatedAdmin`,
+  `DelegatedAdminCapabilities`, `TenantClosure` and `CapabilityCatalog`, and **never joins
+  `Memberships`**. Deleting the membership row alone leaves every delegated-admin capability
+  the person held fully alive.
+- `tenant` and the coarse per-tenant role are **token claims** ([04](04-core-protocol.md)),
+  so the Admin API stops honouring the person immediately, on a live `ICheckAccess` read,
+  while a resource server keeps honouring the token it already holds.
+
+So in one transaction: remove the row; revoke the user's grants **rooted exactly at this
+tenant** (soft delete); revoke that subject's tokens and authorizations **scoped to this
+tenant**, never subject-wide, which would cut them out of every tenant; and audit all of it
+under one correlation id. The response is **`200` with a body**, not `204`, carrying
+`residualAncestorGrants` (an ancestor-rooted grant is ADR-0010's decision to make at the
+ancestor and is deliberately untouched) and `residualTokenWindowSeconds` = 900 (ADR-0004's
+access-token lifetime, small but not zero).
+
+**`409` when it would leave the tenant with no administrator**: no other active membership
+with an admin role, and no active grant conferring user management rooted here or at an
+ancestor. Otherwise recovery is break-glass only (ADR-0015). It is a revocation, so `DELETE`
+with **no** `If-Match` (ADR-0079), idempotent, `404` for a membership in another tenant,
+step-up gated but **not** dual-control, for the same reason grant revoke is not: it reduces
+privilege and it is on the incident path.
 `TenantDto`: `TenantId`, `ParentTenantId?`, `Identifier` (immutable post-provision), `Name`,
 `IsolationMode` (`Pool`|`Silo`), `KeyScope`, `Enabled`, `SchemaVersion?`,
 `RequireInviteApproval`, `ETag`. `DelegatedAdminGrantDto`: `GrantId`, `GranteeUserId`,
@@ -470,9 +499,14 @@ this is the list an implementer should be able to point at a test for.
   TOCTOU-checked rather than event-driven (5.2).
 - **Proposer is never approver**, compared on `sub` rather than trusted from a role, and
   approval is itself step-up gated per capability.
-- **`Failed(target_changed)` is terminal and single-use.** A transient failure stays
-  retry-able only while the stored `TargetETag` still matches; the ETag guard, not the
-  terminal state, is what blocks a stale retry.
+- **A failed guard is terminal and single-use**, as `target_changed` for `mutate` or
+  `precondition_failed` for `create` and `query`. **Retryability follows `FailReason`, not
+  the ETag** (ADR-0081): only a genuinely transient executor error is retryable, and for
+  `mutate` it additionally requires the ETag to still match. The former rule, "retry-able
+  only while the stored `TargetETag` still matches", was **vacuously true** for the three
+  actions that have no target row, so a duplicate-key failure would have been retried
+  forever. A duplicate-key or precondition violation is `precondition_failed`, never
+  transient.
 - **Two ETag sources, never interchanged**: `xmin` for control-plane rows, the entity's own
   `ConcurrencyToken` for engine entities, read off the entity and not the descriptor
   (section 6).
