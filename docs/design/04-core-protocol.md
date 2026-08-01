@@ -566,10 +566,15 @@ and introspecting a non-access token returns no application claims. The token-en
 lookup is **tenant-scoped**, riding the Pool filter, so a tenant-A caller cannot
 introspect or revoke a tenant-B token, and a negative test asserts it.
 
-Native introspection auto-surfaces the mTLS `cnf` (`x5t#S256`). Surfacing the DPoP
-`cnf.jkt` is a build item gated on spikes A-1 and A-3 (06), and its invariant is
-enrich-or-inactive: a DPoP-bound token either carries `cnf.jkt` in the response or
-returns `active:false`, and never active-but-unbound.
+**Native introspection auto-surfaces `cnf` whatever its binding form**, mTLS `x5t#S256` and
+DPoP `jkt` alike: `OpenIddictServerHandlers.Introspection.cs:733-742` reads
+`Claims.Confirmation` and parses the whole JSON object through, with no branch on the
+binding method. So the only build item here is **stamping** `cnf` at issuance for DPoP
+(spikes A-1 and A-3, [06](06-sender-constrained-tokens.md)); surfacing it is not one. The
+invariant that remains ours is enrich-or-inactive: a DPoP-bound token either carries
+`cnf.jkt` in the response or returns `active:false`, and never active-but-unbound. Note also
+that a response carrying `cnf` omits `token_type` entirely rather than claiming `Bearer`
+(`:762`).
 
 **Revocation is single-token** (RFC 7009). The endpoint revokes only the presented token
 and never cascades. "Log out everywhere" is the separate built `RevokeBySubjectAsync`

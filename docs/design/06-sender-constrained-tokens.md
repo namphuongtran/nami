@@ -163,11 +163,16 @@ strongest available evidence that the place is right.
 Two issuance invariants follow, and both exist to prevent a **half-bound token**, meaning
 a token that carries a binding the system will not enforce:
 
-* **Introspection is enrich-or-inactive.** The engine's `cnf`-in-introspection covers only
-  the certificate form, so the `jkt` form must be added. A bound token either carries
-  `cnf.jkt` in the introspection response or the response is `active:false`. Never active
-  and missing its binding, because a resource server would then honour it as a plain
-  bearer token (05, ADR-0048).
+* **Introspection is enrich-or-inactive, and only the policy half is ours.** A bound token
+  either carries `cnf.jkt` in the introspection response or the response is `active:false`.
+  Never active and missing its binding, because a resource server would then honour it as a
+  plain bearer token (05, ADR-0048). What is **not** ours is surfacing the value:
+  `OpenIddictServerHandlers.Introspection.cs:733-742` reads `Claims.Confirmation` off the
+  token principal and parses **the whole JSON object** through, with no mTLS branch and no
+  filter on the key name, and `:239-241` writes it to the response. So once issuance has
+  stamped `cnf` (which is ours, and spike-proven), `cnf.jkt` comes back natively. The engine
+  is mTLS-only at **issuance**, not at introspection, and conflating the two schedules a
+  build for something that already works.
 * **Refresh requires thumbprint continuity.** A refresh grant for a bound token needs a
   **new** proof whose thumbprint equals the stored `cnf.jkt`; a mismatch or a missing
   proof is rejected, and the new access token is re-stamped with the same value
@@ -210,13 +215,23 @@ fail:
   before the built-in proof handler runs. The built-in handler does not reject an
   unrecognised `cnf`; it **throws**, which surfaces as a 500 rather than a protocol error.
   That is the failure this ordering exists to prevent.
-* **Anchor to the pipeline that actually runs.** The built-in proof handler is a server
-  handler, so a co-hosted resource server reaches it, while a standalone validation-only
-  resource server does not run the server pipeline at all and must anchor to the
-  validation pipeline's own proof handler. The spike ran the co-hosted path; the
-  standalone anchor is an integration item in section 10. Anchoring a handler on one
-  pipeline to a descriptor from the other is the specific mistake this note exists to
-  prevent.
+* **Anchor to the pipeline that actually runs.** There are **two** built-in proof
+  handlers, and this is the trap: they share a class name **and** a context type, so the
+  only thing that distinguishes them is the interface each implements and the descriptor a
+  handler anchors to.
+
+  | Pipeline | Declared at | Interface | Throws `ID2196` at |
+  |---|---|---|---|
+  | Validation (standalone resource server) | `OpenIddictValidationHandlers.Protection.cs:807` | `IOpenIddictValidationHandler<ValidateTokenContext>` | `:882` |
+  | Server (co-hosted under `UseLocalServer`) | `Protection.cs:1119` | `IOpenIddictServerHandler<ValidateTokenContext>` | `:1194` |
+
+  **The spike anchored to the Validation pipeline**, so that is the anchor with evidence
+  behind it: `spike-harness/A-1-3-dpop/DpopSpike.cs:68` sets
+  `OpenIddictValidationHandlers.Protection.ValidateProofOfPossession.Descriptor.Order - 500`.
+  The co-hosted server anchor is the one the spike never exercised. Anchoring a handler on
+  one pipeline to a descriptor from the other is the specific mistake this note exists to
+  prevent, and because both statements are true of *a* `ValidateProofOfPossession`, the
+  mistake reads as correct.
 
 Both anchors are relative to a named built-in descriptor rather than absolute, and the
 offsets spike A-3 settled are one order before the built-in extractor and five hundred
@@ -410,7 +425,14 @@ Named per ADR-0066:
 * **A bound token over `Bearer` is rejected** (RFC 9449 section 7.2).
 * **The replay add is fail-closed** on an unconfirmed write, under ADR-0040's general
   security-check rule rather than as an exception to it.
-* **Introspection is enrich-or-inactive** for a bound token.
+* **Introspection is enrich-or-inactive** for a bound token. The `cnf` value itself is
+  surfaced natively; only the inactive-on-missing-binding rule is ours.
+* **Expect no `token_type` in the introspection response for a bound token.** The engine
+  emits `"Bearer"` only when the confirmation is absent
+  (`OpenIddictServerHandlers.Introspection.cs:762`), and its own comment cites RFC 7662
+  section 2.2 to explain why omitting the node beats claiming `Bearer` for a token that is
+  not a bearer token. A resource server that requires the node will break on exactly the
+  tokens this design binds.
 * **Refresh requires thumbprint continuity**, and re-stamps the same value.
 * **`cnf` is a nested object**, never a string; a string double-serializes.
 * **The two skews are distinct.** Using the client skew for the nonce window widens the
@@ -459,9 +481,10 @@ thumbprint while a matching one rotates and re-stamps.
 
 ## 10. Open and build-time items
 
-* **The standalone validation-pipeline anchor** is an integration verification. The spike
-  ran the co-hosted path, and the order anchor differs for a validation-only resource
-  server (section 5).
+* **The co-hosted server-pipeline anchor** is the integration verification, not the
+  standalone one. This entry previously said the opposite, which pointed the open work at
+  the anchor that already has a spike behind it (section 5 carries the correction and the
+  evidence).
 * **The nonce is phase two.** v1 is `iat`-only, which is RFC-compliant; the nonce is added
   if defence against pre-generated proofs is needed.
 * **The certificate-authority infrastructure and the forwarding proxy** for mTLS are
@@ -492,8 +515,11 @@ thumbprint while a matching one rotates and re-stamps.
 * Architecture: the DPoP runtime view and the protocol-core component that carries these
   handlers.
 * Records: R16 for the DPoP research that preceded the design, V18 for spikes A-1 and A-3, V27 for the fourth test of A-7 that showed
-  sender-constraint composing after per-tenant validation, V14 for the finding that the
-  engine's `cnf`-in-introspection covers only the certificate form.
+  sender-constraint composing after per-tenant validation. **V14 is cited as the origin of
+  a claim this design now rejects**, not as support for it: V14 recorded that the engine's
+  `cnf`-in-introspection covers only the certificate form, and the source read below shows
+  it is claim-content-agnostic. The record is named so a later reader who finds V14 does not
+  re-derive the wrong conclusion from it.
 * **External verification, 2026-07-26, OpenIddict at release tag 7.5.0**, the version
   ADR-0061 pins. The claim that the engine has no DPoP was checked rather than assumed:
   `OpenIddictConstants.cs`, `OpenIddictServerOptions.cs`, and `OpenIddictServerHandlers.cs`
@@ -502,14 +528,18 @@ thumbprint while a matching one rotates and re-stamps.
   `CreateConfirmationClaim` builds a `JsonObject` whose **only** key is the certificate
   thumbprint parameter name, and it is passed to `SetClaim(Claims.Confirmation, ...)` in the
   handler that also assigns `context.AccessTokenPrincipal`, which is the source-level basis
-  for both the "mTLS only" claim and the ordering rule in section 5. In
-  `OpenIddictServerHandlers.Protection.cs` the built-in `ValidateProofOfPossession` is a
-  handler on `ValidateTokenContext` and **throws** `InvalidOperationException` with resource
-  string `ID2196`, which is why the custom handler must consume the branch rather than
-  merely precede it. In `OpenIddictValidationAspNetCoreHandlers.cs` the built-in
-  `ExtractAccessTokenFromAuthorizationHeader` is a handler on `ProcessAuthenticationContext`
-  that tests the header with `StartsWith("Bearer ")` and slices by that literal's length, and
-  `AttachWwwAuthenticateHeader` builds its value starting from the Bearer scheme constant.
+  for both the **issuance-side** "mTLS only" claim and the ordering rule in section 5. That
+  claim does **not** extend to introspection, which copies whatever `cnf` the principal
+  carries (section 4). The built-in `ValidateProofOfPossession` **throws**
+  `InvalidOperationException` with resource string `ID2196`, which is why the custom handler
+  must consume the branch rather than merely precede it, and it does so from **both**
+  pipelines (`OpenIddictValidationHandlers.Protection.cs:882`, `Protection.cs:1194`); see
+  the two-handler table in section 5. In `OpenIddictValidationAspNetCoreHandlers.cs` the
+  built-in `ExtractAccessTokenFromAuthorizationHeader` is a handler on
+  `ProcessAuthenticationContext` that tests the header with `StartsWith("Bearer ")` and
+  slices by that literal's length, and `AttachWwwAuthenticateHeader` (same file, registered
+  for both `ProcessChallengeContext` and `ProcessErrorContext`) builds its value starting
+  from the Bearer scheme constant.
   **One corpus statement was corrected against this:** the corpus says the confirmation claim
   is set as a `JsonElement`, and the engine's own code uses `JsonNode` with a `JsonObject`
   instance, so this design says nested JSON object and names the type the engine uses.

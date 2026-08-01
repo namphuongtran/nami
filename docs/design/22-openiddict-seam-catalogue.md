@@ -19,7 +19,7 @@ OpenIddict (numbered `S1` onward), each tagged with a risk tier ... pointing to 
 contract test, an isolation port, and a decommission marker."* This is that document.
 
 The problem it solves is specific. Nami pins one engine version and depends on it in
-thirty-five distinct places, and those places are not equally safe. Some are documented API
+thirty-seven distinct places, and those places are not equally safe. Some are documented API
 that breaks loudly with a release note. Some are internal behaviour that breaks **silently**,
 where a bump changes a sort order or removes an internal throw and nothing fails until a
 token is wrong in production. A catalogue that does not distinguish those two is decoration.
@@ -40,7 +40,7 @@ token is wrong in production. A catalogue that does not distinguish those two is
 
 ## 2. Purpose and scope
 
-In scope: the risk-tier taxonomy, the registry of all thirty-five seams with owner and
+In scope: the risk-tier taxonomy, the registry of all thirty-seven seams with owner and
 contract test, the contract-regression mapping, the per-bump playbook, the decommission
 rules, and the readiness work for the next major.
 
@@ -128,7 +128,7 @@ arrives with documentation. A T2 or T3 break arrives as a wrong token.
 
 ### 5.2 The registry
 
-Thirty-five seams. **Owner** is the design that holds the mechanism; **test** is the
+Thirty-seven seams. **Owner** is the design that holds the mechanism; **test** is the
 contract test that must pass on every bump.
 
 **Signing and key rotation** (owner [12](12-key-management.md), ADR-0011 and ADR-0012)
@@ -138,7 +138,9 @@ contract test that must pass on every bump.
 | S1 | A custom options monitor drives no-restart rotation, an endorsed pattern with no version guarantee | **T2** | `ISigningKeyStore` plus the key cache and the monitor | rotation contract test | none, this is a permanent seam |
 | S2 | The signer is whichever credential is **first** in the collection, with no selection logic in the engine | **T3** | follows S1 | rotation contract test (a) | none |
 | S3 | The key-set endpoint iterates **every** credential with no validity-window filter | **T3** | follows S1 | rotation contract test (b) | none |
-| S4 | The local validation stack snapshots keys at startup and refreshes on a change token, not per request | **T3** | a custom change-token source, and a test that trips it | rotation contract test (c) | none |
+| S4 | `UseLocalServer` snapshots the keys into an **immutable** `StaticConfigurationManager`, so the change token does **not** refresh it and `RequestRefresh()` is a no-op against it | **T3** | none available at this seam; S4a is the fix | rotation contract test (c), which must sign with a freshly rotated key and self-validate | none |
+| S4a | Replacing that manager through `IPostConfigureOptions<OpenIddictValidationOptions>` (setting `Configuration = null` and `ConfigurationManager` to ours). **Ordering is the fragile part**: ours must run *after* the engine's post-configure, or it is overwritten | **T4** | the custom `IConfigurationManager<OpenIddictConfiguration>` | the same test, plus a resolved-order snapshot | none |
+| S4b | The issuer contract on that replacement manager: a null issuer outside a request context disables issuer validation entirely | **T3** | follows S4a | issuer-validation assertion in the same test | none |
 | S5 | Loading a signing certificate from a stream accepts PKCS#12 only, not PEM | T1 | the adapter converts | key-load test | none |
 
 **Sender-constrained tokens** (owner [06](06-sender-constrained-tokens.md), ADR-0014)
@@ -149,7 +151,7 @@ contract test that must pass on every bump.
 | S7 | The serializer must emit a **nested** confirmation object from a principal claim | **T3** | the issuance handler | the highest-risk contract test of this group | none |
 | S8 | The built-in token extractor is hard-coded to one scheme, so a sibling extractor is inserted beside it | **T4** | the sibling extractor, one order before the built-in | the sender-constraint contract test | no committed native |
 | S9 | The built-in proof handler recognises only the certificate thumbprint and **throws** on a key thumbprint | **T3** | the custom proof handler, ordered before it | the same test, plus the throw-avoidance assertion | no committed native |
-| S10 | Surfacing the key thumbprint in the introspection response, where the engine covers only the certificate case | **T5** | the issuance handler and introspection | introspection contract test | no committed native |
+| S10 | Introspection returns the confirmation claim **claim-content-agnostically**, so the key thumbprint is surfaced natively once issuance stamps it; only the inactive-on-missing-binding policy is ours | **T3** | none, there is nothing to isolate | introspection contract test, asserting `cnf.jkt` in the response and the absent `token_type` node | none, this is native behaviour |
 
 **Validation, revocation, and caching** (owner [13](13-revocation-propagation-and-caching.md) and [05](05-resource-server-validation.md))
 
@@ -189,7 +191,7 @@ contract test that must pass on every bump.
 |---|---|---|---|---|
 | S28 | Back-channel logout fan-out | [11](11-login-consent-ui.md), ADR-0019 | the logout fan-out service | targeted at the next major; **the marker trips only when native is proven on a released build**, not when an issue is assigned to a milestone |
 | S29 | Dynamic client registration, if built as an interim | [15](15-admin-api.md) | the admin provisioning port | same condition, same major |
-| S30 | The whole sender-constraint family, S6 to S10 | [06](06-sender-constrained-tokens.md) | the handler interfaces | **no committed native**; treat as owned indefinitely and monitor |
+| S30 | The sender-constraint family, S6 to S9. **S10 was removed from this group on 2026-08-01**, because surfacing the binding at introspection turned out to be native already (section 5.3) | [06](06-sender-constrained-tokens.md) | the handler interfaces | **no committed native**; treat as owned indefinitely and monitor |
 | S31 | Telemetry instruments, because the engine emits none | [19](19-observability-capacity-slo.md), ADR-0022 | Nami's own meter and activity source | open with no milestone; own it, and do not guess the native names |
 | S32 | The actor claim and actor resolution, where the **grant itself is already native** | [14](14-advanced-flows.md) and [07](07-authorization.md) | the token-exchange handler | only the claim is interim |
 
@@ -219,9 +221,10 @@ half of this seam self-reporting.
 
 ### 5.3 What was read at source, and what was not
 
-Five registry claims were re-read against the engine's own source at the pinned version, four
-on 2026-07-27 and S35 on 2026-08-01, rather than carried on the corpus's word. This is the
-standard the rest of the registry should reach before GA, not a claim that it already has.
+Six registry claims were re-read against the engine's own source at the pinned version, four
+on 2026-07-27, S35 on 2026-08-01, and S10 on 2026-08-01, rather than carried on the corpus's
+word. This is the standard the rest of the registry should reach before GA, not a claim that
+it already has.
 
 | Seam | Read at | What it says |
 |---|---|---|
@@ -229,11 +232,29 @@ standard the rest of the registry should reach before GA, not a claim that it al
 | S3 | the key-set discovery handler | the loop over credentials filters on **algorithm only**; there is no validity-window filter, which is exactly what makes publish-before-sign work |
 | S9 | the validation protection handlers | the confirmation check reads only the certificate thumbprint and otherwise throws a specific internal error, which is why the custom handler must run first |
 | S13 | the server options | the reuse leeway is initialized to 30 seconds and documented as the default, confirming ADR-0004's wording rather than assuming it |
+| S10 | the introspection handlers | `OpenIddictServerHandlers.Introspection.cs:733-742` assigns the confirmation by reading `Claims.Confirmation` and parsing **the whole JSON object** through, with no mTLS branch and no filter on the key name; `:239-241` writes it to the response, and `:838` deliberately excludes `Confirmation` from the application-claims merge. So `cnf.jkt` is surfaced natively and **there was nothing to build**. Also read at `:762`: the engine emits `token_type: "Bearer"` only when the confirmation is **absent**, citing RFC 7662 section 2.2. **This row was previously tiered T5 build-interim on V14's word; the read is what retired it** |
 | S35 | the server handlers and the constants file | the private prefix is `oi_` (`OpenIddictConstants.cs:121`); `PrepareAccessTokenPrincipal` (`:3571`) and `PrepareIdentityTokenPrincipal` (`:4557`) both drop private claims with a `return false` **above** the `HasDestination` check; `PrepareRefreshTokenPrincipal` (`:4374-4384`) excludes six claims by name and then returns true unconditionally, "other claims are always included in the refresh token, even private claims" (`:4383`); and the claim value-type switch (`:2846-2900`) ends in `_ => true`, so a name outside its well-known list never throws ID0424. **The corpus's citations for the third of these point at `:3675` and `:4333`, which are class declarations rather than the sentences; reading them is what surfaced the discrepancy** |
 
 **Not verified here**, and marked so deliberately: whether the server-side signing path has
 a handler identical to S2's, because the checked-in source excerpt covers the validation
 side; and every roadmap statement in section 5.6, which is external and time-sensitive.
+
+**Two rows were corrected on 2026-08-01, and the shape of both errors is worth keeping.**
+S4 previously read "the local validation stack snapshots keys at startup and **refreshes on
+a change token**", with a custom change-token source as its isolation. That is the mechanism
+spike A-2 disproved (verification record V19): the snapshot goes into an **immutable**
+`StaticConfigurationManager`, so the change token never reaches it and `RequestRefresh()` is
+a no-op. The change token is the right mechanism on the **signing** side and the wrong one
+on the **self-validation** side, and the old row collapsed that distinction. Four other
+places in this repository already stated it correctly ([12](12-key-management.md) sections
+3.1 and 5.2, ADR-0011, and the
+[runtime flow views](../architecture/09-runtime-flow-views.md)), so this was one stale row
+contradicting the rest of the corpus, in the one document ADR-0021 re-reads on every bump.
+S4a and S4b were added because the seams the working fix actually depends on had **no row at
+all**: without them, a 7.6 or 8.0 bump that reorders post-configure re-freezes self-validation
+with nothing flagging it. S10 is the opposite error, a build scheduled for something already
+native; both are recorded rather than quietly overwritten because a registry that hides its
+own corrections cannot be audited.
 
 ### 5.4 The lifecycle of a build-interim
 
@@ -383,7 +404,7 @@ the engine or any co-versioned library.
 
 | Group | Status |
 |---|---|
-| Rotation, S1 to S4 | specified |
+| Rotation, S1 to S4b | specified; test (c) must sign with a freshly rotated key and then **self-validate**, or it passes without touching S4a |
 | Sender constraint, S6 to S10 | specified, from spikes A-1 and A-3 |
 | Multi-tenant composition, S22 to S24 | specified, from spike A-4 tests T1 to T7 |
 | Endpoint model, S16, S17, S20, S21 | specified, through the conformance suite |
@@ -395,13 +416,13 @@ the engine or any co-versioned library.
 | **Cache, entry validation, leeway, family revoke, refresh interval, S11 to S15** | **to build** |
 | **Prune scope S25, pin check S26, telemetry surface S31** | **to build** |
 
-Nine of the thirty-five seams therefore have no contract test yet, and they are named rather
+Nine of the thirty-seven seams therefore have no contract test yet, and they are named rather
 than glossed: a registry that reported itself complete would be worse than one that reports
 its own gaps.
 
 ## 10. Open and build-time items
 
-* **Build the contract-regression project** covering all thirty-five seams, extending the
+* **Build the contract-regression project** covering all thirty-seven seams, extending the
   specified tests and adding the nine listed above.
 * **Write the pipeline-order constants and the snapshot baseline** (S33), and attach the
   decommission markers in code as well as here (S28 to S32).
