@@ -128,11 +128,15 @@ change-tracker path carries a registration constraint of its own (ADR-0018, see
 * **Tenant is resolved from host or path and never from a token claim**, and resolution runs
   **before** authentication so the issuer and the stores are already tenant-correct when the
   pipeline starts.
-* One type caveat is load-bearing rather than cosmetic: where `TenantId` is text an unset
-  variable simply matches nothing, which fails closed, but where a control-plane table stores
-  it as a `uuid` the policy must wrap the read in `NULLIF(..., '')` before casting, or an
-  unset variable raises a cast error instead of failing closed. The rule is that casting to
-  `uuid` implies a mandatory `NULLIF`. The column-level detail is in the
+* **Every tenant discriminator is text**, holding `Tenants.Identifier`, so an unset variable
+  simply matches nothing and the policy fails closed with no cast involved. That is the reason
+  for the type, not a happy accident: Finbuckle's tenant identity is a string, so
+  `.IsMultiTenant()` and its auto-stamp and query filter compose only against a text column,
+  and a `Guid` tenant property throws at model build.
+* One caveat survives as a **rule with zero instances**: a `uuid` tenant column would have to
+  wrap the read in `NULLIF(..., '')` before casting, because an unset variable otherwise raises
+  a cast error instead of failing closed. No v1 or v2 table has such a column. The rule is kept
+  because it is cheap to keep and expensive to rediscover. The column-level detail is in the
   [data design](../design/02-data.md).
 
 ## 3. User management, sessions, and authentication
@@ -354,8 +358,9 @@ Kill-switched off in v1 (ADR-0071). Three spike findings shape the design rather
 discovered later: ordering uses an IDENTITY `seq` column and **not** the UUIDv7 key, because
 UUIDv7 is not monotonic within a millisecond; consumers must deduplicate through an inbox,
 because at-least-once delivery plus a broker without native deduplication means a duplicate
-is expected rather than exceptional; and the tenant-scoped outbox needs the `NULLIF` cast
-rule from section 2 (ADR-0071, ADR-0036).
+is expected rather than exceptional; and the tenant-scoped outbox carries a **text**
+discriminator like every other guarded table, so its policy is a plain comparison and the
+`NULLIF` rule in section 2 does not apply to it (ADR-0071, ADR-0036).
 
 ## 9. The two lanes never cross
 

@@ -111,7 +111,7 @@ applications too.
 
 ## Stores
 
-Four EF Core DbContexts on PostgreSQL 18 (ADR-0037, indexed in the ADR-0061 stack of
+Five EF Core DbContexts on PostgreSQL 18 (ADR-0037, indexed in the ADR-0061 stack of
 record), separated by **tenant scope** rather
 than merely by concern. This topology is fixed and changing it requires a superseding ADR
 (ADR-0001). They may share one cluster or be split onto separate tiers, since the
@@ -142,10 +142,18 @@ at all (ADR-0039).
 This is the single most counter-intuitive thing in this view, so it is stated explicitly
 (ADR-0018):
 
-* Global contexts (Identity, Data Protection, control plane) **are** pooled, because their
-  connection is fixed and reuse is safe.
+* The deciding axis is **whether a context carries tenant-scoped tables**, not whether its
+  connection string is fixed. A fixed connection is what makes pooling possible; it is not
+  what makes pooling safe. What makes it unsafe is a pooled instance capturing the ambient
+  tenant once at construction.
+* Global contexts (Identity, Data Protection, and the control plane **restricted to its
+  global tables**) **are** pooled.
+* The **tenant-scoped control-plane context is not pooled**. It exists so that the five
+  control-plane tables that are `.IsMultiTenant()` and row-level-security isolated are not
+  on the topology T7 broke, which would leave row-level security as their only layer.
 * **Silo** contexts are **not** pooled, because their connection string varies per tenant,
-  which `AddDbContextPool` cannot express.
+  which `AddDbContextPool` cannot express. This is a separate and lesser reason than the one
+  above.
 * The **Pool-mode operational context is not pooled in v1** either. This was a gate
   decision, not a preference: spike A-4's test T7 ran on 2026-07-06 (verification records
   V17 and V24) and the pooled-plus-mutable pattern **failed** it, because an instance
@@ -234,7 +242,7 @@ database-backed store, so the product runs with no cloud dependency at all (ADR-
 
 ## Sources
 
-* ADR-0001 (the fixed four-context topology and tenant scoping), ADR-0037 (PostgreSQL 18,
+* ADR-0001 (the fixed five-context topology and tenant scoping), ADR-0037 (PostgreSQL 18,
   forced row-level security, `SET LOCAL`), ADR-0018 (the per-context DbContext pooling
   matrix, the A-4 / T7 outcome, connection-pool sizing, and the PgBouncer condition),
   ADR-0006 (the keyring's independence from Redis), ADR-0004 (the prune retention floor that

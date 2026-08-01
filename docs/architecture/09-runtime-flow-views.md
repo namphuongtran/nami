@@ -752,17 +752,16 @@ idempotency key. Multi-node drains use PostgreSQL's `FOR UPDATE SKIP LOCKED`
 broker**: one candidate broker has native duplicate detection keyed on message id and
 another has none, so relying on the broker would make the consumer contract change when
 the broker does. Topology is a **single stream plus `TenantId` plus a
-row-level-security-guarded outbox**, deliberately with no per-tenant topic. That policy
-compares a **uuid** tenant column and must therefore use
-`NULLIF(current_setting(...), '')::uuid`, because a **pooled** connection returns an
-empty string rather than NULL once the transaction ends and casting an empty string to
-`uuid` **throws** instead of failing closed. The trap is scoped by **column type, not by
-release**: it does not reach the OpenIddict tenant tables, whose discriminator is `text`
-and therefore fails closed on an unset variable, but it reaches every guarded
-`uuid`-tenant table, and **v1 already has five** (`LogoutDeliveryOutbox`, `OutboxEmail`,
-`SuppressionEntry`, `TenantBranding`, `ProcessingRestriction`), so this outbox follows an
-existing rule
-rather than introducing one. Nami is a **producer only** and takes no inbound dependency on any
+row-level-security-guarded outbox**, deliberately with no per-tenant topic. Its policy
+compares a **text** discriminator holding `Tenants.Identifier`, so an unset variable fails
+closed by non-match. That is what the outbox column must be for a second reason too: the
+value does not stay in the database, it is published in the event envelope, and consumers
+match it against the `tenant` claim, which is a **string tenant identifier**. A `uuid`
+column would imply an undescribed conversion before publish, and could not be
+`.IsMultiTenant()` at all, since a `Guid` tenant property throws at model build. The
+`NULLIF(current_setting(...), '')::uuid` cast rule is retained as a rule with **zero
+instances**, for the hypothetical future `uuid`-tenant table (ADR-0071, and the
+[data design](../design/02-data.md) section 4 keeps it). Nami is a **producer only** and takes no inbound dependency on any
 consumer. The kill
 switch is simply not calling the registration extension, so nothing is added to the hot
 issuance path in v1. Proven by spike A-9 (2026-07-21, 10 of 10), which changed the design

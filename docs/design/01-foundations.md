@@ -109,7 +109,7 @@ consumer's** API process and must not drag the server in.
 | `Nami.Identity.Abstractions` | the ports, the dependency-inversion centre, plus the definition model | every `I…` port, `ClientDefinition`, `ScopeDefinition` | transitively |
 | `Nami.Identity.Core` | engine wiring, slices, the builder | `AddNamiIdentity()`, `INamiIdentityBuilder`, `NamiIdentityOptions` | yes |
 | `Nami.Identity.Keys` | key store and rotation | `.UseKeyStore(...)` | in the meta |
-| `Nami.Identity.EntityFrameworkCore` (+ `.PostgreSQL`) | the persistence adapter and the four contexts | `AddEntityFrameworkStores()`, `.UsePostgreSQL(...)` | the default |
+| `Nami.Identity.EntityFrameworkCore` (+ `.PostgreSQL`) | the persistence adapter and the five contexts | `AddEntityFrameworkStores()`, `.UsePostgreSQL(...)` | the default |
 | `Nami.Identity.MultiTenant` | tenant resolution and per-tier stores | `.AddMultiTenant(...)` | optional |
 | `Nami.Identity.OpenTelemetry` | telemetry | `.AddObservability()` | in the meta |
 | `Nami.Identity.Validation` | **consumer-side** resource-API validation | the validation registration | optional, and only for an API |
@@ -282,7 +282,7 @@ builder.Services.AddNamiIdentity(o =>
 
 ## 4. Data and structure
 
-This phase creates the four contexts with the correct scope. The schema is
+This phase creates the five contexts with the correct scope. The schema is
 [02](02-data.md).
 
 | Context | Scope | Holds |
@@ -303,7 +303,7 @@ not pooling in general.
 ### 5.1 Composition and pipeline order
 
 The host's entry point is the composition root. `AddNamiIdentity(cfg)` wires the engine,
-the four contexts, tenant resolution, health, and the database adapters. A provider selector
+the five contexts, tenant resolution, health, and the database adapters. A provider selector
 reads one configuration value and registers the matching key and secret adapters, so
 changing provider is configuration rather than code.
 
@@ -327,7 +327,7 @@ sequenceDiagram
   participant Mig as Migrator
   participant App as Nami.Identity.Host
   Dev->>PG: compose up, wait for healthy
-  Mig->>PG: apply migrations for the four contexts
+  Mig->>PG: apply migrations for the five contexts
   App->>PG: auto-seed the first signing key, activated immediately
   Note over App: readiness blocks until a key exists
   Dev->>App: idempotent seed of the default tenant
@@ -396,7 +396,7 @@ Exact version pins live in the central package file, not here.
 > pattern rather than one this design introduces. **Facade** for the managers, which is why
 > reaching past them to a store loses validation, caching, and normalization at once.
 > **Fluent Builder** for composition. No pattern is applied for its own sake, and there is
-> deliberately no abstraction over the four contexts, because they differ in scope rather
+> deliberately no abstraction over the five contexts, because they differ in scope rather
 > than in behaviour.
 
 ## 7. Error handling, edge cases, invariants
@@ -451,7 +451,7 @@ mechanics themselves are [02](02-data.md).
 * **Unit tests** for the composition root: the provider selector registers the adapter the
   configuration names, and an unknown provider fails at start-up rather than silently
   falling back.
-* **Integration tests** on a real database container: the four contexts migrate, and two
+* **Integration tests** on a real database container: the five contexts migrate, and two
   tenants resolve to two distinct tenant contexts.
 * **Health**: readiness is false before keys load and true after; readiness flips to false
   on shutdown while liveness stays true.

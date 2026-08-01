@@ -22,7 +22,7 @@ constraint names, and index storage parameters are set at implementation.
 
 | Decision | What this design applies |
 |---|---|
-| ADR-0001 | Global identity/membership/registry; tenant-scoped OpenIddict data; Pool by default, Silo on demand; global scope catalog; four DbContexts (topology fixed) |
+| ADR-0001 | Global identity/membership/registry; tenant-scoped OpenIddict data; Pool by default, Silo on demand; global scope catalog; five DbContexts (topology fixed) |
 | ADR-0037 | PostgreSQL 18 sole engine; FORCE RLS backstop; `xmin` concurrency; `pg_advisory_lock`; `jsonb`; efbundle migrations plus a raw-SQL RLS step |
 | ADR-0036 | UUIDv7 clustered keys everywhere, with two declared surrogate exceptions |
 | ADR-0018 | DbContext pooling: non-pooled Pool context in v1 (A-4/T7), pooled-plus-mutable as a post-v1 option; per-context pooling matrix; connection-pool sizing |
@@ -34,7 +34,7 @@ constraint names, and index storage parameters are set at implementation.
 ## 2. Purpose and scope
 
 The persistence tier and the isolation model that every other subsystem depends on:
-the four DbContexts, tiered Pool/Silo multi-tenancy with a two-layer isolation
+the five DbContexts, tiered Pool/Silo multi-tenancy with a two-layer isolation
 control (an EF query filter plus PostgreSQL FORCE row-level security), the
 control-plane schema, the UUIDv7 key and `xmin` concurrency conventions, and the
 migration model. It is Phase 02 and rests on the foundations (01).
@@ -48,7 +48,7 @@ This doc creates the tables and the isolation guarantees; those docs use them.
 
 ## 3. Interfaces and contract
 
-### The four DbContexts
+### The five DbContexts
 
 | DbContext | Scope | Base type | Pooling |
 |---|---|---|---|
@@ -56,11 +56,33 @@ This doc creates the tables and the isolation guarantees; those docs use them.
 | `IdentityDbContext` | Global | ASP.NET Core Identity context with a `Guid` key | Pooled |
 | `DataProtectionDbContext` | Global | `DbContext`, implements `IDataProtectionKeyContext` | Pooled |
 | `ControlPlaneDbContext` | Global | `DbContext` | Pooled |
+| `ControlPlaneTenantDbContext` | Tenant-scoped | Finbuckle `MultiTenantDbContext` | **Non-pooled** `AddDbContext` |
 
 The topology is fixed by ADR-0001; changing it requires a superseding ADR. Each
 context owns its own `__EFMigrationsHistory` in its own schema (`openiddict`,
-`identity`, `dataprotection`, `controlplane`) so a shared database has no collision.
-Data tables are all in `public`: v1 uses no schema separation for data.
+`identity`, `dataprotection`, `controlplane`, `controlplane_tenant`) so a shared
+database has no collision. Data tables are all in `public`: v1 uses no schema
+separation for data.
+
+**Why the control plane is two contexts and not one.** Pooling is decided **per
+context**, and the hazard is not the connection string but the fact that a pooled
+`DbContext` instance captures the ambient tenant once, at construction, and cannot carry
+per-request state (`OnConfiguring` runs once per pooled instance). That is exactly the
+topology spike A-4's test T7 proved leaks. The control plane holds both kinds of table:
+global rows keyed by `TenantId` as ordinary data, and genuinely tenant-scoped rows that
+are `.IsMultiTenant()` and RLS-isolated. Keeping both in one pooled context would put
+the tenant-scoped ones on the leaking topology and leave RLS as the only layer, which is
+the single-layer posture ADR-0018 exists to avoid. Making the whole context non-pooled
+would fix that but would also drop pooling for `ServerSideSessions`, which every
+authenticated request touches, and `AuditLog`, which is write-heavy. So the five
+tenant-scoped tables move to their own non-pooled `MultiTenantDbContext` and the hot
+global tables keep the pool.
+
+**Two candidate keys on `Tenants`, deliberately.** `TenantId` (`uuid`) is the foreign key
+for **global** tables that reference a tenant as data (`Memberships`,
+`DelegatedAdmin.RootTenantId`, `ProvisioningRequest`). `Identifier` (`varchar(64)`) is the
+**discriminator** for tenant-scoped, Finbuckle-managed tables, and it is what
+`ITenantInfo.Id` carries. Both are in use on purpose; do not "unify" them.
 
 ```mermaid
 graph LR
@@ -72,7 +94,8 @@ graph LR
   silo[(Silo<br/>dedicated DB per tenant)]:::store
   id[(IdentityDbContext<br/>global: users, roles, claims)]:::store
   dp[(DataProtectionDbContext<br/>global: DP keyring)]:::store
-  cp[(ControlPlaneDbContext<br/>global: tenants, memberships,<br/>delegated admin, audit, keys, sessions)]:::store
+  cp[(ControlPlaneDbContext<br/>global, pooled: tenants, memberships,<br/>delegated admin, audit, keys, sessions)]:::store
+  cpt[(ControlPlaneTenantDbContext<br/>tenant-scoped, non-pooled: logout outbox,<br/>email outbox, suppression, branding, restrictions)]:::store
 
   ent -->|IsolationMode Pool| pool
   ent -->|IsolationMode Silo| silo
@@ -293,7 +316,7 @@ the engine's global unique index, since it has its own database.
 CREATE TABLE "Tenants" (
   "TenantId"              uuid PRIMARY KEY,                 -- UUIDv7
   "ParentTenantId"        uuid NULL REFERENCES "Tenants"("TenantId"),
-  "Identifier"            text NOT NULL UNIQUE,             -- IMMUTABLE post-provision; drives the per-tenant issuer
+  "Identifier"            varchar(64) NOT NULL UNIQUE,      -- IMMUTABLE post-provision; drives the per-tenant issuer AND is the tenant discriminator
   "Name"                  text NOT NULL,
   "IsolationMode"         text NOT NULL,                    -- 'Pool' | 'Silo'
   "ConnectionString"      text NULL,                        -- Silo only
@@ -453,7 +476,7 @@ CREATE TABLE "SessionParticipatingClients" (
 -- Back-channel logout delivery outbox (tenant-scoped, RLS) --------------------
 CREATE TABLE "LogoutDeliveryOutbox" (
   "Id"             uuid PRIMARY KEY,
-  "TenantId"       uuid NOT NULL,                           -- .IsMultiTenant() + FORCE RLS
+  "TenantId"       varchar(64) NOT NULL,                    -- the Tenants.Identifier discriminator; .IsMultiTenant() + FORCE RLS
   "Sid"            text NOT NULL,
   "ClientId"       text NOT NULL,
   "LogoutUri"      text NOT NULL,
@@ -471,7 +494,7 @@ CREATE INDEX "IX_LogoutDeliveryOutbox_claim"
 -- TenantId lives in IdentityDbContext for the confirm and reset mail.
 CREATE TABLE "OutboxEmail" (
   "Id"                uuid PRIMARY KEY,
-  "TenantId"          uuid NOT NULL,
+  "TenantId"          varchar(64) NOT NULL,                 -- Tenants.Identifier discriminator
   "Payload"           text NOT NULL,
   "IdempotencyKey"    text NOT NULL UNIQUE,                 -- prevents double-send
   "Status"            text NOT NULL,                        -- 'Pending' | 'InFlight' | 'Sent' | 'DeadLettered'
@@ -484,7 +507,7 @@ CREATE INDEX "IX_OutboxEmail_claim" ON "OutboxEmail" ("Status", "NextAttemptAt")
 
 CREATE TABLE "SuppressionEntry" (
   "Id"            uuid PRIMARY KEY,
-  "TenantId"      uuid NOT NULL,
+  "TenantId"      varchar(64) NOT NULL,                       -- Tenants.Identifier discriminator
   "RecipientHash" bytea NOT NULL,                           -- hash only, never the address
   "Reason"        text NOT NULL,                            -- 'hard-bounce' | 'complaint' | 'manual'
   "ExpiresAt"     timestamptz NULL,                         -- hard-bounce and complaint persist; soft carries a TTL
@@ -495,7 +518,7 @@ CREATE INDEX "IX_SuppressionEntry_lookup"
 
 -- Tenant branding (per-tenant theming; RLS-isolated) --------------------------
 CREATE TABLE "TenantBranding" (
-  "TenantId"              uuid PRIMARY KEY REFERENCES "Tenants"("TenantId"),
+  "TenantId"              varchar(64) PRIMARY KEY REFERENCES "Tenants"("Identifier"),
   "LogoUri"               text NULL,                        -- https only, SSRF-safe
   "ThemeJson"             jsonb NULL,                       -- design tokens only, never raw CSS
   "DisplayName"           text NULL,
@@ -525,7 +548,7 @@ CREATE TABLE "ProvisioningRequest" (
 
 CREATE TABLE "ProcessingRestriction" (                      -- GDPR Art.18 (tenant-scoped, RLS)
   "SubjectRef" uuid NOT NULL,
-  "TenantId"   uuid NOT NULL REFERENCES "Tenants"("TenantId"),
+  "TenantId"   varchar(64) NOT NULL REFERENCES "Tenants"("Identifier"),
   "Reason"     text NOT NULL,   -- 'accuracy-contested' | 'erasure-alt' | 'legal-claim' | 'objection-pending'
   "Scope"      text NOT NULL,
   "StartedAt"  timestamptz NOT NULL,
@@ -612,32 +635,59 @@ Per request, inside the request transaction:
 `SET LOCAL`, which is what makes it pooling-safe; passing `false` would leak the setting
 to the next request on that connection and must never be used.
 
-**The policy expression must match the tenant column's type**, and this is the one place
-where getting it wrong crashes rather than fails closed. The OpenIddict `TenantId` is
-`text`, because it holds the Finbuckle identifier, so an unset GUC simply fails to match
-and returns zero rows. A `uuid` tenant column must cast through `NULLIF`:
+**Every tenant discriminator column is `varchar(64)`, holding the `Tenants.Identifier`
+string, so the policy expression above is a plain text comparison and an unset GUC simply
+fails to match and returns zero rows.** That is fail-closed by construction, and it is the
+main reason the type is text rather than `uuid`.
+
+The type is not a style choice. **`.IsMultiTenant()` composes only against a string
+column**, because Finbuckle's tenant identity is a string (`ITenantInfo.Id` and
+`.Identifier` are both `String`). A `Guid` tenant property throws at model build, so the
+application does not start:
+
+```text
+InvalidOperationException: The property 'TenantId' cannot be added to the type
+'<Entity>' because the type of the corresponding CLR property or field 'Guid' does not
+match the specified type 'string'.
+```
+
+Probe-verified 2026-08-01 against `Finbuckle.MultiTenant.EntityFrameworkCore` 10.1.2, the
+version ADR-0061 pins: the `Guid` shape throws as above and the `string` shape builds. So
+the auto-stamp, the query filter, and the throw-on-mismatch that spike A-4 proved 17/17
+are only available on a text column.
+
+**The `uuid` form and its `NULLIF` cast are kept as a rule with zero current instances.**
+No v1 table uses a `uuid` tenant column, and the v2 change-event outbox does not either
+(ADR-0071). If a future table ever does, its policy **must** cast:
 
 ```sql
 USING ("TenantId" = NULLIF(current_setting('app.current_tenant', true), '')::uuid)
 ```
 
 because a pooled connection with no setting returns the empty string, and `''::uuid`
-raises `22P02` instead of failing closed.
+raises `22P02`, which crashes instead of failing closed. The rule stays because it is
+cheap to keep and expensive to rediscover, and such a table could not be
+`.IsMultiTenant()` at all, so it would have to hand-roll the isolation layer and should be
+argued for in an ADR first.
 
-**This document is the single authority for which tables take the `uuid` form**, and a
-new guarded table with a `uuid` tenant column is added to this list rather than only to
-its own design, because the failure is a crash rather than a leak and is therefore easy
-to discover late. In v1 there are five: `LogoutDeliveryOutbox`, `OutboxEmail`,
-`SuppressionEntry`, `TenantBranding`, and `ProcessingRestriction`. The v2 change-event
-outbox joins them (ADR-0071).
+**Keep the discriminator on a deterministic collation** (the default, or `COLLATE "C"`).
+PostgreSQL permits non-deterministic ICU collations under which `=` has surprising
+semantics, and a tenant isolation key must never be ambiguous.
 
 `TenantBranding` is RLS-isolated and `.IsMultiTenant()` like every other per-tenant
-control-plane table, for consistency and defence in depth, and it carries a read-path
-consequence worth stating for the implementer: the login surface reads branding for the
-tenant being signed into, so **the tenant resolver must set `app.current_tenant` before
-that read**, or the `NULLIF` cast fails closed and no branding is returned. That is a
-benign degrade to the default theme rather than a security failure, but it looks like a
-bug to anyone who has not been told.
+control-plane table, and its tenant column **is** its primary key, one row per tenant. It
+is a deliberate, documented third exception to the UUIDv7 primary-key rule, beside
+`ServerSideSessions.Id` and `DataProtectionKeys.Id`, and none of that rule's three reasons
+reaches it: it is not a hot write path (one row per tenant, written when an admin edits
+branding), `Identifier` is already globally `UNIQUE` so there is no collision on a Silo
+move, and non-enumerability is meaningless for a value that appears in the hostname and the
+URL path. The upside that decided it is the read path: the login surface reads branding for
+the tenant being signed into, the resolver already holds the identifier, and a `uuid`
+primary key would force an identifier-to-uuid lookup on the first page a user ever sees.
+The implementer consequence still holds, and now fails closed by non-match rather than by
+a cast: **the tenant resolver must set `app.current_tenant` before that read**, or no
+branding is returned. That is a benign degrade to the default theme rather than a security
+failure, but it looks like a bug to anyone who has not been told.
 
 RLS is layer 2; the EF named filter plus auto-stamp is layer 1. Both are required,
 because the bulk, `ExecuteUpdate`/`ExecuteDelete`, and raw paths bypass layer 1, which
@@ -835,6 +885,9 @@ not be pooled in v1:
 // next tenant's request (spike A-4/T7). ADR-0018.
 services.AddDbContext<OpenIddictDbContext>(o => o.UseNpgsql(poolConnectionString));
 
+// Tenant-scoped control-plane tables: non-pooled for the same T7 reason as above.
+services.AddDbContext<ControlPlaneTenantDbContext>(o => o.UseNpgsql(controlPlaneConnection));
+
 // Global contexts: pooled.
 services.AddDbContextPool<ControlPlaneDbContext>(o => o.UseNpgsql(controlPlaneConnection));
 services.AddDbContextPool<IdentityDbContext>(o => o.UseNpgsql(identityConnection));
@@ -846,9 +899,27 @@ services.AddMultiTenant<NamiTenantInfo>()
         .WithStore<TenantStore>();
 ```
 
-`AddDbContextPool` is deliberately not used for `OpenIddictDbContext`, and a comment
-saying why belongs at the call site: this is the single most consequential line in the
-tier, and to anyone who does not know about T7 it looks like a missed optimization.
+`AddDbContextPool` is deliberately not used for `OpenIddictDbContext` or for
+`ControlPlaneTenantDbContext`, and a comment saying why belongs at each call site: this is
+the single most consequential line in the tier, and to anyone who does not know about T7 it
+looks like a missed optimization.
+
+**`TenantStore` must map `ITenantInfo.Id` to `Tenants.Identifier`, not to
+`Tenants.TenantId`.** This is the load-bearing line of the whole isolation model and it is
+easy to leave to inference, so it is stated here: Finbuckle stamps `ITenantInfo.Id` into
+the discriminator column, so this mapping decides what every tenant-scoped row holds, what
+the RLS GUC carries, and what leaves the system on the wire. Setting `Id` to the identifier
+gives one representation end to end and no conversion step anywhere, because it is already
+the value the `tenant` claim carries (design [09](09-federation-and-claims-profile.md)), the
+value the change-event envelope carries (ADR-0071), and the value the Admin API already
+uses on the branding, membership, and delegated-admin routes (design
+[15](15-admin-api.md)). Mapping `Id` to `TenantId.ToString()` instead would buy the storage
+cost of text, the opacity of a uuid, and a still-required uuid-to-identifier conversion
+before anything is published.
+
+This mapping is safe **only because `Tenants.Identifier` is immutable post-provision**, as
+its column comment states. If that invariant is ever relaxed, this whole shape has to be
+revisited, because a tenant rename would mean rewriting every tenant-scoped row.
 
 ### Configuration keys
 
@@ -924,9 +995,12 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
   item, which is where it is tracked.
 * **Missing composite index.** Without the `(TenantId, ClientId)` override, the second
   tenant to reuse a `client_id` fails with `23505`.
-* **The `uuid` GUC cast on a pooled connection.** Without `NULLIF`, an unset
-  `app.current_tenant` raises `22P02`. That is a crash rather than a fail-closed, which
-  is why the list of `uuid`-form tables is centralized in section 4.
+* **A `uuid` tenant column, which no v1 table has and none should acquire.** Two failures
+  ride on it. It cannot be `.IsMultiTenant()` at all, since Finbuckle's tenant identity is a
+  string and a `Guid` property throws at model build, so the auto-stamp and query filter are
+  simply unavailable. And its RLS policy needs a `NULLIF` cast, because an unset
+  `app.current_tenant` on a pooled connection raises `22P02`, a crash rather than a
+  fail-closed. Both are why section 4 keeps the rule with zero instances.
 * **Migration partial failure or version skew.** A fan-out can leave two schema versions
   live; the per-tenant `SchemaVersion` plus the resolver traffic gate stops new code from
   running against an old schema.

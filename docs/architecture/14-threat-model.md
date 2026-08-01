@@ -158,8 +158,9 @@ flowchart LR
 **Reading tenant B's data while authenticated as tenant A** (A4). Through the ORM: blocked by
 the filter, then by row-level security. Through bulk or raw SQL bypassing the filter: **only**
 row-level security remains, which is why I3 is critical. Through an unset tenant variable on a
-pooled connection: fails closed, by non-match on a text column and by the `NULLIF` cast on a
-`uuid` one. Through the application running as a superuser: **the policy is bypassed entirely**,
+pooled connection: fails closed by non-match, since every discriminator is a text column
+holding `Tenants.Identifier`; the `NULLIF` cast that a `uuid` column would need is a rule with
+no current instances. Through the application running as a superuser: **the policy is bypassed entirely**,
 so the de-privileged role is not hardening but load-bearing. Through a forged token carrying
 another tenant's issuer: blocked at the resource server by issuer binding, not by the signature.
 

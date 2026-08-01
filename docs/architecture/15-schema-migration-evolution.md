@@ -23,8 +23,8 @@ data operations rather than administrative metadata changes.
   application holds a **least-privilege connection with no DDL rights**, and the migration runs
   under a separate role. The permission split is what makes the rule enforceable rather than a
   convention (ADR-0025, ADR-0017).
-* **Four contexts, four histories.** Each DbContext keeps its own migrations-history table in
-  its own schema, so the four can share one database without colliding
+* **Five contexts, five histories.** Each DbContext keeps its own migrations-history table in
+  its own schema, so the five can share one database without colliding
   ([12-data-architecture](12-data-architecture.md), ADR-0001).
 * **A Silo fleet is an operational fan-out, not an ORM feature.** The ORM migrates one context
   against one connection string; there is no "migrate every tenant database". An orchestrator
@@ -94,13 +94,15 @@ they are re-verified on every bump rather than learned once (ADR-0021):
 added by an explicit raw-SQL migration step after table creation. That is a consequence of the
 model, not a workaround: the ORM has no concept of a policy (ADR-0037, ADR-0017).
 
-One correctness caveat rides with that step. A policy that casts the tenant setting to `uuid`
-must use `NULLIF(current_setting(...), '')::uuid`, because a **pooled** connection returns an
-empty string rather than NULL once the transaction ends, and casting an empty string to `uuid`
-**throws** instead of failing closed. The scope is the column **type**, not the release:
-text-typed tenant comparisons are safe as they are, and five v1 control-plane tables carry a
-`uuid` tenant column and therefore need the cast (ADR-0071, and the data design carries the
-authoritative list).
+One correctness caveat rides with that step, and it is now a rule with **zero instances**.
+Every tenant discriminator is text holding `Tenants.Identifier`, so tenant comparisons fail
+closed by non-match and no cast is involved. If a future table ever carried a `uuid` tenant
+column, its policy would have to use `NULLIF(current_setting(...), '')::uuid`, because a
+**pooled** connection returns an empty string rather than NULL once the transaction ends and
+casting an empty string to `uuid` **throws** instead of failing closed. Such a table also could
+not be `.IsMultiTenant()`, so it would have to hand-roll its isolation layer, which is why it
+should be argued for in an ADR before it is written (ADR-0001, and the data design carries the
+rule).
 
 ## 5. The tenant data lifecycle has four states that are easy to confuse
 
@@ -153,7 +155,7 @@ tenant is enabled (ADR-0054, ADR-0017).
   old-scope invisibility, and identifier immutability), ADR-0025 (no migrate on startup and the
   migration run mode).
 * ADR-0021 (the version-pinned hazards as contract-regression items re-verified per bump),
-  ADR-0037 and ADR-0001 (four contexts with four histories, and row-level security as a raw-SQL
+  ADR-0037 and ADR-0001 (five contexts with five histories, and row-level security as a raw-SQL
   step because the model has no concept of a policy), ADR-0071 (the `uuid` cast caveat and its
   scope by column type rather than by release).
 * ADR-0016 and ADR-0006 (the erasure saga the deprovision path reuses, and why the keyset is

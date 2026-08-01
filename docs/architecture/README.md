@@ -69,7 +69,7 @@ question. Each topic is one file.
 | File | Topic | Covers |
 |---|---|---|
 | [11-cross-cutting-concepts](11-cross-cutting-concepts.md) | The index into the six that follow, plus the invariants that reappear everywhere | Tenancy, security, observability, configuration |
-| [12-data-architecture](12-data-architecture.md) | Logical data model and database topology | ER diagram, the four contexts, row-level security |
+| [12-data-architecture](12-data-architecture.md) | Logical data model and database topology | ER diagram, the five contexts, row-level security |
 | [13-security-architecture](13-security-architecture.md) | The primary quality attribute, given its own view | Trust boundaries, the three isolation layers, token and key protection, administration controls, audit, abuse resistance |
 | [14-threat-model](14-threat-model.md) | The threats those controls answer, and the residual | STRIDE across five boundaries, two attack trees, and where the residual actually lives |
 | [15-schema-migration-evolution](15-schema-migration-evolution.md) | How the schema and the tenant fleet change safely | Migration as a build artifact, the traffic gate, expand-and-contract, the tenant lifecycle |

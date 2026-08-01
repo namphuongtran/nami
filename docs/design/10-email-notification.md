@@ -206,10 +206,14 @@ types.
   (`bytea`, hash only, never the address, DP.01), `Reason`, `ExpiresAt`, indexed
   `(TenantId, RecipientHash)`.
 
-Both tenant-columned tables use the `TenantId = NULLIF(current_setting('app.current_tenant', true), '')::uuid`
-RLS predicate form (02): an unset GUC then fails closed rather than crashing with a
-`22P02` cast error, so the relay's per-tenant iteration must set the ambient tenant and
-GUC before touching the control-plane copies.
+Both tenant-columned tables carry the discriminator as `varchar(64)` holding
+`Tenants.Identifier`, so their RLS predicate is the plain text form
+`TenantId = current_setting('app.current_tenant', true)` (02). An unset GUC then simply
+fails to match and returns zero rows, which is fail-closed by construction with no cast to
+get wrong. The relay's per-tenant iteration must still set the ambient tenant and the GUC
+before touching the control-plane copies, or it sees nothing rather than everything. Both
+tables live in `ControlPlaneTenantDbContext`, which is **non-pooled** for the T7 reason in
+02 section 1, so the relay must not assume a pooled context here.
 
 The `Payload` holds a live bearer token until the row is `Sent`, which is why it is
 redacted at that point (section 5.1) and never logged (section 8).

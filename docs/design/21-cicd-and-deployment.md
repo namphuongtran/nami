@@ -102,7 +102,7 @@ local TLS proxy from ADR-0063/ADR-0070. First run is an explicit order that avoi
 chicken-and-egg:
 
 1. `docker compose up -d postgres redis`, then wait for `postgres` to be healthy.
-2. Migrate with a one-shot migrator (a `migrator` compose service or `dotnet ef database update` per context, across the four DbContexts) - **never migrate-on-startup in production** (ADR-0017); development may enable it for convenience only.
+2. Migrate with a one-shot migrator (a `migrator` compose service or `dotnet ef database update` per context, across the five DbContexts) - **never migrate-on-startup in production** (ADR-0017); development may enable it for convenience only.
 3. Auto-seed the first key (ADR-0012): startup blocks until a signing and an encryption key exist with immediate activation and Data-Protection wrapping; `/health/ready` fails until then.
 4. Seed dev clients and scopes idempotently.
 5. Bootstrap the first admin through the audited break-glass path (ADR-0015), with a Production fail-fast on a weak or absent bootstrap value.

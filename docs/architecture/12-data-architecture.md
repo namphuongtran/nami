@@ -8,7 +8,7 @@ tags: [architecture, data, multi-tenancy, topology]
 
 > **Part of:** the [Software Architecture Document](README.md), structural views.
 
-The architecture-level data view: where the four context boundaries are drawn and why, the
+The architecture-level data view: where the five context boundaries are drawn and why, the
 entity relationships that carry an architectural decision, the multi-tenancy data model, and
 the physical database topology.
 
@@ -25,7 +25,7 @@ is the `xmin` system column, surfaced as the admin ETag and as the dual-control
 time-of-check guard (ADR-0020); `jsonb` is an extension bag and never the only home for data that must be
 queried; timestamps are `timestamptz`; encrypted blobs are `bytea`; enums are stored as `text`.
 
-## 1. The four-context boundary map
+## 1. The five-context boundary map
 
 The load-bearing data decision is that boundaries follow **tenant scope**, not merely
 concern: a user is global, but a tenant's tokens are the tenant's. This topology is fixed and
@@ -35,17 +35,19 @@ changing it requires a superseding ADR (ADR-0001).
 graph TB
   res[Tenant resolver<br/>host or path]:::comp
 
-  subgraph TS[Tenant-scoped]
+  subgraph TS[Tenant-scoped, non-pooled]
     oi[(OpenIddict context<br/>Applications, Authorizations, Tokens<br/>Scope is a GLOBAL catalog)]:::store
+    cpt[(Control-plane tenant context<br/>LogoutDeliveryOutbox, OutboxEmail,<br/>SuppressionEntry, TenantBranding,<br/>ProcessingRestriction)]:::store
   end
-  subgraph GL[Global, no tenant filter]
+  subgraph GL[Global, no tenant filter, pooled]
     direction LR
     id[(Identity context<br/>Users, Roles, Passkeys)]:::store
     dp[(Data Protection context<br/>keyring, root of trust)]:::store
-    cp[(Control-plane context<br/>Tenants, Closure, Memberships,<br/>DelegatedAdmin, AuditLog,<br/>SigningKeys, Sessions, Outboxes)]:::store
+    cp[(Control-plane context<br/>Tenants, Closure, Memberships,<br/>DelegatedAdmin, AuditLog,<br/>SigningKeys, Sessions)]:::store
   end
 
   res -->|sets ambient tenant| oi
+  res -->|sets ambient tenant| cpt
   cp -->|registry drives| res
   id -.->|one identity, many tenants| cp
 
@@ -60,9 +62,10 @@ graph TB
 | **OpenIddict** | Tenant-scoped | Applications, authorizations, and tokens belong to one tenant. Pool shares a database and discriminates by `TenantId` plus a query filter plus row-level security; Silo gets its own database. **Scope is the deliberate exception**: a global product catalog shared by every tenant, so it carries no `TenantId` at all (ADR-0001) |
 | **Identity** | Global | One human identity signs in to many tenants, so users and roles must not be partitioned by tenant. A user reaches tenants through a membership |
 | **Data Protection** | Global | The keyring is a root of trust for authentication, kept independent of Redis so a cache outage never breaks auth (ADR-0006) |
-| **Control-plane** | Global | Anchors everything that must not depend on any one tenant: the tenant registry and hierarchy, cross-tenant memberships and delegated admin, the audit chain, signing keys, sessions, and the delivery outboxes |
+| **Control-plane** | Global | Anchors everything that must not depend on any one tenant: the tenant registry and hierarchy, cross-tenant memberships and delegated admin, the audit chain, signing keys, and sessions. Pooled, because nothing here carries an ambient tenant |
+| **Control-plane tenant** | Tenant-scoped | The control-plane tables that genuinely belong to one tenant and are `.IsMultiTenant()` with row-level security: the logout and email delivery outboxes, suppression entries, branding, and processing restrictions. They are a **separate context because pooling is decided per context**: a pooled instance captures the ambient tenant once at construction, which is the topology spike A-4's T7 proved leaks, so these tables are non-pooled while the hot global tables above keep the pool (ADR-0018, ADR-0001) |
 
-Each context keeps its **own migrations-history table in a separate schema**, so the four can
+Each context keeps its **own migrations-history table in a separate schema**, so the five can
 share one physical database without colliding, or be split apart later without a rewrite
 (recorded in the [data design](../design/02-data.md)). For a Silo tenant the fan-out view is
 different: the per-tenant schema version is the fleet-level indicator, while the
@@ -124,7 +127,7 @@ erDiagram
         boolean IsInheritable "false blocks the cascade down the tree"
     }
     TENANT_BRANDING {
-        uuid TenantId PK "FK, one row per tenant"
+        varchar TenantId PK "Tenants.Identifier, FK, one row per tenant"
         text LogoUri "nullable, https-only and SSRF-safe"
         jsonb ThemeJson "nullable, design tokens, never raw CSS"
         text DisplayName "nullable"
@@ -260,7 +263,7 @@ erDiagram
     }
     LOGOUT_DELIVERY_OUTBOX {
         uuid Id PK "UUIDv7"
-        uuid TenantId "tenant-scoped with row-level security"
+        varchar TenantId "Tenants.Identifier, tenant-scoped with row-level security"
         text Sid "the session being logged out"
         text ClientId "the relying party"
         text LogoutUri "where the logout token is POSTed"
@@ -279,11 +282,11 @@ erDiagram
         int Attempts "retry counter"
         text ProviderMessageId "nullable, from the provider"
         timestamptz CreatedAt "enqueued"
-        uuid TenantId "control-plane copy only, with row-level security"
+        varchar TenantId "Tenants.Identifier, control-plane copy only, with row-level security"
     }
     SUPPRESSION_ENTRY {
         uuid Id PK "UUIDv7"
-        uuid TenantId "indexed with RecipientHash"
+        varchar TenantId "Tenants.Identifier, indexed with RecipientHash"
         bytea RecipientHash "hash only, never the address"
         text Reason "hard-bounce, complaint, or manual"
         timestamptz ExpiresAt "nullable, soft reasons carry a TTL"
@@ -428,8 +431,9 @@ Layer 1 covers the change-tracker path and **fails closed** on an unset or misma
 tenant. Layer 2 exists because layer 1 is bypassed by the bulk, raw, and
 `ExecuteUpdate`/`ExecuteDelete` paths, including the engine's own pruning; it needs a
 de-privileged role because a superuser bypasses row-level security, and the tenant setting is
-applied with `SET LOCAL` inside the request transaction so it is pooling-safe. The `NULLIF`
-cast rule for `uuid`-typed tenant columns is in
+applied with `SET LOCAL` inside the request transaction so it is pooling-safe. Every tenant
+discriminator is text, so comparisons fail closed by non-match; the `NULLIF` cast rule for a
+hypothetical `uuid`-typed tenant column, which no table has, is in
 [08-component-view section 2](08-component-view.md).
 
 **Pool versus Silo** is recorded per tenant in the registry. Pool shares one database and
@@ -440,7 +444,7 @@ fan-out (ADR-0001, ADR-0018, ADR-0054).
 
 ## 6. Physical topology
 
-The four contexts are logical. Physically they may share one cluster or be split, and two
+The five contexts are logical. Physically they may share one cluster or be split, and two
 placement facts are architectural:
 
 * The **operational store is the hot write path**, one row per token issued, so it wants a
@@ -493,7 +497,7 @@ failover behaviour and deployment topology are elaborated in
 
 ## Sources
 
-* ADR-0001 (the fixed four-context topology, tenant scoping, and the global scope catalog
+* ADR-0001 (the fixed five-context topology, tenant scoping, and the global scope catalog
   with its globally unique name), ADR-0037 (PostgreSQL 18, forced row-level security, and
   row-level security as a raw-SQL migration step), ADR-0018 (the change-tracker paths,
   optional navigations, composite client-id uniqueness, pooling, and the ETag), ADR-0017

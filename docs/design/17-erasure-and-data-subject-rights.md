@@ -69,7 +69,7 @@ restriction:
 | Column | Type | Notes |
 |---|---|---|
 | SubjectRef | uuid | the restricted subject; **primary key together with `TenantId`** |
-| TenantId | uuid | tenant discriminator, and the second half of the primary key |
+| TenantId | varchar(64) | tenant discriminator holding `Tenants.Identifier`, FK to `Tenants(Identifier)`, and the second half of the primary key |
 | Reason | text | accuracy-contested \| erasure-alt \| legal-claim \| objection-pending |
 | Scope | text | which processing is restricted |
 | StartedAt | timestamptz | when applied |
@@ -83,10 +83,12 @@ the saga would then have to reconcile.
 `CheckpointJson`, `xmin`) carries the request itself, and its `CheckpointJson` is what
 makes the saga resumable per plane.
 
-Because the discriminator is a uuid, its row-level-security policy uses the uuid
-predicate form `TenantId = NULLIF(current_setting('app.current_tenant', true), '')::uuid`
-(the plain text form would raise `22P02` on an empty GUC); RLS is applied by a raw-SQL
-migration, not the EF model ([02 data](02-data.md)).
+The discriminator is `varchar(64)` text holding `Tenants.Identifier`, so its
+row-level-security policy uses the plain text predicate
+`TenantId = current_setting('app.current_tenant', true)`, and an unset GUC fails closed by
+non-match rather than raising `22P02` on a cast. RLS is applied by a raw-SQL migration, not
+the EF model. The table is `.IsMultiTenant()` and lives in the **non-pooled**
+`ControlPlaneTenantDbContext` ([02 data](02-data.md) sections 1 and 4).
 
 Referenced, not defined here: `SubjectDek` and `AuditLog` (with the ciphertext-at-write
 precondition on subject-bearing columns) live in [02 data](02-data.md)/[03 audit](03-audit.md);
@@ -295,7 +297,7 @@ owns the classification model, the transfer register, and the profile.
 |---|---|---|---|
 | .NET BCL `System.Security.Cryptography` (AES-256-GCM) | Per-subject DEK wrap/unwrap for crypto-shred; no third-party crypto | MIT (.NET runtime) | ADR-0016, ADR-0026 |
 | OpenIddict managers (`IOpenIddict*Manager`) | Revoke-by-subject and prune during erasure | Apache-2.0 | ADR-0004 |
-| EF Core + Npgsql | The four DbContexts the data-map traverses | MIT / PostgreSQL License | ADR-0037 |
+| EF Core + Npgsql | The five DbContexts the data-map traverses | MIT / PostgreSQL License | ADR-0037 |
 
 > **Patterns applied (ADR-0066).** Orchestration saga (idempotent, resumable,
 > per-plane checkpoint) for erasure and the read-saga for access; ports and adapters
