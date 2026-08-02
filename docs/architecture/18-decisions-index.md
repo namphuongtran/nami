@@ -60,8 +60,11 @@ one inside that view's own `Sources` list or in a passing cross-reference. So a 
 is one that **touches** the decision, not necessarily one that depends on it. For the "what
 must I re-read" question that is the right side to err on.
 
-Not yet a CI gate. The script exits non-zero so it can become one, and until it does this
-table's column is only as current as the last person who ran it.
+This paragraph used to end "Not yet a CI gate ... this table's column is only as current as the
+last person who ran it", and it survived the change that made it one, four paragraphs above its
+own contradiction. Recorded rather than quietly deleted, because it is the cheapest instance of
+the rule this layer keeps relearning: **a document disagreeing with itself is the first place to
+look for a wrong claim**, and the wiring change is exactly the kind that leaves one behind.
 
 ## 2. ADR to view
 
@@ -93,7 +96,7 @@ table's column is only as current as the last person who ran it.
 | [0023](../adr/0023-iac-tool-opentofu.md) | Use OpenTofu as the default infrastructure-as-code tool inste... | 03, 10 |
 | [0024](../adr/0024-architecture-style.md) | Adopt a hexagonal shell (dependency rule plus ports/adapters)... | 03, 05, 06, 07, 08, 10, 12 |
 | [0025](../adr/0025-local-development-and-first-run.md) | Run locally with docker-compose dependencies, multi-stage Doc... | 03, 07, 10, 15, 17 |
-| [0026](../adr/0026-dependency-license-policy.md) | Restrict dependencies to permissive OSS licenses, enforced by... | 03, 05, 11, 13, 16 |
+| [0026](../adr/0026-dependency-license-policy.md) | Restrict dependencies to permissive OSS licenses, enforced by... | 03, 05, 11, 13, 16, 18 |
 | [0027](../adr/0027-packaging-and-distribution.md) | Distribute Nami as a hybrid NuGet meta-package plus a referen... | 01, 03, 07, 08, 10, 17, 18 |
 | [0028](../adr/0028-user-management.md) | Build user management on ASP.NET Core Identity with native pa... | 01, 04, 07, 08, 12, 17 |
 | [0029](../adr/0029-bff.md) | Build a Nami.Identity.Bff package by composing OSS-permissive... | 01, 03, 07, 08, 09, 13, 24 |
@@ -118,7 +121,7 @@ table's column is only as current as the last person who ran it.
 | [0048](../adr/0048-introspection-revocation-endpoint-isolation.md) | Isolate the introspection and revocation endpoints with clien... | 03, 04, 07, 09, 11, 13, 14, 21, 24 |
 | [0049](../adr/0049-resource-server-per-tenant-validation.md) | Isolate tenants at the resource server by issuer and tenant b... | 01, 02, 03, 04, 05, 07, 08, 09, 11, 13, 14, 18, 20, 23, 24 |
 | [0050](../adr/0050-per-client-cors-policy.md) | Provide per-client CORS through a custom policy provider, not... | 11, 13 |
-| [0051](../adr/0051-release-supply-chain-integrity.md) | Sign and attest release artifacts with keyless provenance for... | 10, 11, 13, 17 |
+| [0051](../adr/0051-release-supply-chain-integrity.md) | Sign and attest release artifacts with keyless provenance for... | 10, 11, 13, 17, 18 |
 | [0052](../adr/0052-ergonomic-config-layer.md) | Build an ergonomic, fail-closed configuration layer for decla... | 01, 10, 17, 18 |
 | [0053](../adr/0053-data-subject-rights-suite.md) | Build the data-subject-rights suite (access, portability, rec... | 01, 03, 09, 11, 13, 16, 20 |
 | [0054](../adr/0054-cross-border-transfer-and-data-residency.md) | Make data residency and cross-border personal-data transfer f... | 01, 03, 09, 11, 12, 13, 15, 20 |
@@ -133,11 +136,11 @@ table's column is only as current as the last person who ran it.
 | [0063](../adr/0063-observability-backend-and-dev-visualization.md) | Keep the observability backend operator-chosen and run a self... | 11, 16 |
 | [0064](../adr/0064-mcp-authorization-server-support.md) | Support Nami as the OAuth authorization server for MCP servers | 01, 19 |
 | [0065](../adr/0065-coding-and-naming-conventions.md) | Adopt the Microsoft naming and C# coding conventions as an en... | 07, 09, 10, 12, 16, 18, 23, 24 |
-| [0066](../adr/0066-design-patterns-vocabulary-and-pragmatic-use.md) | Adopt design patterns as a shared vocabulary applied pragmati... | 03, 18 |
+| [0066](../adr/0066-design-patterns-vocabulary-and-pragmatic-use.md) | Adopt design patterns as a shared vocabulary applied pragmati... | 03 |
 | [0067](../adr/0067-ai-assisted-development-governance.md) | Adopt an AI-assisted development policy: human-accountable, d... | 11, 17 |
 | [0068](../adr/0068-continuous-access-evaluation-shared-signals.md) | Support continuous access evaluation via the OpenID Shared Si... | 01, 19 |
 | [0069](../adr/0069-verifiable-credentials-openid4vc.md) | Support issuing Verifiable Credentials via OpenID4VC (Nami as... | 01, 19 |
-| [0070](../adr/0070-local-development-tls.md) | Serve HTTPS in local development with a locally-trusted cert... | 10, 18 |
+| [0070](../adr/0070-local-development-tls.md) | Serve HTTPS in local development with a locally-trusted cert... | 10 |
 | [0071](../adr/0071-identity-change-event-publishing.md) | Publish identity change events outward through a transactiona... | 01, 03, 04, 05, 07, 08, 09, 14, 15, 19, 24 |
 | [0072](../adr/0072-ui-rendering-stack.md) | Render the human-facing UI as server-rendered Razor with no c... | 01, 07, 08, 11, 13, 21, 22 |
 | [0073](../adr/0073-edge-posture-and-forwarded-headers.md) | Assume an L7 edge in front of the deployment, define the dire... | 03, 04, 07, 09, 10, 11, 13, 17, 18, 21 |
@@ -145,21 +148,21 @@ table's column is only as current as the last person who ran it.
 | [0075](../adr/0075-security-sensitive-port-invariants.md) | Treat security-sensitive ports as carrying non-weakenable inv... | 08, 09, 13, 14, 18, 23, 24 |
 | [0076](../adr/0076-application-transport-security.md) | Decide the application's own transport security: HSTS policy, the... | 03, 13, 18, 23 |
 | [0077](../adr/0077-metric-cardinality-and-telemetry-privacy.md) | Bound metric cardinality with an allow-listed tag set, and keep... | 14, 16, 18, 23 |
-| [0078](../adr/0078-load-test-tooling.md) | Adopt Apache JMeter as the load-test tool, replacing k6 and N... | 03, 18 |
+| [0078](../adr/0078-load-test-tooling.md) | Adopt Apache JMeter as the load-test tool, replacing k6 and N... | 03 |
 | [0079](../adr/0079-admin-api-http-conventions.md) | Decide the Admin API's HTTP surface by rule rather than per e... | 18 |
 | [0080](../adr/0080-health-and-readiness-probe-contract.md) | Serve two anonymous probe routes, `/health/live` and `/health... | 09, 10, 18, 24 |
 | [0081](../adr/0081-dual-control-target-guard-taxonomy.md) | Classify a dual-control proposal's target, so the guard check... | 09, 12 |
 | [0082](../adr/0082-abuse-detection-lanes-and-grouping-keys.md) | Give every abuse rule a lane that can answer it, and add the... | 13, 14 |
 | [0083](../adr/0083-abuse-detection-is-built-in.md) | Ship abuse detection as a built-in component rather than a SI... | 13, 14 |
 | [0084](../adr/0084-membership-removal-semantics.md) | Define what removing a person from a tenant guarantees, befor... | 06, 18 |
-| [0085](../adr/0085-telemetry-instrument-naming.md) | Namespace every custom instrument `nami.identity.` and freeze... | 16, 18 |
+| [0085](../adr/0085-telemetry-instrument-naming.md) | Namespace every custom instrument `nami.identity.` and freeze... | 16 |
 | [0086](../adr/0086-pin-ci-actions-by-commit-sha.md) | Pin every CI action by commit SHA, never by tag | 11, 18 |
 | [0087](../adr/0087-http-surface-snapshot-gate.md) | Lock the HTTP surface with a committed snapshot of the genera... | 18 |
 | [0088](../adr/0088-claims-contract-stability.md) | Freeze the claims contract as a consumer surface, and promise... | 04, 09, 11, 18 |
 | [0089](../adr/0089-self-service-surface-conventions.md) | Give the self-service surface its own conventions, while it s... | 18 |
 | [0090](../adr/0090-versioned-api-base-path.md) | Serve Nami's own APIs under the base path `/api/v1`, and rule... | 18 |
 | [0091](../adr/0091-browser-facing-response-headers.md) | Fix the browser-facing response-header baseline as three prof... | 13, 18 |
-| [0092](../adr/0092-ci-security-scan-tooling.md) | Pin the five CI security scans, and take no third-party SAST... | NONE |
+| [0092](../adr/0092-ci-security-scan-tooling.md) | Pin the five CI security scans, and take no third-party SAST... | 11, 18 |
 
 ## 3. What the shape of that table says
 
@@ -172,23 +175,25 @@ measure: it counts views that depend on a decision rather than views that mentio
 them with the same exclusion whenever section 2 is regenerated, and never regenerate one without
 the other.
 
-> **Two counts below are known stale as of 2026-08-01, measured and left for a separate
-> change.** A recompute run for an unrelated edit found that **four** decisions are cited by no
-> view (ADR-0079, ADR-0087, ADR-0089, ADR-0090), not the five the paragraph on zeros claims:
-> ADR-0045 is counted there as a zero while its own row reads `11, 18` and the same paragraph
-> says it is reachable through view 11's governance row, so the two halves of that paragraph
-> contradict each other. ADR-0091 briefly joined that set when it was written and left it in the
-> companion change, which is why the figure is still four. And **eight** decisions sit at a
-> single view (ADR-0000, ADR-0045,
-> ADR-0066, ADR-0070, ADR-0078, ADR-0084, ADR-0085, ADR-0086), not the five named at the end of
-> this section; ADR-0084 moved from zero to one when its gap was closed and the tally did not
-> follow. The sixteen at two views is correct. Both stale figures are the count-versus-list
-> shape recorded in [`../design/CLAUDE.md`](../design/CLAUDE.md): the count was derived once and
-> the list transcribed separately, so they drifted apart rather than together. Resolving them
-> means re-judging what "cited by no view" should mean when the only citation is the
-> cross-cutting register that exists for decisions with no view, which is a change to this
-> section's claim and not a fix to its arithmetic. **Do not quote either figure forward until
-> then.**
+> **A stale-count warning stood here from 2026-08-01 and was resolved on 2026-08-02. What it
+> asked for was a definition, not arithmetic**, and the definition is now stated so the figures
+> can be recomputed rather than re-judged.
+>
+> **A citation in [11-cross-cutting-concepts](11-cross-cutting-concepts.md) counts as a view.**
+> That view is the register for decisions that are substance without a view, so it is tempting
+> to treat a citation there as still-a-zero, and the old text did exactly that for ADR-0045
+> while the derived table read `11, 18` for the same decision. Two definitions of one word in
+> one document is what let the count and the list drift apart. The mechanical definition wins
+> for one reason: this section instructs a maintainer to recompute whenever section 2 is
+> regenerated, and a figure that requires a judgement about which citations really count cannot
+> be recomputed the same way twice. The qualitative point survives as an observation rather
+> than as a second tally, and it is made where ADR-0045 is discussed below.
+>
+> The old warning's own numbers are kept here because they date the drift rather than describe
+> today: it recorded four zeros and eight ones on 2026-08-01. Both moved again the same week,
+> ADR-0091 landing at one view and ADR-0092 at none until its governance row was written, which
+> is the point about recomputing rather than quoting forward. **Every figure in this section was
+> recomputed on 2026-08-02** over the twenty-three views other than this one.
 
 **The genuinely cross-cutting decisions are not the ones a reader would guess.** ADR-0008 leads
 at 17 views, then ADR-0001 and ADR-0039 at 16, ADR-0006 and ADR-0011 at 15, and five at 14:
@@ -201,25 +206,30 @@ model turns up in sixteen views, including context, data, runtime, security, per
 reliability, schema, observability, and operations, because almost every other decision
 eventually has to say how fast a change of mind takes effect.
 
-**Five decisions are cited by no view, and all five zeros are correct. Two more were, and
-were defects.** All seven were judged by one test, the question this page exists to answer: if
-the decision changed, would any view become wrong?
+**Four decisions are cited by no view, and all four zeros are correct. Three more were, and
+were defects.** Every one was judged by the same test, the question this page exists to answer:
+if the decision changed, would any view become wrong?
 
-**ADR-0045** (coordinated vulnerability disclosure) and **ADR-0079** (the Admin API's HTTP
-conventions) keep their zeros. A disclosure process is governance, not architecture, so it has
-no structural or operational view to land in. ADR-0079's case is different and is **measured
+**ADR-0079** (the Admin API's HTTP conventions) holds its zero, and the verdict is **measured
 rather than argued**: the architecture layer carries no HTTP verb and no admin path anywhere,
 so a rule about tenant prefixes and about whether revoking is a `DELETE` invalidates nothing
 here. Its sibling ADR-0044 is cited in four views because it is a product-shape driver; a
-convention for one contract sits a layer below that. ADR-0045 is reachable through the
-governance row of [11-cross-cutting-concepts](11-cross-cutting-concepts.md), which is where
-decisions that are substance without a view belong; **ADR-0079 is not, and deliberately so**,
+convention for one contract sits a layer below that.
+
+**ADR-0045** (coordinated vulnerability disclosure) is **not** among the zeros, and used to be
+counted as one. Its single citation is the governance row of
+[11-cross-cutting-concepts](11-cross-cutting-concepts.md), which is where decisions that are
+substance without a view belong, and under the definition above that is a view. The
+substantive point the old wording was reaching for is true and is worth keeping in the form of
+an observation: a disclosure process is governance rather than architecture, so its one view is
+the register rather than a structural or operational view, which is a different thing from
+having a home in the layer. **ADR-0079 is not in that register, and deliberately so**,
 since an HTTP convention is not governance and filing it there to give it a home would be the
 wrong-owner attribution this layer keeps having to correct. Its home is the contract itself,
 and this row is the pointer.
 
 **ADR-0087** (the HTTP-surface snapshot gate) joins ADR-0079 for the same measured reason and
-was the harder call of the three. Reversing it would not make any view false, because no view
+was the harder call of the four. Reversing it would not make any view false, because no view
 says the HTTP surface is locked; it says nothing about the HTTP surface at all. One candidate
 was considered and rejected: concern **C10** in
 [02-stakeholders-and-concerns](02-stakeholders-and-concerns.md), "protocol conformance and a
@@ -230,7 +240,7 @@ other would have made this page inconsistent with the verdict directly above it.
 ever expanded to name the HTTP contract, **both** belong in it, and the two rows move
 together.
 
-**ADR-0089** (the self-service surface's conventions) is the fourth, and its zero is the
+**ADR-0089** (the self-service surface's conventions) is the third, and its zero is the
 least surprising: the architecture layer names no HTTP path but the probe routes, the same
 measurement that settled ADR-0079 and ADR-0087, and this decision governs a surface with one
 declared endpoint. (**Tightened 2026-08-01.** This clause read "carries no HTTP path
@@ -244,7 +254,7 @@ reaches them; the spelling of the route a user calls to reset their own password
 reaches none. Same test, same day, opposite answers, which is the evidence that it
 discriminates rather than defaults.
 
-**ADR-0090** (the versioned API base path) is the fifth, and it is the one whose zero was
+**ADR-0090** (the versioned API base path) is the fourth, and it is the one whose zero was
 measured against the paths this layer **does** name rather than against a claim that it names
 none. Enumerated on 2026-08-01 across the twenty-three views other than this one, under the
 same exclusion the counts above use, they are `/health/live` and
@@ -258,8 +268,23 @@ proxy, which fails the first. So the decision cannot make a path on this page wr
 it changes none of the paths on this page. Its base path reaches the two custom surfaces,
 both of which live a layer below, which is the same place ADR-0079 and ADR-0089 were sent.
 
+**ADR-0092** (the five CI security scans) is the newest of the three that were **not** correct
+zeros, and it is the one where the measurement and the verdict disagreed. Measured, its zero
+held: no view among the twenty-three names a SAST, DAST, secret-scan, container-scan or
+dependency-scan stage, or a quality gate, so nothing here becomes false if the tools change.
+Two things overrode that. The governance-and-supply-chain row of
+[11-cross-cutting-concepts](11-cross-cutting-concepts.md) already carries ADR-0051, ADR-0026
+and **ADR-0086**, and ADR-0086 is the closest precedent available: a decision purely about CI
+mechanics, pinning actions by commit SHA, sitting in that row because supply-chain substance
+belongs there whether or not a structural view describes it. And the argument that keeps
+ADR-0079 out does not reach here, since an HTTP convention is not governance while a
+release-gate and toolchain-licence decision is exactly that. Worth recording as a method note:
+the first search for those stage names returned seven views, all false, because an
+unanchored `SAST` matches "di**sast**er". A presence found by a loose pattern is the mirror of
+the absence found by a narrow one, and this section had already been bitten by the second.
+
 **ADR-0080** (the probe contract) and **ADR-0084** (what removing a person from a tenant
-guarantees) were **not** correct zeros, and the ADR-0080 case is the instructive one. Two views
+guarantees) were the other two, and the ADR-0080 case is the instructive one. Two views
 already stated parts of the probe contract without an owner, which is only untidy. The real
 defect was the opposite shape: the runtime view's admin invariant and the glossary entry both
 stated `RequireActor` as universal, while ADR-0080 creates exactly one exemption from it, the
@@ -269,10 +294,19 @@ plain coverage gap: the domain model defined Membership and never said that endi
 the delegated-admin grant intact, which is a statement about aggregate independence and belongs
 in the domain model rather than in an endpoint description.
 
-Five sit at a single view. Three are genuinely narrow rather than under-covered: the record
-format itself, the design-patterns vocabulary, and local-development TLS. The two that joined
-them, the load-test tool and the telemetry instrument namespace, are narrow for the same
-reason and were checked with the same test. Sixteen sit at two, and that tail is unremarkable: it is mostly the six demand-driven extensions, named where scope is set
+Ten sit at a single view, which was five when this paragraph was first written and is the
+figure that drifted furthest. **They split cleanly in two, and the split is more useful than
+the total.** Four have the cross-cutting register as their only view: the record format itself
+(ADR-0000), coordinated disclosure (ADR-0045), actions pinned by commit SHA (ADR-0086) and the
+CI security scans (ADR-0092). All four are governance or supply-chain substance, which is what
+that row exists to hold, so a single view there means the layer placed them rather than
+under-covered them. The other six sit at one genuine structural view and are narrow rather than
+under-covered, each checked with the same test: the design-patterns vocabulary and the
+load-test tool (both at [03](03-drivers-and-constraints.md)), local-development TLS
+([10](10-deployment-infrastructure.md)), the membership-removal guarantee
+([06](06-domain-model.md)), the telemetry instrument namespace
+([16](16-observability-monitoring.md)), and the browser-facing response-header baseline
+([13](13-security-architecture.md)). Sixteen sit at two, and that tail is unremarkable: it is mostly the six demand-driven extensions, named where scope is set
 ([01-introduction-scope](01-introduction-scope.md)) and where their triggers are recorded
 ([19-evolution-and-extensions](19-evolution-and-extensions.md)), which is exactly the footprint
 a recorded-but-uncommitted option should have.
