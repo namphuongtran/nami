@@ -84,6 +84,49 @@ The hook **skips** this check when `python3` is absent rather than failing, beca
 is opt-in convenience and CI is the authority. A hook that refuses to run on a machine
 missing an interpreter is a hook people turn off, which costs more than the check earns.
 
+## test-editorconfig.sh
+
+A self-test for the C# ruleset in [`../.editorconfig`](../.editorconfig) and for
+[`../Directory.Build.props`](../Directory.Build.props) (ADR-0065), run in CI as its own job
+because it needs a .NET SDK:
+
+```bash
+bash scripts/test-editorconfig.sh
+```
+
+It writes a throwaway project to `.editorconfig-probe/`, builds a compliant fixture and
+asserts it is clean, then builds a violating fixture and asserts all four naming rules and
+the formatting rule fire. The directory is removed on every exit path and is git-ignored as
+a backstop. It **skips with exit 0 when `dotnet` is absent**, and says out loud that a skip
+is not a pass.
+
+The probe lives **inside the repository on purpose**. That is the only way it inherits the
+real `.editorconfig` (which sets `root = true` at that level) and the real
+`Directory.Build.props` (MSBuild walks up from the project directory) rather than a copy
+that could drift from what is being edited. It is the same trap `test-check-adrs.sh` fell
+into from the other side, and here the subject is the working tree by construction.
+
+It exists because the ruleset landed on 2026-08-02, ahead of any C# in this repository, so
+nothing else exercises it. Three ways it can be silently inert were found by measuring
+rather than by reading, and each is a live assertion:
+
+- A per-rule `dotnet_naming_rule.<name>.severity = error` does not reach the build. Only
+  `dotnet_diagnostic.IDE1006.severity` does. Removing that one line reports 5 failures here.
+- Severity of any kind fails nothing without `EnforceCodeStyleInBuild`, which is an MSBuild
+  property rather than an editorconfig key. Removing it reports 8.
+- The const and static carve-outs are what hold ADR-0065's rule to private *instance*
+  fields. Delete either and the general rule takes over that kind of member, enforcing a
+  convention no decision states.
+
+Counts, not per-line greps, are what the assertions turn on, for the reason
+[`CLAUDE.md`](CLAUDE.md) records: a negative assertion written per-line passes vacuously.
+
+One claim this file used to carry was wrong and was caught by breaking the subject rather
+than by review: naming-rule **declaration order is not load-bearing**. Moving the general
+private-field rule above the other two left every field matched by the same rule as before,
+so the more specific symbol specification wins regardless of position. The test correctly
+stays green on that reorder, because there is nothing there to catch.
+
 ## Pre-commit hook (opt-in, maintainers)
 
 Enable once per clone:

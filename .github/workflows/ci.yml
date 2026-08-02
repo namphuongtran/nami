@@ -46,4 +46,30 @@ jobs:
         # every run rather than once.
         run: bash scripts/test-check-adrs.sh
 
+  editorconfig:
+    name: C# style ruleset
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install the .NET SDK
+        # v6.0.0, published 2026-07-16, runtime node24 (read in action.yml at this
+        # exact SHA). Pinned by commit SHA, never by tag (ADR-0086).
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          # The probe project targets net10.0, which is the pin ADR-0030 sets. The
+          # exact SDK pin is that ADR's `global.json` roll-forward and lands at M1
+          # with the solution; setup-dotnet reads global.json in preference to this
+          # input once the file exists, so the two do not need reconciling here.
+          dotnet-version: "10.0.x"
+      - name: Style ruleset self-test
+        # There is no C# in this repository yet, so nothing else exercises the
+        # ruleset in .editorconfig and Directory.Build.props. This builds a
+        # throwaway project against the real ones and asserts that a compliant
+        # fixture is clean and a violating fixture fails on all four naming rules
+        # plus formatting. Three ways the ruleset can be silently inert were found
+        # by measurement while writing it, and each is a live assertion here.
+        run: bash scripts/test-editorconfig.sh
+
   # .NET build/test/license-scan gates are added when the solution lands (M1).
+  # The job above is not one of them: it builds a throwaway fixture to prove a
+  # ruleset, and reads no project in this repository, because there are none.
