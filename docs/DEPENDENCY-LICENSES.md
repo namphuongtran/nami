@@ -144,12 +144,17 @@ Three things follow, and the last is the one that changes what a person has to d
   is the same disposition section 6 records for OWASP ZAP. Section 4 already warned that an
   `execute-only` classification "settles nothing until the composition of the thing being
   executed is known". For this row the composition is now known.
-* **Six of the nine fall into none of section A's three buckets.** Section A allows a named set,
-  routes MPL-2.0 and LGPL through Architect and Legal, and forbids commercial, viral copyleft and
-  source-available. `EPL-1.0`, `CDDL-1.0`, `CC-BY-SA-3.0`, `OFL-1.1`, `Apache-1.1` and the
-  Indiana University licence are in none of the three. That is a gap in the policy rather than a
-  fault in the tool, and it is recorded here and not patched here, because section A belongs to
-  ADR-0026.
+* **Six of the nine fell into none of section A's three buckets, and that gap is now closed.**
+  Section A allows a named set, routes MPL-2.0 and LGPL through Architect and Legal, and forbids
+  commercial, viral copyleft and source-available. `EPL-1.0`, `CDDL-1.0`, `CC-BY-SA-3.0`,
+  `OFL-1.1`, `Apache-1.1` and the Indiana University licence were in none of the three. ADR-0026
+  gained two additions on the same date, and this row needed both. The **residual rule** gives
+  silence a meaning: a licence in none of the lists means **the dependency is not taken**, and
+  adding a name is an amendment to that ADR rather than a pull-request judgement. The **scope
+  statement** is what keeps that rule from reading as a ban on JMeter: the lists classify what
+  Nami *conveys*, and a component bundled inside an `execute-only` tool is answered by the
+  boundary in section C. Without the first the six had no disposition; without the second the
+  first would have reversed ADR-0078 by accident.
 * **The reason recorded for dropping the previous load tool no longer describes this project's
   posture.** k6 was removed "rather than carved out" because it is AGPL, and the tool chosen in
   its place bundles a `GPL-2.0-or-later WITH Classpath-exception-2.0` leg plus four other
