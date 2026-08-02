@@ -84,9 +84,13 @@ tag is stated in ADR-0086's Consequences, which also names M1 as the point to re
 
 `Version="5.6.0"` in `Directory.Packages.props` restores as the constraint `>= 5.6.0` and
 resolves to `5.6.0` only because NuGet takes the lowest match, read from
-`obj/project.assets.json`. Exact pinning is `[5.6.0]`. ADR-0021 parameter A wants
-OpenIddict "pinned exactly", and that decision belongs in ADR-0021 rather than to whoever
-adds the next row here.
+`obj/project.assets.json`. Exact pinning is `[5.6.0]`, and since 2026-08-02 ADR-0021
+parameter A requires that form of OpenIddict and its sub-packages and of nothing else, so
+**a file mixing the two forms is correct and must not be tidied into one**.
+
+A bracket bounds the direct constraint and nothing beneath it, so it is not a reproducible
+restore: transitive versions still move. No decision covers that yet; the same parameter
+names it as owed before M1.
 
 Never put `Version=` on a `PackageReference` (`NU1008`), and never omit the row
 (`NU1010`). Both exit 1, both measured.

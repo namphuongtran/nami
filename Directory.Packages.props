@@ -31,12 +31,19 @@
     is what is actually written, so a yanked or unlisted 5.6.0 would float this
     forward silently. Exact pinning is the bracket form, `[5.6.0]`.
 
-    This is not a defect today and it is a decision owed before OpenIddict
-    lands: ADR-0021 parameter A wants OpenIddict "pinned exactly through Central
-    Package Management", and "exactly" is not what the plain form expresses.
-    Whether every row here becomes bracketed, or only the engine's, is an open
-    item and belongs in ADR-0021's own terms rather than being settled by
-    whoever adds the next line to this file.
+    ADR-0021 parameter A settled the OpenIddict half of that on 2026-08-02:
+    "exactly" is the bracket form, it is required of OpenIddict and its
+    sub-packages, and it is deliberately NOT imposed on every row here, because
+    a package with a deep graph can pay a restore conflict no decision asked
+    for. So the row below stays plain and the engine's rows will not, and that
+    difference is a decision rather than an inconsistency.
+
+    What a bracket still does not buy is a reproducible graph. It bounds the
+    direct constraint and nothing beneath it, so transitive versions remain
+    whatever the graph allows on the day of the restore, which reaches the
+    ADR-0026 licence scan as much as it reaches the pin. That gap is named in
+    the same parameter, no decision in this repository covers it yet, and it is
+    owed before M1.
 
     The restore graph is currently ONE node deep, also read from the assets
     file: the analyzer brings no transitive packages at all. Worth knowing when

@@ -107,8 +107,9 @@ Never put `Version=` on a `PackageReference`: Central Package Management is on, 
 
 Read the constraint rather than the number: `Version="5.6.0"` restores as
 `>= 5.6.0` in `obj/project.assets.json` and resolves to `5.6.0` only because NuGet takes the
-lowest match. Exact pinning is `[5.6.0]`, which ADR-0021 parameter A will need for OpenIddict
-and which no row uses yet.
+lowest match. Exact pinning is `[5.6.0]`, which ADR-0021 parameter A requires of OpenIddict and
+its sub-packages and of nothing else, so this file is meant to mix the two forms and no row uses
+the bracket yet.
 
 ## `Directory.Build.props` and `.editorconfig` are one mechanism, and the knob is two properties
 
