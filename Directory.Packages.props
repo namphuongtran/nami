@@ -45,10 +45,27 @@
     the same parameter, no decision in this repository covers it yet, and it is
     owed before M1.
 
-    The restore graph is currently ONE node deep, also read from the assets
-    file: the analyzer brings no transitive packages at all. Worth knowing when
-    the ADR-0026 licence-scan gate is wired, because a green scan over a
-    one-node graph says almost nothing about the scanner.
+    THE RESTORE GRAPH STOPPED BEING TRIVIAL ON 2026-08-02. With only the
+    analyzer row it was one node deep, the analyzer bringing no transitive
+    packages at all, and that reading is kept because it is what made the
+    following one worth taking. Adding the two test rows below took the
+    architecture-test project's graph to TWENTY-THREE nodes, read from its
+    `obj/project.assets.json`, from two direct references.
+
+    That matters to the ADR-0026 licence-scan gate in both directions. A green
+    scan over a one-node graph said almost nothing about the scanner; a graph
+    this shape is the first thing here that could actually exercise one. And it
+    is the first place where "read the licence of what is distributed" costs
+    more than three reads, so section 3 of `docs/DEPENDENCY-LICENSES.md`
+    enumerates all twenty-three rather than only the two that are written here.
+
+    One node in it is worth naming: `Microsoft.ApplicationInsights`, pulled in
+    by `Microsoft.Testing.Extensions.Telemetry`, which the testing platform
+    auto-registers. It is test-only and is never packed into a shipped
+    artifact, and the CI job opts out by environment variable rather than
+    leaving the default. No ADR rules on transmitting build telemetry, so that
+    is a choice made in the workflow and stated there, not a decision cited
+    from somewhere.
 
     Licence, before adoption rather than after (ADR-0026, and section 7 of the
     licence record: "read the licence text of the thing that is actually
@@ -58,6 +75,19 @@
     documents in this repository already asserted MIT for it in prose, which is
     blind spot 2 of the licence record and is not evidence. Recorded with its
     source in `docs/DEPENDENCY-LICENSES.md` section 3.
+
+    The two test rows were read the same way on 2026-08-02: xunit.v3 3.2.2 and
+    TngTech.ArchUnitNET.xUnitV3 0.13.3 both carry
+    `<license type="expression">Apache-2.0</license>` in their own .nuspec.
+
+    THE xUnit INTEGRATION PACKAGE NAME IS NOT COSMETIC. The plainly named
+    `TngTech.ArchUnitNET.xUnit` at the same version declares a dependency on
+    `xunit.assert 2.4.1`, which is xUnit v2, while ADR-0060 binds tests to what
+    `xunit.v3.assert` ships. The `xUnitV3` variant declares `xunit.v3.assert`
+    instead and is the one this project takes. Both nuspecs were read; the
+    documents that name this library (ADR-0024, design 01 and design 20) all
+    write the base name `TngTech.ArchUnitNET` and none of them chooses between
+    the integration variants, so the choice is made here.
   -->
 
   <PropertyGroup>
@@ -66,6 +96,8 @@
 
   <ItemGroup>
     <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
+    <PackageVersion Include="TngTech.ArchUnitNET.xUnitV3" Version="0.13.3" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
   </ItemGroup>
 
 </Project>

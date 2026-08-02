@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The architecture-test suite ADR-0024 names by this exact project name, and
+    the row design 20 section 3.1 gives it in the taxonomy. It is the first
+    project under `tests/`; that folder held nothing but a placeholder until
+    2026-08-02.
+
+    TargetFramework reads $(NamiApplicationTargetFramework), the SINGLE-target
+    knob, and this is a choice with no source rather than a rule being followed.
+    ADR-0030 parameter B splits the two knobs by what a thing is: a published
+    library multi-targets, "the host is single-target on the current LTS". A
+    test project is neither, and no document in this repository says which knob
+    it takes. It reads the application one because under the testing platform
+    this project genuinely is an executable, and because multi-targeting it
+    would run the same assertions once per framework for no added signal. Revisit
+    when .NET 12 ships and the two knobs stop being the same string, which is the
+    first moment the choice can be wrong in a visible way.
+
+    OutputType is Exe because the test project is its own runner: xunit.v3 ships
+    Microsoft Testing Platform support, and with TestingPlatformDotnetTestSupport
+    set, `dotnet test` drives it directly. Measured on 2026-08-02, SDK 10.0.301:
+    with only the two package references below, `dotnet test` reported
+    "Passed! - Failed: 0, Passed: 2" and a deliberately broken rule exited 1.
+    So Microsoft.NET.Test.Sdk and xunit.runner.visualstudio are BOTH absent on
+    purpose. Adding them is not neutral: the same probe measured 28 restore-graph
+    nodes with the pair against 23 without, and every added node is a licence
+    read owed under ADR-0026.
+
+    IsPackable is false. Nothing under `tests/` is published (ADR-0027 ships the
+    packages design 01 section 3.1 lists, and this is not one of them).
+
+    There are no PublicAPI.*.txt files here and there must not be. ADR-0044
+    parameter A locks the surface of "every public package"; this project is not
+    a package, and the analyzer is referenced per-project in `src/` rather than
+    inherited, so nothing asks for them.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>$(NamiApplicationTargetFramework)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="TngTech.ArchUnitNET.xUnitV3" />
+  </ItemGroup>
+
+  <!--
+    The ProjectReference is what gives the test the assembly to inspect, and it
+    does NOT weaken the rule being tested: the arrow points from the test into
+    Abstractions, never the other way, and design 01 section 3.1 constrains what
+    Abstractions depends on rather than what may depend on it.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Nami.Identity.Abstractions/Nami.Identity.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
