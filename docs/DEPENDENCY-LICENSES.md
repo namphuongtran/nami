@@ -41,6 +41,12 @@ change the question from execution to conveying, and would need a new decision.
 |---|---|---|---|---|---|---|
 | Apache JMeter | Load and soak testing, the SLO release gate | Apache-2.0 | `execute-only` | `apache/jmeter` `master` `LICENSE` | 2026-08-01 | [ADR-0078](adr/0078-load-test-tooling.md) |
 | OIDF conformance suite | OpenID certification profiles, self-hosted image | MIT | `execute-only` | `openid/conformance-suite` `LICENSE.txt` (GitLab, `master`) | 2026-08-01 | [ADR-0027](adr/0027-packaging-and-distribution.md) |
+| cosign (sigstore) | Keyless signing and attestation of the image, the SBOM and the build provenance | Apache-2.0 | `execute-only` | `sigstore/cosign` `LICENSE`, default branch | 2026-08-02 | [ADR-0051](adr/0051-release-supply-chain-integrity.md) |
+| CycloneDX for .NET | The per-release SBOM | Apache-2.0 | `execute-only` | `CycloneDX/cyclonedx-dotnet` `LICENSE`, default branch | 2026-08-02 | [ADR-0026](adr/0026-dependency-license-policy.md) section C |
+
+The CycloneDX row is worth one sentence, because it is the blind spot wearing a disguise: it is
+installed as a `dotnet tool`, so it *is* a NuGet package and still appears in no project's restore
+graph. A tool that looks like a package is the case most likely to be assumed covered.
 
 **The `Boundary` column is checked, not merely declared** (ADR-0026 section C). CI fails when a
 tool classified `execute-only` appears in the file list of a published artifact, and it fails
@@ -113,8 +119,8 @@ The four quoted verbatim details matter:
   build script in the distribution's own repository, because it is the only place the
   composition is stated and no licence tool parses it. And **an `execute-only` classification is
   a claim about a boundary, not about a licence**: it settles nothing until the composition of
-  the thing being executed is known, which is a limit worth carrying back to the two rows in
-  section 2 that currently hold that classification.
+  the thing being executed is known, which is a limit that applies to every `execute-only` row
+  in section 2.
 
 ## 5. Verified alternatives, not yet taken
 
@@ -151,7 +157,68 @@ had narrowed the assertion-library constraint to "MIT or BSD", which would have 
 Apache-2.0 candidate above for no reason the policy gives. Those were corrected in the same
 change as this section.
 
-## 6. Maintenance rule
+## 6. Pipeline scan tools, verified ahead of the decision
+
+[ADR-0062](adr/0062-owasp-asvs-security-baseline.md) leaves the analyzer choice open ("The
+specific analyzers are an open, replaceable choice, not pinned here"), and design
+[21](design/21-cicd-and-deployment.md) writes most of the CD scan stages as slash-alternatives.
+None of the tools below is adopted. They are verified first anyway, for two reasons. ADR-0026
+section C's second limb requires an executable used in the pipeline to be in an inventory at all,
+and these were in none. And a licence is an **input** to the choice rather than a consequence of
+it: two of the nine turned out not to be permissive, which removes them from the shortlist before
+anyone weighs their merits.
+
+| Tool | Role in the pipeline | Licence | Read at | Date | Status |
+|---|---|---|---|---|---|
+| Trivy | Dependency scan and container scan | Apache-2.0 | `aquasecurity/trivy` `LICENSE`, default branch | 2026-08-02 | Verified, choice open |
+| Grype | Container scan, the alternative to Trivy | Apache-2.0 | `anchore/grype` `LICENSE`, default branch | 2026-08-02 | Verified, choice open |
+| OWASP Dependency-Check | Dependency scan, the alternative to Trivy | Apache-2.0 | `dependency-check/DependencyCheck` `LICENSE.txt`, default branch | 2026-08-02 | Verified, choice open |
+| gitleaks | Secret scan | MIT | `gitleaks/gitleaks` `LICENSE`, default branch | 2026-08-02 | Verified. No ADR owns it, see below |
+| OWASP ZAP | DAST pass against staging | Apache-2.0 at the root, but the distributed package bundles thirty third-party components and seven are outside section A's permissive set | `zaproxy/zaproxy` `LICENSE` and `LEGALNOTICE.md`, default branch | 2026-08-02 | Verified, choice open. Answerable only as `execute-only` |
+| Semgrep | SAST | **LGPL-2.1**, identically at the root `LICENSE` and at `cli/LICENSE` | `semgrep/semgrep`, `develop` | 2026-08-02 | Not permissive; section A routes LGPL through the exception process with Legal |
+| CodeQL, the query packs | The queries, not the thing that executes them | MIT | `github/codeql` `LICENSE`, default branch | 2026-08-02 | Verified, and not the artifact that matters |
+| CodeQL CLI, the engine | SAST | **GitHub CodeQL Terms and Conditions**, a proprietary licence and not OSI-approved | `github/codeql-cli-binaries` `LICENSE.md`, default branch | 2026-08-02 | Fails section A as a dual licence with a paid tier |
+
+Four details, quoted, because each one changes what the pending decision can choose from.
+
+* **CodeQL is split across two repositories and only the one that does not execute is MIT.** The
+  query repository's own `README.md` says so: "The CodeQL CLI (including the CodeQL engine) is
+  hosted in a [different repository](https://github.com/github/codeql-cli-binaries) and is
+  [licensed separately]". The CLI's terms grant CI use only "with an Open Source Codebase", and
+  only "If the Open Source Codebase is hosted and maintained on GitHub.com"; the Restrictions
+  section then forbids using it "in any other context ... during automated analysis, CI or CD"
+  and "in connection with any codebase that is not an Open Source Codebase (e.g., code in a
+  private repo in GitHub)", except where "your use of the Software is under a paid customer
+  license for GitHub Advanced Security". **Nami today satisfies the free grant** and would not be
+  in breach. The cost is not a breach, it is a coupling: adopting it binds the security gate to
+  this project staying public on one host, and it gives an adopter who forks privately a gate
+  they cannot run. That is a decision to take deliberately or not at all, and it is invisible if
+  the only licence anyone reads is the MIT one on the query repository.
+* **Semgrep declares LGPL-2.1 in both places it declares anything**, root and `cli/`, so there is
+  no permissively-licensed subset to prefer. This does not forbid it: section A routes LGPL
+  through the exception process rather than banning it, and an execute-only CI tool is the
+  easiest version of that case. It does mean it cannot be adopted silently.
+* **ZAP is the first thing the section 7 composition rule was applied to, and it earned the
+  rule.** The root licence is Apache-2.0; `LEGALNOTICE.md` in the same repository lists thirty
+  bundled components, of which `javahelp` (GPL with classpath exception), `jericho-html` (EPL /
+  LGPL dual), `jfreechart` (LGPL), `jgrapht-core` (LGPL 2.1), `swingx-all` (LGPL 2.1), `xom`
+  (LGPL) and `json-lib` (MIT plus the non-OSI "Good, Not Evil" clause) fall outside section A.
+  Every one of them is answerable as execution rather than conveying, and not one is visible
+  from the root licence file.
+* **The four licences design 21 asserted in prose were all correct**, checked individually rather
+  than as a group: CycloneDX Apache-2.0, cosign Apache-2.0, Trivy and Grype Apache-2.0, gitleaks
+  MIT. Blind spot 2 did not fire. The instructive part is *where* the table stopped. The two
+  tools it never listed, CodeQL and Semgrep, are the two that are not permissive, so a reader
+  auditing only the recorded rows would have found nothing wrong and missed both. An inventory
+  assembled from what someone already checked reports clean on precisely what nobody checked.
+
+One item is left open rather than settled here, because it is a decision and this file does not
+make them. **No ADR owns gitleaks.** Design 21's tool table fills its decision column with "this
+doc", where every other row names an ADR, which puts a tool choice in the layer that realizes
+decisions instead of the layer that makes them. It belongs to whatever closes ADR-0062's open
+analyzer choice.
+
+## 7. Maintenance rule
 
 * A new dependency or tool is added to this file **in the same change** that introduces it, with
   the licence read at source and the date recorded. Not "verify later".
@@ -164,9 +231,11 @@ change as this section.
   twice on exactly that. So the read is two steps: find where the distribution declares what it
   bundles, usually a build manifest or an assembly descriptor rather than anything a scanner
   looks at, then read the licence of each bundled part that the intended use actually exercises.
-  This is owed to both `execute-only` rows in section 2, which were classified on their root
-  licences and whose bundled parts have not been enumerated; do it at adopt time, when the exact
-  released version is known, and record the enumeration alongside the licence.
+  Section 6 carries the first worked example, on OWASP ZAP, where the root licence is Apache-2.0
+  and seven of thirty bundled components are not. This is owed to every `execute-only` row in
+  section 2: all four were classified on a root licence and none has had its bundled parts
+  enumerated. Do it at adopt time, when the exact released version is known, and record the
+  enumeration alongside the licence.
 * Re-verify at adopt time. ADR-0026 already says a licence "can change again in either
   direction", and this project has now been wrong in both directions: a commercial package
   recorded as permissive, and a permissive package recorded as the wrong permissive licence.
