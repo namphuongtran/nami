@@ -159,7 +159,7 @@ look for a wrong claim**, and the wiring change is exactly the kind that leaves 
 | [0083](../adr/0083-abuse-detection-is-built-in.md) | Ship abuse detection as a built-in component rather than a SI... | 13, 14 |
 | [0084](../adr/0084-membership-removal-semantics.md) | Define what removing a person from a tenant guarantees, befor... | 06, 18 |
 | [0085](../adr/0085-telemetry-instrument-naming.md) | Namespace every custom instrument `nami.identity.` and freeze... | 16 |
-| [0086](../adr/0086-pin-ci-actions-by-commit-sha.md) | Pin every CI action by commit SHA, never by tag | 11, 18 |
+| [0086](../adr/0086-pin-ci-actions-by-version-tag.md) | Pin every CI action by a full version tag, never by a floating major or a SHA | 11, 18 |
 | [0087](../adr/0087-http-surface-snapshot-gate.md) | Lock the HTTP surface with a committed snapshot of the genera... | 18 |
 | [0088](../adr/0088-claims-contract-stability.md) | Freeze the claims contract as a consumer surface, and promise... | 04, 09, 11, 18 |
 | [0089](../adr/0089-self-service-surface-conventions.md) | Give the self-service surface its own conventions, while it s... | 18 |
@@ -278,7 +278,7 @@ dependency-scan stage, or a quality gate, so nothing here becomes false if the t
 Two things overrode that. The governance-and-supply-chain row of
 [11-cross-cutting-concepts](11-cross-cutting-concepts.md) already carries ADR-0051, ADR-0026
 and **ADR-0086**, and ADR-0086 is the closest precedent available: a decision purely about CI
-mechanics, pinning actions by commit SHA, sitting in that row because supply-chain substance
+mechanics, how an action reference is pinned, sitting in that row because supply-chain substance
 belongs there whether or not a structural view describes it. And the argument that keeps
 ADR-0079 out does not reach here, since an HTTP convention is not governance while a
 release-gate and toolchain-licence decision is exactly that. Worth recording as a method note:
@@ -300,7 +300,7 @@ in the domain model rather than in an endpoint description.
 Ten sit at a single view, which was five when this paragraph was first written and is the
 figure that drifted furthest. **They split cleanly in two, and the split is more useful than
 the total.** Four have the cross-cutting register as their only view: the record format itself
-(ADR-0000), coordinated disclosure (ADR-0045), actions pinned by commit SHA (ADR-0086) and the
+(ADR-0000), coordinated disclosure (ADR-0045), how an action reference is pinned (ADR-0086) and the
 CI security scans (ADR-0092). All four are governance or supply-chain substance, which is what
 that row exists to hold, so a single view there means the layer placed them rather than
 under-covered them. The other six sit at one genuine structural view and are narrow rather than

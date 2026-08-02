@@ -68,7 +68,7 @@ Every technology in the table below was chosen under these rules, and a future c
 | Code style and conventions | `.editorconfig` plus .NET analyzers and `dotnet format` | 0065 |
 | Packaging and distribution | NuGet meta-package (`Nami.Identity`) plus a non-packable reference host application (`Nami.Identity.Host`) shipped as an image and a template | 0027, 0044, 0065 |
 | Database high availability | Primary plus streaming-replication standby, automatic failover, PITR; read replicas optional and not v1; Redis durability an operator option never depended on | 0074 |
-| Supply chain | Keyless signing and provenance attestation; CI actions pinned by commit SHA | 0051, 0086 |
+| Supply chain | Keyless signing and provenance attestation; base images digest-pinned, CI actions pinned by a full version tag (the two differ, deliberately, since 2026-08-02) | 0051, 0086 |
 | Dependency policy | Permissive OSS only, CI license-scan | 0026 |
 | Key management | No-restart rotation, provider-agnostic DR, per-scope keyset | 0005, 0006, 0011, 0012, 0033 |
 | Security posture | Hardening-invariant startup check, abuse defense, CVE disclosure; OWASP ASVS baseline | 0043, 0042, 0045, 0062 |

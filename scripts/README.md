@@ -11,7 +11,7 @@ Neutral ADR/docs hygiene checks, run in CI (`.github/workflows/ci.yml`) and loca
 - no em dash appears in tracked markdown (project style rule): use a comma, colon, or parentheses. The check builds the pattern from the codepoint, so this script stays pure ASCII and cannot fail against itself;
 - no design-corpus test identifier appears in tracked markdown: the `9.T`, `8.K` and `25.T` families point into a numbered test register this repository does not have, so an obligation is stated by what it asserts and listed in `docs/design/20-testing.md` instead. The families are named by prefix here on purpose, because writing a whole identifier would trip this very check; `docs/adr/README.md` carries the full convention and the reason it is enforced;
 - every ADR has a row in the architecture layer's reverse index, `docs/architecture/18-decisions-index.md`, and every row there resolves to a file (bidirectional). This is a second index, and the first one passing says nothing about it: nine ADRs had drifted out of this one while every other check was green. Membership only, never the "Views that cite it" column, which is regenerated from the views themselves;
-- GitHub Actions workflow hygiene, two rules, added 2026-08-02 as the no-new-dependency half of the workflow-analysis gap ADR-0092 names: no `${{ ... }}` expression appears inside any `run:` script, and no workflow uses a `pull_request_target:` or `workflow_run:` trigger. **Read the scope before reading the green.** Interpolating into a shell is the injection vector and passing the value through `env:` is the standard mitigation, so the first rule enforces the mitigation rather than judging whether a value is trusted, which is the part that would need a real analyser. What neither rule sees: interpolation into an action's `with:` inputs, the scope of a `permissions:` block, composite actions and reusable workflows in other repositories, and what a pinned action does once it runs (ADR-0086 governs *which* action code runs, and nothing here governs its behaviour).
+- GitHub Actions workflow hygiene, **three** rules. Two were added 2026-08-02 as the no-new-dependency half of the workflow-analysis gap ADR-0092 names: no `${{ ... }}` expression appears inside any `run:` script, and no workflow uses a `pull_request_target:` or `workflow_run:` trigger. The third, 8c, landed the same day with ADR-0086 parameter A's reversal and is what makes that reversal a decision rather than a loosening: every `uses:` must be a full version tag, `@vX.Y.Z`, so a floating major (`@v7`), a branch (`@main`), a partial version (`@v7.0`) and a commit SHA are all rejected. The floating major is the form that actually moved this repository's linter under an unchanged workflow file, and it differs from the sanctioned form by four characters in a diff. Local (`./...`) and container (`docker://...`) references are out of scope, image digests being ADR-0051 section D. **Read the scope before reading the green.** Interpolating into a shell is the injection vector and passing the value through `env:` is the standard mitigation, so the first rule enforces the mitigation rather than judging whether a value is trusted, which is the part that would need a real analyser. What neither rule sees: interpolation into an action's `with:` inputs, the scope of a `permissions:` block, composite actions and reusable workflows in other repositories, and what a pinned action does once it runs (ADR-0086 constrains *which* action code runs, and since its parameter A was reversed on 2026-08-02 it constrains it by a movable tag, so even that is weaker than it reads; nothing here governs an action's behaviour).
 
 Run locally:
 
@@ -35,9 +35,10 @@ A self-test for `check-adrs.sh` Check 8, run in CI alongside the guardrail itsel
 bash scripts/test-check-adrs.sh
 ```
 
-It creates a throwaway `git worktree` at `HEAD`, copies the **working-tree** guardrail into
-it, plants a workflow carrying three violations and four look-alikes, and asserts that
-exactly the three are reported. The worktree is removed on every exit path, so neither the
+It creates a throwaway `git worktree` at `HEAD`, copies the **working-tree** guardrail and
+the **working-tree** workflows into it, then plants two workflows: one carrying three
+hygiene violations and four look-alikes, and one carrying four pin violations and four
+look-alikes. It asserts that exactly the three and exactly the four are reported. The worktree is removed on every exit path, so neither the
 real working tree nor the real index is ever written to.
 
 It exists because Check 8 matches with `awk`, and the awk on the CI runner is a different
@@ -45,13 +46,21 @@ implementation from the one the check was authored against. A green guardrail on
 tree proves only that the awk parses, since a clean tree has nothing to match; this supplies
 the bug so the matching is proven on the awk that runs it, on every run rather than once.
 
-Two properties are load-bearing and easy to lose in an edit. **It copies the working-tree
+Three properties are load-bearing and easy to lose in an edit. **It copies the working-tree
 guardrail into the worktree**, because a worktree at `HEAD` otherwise tests the committed
 script rather than the one being edited: the first version of this file omitted that copy,
 and deleting Check 8's block-scalar detection outright still produced a green. And **the two
 finding-count assertions are what prove the look-alikes did not trip**; the per-line checks
 are diagnostics, and the negative ones among them pass vacuously if a line number drifts,
 which also happened on the first run.
+
+The third was added on 2026-08-02 and is the same trap one layer out: **it copies the
+working-tree workflows in as well**. Check 8c landed in the same commit that fixed every
+`uses:` it rejects, so without that copy the worktree carried `HEAD`'s unfixed workflow,
+the new rule found seven real violations in it, and two assertions failed for a reason
+that had nothing to do with what they were testing. The generalisation is worth more than
+the fix: **a self-test's subject is the script and its input**, and a check cannot
+otherwise be introduced in the same change as the fix it demands.
 
 ## check-decisions-index.py
 

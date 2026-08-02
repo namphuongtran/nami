@@ -115,8 +115,12 @@ string the SDK cannot parse makes the whole `sdk` block inert. The corpus writes
 floor rather than a wildcard, and a wildcard is not available: the `rollForward` key is
 what expresses the range.
 
-The lint version is not a preference: it is the version bundled by the SHA-pinned
-action in `ci.yml` (ADR-0086), so bump both or neither. `.markdownlint-cli2.jsonc`
+The lint version is not a preference: it is the version bundled by the version-pinned
+action in `ci.yml` (ADR-0086 parameter B), so bump both or neither. That coupling is the
+half of ADR-0086 that survived its parameter A reversal on 2026-08-02, and it is the half
+that caught the only real drift this repository has had. **Every `uses:` in `ci.yml` is a
+full version tag, `@v7.0.1`, never `@v7` and never a commit SHA**, and `check-adrs.sh`
+Check 8c fails a build on any other form. `.markdownlint-cli2.jsonc`
 sets `gitignore: true` so the glob reads the same file set CI reads; without it the
 same command also walks the git-ignored draft areas and reports errors CI can never
 see.

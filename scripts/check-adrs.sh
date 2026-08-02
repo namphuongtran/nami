@@ -154,6 +154,19 @@ fi
 #       write-scoped permissions and secrets with code the proposer controls.
 #       Neither is present today; if one is ever genuinely needed it becomes a
 #       deliberate exception with a recorded reason, not a silent addition.
+#   8c. Every `uses:` reference is a FULL version tag, `@vX.Y.Z`. Added
+#       2026-08-02 with ADR-0086 parameter A's reversal, and it is the whole
+#       reason that reversal is a decision rather than a loosening. A floating
+#       major is what actually bit this repository: `@v24` moved from v24.0.0 to
+#       v24.1.0, changed the bundled linter, and made a sentence in CLAUDE.md
+#       false with nothing failing. The exact tag closes that; this check is what
+#       keeps it closed, because `@v7` is one keystroke from `@v7.0.1` and reads
+#       almost the same in a diff. A commit SHA is rejected too, which is the
+#       half worth explaining: the SHA is the *more* immutable form and the
+#       repository deliberately does not use it, so allowing it would leave two
+#       sanctioned styles and no way to tell a deliberate one from a leftover.
+#       Local (`./...`) and container (`docker://...`) references are out of
+#       scope; ADR-0051 section D governs image digests.
 #
 # What this does NOT see, stated here because a check that cannot see a class
 # must say so where its result is read: interpolation into an action's `with:`
@@ -185,6 +198,26 @@ if [ -n "$wf" ]; then
   if [ -n "$trig" ]; then
     while IFS= read -r l; do add "trigger runs privileged against proposer-controlled input: $l"; done <<< "$trig"
   fi
+
+  for f in $wf; do
+    [ -f "$f" ] || continue
+    refs=$(awk -v F="$f" '
+      { line = $0; sub(/\r$/, "", line)
+        if (line !~ /^[[:space:]]*-?[[:space:]]*uses:[[:space:]]/) next
+        sub(/^[[:space:]]*-?[[:space:]]*uses:[[:space:]]+/, "", line)
+        sub(/[[:space:]]+#.*$/, "", line)
+        sub(/[[:space:]]+$/, "", line)
+        if (line ~ /^\.\//) next
+        if (line ~ /^docker:\/\//) next
+        n = index(line, "@")
+        if (n == 0) { print F ":" NR ": " line " (no version reference at all)"; next }
+        ref = substr(line, n + 1)
+        if (ref !~ /^v[0-9]+\.[0-9]+\.[0-9]+$/) print F ":" NR ": " line
+      }' "$f" 2>/dev/null || true)
+    if [ -n "$refs" ]; then
+      while IFS= read -r l; do add "action reference is not a full version tag (ADR-0086 requires @vX.Y.Z: not @v7, not a branch, not a commit SHA): $l"; done <<< "$refs"
+    fi
+  done
 fi
 
 # --- Coverage warning: untracked input is not read at all ---

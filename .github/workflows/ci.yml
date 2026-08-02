@@ -14,13 +14,16 @@ jobs:
     name: Docs lint
     runs-on: ubuntu-latest
     steps:
-      # Actions are pinned by commit SHA, never by tag (ADR-0086). The trailing
-      # comment is the human-readable version and is not what resolves.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Actions are pinned by a FULL version tag, never by a floating major
+      # (ADR-0086). `@v7.0.1`, never `@v7`: the floating form is what silently
+      # changed the bundled linter under this workflow once already, and the
+      # guardrail rejects it. The residual risk this accepts is stated in the
+      # ADR: a release tag is still movable by whoever owns the action.
+      - uses: actions/checkout@v7.0.1
       - name: Markdown lint
         # v24.1.0 bundles markdownlint-cli2 0.23.1 / markdownlint 0.41.1. Keep this
         # in step with the version CLAUDE.md tells a contributor to run locally.
-        uses: DavidAnson/markdownlint-cli2-action@3b11e4c3e2eac5207914843511bd517908954018 # v24.1.0
+        uses: DavidAnson/markdownlint-cli2-action@v24.1.0
         with:
           globs: "**/*.md"
 
@@ -28,7 +31,7 @@ jobs:
     name: ADR/docs guardrail
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
       - name: ADR/docs hygiene checks
         run: bash scripts/check-adrs.sh
       - name: Decisions index
@@ -50,11 +53,14 @@ jobs:
     name: C# style ruleset
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
       - name: Install the .NET SDK
-        # v6.0.0, published 2026-07-16, runtime node24 (read in action.yml at this
-        # exact SHA). Pinned by commit SHA, never by tag (ADR-0086).
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        # v6.0.0, published 2026-07-16, runtime node24. The node24 fact was read
+        # in action.yml at the commit v6.0.0 pointed to on 2026-08-01, which is a
+        # weaker guarantee than it was before 2026-08-02: this now names a tag,
+        # and a tag can be repointed (ADR-0086 parameter A, and its Consequences
+        # say what that costs). v6.0.0 was the latest stable release on 2026-08-02.
+        uses: actions/setup-dotnet@v6.0.0
         with:
           # The probe project targets net10.0, which is the pin ADR-0030 sets.
           # `global.json` landed 2026-08-02 and this input is deliberately left as
@@ -77,9 +83,9 @@ jobs:
     name: Solution build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
       - name: Install the .NET SDK
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: "10.0.x"
       - name: Report the resolved SDK

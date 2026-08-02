@@ -148,7 +148,7 @@ The SDK analyzers see C#. They do not see Razor markup, SQL held outside C#, Doc
 GitHub Actions workflow definitions. Three of those four are covered elsewhere: secrets by
 gitleaks across the tree, the image by Trivy, and dependency vulnerabilities by Trivy again.
 **Workflow definitions were covered by nothing here.** Untrusted input reaching a workflow
-expression is a real class of supply-chain defect, and [ADR-0086](0086-pin-ci-actions-by-commit-sha.md)
+expression is a real class of supply-chain defect, and [ADR-0086](0086-pin-ci-actions-by-version-tag.md)
 addresses which actions run rather than what a workflow does with input. That was recorded as a
 Pre-GA ratification item rather than solved by adding a tool whose licence would then have to be
 carried for one stage.

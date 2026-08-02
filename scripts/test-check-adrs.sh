@@ -42,6 +42,18 @@ cp "$(pwd)/scripts/check-adrs.sh" "$wt/scripts/check-adrs.sh" || {
   exit 1
 }
 
+# The same trap, one layer out, and it took Check 8c to expose it. Copying the
+# script is not enough when a check reads a file that is also being edited: 8c
+# landed in the same change that fixed every `uses:` it rejects, so the worktree
+# carried HEAD's workflows, the new check found seven real violations in them,
+# and case 1 and case 4 both failed for a reason that had nothing to do with
+# either. **A self-test's subject is the script AND its input.** Copy both, or a
+# check cannot be introduced in the same commit as the fix it demands.
+cp "$(pwd)"/.github/workflows/*.yml "$wt/.github/workflows/" 2>/dev/null || {
+  echo "self-test FAILED: could not stage the working-tree workflows into the worktree"
+  exit 1
+}
+
 fails=0
 fail() { echo "  - $1"; fails=$((fails + 1)); }
 
@@ -72,7 +84,7 @@ jobs:
           echo "${{ github.head_ref }}"
           echo end
       - if: ${{ github.event_name == 'push' }}
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.sha }}
       - env:
@@ -110,6 +122,55 @@ printf '%s\n' "$out" | grep -q 'zz-selftest.yml:17$' && fail "a with: input expr
 printf '%s\n' "$out" | grep -q 'zz-selftest.yml:19$' && fail "an env: expression was flagged; that is the sanctioned mitigation"
 printf '%s\n' "$out" | grep -q 'zz-selftest.yml:21$' && fail "a run: reading a shell variable was flagged; no expression is present"
 
+# --- Case 4: Check 8c, action references that are not a full version tag ---
+# Four violations and four look-alikes, on the same reasoning as case 2: a rule
+# that flagged every `uses:` would catch the four below and also forbid the exact
+# form ADR-0086 requires. The `@v7` line is the one that matters most, because it
+# is the form that already changed this repository's linter under an unchanged
+# workflow file, and it differs from the sanctioned form by four characters.
+cat > "$wt/.github/workflows/zz-pins.yml" <<'YAML'
+name: Pins
+on:
+  push:
+    branches: [main]
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@main
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@v7.0
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-dotnet@v6.0.0 # latest stable on 2026-08-02
+      - uses: ./.github/actions/local-thing
+      - uses: docker://alpine:3.20
+YAML
+
+out4=$( cd "$wt" && git add .github/workflows/zz-pins.yml && bash scripts/check-adrs.sh 2>&1 )
+rc4=$?
+
+[ "$rc4" -eq 1 ] || fail "expected exit 1 on the planted pin violations, got $rc4"
+
+pinhits=$(printf '%s\n' "$out4" | grep -c 'not a full version tag')
+
+# The count is the load-bearing assertion, for the reason case 2 records: the four
+# negatives below fail open if a line number drifts. Four is exactly the violations
+# planted, so a fifth means a look-alike tripped and a third means one was missed.
+[ "$pinhits" -eq 4 ] || fail "expected 4 pin findings, got $pinhits (more means a look-alike tripped; fewer means a real one was missed)"
+
+printf '%s\n' "$out4" | grep -q 'zz-pins.yml:9:'  || fail "the floating major @v7 on line 9 was not reported"
+printf '%s\n' "$out4" | grep -q 'zz-pins.yml:10:' || fail "the branch reference @main on line 10 was not reported"
+printf '%s\n' "$out4" | grep -q 'zz-pins.yml:11:' || fail "the commit SHA on line 11 was not reported"
+printf '%s\n' "$out4" | grep -q 'zz-pins.yml:12:' || fail "the partial version @v7.0 on line 12 was not reported"
+
+printf '%s\n' "$out4" | grep -q 'zz-pins.yml:13:' && fail "a full version tag was flagged; that is the form ADR-0086 requires"
+printf '%s\n' "$out4" | grep -q 'zz-pins.yml:14:' && fail "a full version tag with a trailing comment was flagged"
+printf '%s\n' "$out4" | grep -q 'zz-pins.yml:15:' && fail "a local ./ action was flagged; it is outside the stated scope"
+printf '%s\n' "$out4" | grep -q 'zz-pins.yml:16:' && fail "a docker:// reference was flagged; ADR-0051 section D governs image digests"
+
+( cd "$wt" && git rm -q --cached .github/workflows/zz-pins.yml >/dev/null 2>&1; rm -f .github/workflows/zz-pins.yml )
+
 # --- Case 3: untracked means unread, and the script must say so rather than pass quietly ---
 cat > "$wt/.github/workflows/zz-untracked.yml" <<'YAML'
 name: Untracked
@@ -130,5 +191,5 @@ if [ "$fails" -gt 0 ]; then
   echo "check-adrs self-test FAILED: ${fails} assertion(s) above."
   exit 1
 fi
-echo "check-adrs self-test OK: Check 8 catches 3 planted violations, leaves 4 look-alikes alone, and warns on untracked."
+echo "check-adrs self-test OK: Check 8 catches 3 planted hygiene violations and 4 planted pin violations, leaves 8 look-alikes alone, and warns on untracked."
 exit 0

@@ -37,7 +37,7 @@ dual-control proposal machinery ([15 Admin API](15-admin-api.md)).
 | ADR-0023 | OpenTofu as the IaC tool (MPL-2.0, drop-in, state encryption), Helm for the app, a per-cloud adapter |
 | ADR-0031 | The 12/15-factor baseline with four tightened invariants (config, concurrency, disposability, logs) enforced by tests and a CI gate |
 | ADR-0051 | Keyless cosign signing, SLSA provenance, a CycloneDX SBOM per release, digest-pinned base with a re-scan/re-sign cadence, and signing only in the dual-controlled release pipeline |
-| ADR-0086 | Every `uses:` in a workflow is a commit SHA with the version as a trailing comment, and the markdownlint action's bundled linter version is coupled to the one contributors run locally |
+| ADR-0086 | Every `uses:` in a workflow is a full version tag at the latest stable release, never a floating major and never a commit SHA, and the markdownlint action's bundled linter version is coupled to the one contributors run locally |
 | ADR-0046 (ref) | Dual-control (two-person approval) on the irreversible sign-and-publish step |
 
 ## Component and interface design
@@ -87,12 +87,21 @@ re-sign then re-attest** cadence (a dependency bot bumps the digest) so a base-i
 appearing after a release is caught rather than shipped silently. Signing happens only in
 the gated release pipeline; pull-request CI never signs or publishes.
 
-**The same never-a-mutable-tag rule applies one step earlier, to the actions themselves**
-(ADR-0086). Every `uses:` is a full commit SHA with the version as a trailing comment,
-because an action executes in the runner with the repository checked out, so it runs before
-and with more access than the image the paragraph above pins. The rule was adopted after a
-floating major tag on the markdown-lint action moved and silently changed the linter
-version out from under the version this repository documents for local use.
+**A weaker rule applies one step earlier, to the actions themselves** (ADR-0086). Every
+`uses:` is a full version tag at the latest stable release, `@v7.0.1`, never a floating
+major and never a commit SHA. The rule was adopted after a floating major tag on the
+markdown-lint action moved and silently changed the linter version out from under the
+version this repository documents for local use, and `scripts/check-adrs.sh` Check 8c now
+fails a build on any reference that is not a full version tag.
+
+**"Weaker" is the accurate word and it is not a slip.** Until 2026-08-02 this paragraph said
+the never-a-mutable-tag rule above applied here too, because ADR-0086 required a commit SHA.
+Its parameter A was reversed that day, for reviewability, so the image is digest-pinned and
+the actions are tag-pinned and those are no longer one rule. An action executes in the runner
+with the repository checked out, so it runs before and with more access than the image the
+paragraph above pins, which is exactly why the difference is called out here rather than
+smoothed over. ADR-0086's Consequences carry what the reversal gave up and name M1, when the
+release pipeline adds `id-token: write` and signing credentials, as the point to re-open it.
 
 The CD scans are fixed by [ADR-0092](../adr/0092-ci-security-scan-tooling.md), which
 replaced the slash-alternatives this section used to carry. **SAST runs no third-party
@@ -107,7 +116,7 @@ thirty bundled components sit outside the ADR-0026 permissive set.
 
 One gap was deliberate and named rather than absent: the SDK analyzers read C#, so nothing
 in this pipeline analyses what a workflow definition does with untrusted input, and ADR-0086
-pins which action code runs without reaching that. **Ratified 2026-08-02 as ADR-0092 section
+constrains which action code runs without reaching that. **Ratified 2026-08-02 as ADR-0092 section
 6, and with no sixth tool.** The guardrail job that already runs here gained two rules
 instead: no `${{ }}` expression inside any `run:` script, since interpolating into a shell is
 the vector and passing through `env:` is the mitigation, and no `pull_request_target` or
