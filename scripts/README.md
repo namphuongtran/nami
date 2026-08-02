@@ -94,11 +94,20 @@ because it needs a .NET SDK:
 bash scripts/test-editorconfig.sh
 ```
 
-It writes a throwaway project to `.editorconfig-probe/`, builds a compliant fixture and
-asserts it is clean, then builds a violating fixture and asserts all four naming rules and
-the formatting rule fire. The directory is removed on every exit path and is git-ignored as
-a backstop. It **skips with exit 0 when `dotnet` is absent**, and says out loud that a skip
-is not a pass.
+It writes a throwaway project to `.editorconfig-probe/`, then asserts against **both**
+enforcement paths: a compliant fixture must be build-clean and format-clean, and a violating
+fixture must fail all four naming rules and the formatting rule under `dotnet build` and
+again under `dotnet format --verify-no-changes`. The directory is removed on every exit path
+and is git-ignored as a backstop. It **skips with exit 0 when `dotnet` is absent**, and says
+out loud that a skip is not a pass.
+
+**Both paths are asserted because they are not the same gate under two names.** ADR-0065
+names `dotnet format --verify-no-changes` as what CI enforces, and the format path does not
+need `EnforceCodeStyleInBuild`, reports whitespace as `WHITESPACE` rather than `IDE0055`, and
+exits 2 rather than 1. Measured consequence: removing that property, or removing
+`dotnet_diagnostic.IDE1006.severity`, silences `dotnet build` entirely while the format path
+keeps reporting every naming violation. A gate built on the format path alone stays green
+through both breaks, and every contributor's local build goes quiet.
 
 The probe lives **inside the repository on purpose**. That is the only way it inherits the
 real `.editorconfig` (which sets `root = true` at that level) and the real
@@ -111,12 +120,13 @@ nothing else exercises it. Three ways it can be silently inert were found by mea
 rather than by reading, and each is a live assertion:
 
 - A per-rule `dotnet_naming_rule.<name>.severity = error` does not reach the build. Only
-  `dotnet_diagnostic.IDE1006.severity` does. Removing that one line reports 5 failures here.
+  `dotnet_diagnostic.IDE1006.severity` does. Removing that one line reports 5 failures here,
+  all of them on the build path.
 - Severity of any kind fails nothing without `EnforceCodeStyleInBuild`, which is an MSBuild
-  property rather than an editorconfig key. Removing it reports 8.
+  property rather than an editorconfig key. Removing it reports 8, again all build-path.
 - The const and static carve-outs are what hold ADR-0065's rule to private *instance*
   fields. Delete either and the general rule takes over that kind of member, enforcing a
-  convention no decision states.
+  convention no decision states. Deleting the general rule reports 3, spanning both paths.
 
 Counts, not per-line greps, are what the assertions turn on, for the reason
 [`CLAUDE.md`](CLAUDE.md) records: a negative assertion written per-line passes vacuously.
@@ -126,6 +136,13 @@ than by review: naming-rule **declaration order is not load-bearing**. Moving th
 private-field rule above the other two left every field matched by the same rule as before,
 so the more specific symbol specification wins regardless of position. The test correctly
 stays green on that reorder, because there is nothing there to catch.
+
+A second lesson came from a break that did not break. One of the experiments above was run
+with an edit that threw before writing, so the unmodified ruleset was what got tested, and it
+passed. **A failed break reports the same green as a healthy subject.** Confirm the subject
+actually changed before reading anything into a green, which is the same rule the sibling
+self-test learned from the other direction when its worktree tested the committed script
+instead of the edited one.
 
 ## Pre-commit hook (opt-in, maintainers)
 

@@ -78,7 +78,9 @@ python3 scripts/check-decisions-index.py
 
 # The C# style ruleset, since 2026-08-02. Its own CI job, because it needs a .NET SDK.
 # There is no C# here yet, so it builds a throwaway project in .editorconfig-probe/
-# against the real .editorconfig and Directory.Build.props and asserts the rules fire.
+# against the real .editorconfig and Directory.Build.props, and asserts the rules fire
+# on BOTH paths: `dotnet build` and `dotnet format --verify-no-changes`. Those are not
+# one gate under two names, and each catches a break the other sleeps through.
 # Skips with exit 0 when dotnet is absent, and says a skip is not a pass.
 bash scripts/test-editorconfig.sh
 

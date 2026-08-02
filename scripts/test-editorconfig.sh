@@ -35,13 +35,30 @@
 # passed while its subject was deliberately broken, because the isolated copy was
 # not the one under edit. Here the subject is the working tree by construction.
 #
-# Proven the same way before this script was wired, by breaking the subject on
-# purpose and counting: with `dotnet_diagnostic.IDE1006.severity` removed from
-# .editorconfig the run reports 5 failed assertions, and with
-# EnforceCodeStyleInBuild removed from Directory.Build.props it reports 8. A
-# third break, reordering the naming rules, correctly reported nothing, which is
-# how the "order is load-bearing" claim that this header used to carry was found
-# to be false before it was committed.
+# Proven the same way, by breaking the subject on purpose and counting. Four
+# breaks, and the pattern across them is worth more than any single number:
+#
+#   drop dotnet_diagnostic.IDE1006.severity   -> 5 failures, all on the BUILD path
+#   drop EnforceCodeStyleInBuild              -> 8 failures, all on the BUILD path
+#   drop the private-instance-field rule      -> 3 failures, spanning BOTH paths
+#   reorder the naming rules                  -> 0 failures, correctly
+#
+# The first two leaving the format path untouched is the asymmetry Part 3 exists
+# for: either break silences `dotnet build` completely while `dotnet format
+# --verify-no-changes` keeps reporting all four naming violations. A gate built
+# only on the format path would therefore stay green through both, and every
+# contributor's local build would be silent. That is why neither part stands in
+# for the other.
+#
+# The reorder break is how the "declaration order is load-bearing" claim this
+# header used to carry was found to be false before it stayed committed. Its
+# green is correct: there is nothing there to catch.
+#
+# A fifth break was run and is not listed, because it did not run: the edit that
+# was supposed to delete a rule threw before writing, and the unmodified file
+# then passed. A break experiment that fails to break reports the same green as
+# a healthy subject, so check that the subject actually changed before believing
+# a green.
 #
 # Portable to macOS bash 3.2 and the Ubuntu runner, like the scripts beside it:
 # no mapfile, no associative arrays, no GNU-only flags. Pure ASCII.
@@ -124,6 +141,13 @@ if [ "$good_ide" -ne 0 ]; then
   printf '%s\n' "$good_out" | grep "IDE[0-9]" | sed 's/^/    /'
 fi
 
+dotnet format "$probe/Probe.csproj" --verify-no-changes >/dev/null 2>&1
+good_fmt_rc=$?
+if [ "$good_fmt_rc" -ne 0 ]; then
+  fail "compliant fixture is not format-clean (dotnet format exit $good_fmt_rc)."
+  dotnet format "$probe/Probe.csproj" --verify-no-changes 2>&1 | sed 's/^/    /'
+fi
+
 # --- Part 2: the violating fixture must fail the build ---
 #
 # One violation per rule the ruleset sets to error, plus whitespace for IDE0055.
@@ -191,10 +215,46 @@ if [ "$n0055" -lt 1 ]; then
   fail "expected at least 1 IDE0055 site, found $n0055."
 fi
 
+# --- Part 3: the same violations must fail the OTHER enforcement path ---
+#
+# ADR-0065 names `dotnet format --verify-no-changes` as what CI enforces, and
+# Part 2 does not exercise it. The two paths are not the same gate wearing two
+# names, which is why both are asserted rather than one standing in for the
+# other. Three measured differences:
+#
+#   - `dotnet format` does NOT need EnforceCodeStyleInBuild. It caught a naming
+#     violation on a project without the property, on which `dotnet build`
+#     reported nothing at all. So a green format gate is not evidence that the
+#     property is still set, and deleting it as redundant would leave every
+#     local `dotnet build` silent while CI stayed green.
+#   - It reports whitespace as `WHITESPACE`, not as `IDE0055`.
+#   - It exits 2 rather than 1.
+#
+# The direction that matters for a contributor is the reverse of the one CI
+# cares about: this is the path that also FIXES, so a violation caught here is
+# `dotnet format` away from being resolved.
+fmt_out=$(dotnet format "$probe/Probe.csproj" --verify-no-changes 2>&1)
+fmt_rc=$?
+
+if [ "$fmt_rc" -eq 0 ]; then
+  fail "violating fixture is format-clean. The path ADR-0065 names as the CI gate is inert."
+fi
+
+fmt_sites=$(printf '%s\n' "$fmt_out" | grep -oE 'Violating\.cs\([0-9]+,[0-9]+\): error [A-Z0-9]+' | sort -u)
+fmt_n1006=$(printf '%s\n' "$fmt_sites" | grep -c "IDE1006")
+fmt_nws=$(printf '%s\n' "$fmt_sites" | grep -c "WHITESPACE")
+if [ "$fmt_n1006" -ne 4 ]; then
+  fail "format path: expected exactly 4 distinct IDE1006 sites, found $fmt_n1006."
+  printf '%s\n' "$fmt_sites" | sed 's/^/    /'
+fi
+if [ "$fmt_nws" -lt 1 ]; then
+  fail "format path: expected at least 1 WHITESPACE site, found $fmt_nws."
+fi
+
 # --- Report ---
 if [ "$fails" -gt 0 ]; then
   echo "editorconfig self-test FAILED: $fails assertion(s)."
   exit 1
 fi
-echo "editorconfig self-test OK: compliant fixture builds clean, violating fixture fails on 4 naming rules and formatting."
+echo "editorconfig self-test OK: compliant fixture is build-clean and format-clean; violating fixture fails on 4 naming rules and formatting, on both the build and the dotnet-format path."
 exit 0
