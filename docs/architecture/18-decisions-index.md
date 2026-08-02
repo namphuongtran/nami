@@ -152,6 +152,7 @@ table's column is only as current as the last person who ran it.
 | [0089](../adr/0089-self-service-surface-conventions.md) | Give the self-service surface its own conventions, while it s... | 18 |
 | [0090](../adr/0090-versioned-api-base-path.md) | Serve Nami's own APIs under the base path `/api/v1`, and rule... | 18 |
 | [0091](../adr/0091-browser-facing-response-headers.md) | Fix the browser-facing response-header baseline as three prof... | 13, 18 |
+| [0092](../adr/0092-ci-security-scan-tooling.md) | Pin the five CI security scans, and take no third-party SAST... | NONE |
 
 ## 3. What the shape of that table says
 
