@@ -105,9 +105,20 @@ decision is now that ADR rather than this document. DAST is **OWASP ZAP** on sta
 classified `execute-only`, which is what makes it answerable given that seven of its
 thirty bundled components sit outside the ADR-0026 permissive set.
 
-One gap is deliberate and named rather than absent: the SDK analyzers read C#, so nothing
-in this pipeline analyses what a workflow definition does with untrusted input. ADR-0086
-pins which action code runs and does not reach that. It is a Pre-GA ratification item.
+One gap was deliberate and named rather than absent: the SDK analyzers read C#, so nothing
+in this pipeline analyses what a workflow definition does with untrusted input, and ADR-0086
+pins which action code runs without reaching that. **Ratified 2026-08-02 as ADR-0092 section
+6, and with no sixth tool.** The guardrail job that already runs here gained two rules
+instead: no `${{ }}` expression inside any `run:` script, since interpolating into a shell is
+the vector and passing through `env:` is the mitigation, and no `pull_request_target` or
+`workflow_run` trigger. It is a **regression guard rather than a finder**: measured on that
+date, this repository's whole `.github/` tree carried zero expressions and zero such
+triggers, so a tool bought then would have found nothing, while the release pipeline below
+puts `id-token: write` on a job and Dependabot already opens weekly pull requests against the
+workflow directory. The two rules cover two constructs and not workflow safety; what they do
+not see is listed in ADR-0092 and in `scripts/README.md`. That ADR records the reversal
+condition and deliberately names **no** candidate tool, because no licence has been read for
+one and a name with no reading behind it would read as settled research.
 
 A config test forbids dangerous toggles such as
 `DisableTransportSecurityRequirement` outside development; it targets transport security,

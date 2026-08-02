@@ -147,11 +147,73 @@ again at adopt time against the exact released version, per `DEPENDENCY-LICENSES
 The SDK analyzers see C#. They do not see Razor markup, SQL held outside C#, Dockerfiles, or
 GitHub Actions workflow definitions. Three of those four are covered elsewhere: secrets by
 gitleaks across the tree, the image by Trivy, and dependency vulnerabilities by Trivy again.
-**Workflow definitions are covered by nothing here.** Untrusted input reaching a workflow
+**Workflow definitions were covered by nothing here.** Untrusted input reaching a workflow
 expression is a real class of supply-chain defect, and [ADR-0086](0086-pin-ci-actions-by-commit-sha.md)
-addresses which actions run rather than what a workflow does with input. This is recorded as a
+addresses which actions run rather than what a workflow does with input. That was recorded as a
 Pre-GA ratification item rather than solved by adding a tool whose licence would then have to be
 carried for one stage.
+
+### 6. Workflow definitions: two bright lines in the existing guardrail, and no sixth tool (binding, added 2026-08-02)
+
+This closes the gap above. It is deliberately **not** numbered among the five scans and the
+title is unchanged, because it adds no tool and no stage: it is two checks inside
+`scripts/check-adrs.sh`, the guardrail that already runs as a blocking CI job.
+
+**The measurement came first, and it moved the question.** Read on 2026-08-02, this repository
+has one workflow file, forty-one lines. Across the whole `.github/` tree there are **zero**
+`${{ }}` expressions of any kind, **zero** `pull_request_target`, `workflow_run`,
+`issue_comment`, or `workflow_dispatch` triggers, two `run:` steps that are literal command
+strings, a top-level `permissions: contents: read`, both `uses:` pinned by SHA, and no
+reference to any secret. **A tool bought today would find nothing.** What makes the gap real is
+not the present state but the next one: design [21](../design/21-cicd-and-deployment.md)
+section on the release pipeline signs keyless through GitHub Actions OIDC, which means a job
+carrying `id-token: write`, and `.github/dependabot.yml` already opens weekly pull requests
+against `.github/workflows/` itself.
+
+**So the decision is a regression guard rather than a finder**, and the two rules are chosen so
+that neither needs a judgement about which inputs are trusted:
+
+* **No `${{ ... }}` inside any `run:` script.** Interpolation into a shell is the injection
+  vector, and the standard mitigation is to pass the value through `env:` and reference it as a
+  shell variable. The rule therefore **enforces the mitigation** instead of trying to classify a
+  value as dangerous, which is the part that genuinely needs a tool.
+* **No `pull_request_target:` and no `workflow_run:` trigger.** Both combine write-scoped
+  permissions and secrets with code the proposer controls. Neither exists today, so this costs
+  nothing now and makes adding one a deliberate exception with a reason rather than a line in a
+  diff nobody reads twice.
+
+**What the checks do not see, stated in the script itself and repeated here** because a green
+that is read as "the workflows are safe" would be worse than no check: interpolation into an
+action's `with:` inputs, the scope of a `permissions:` block, composite actions and reusable
+workflows defined in other repositories, and anything at all about what a pinned action does.
+The green is a statement about two constructs.
+
+**Proven before wiring, per the rule in `scripts/CLAUDE.md` that a check never run against the
+bug it exists for is not known to work.** A workflow was written carrying an inline `run:`
+interpolation, the same interpolation inside a block scalar, a `pull_request_target` trigger,
+and four constructs that must **not** trip: an `if:` expression, a `with:` expression, an `env:`
+expression, and a `run:` reading that `env:` value as a shell variable. Untracked it produced
+nothing, since the check reads the git index; staged it produced exactly three problems and left
+the four alone, including the `env:`-then-`$VAR` form that is the mitigation the rule exists to
+push people toward. Writing it also found that the script's untracked-file coverage warning
+named only markdown, so a new workflow would have been invisible **and** unannounced, which is
+the same false-green shape that warning was added for; it now covers workflows too.
+
+**The reversal condition is recorded and no candidate is named, which is deliberate.** Reverse
+this when the bright lines stop being able to hold the surface, concretely when a `with:`-input
+flow or a `permissions:` scope question becomes a real one rather than a hypothetical, or when
+M1's release pipeline lands and the re-read below finds two rules insufficient. The replacement
+would then be a dedicated GitHub Actions analyser.
+
+**Naming one here was considered and dropped.** Two exist that a reader will think of, and
+writing their names would have cost nothing except accuracy: **no licence has been read for
+either**, so the entry would have looked like the Semgrep reversal record for SAST while being a
+different thing. Semgrep is named because it was read at source, LGPL-2.1 at both its root
+`LICENSE` and its `cli/LICENSE`, and it carries a row in `DEPENDENCY-LICENSES.md` with that
+reading and its date. A name with no reading behind it converts an open research task into
+something that looks settled, which is the failure this repository treats as worse than an
+omission. So the condition is written and the search is left honestly open: reversing starts by
+reading a licence at source and adding the row, exactly as the five tools above did.
 
 ### Consequences
 
@@ -163,14 +225,20 @@ carried for one stage.
   privately runs exactly the same SAST gate.
 * Good, because using one tool for two stages halves the re-verification and inventory burden
   that this project has repeatedly failed to keep up with.
-* Good, because the reversal condition is written down with its candidate, so a later change is
-  a stack-row edit and a recorded exception rather than a research task.
+* Good, because the reversal condition is written down with its candidate **for the five stages
+  above**, so a later change there is a stack-row edit and a recorded exception rather than a
+  research task. **Section 6 is the exception and says so**: its condition is recorded and no
+  candidate is named, because none has had its licence read, so reversing it genuinely is a
+  research task and pretending otherwise would be the more expensive error.
 * Bad, because the SDK analyzers are C#-only and shallower than a dedicated SAST engine on
   cross-file flows. Accepted, with the gap named above rather than papered over, and with
   Semgrep pre-identified if a concrete finding shows the gap is real.
-* Bad, because workflow-definition analysis is left uncovered until a Pre-GA decision. Accepted
-  deliberately: adding a tool for one stage would carry a licence, an inventory row and a
-  runtime for the least of the five surfaces.
+* ~~Bad, because workflow-definition analysis is left uncovered until a Pre-GA decision.~~
+  **Closed 2026-08-02 by section 6**, and the shape of the close is worth noting: the same
+  argument that took the SDK's own analyzers for SAST, that a capability already present costs
+  no licence, applied a second time to a guardrail script this repository already runs. The
+  cost stays at zero and the coverage is two constructs rather than a tool's whole rule set,
+  which section 6 says out loud.
 * Bad, because concentrating two stages on Trivy makes a single project's licence drift a
   two-stage problem. Mitigated by both alternatives staying verified with read locations and
   dates, so replacing it is a swap rather than a search.
@@ -188,7 +256,11 @@ carried for one stage.
 * **At adopt time**: enumerate ZAP's bundled components against the exact released version, per
   the `DEPENDENCY-LICENSES.md` section 7 maintenance rule, rather than relying on the reading
   taken here against the repository's default branch.
-* **Pre-GA**: ratify or accept the workflow-definition coverage gap.
+* ~~**Pre-GA**: ratify or accept the workflow-definition coverage gap.~~ **Ratified 2026-08-02**
+  as section 6. The standing obligation that replaces it: the two rules are a **regression
+  guard measured against a workflow set of one file**, so re-read them when the release
+  pipeline lands at M1, which is when a job first carries `id-token: write` and when the four
+  remaining CI security stages become workflow steps.
 
 ## Pros and Cons of the Options
 

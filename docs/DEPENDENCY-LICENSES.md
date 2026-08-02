@@ -172,6 +172,15 @@ subject is executables the pipeline actually runs. **A tool moves from this sect
 in the change that first runs it**, when there is a pinned version to read a licence against
 instead of a default branch.
 
+**One stage has no row here at all, and its absence is a decision rather than a gap.**
+ADR-0092 section 6 covers GitHub Actions workflow definitions with two rules inside the
+existing `scripts/check-adrs.sh` guardrail and takes **no tool**, so there is no licence to
+read and nothing to inventory. A reader will think of one or two dedicated analysers that
+could have gone here; **neither has had a licence read**, and neither is named in that ADR,
+because a name with no reading behind it makes an open search look like finished research.
+If the reversal condition in that section ever fires, the first step is a licence read at
+source and a row in this table, before anything is chosen.
+
 | Tool | Role in the pipeline | Licence | Read at | Date | Status |
 |---|---|---|---|---|---|
 | Trivy | Dependency scan and container scan | Apache-2.0 | `aquasecurity/trivy` `LICENSE`, default branch | 2026-08-02 | **Chosen for both stages** (ADR-0092) |

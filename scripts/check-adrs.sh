@@ -2,7 +2,8 @@
 # ADR / docs guardrail (neutral, public). Run by CI and available locally.
 # Checks: template placeholders, ADR cross-reference integrity, ADR index/status,
 # ADR-0061 stack-of-record table membership, the no-em-dash style rule,
-# design-corpus test identifiers, and architecture decisions-index membership.
+# design-corpus test identifiers, architecture decisions-index membership, and
+# GitHub Actions workflow-definition hygiene.
 # Contains no competitor/real-name logic; that is a local, git-ignored concern
 # (see scripts/README.md).
 #
@@ -135,9 +136,60 @@ else
   add "missing ${archidx} (Check 7 cannot run)"
 fi
 
-# --- Coverage warning: untracked markdown is not read at all ---
-# Checks 1, 2, 5 and 6 read `git ls-files`, which lists the index. A markdown file
-# that has never been `git add`-ed is therefore not read, and without this warning
+# --- Check 8: workflow-definition hygiene (GitHub Actions) ---
+# ADR-0092 pins five CI security scans and states that none of them reads a
+# workflow definition: the SDK analyzers see C#, and ADR-0086 constrains *which*
+# action code runs, not what a workflow does with input. This check is the
+# no-new-dependency half of that gap, on the same reasoning ADR-0092 used to take
+# the SDK's own analyzers for SAST.
+#
+# Two bright lines, chosen because neither needs a judgement about which inputs
+# are trusted. Classifying trust is what needs a real tool; forbidding the
+# construct does not.
+#   8a. No `${{ ... }}` inside any `run:` script. Interpolation into a shell is
+#       the injection vector, and the standard mitigation is to pass the value
+#       through `env:` and reference it as a shell variable, so this check
+#       enforces the mitigation rather than trying to spot a dangerous value.
+#   8b. No `pull_request_target:` or `workflow_run:` trigger. Both combine
+#       write-scoped permissions and secrets with code the proposer controls.
+#       Neither is present today; if one is ever genuinely needed it becomes a
+#       deliberate exception with a recorded reason, not a silent addition.
+#
+# What this does NOT see, stated here because a check that cannot see a class
+# must say so where its result is read: interpolation into an action's `with:`
+# inputs (not a shell, so not this vector, but not harmless either), the scope of
+# a `permissions:` block, composite actions and reusable workflows defined in
+# other repositories, and anything about what a pinned action actually does.
+# Its green is a statement about two constructs, not about workflow safety.
+wf=$(git ls-files '.github/workflows/*.yml' '.github/workflows/*.yaml' 2>/dev/null)
+if [ -n "$wf" ]; then
+  for f in $wf; do
+    [ -f "$f" ] || continue
+    hits=$(awk -v F="$f" '
+      { line = $0; sub(/\r$/, "", line)
+        isblank = (line ~ /^[[:space:]]*$/)
+        if (!isblank) { match(line, /[^ ]/); cur = RSTART - 1 }
+        if (inrun) {
+          if (isblank) next
+          if (cur > ind) { if (index(line, "${{")) print F ":" NR; next }
+          inrun = 0
+        }
+        if (line ~ /^[[:space:]]*-?[[:space:]]*run:[[:space:]]*[|>]/) { ind = cur; inrun = 1; next }
+        if (line ~ /^[[:space:]]*-?[[:space:]]*run:[[:space:]]/) { if (index(line, "${{")) print F ":" NR }
+      }' "$f" 2>/dev/null || true)
+    if [ -n "$hits" ]; then
+      while IFS= read -r l; do add "expression interpolated into a run: script (pass it through env: and use a shell variable): $l"; done <<< "$hits"
+    fi
+  done
+  trig=$(grep -nE '^[[:space:]]*(pull_request_target|workflow_run):' $wf 2>/dev/null || true)
+  if [ -n "$trig" ]; then
+    while IFS= read -r l; do add "trigger runs privileged against proposer-controlled input: $l"; done <<< "$trig"
+  fi
+fi
+
+# --- Coverage warning: untracked input is not read at all ---
+# Checks 1, 2, 5, 6 and 8 read `git ls-files`, which lists the index. A file that
+# has never been `git add`-ed is therefore not read, and without this warning
 # the script prints OK while having ignored it: a false green, which has fired. CI
 # cannot hit it (its checkout is tracked-only), so this exists for local runs.
 # It warns rather than fails on purpose. An untracked work-in-progress file is
@@ -145,11 +197,21 @@ fi
 # when it is most useful, which trains people to skip it. Printed before the verdict
 # in both outcomes, because the caveat applies to a FAILED run just as much: the
 # listed problems may not be all of them.
+# Workflows joined markdown here on 2026-08-02 with Check 8, and the omission was
+# found by writing that check rather than by it firing: a new workflow is exactly
+# the file most likely to be run locally before it is staged.
 untrackedmd=$(git ls-files --others --exclude-standard '*.md' 2>/dev/null || true)
 if [ -n "$untrackedmd" ]; then
   n=$(printf '%s\n' "$untrackedmd" | wc -l | tr -d ' ')
   echo "coverage warning: ${n} untracked markdown file(s) were NOT read by Checks 1, 2, 5, 6."
   printf '%s\n' "$untrackedmd" | sed 's/^/  ? /'
+  echo "  Run 'git add' on them and re-run, or this verdict says nothing about their contents."
+fi
+untrackedwf=$(git ls-files --others --exclude-standard '.github/workflows/*.yml' '.github/workflows/*.yaml' 2>/dev/null || true)
+if [ -n "$untrackedwf" ]; then
+  n=$(printf '%s\n' "$untrackedwf" | wc -l | tr -d ' ')
+  echo "coverage warning: ${n} untracked workflow file(s) were NOT read by Check 8."
+  printf '%s\n' "$untrackedwf" | sed 's/^/  ? /'
   echo "  Run 'git add' on them and re-run, or this verdict says nothing about their contents."
 fi
 

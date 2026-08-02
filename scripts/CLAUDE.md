@@ -5,18 +5,26 @@ including **never edit a document to silence a checker** and **a false positive 
 checker is a defect in the checker**. Both are rules about this folder's output and they
 live at the root because the file that gets wrongly edited is a document, not a script.
 
-[`README.md`](README.md) in this folder is the authority on what each of the seven checks
+[`README.md`](README.md) in this folder is the authority on what each of the eight checks
 does, on how to run them, and on the opt-in pre-commit hook with its git-ignored denylist
 and allowlist. Read it. What follows is what it does not carry.
 
 ## Run `git add` before you run the guardrail, or its green covers less than it looks
 
-`check-adrs.sh:27` builds its input as `md=$(git ls-files '*.md')`, which lists the **git
-index**. A markdown file that has never been added is therefore invisible to Checks 1, 2,
-5 and 6, and the script used to print `ADR/docs guardrail OK.` while having read nothing
+`check-adrs.sh` builds its markdown input as `md=$(git ls-files '*.md')`, which lists the
+**git index**. A markdown file that has never been added is therefore invisible to Checks 1,
+2, 5 and 6, and the script used to print `ADR/docs guardrail OK.` while having read nothing
 you just wrote. That false green fired once, and the script now **announces the gap**
 instead: it lists untracked markdown above the verdict, in both the passing and the
 failing case, because a FAILED list is equally incomplete.
+
+**Check 8 reads the index the same way, and the warning did not cover it for the length of
+one edit.** Added 2026-08-02 for GitHub Actions workflows, it inherited the same blind spot
+and the warning still named only markdown, so a new workflow would have been unread **and**
+unannounced. Found by writing the check rather than by it firing, and fixed in the same
+change. The generalisation is cheap and worth carrying: **when a check joins this script,
+ask what its input set is before asking what it matches**, because the coverage warning is a
+list of input sets and not a property of the script.
 
 It warns rather than fails, deliberately. An untracked work-in-progress file is legitimate
 mid-edit, and failing on one would make the script unrunnable exactly when it is most

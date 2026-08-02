@@ -10,7 +10,8 @@ Neutral ADR/docs hygiene checks, run in CI (`.github/workflows/ci.yml`) and loca
 - every ADR marked `stack-record: true` in its frontmatter appears in the ADR-0061 stack-of-record table, and every ADR cited in that table carries the marker (bidirectional);
 - no em dash appears in tracked markdown (project style rule): use a comma, colon, or parentheses. The check builds the pattern from the codepoint, so this script stays pure ASCII and cannot fail against itself;
 - no design-corpus test identifier appears in tracked markdown: the `9.T`, `8.K` and `25.T` families point into a numbered test register this repository does not have, so an obligation is stated by what it asserts and listed in `docs/design/20-testing.md` instead. The families are named by prefix here on purpose, because writing a whole identifier would trip this very check; `docs/adr/README.md` carries the full convention and the reason it is enforced;
-- every ADR has a row in the architecture layer's reverse index, `docs/architecture/18-decisions-index.md`, and every row there resolves to a file (bidirectional). This is a second index, and the first one passing says nothing about it: nine ADRs had drifted out of this one while every other check was green. Membership only, never the "Views that cite it" column, which is regenerated from the views themselves.
+- every ADR has a row in the architecture layer's reverse index, `docs/architecture/18-decisions-index.md`, and every row there resolves to a file (bidirectional). This is a second index, and the first one passing says nothing about it: nine ADRs had drifted out of this one while every other check was green. Membership only, never the "Views that cite it" column, which is regenerated from the views themselves;
+- GitHub Actions workflow hygiene, two rules, added 2026-08-02 as the no-new-dependency half of the workflow-analysis gap ADR-0092 names: no `${{ ... }}` expression appears inside any `run:` script, and no workflow uses a `pull_request_target:` or `workflow_run:` trigger. **Read the scope before reading the green.** Interpolating into a shell is the injection vector and passing the value through `env:` is the standard mitigation, so the first rule enforces the mitigation rather than judging whether a value is trusted, which is the part that would need a real analyser. What neither rule sees: interpolation into an action's `with:` inputs, the scope of a `permissions:` block, composite actions and reusable workflows in other repositories, and what a pinned action does once it runs (ADR-0086 governs *which* action code runs, and nothing here governs its behaviour).
 
 Run locally:
 
@@ -18,13 +19,13 @@ Run locally:
 bash scripts/check-adrs.sh
 ```
 
-The checks that read the tracked markdown set (1, 2, 5, 6) get that set from
-`git ls-files`, so a file that has never been `git add`-ed is not read at all. The script
-prints a `coverage warning:` listing any untracked markdown **above** its verdict, in both
-the passing and the failing case, so a green is never mistaken for coverage it did not
-have. It warns rather than fails, because an untracked work-in-progress file is legitimate
-mid-edit; staging is still what makes the verdict cover it. CI cannot reach this case, its
-checkout being tracked-only.
+The checks that read tracked files from `git ls-files` (markdown for 1, 2, 5, 6; workflows
+for 8) do not see a file that has never been `git add`-ed. The script prints a
+`coverage warning:` listing any untracked markdown, and separately any untracked workflow,
+**above** its verdict in both the passing and the failing case, so a green is never mistaken
+for coverage it did not have. It warns rather than fails, because an untracked
+work-in-progress file is legitimate mid-edit; staging is still what makes the verdict cover
+it. CI cannot reach this case, its checkout being tracked-only.
 
 ## check-decisions-index.py
 
