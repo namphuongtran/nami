@@ -146,8 +146,46 @@ jobs:
         # Measured against the same planted violation: exit 2 on IDE1006.
         run: dotnet format Nami.Identity.slnx --verify-no-changes
 
-  # .NET test and license-scan gates are added when the solution carries projects
-  # (M1). The `C# style ruleset` job is not one of them: it builds a throwaway
-  # fixture to prove a ruleset, and reads no project in this repository. The
-  # `build` job above reads the solution but not yet any project, for the reason
-  # its own comment gives.
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    env:
+      # Microsoft Testing Platform collects usage data through
+      # Microsoft.Testing.Extensions.Telemetry, which the platform auto-registers
+      # rather than requiring code to opt in, so the default here is on. Its
+      # documented data points include "Three octet IP address used to determine
+      # the geographical location", read at
+      # learn.microsoft.com/dotnet/core/testing/microsoft-testing-platform-telemetry
+      # on 2026-08-02, which also gives these two variable names and the value '1'.
+      # No ADR rules on this; it is a choice, made because the cost of opting out
+      # is two lines and the project is an identity server.
+      #
+      # BOTH names are set on purpose. Either one alone disables it per that page,
+      # and the pair is not redundancy: the DOTNET_CLI one also covers the SDK's
+      # own telemetry in the same job, and the TESTINGPLATFORM one keeps working
+      # if a future runner stops honouring the CLI variable.
+      TESTINGPLATFORM_TELEMETRY_OPTOUT: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install the .NET SDK
+        uses: actions/setup-dotnet@v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+      - name: Run the test suite
+        # One suite so far, the architecture tests of ADR-0024. It is a real gate
+        # rather than a placeholder, measured on 2026-08-02: a planted
+        # Newtonsoft.Json dependency inside `Nami.Identity.Abstractions` fails both
+        # of its facts, and the analyzer reference that project legitimately
+        # carries fails neither.
+        #
+        # There is no Microsoft.NET.Test.Sdk anywhere in the tree. xunit.v3 drives
+        # Microsoft Testing Platform directly and the test project sets
+        # TestingPlatformDotnetTestSupport, so this command is the whole runner
+        # story. If a future test project omits that property, `dotnet test` will
+        # skip it silently rather than fail, which is the failure mode to watch.
+        run: dotnet test Nami.Identity.slnx --nologo
+
+  # The license-scan gate is added at M1 (ADR-0026 section C). The `C# style
+  # ruleset` job is not one of the pending ones: it builds a throwaway fixture to
+  # prove a ruleset, and reads no project in this repository.
