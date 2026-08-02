@@ -300,7 +300,9 @@ load-bearing:
 ### The extension model: one pipeline, order-anchored
 
 Custom protocol behaviour is an inserted OpenIddict event handler at a named,
-order-anchored position, never a fork of the engine (ADR-0024, ADR-0021). The engine
+order-anchored position, never a fork of the engine (ADR-0021 parameter F, which owns the
+anchoring rule and reserves the axis to Nami's own code; this cited ADR-0024 as a joint owner
+until 2026-08-02, and that ADR does not rule on this pipeline). The engine
 runs four phases; handlers slot in and may short-circuit with `HandleRequest`,
 `SkipRequest`, or `Reject`.
 

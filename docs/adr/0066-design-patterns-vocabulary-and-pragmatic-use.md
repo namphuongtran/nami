@@ -47,7 +47,7 @@ Among the patterns already in deliberate use (not an exhaustive list):
 
 * **Adapter** for the cloud-agnostic ports: key, secret, and data-protection stores (ADR-0006/0009), email delivery (ADR-0038), the tenant store (ADR-0001), EF persistence, and the `ICheckAccess` adapter (ADR-0047), all under the ports doctrine of ADR-0024.
 * **Strategy** for swappable behavior: the `ICheckAccess` engine (DB-first now, ReBAC later, ADR-0047), the per-client CORS policy provider (ADR-0050), and the dynamic external-IdP scheme provider (ADR-0034).
-* **Chain of Responsibility** for the OpenIddict event-handler pipeline that owns the protocol flow; custom logic is an inserted handler at a named order-anchor, never a fork (ADR-0024/0021).
+* **Chain of Responsibility** for the OpenIddict event-handler pipeline that owns the protocol flow; custom logic is an inserted handler at a named order-anchor, never a fork (ADR-0021 parameter F, which owns the anchoring rule; the citation here read ADR-0024/0021 until 2026-08-02, and ADR-0024 rules on nothing in this pipeline: the only handler it defines is the feature-slice handler of a vertical slice, and its one mention of the "pipeline/handler model" is a consequence bullet arguing for the architecture style, not a rule about insertion).
 * **Factory** for the pooled `DbContext` in Pool mode (ADR-0018).
 * **Outbox** for the audit and email delivery paths, the sanctioned edge-eventing path (ADR-0008/0038/0020).
 * **State** for the `Proposal` aggregate's state machine (ADR-0020) and the key-rotation lifecycle (ADR-0011).

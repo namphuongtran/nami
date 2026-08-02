@@ -150,8 +150,17 @@ projects:
 
 ### 3.2 The two extension axes
 
-A consumer never forks the engine and never forks Nami. There are two ways to change
-behaviour and deliberately no third.
+Behaviour changes in two ways here and deliberately no third, and neither is a fork of the
+engine or of Nami. **The two axes do not have the same audience, corrected 2026-08-02.** Axis
+one is the consumer extension point, and it is the one ADR-0027 parameter E documents as such.
+Axis two is **Nami's own mechanism**, decided in ADR-0021 parameter F and not offered to a
+consumer, because the position a handler anchors to is a public type of OpenIddict rather than
+of Nami, so ADR-0044 parameter E's promise to absorb an upstream break behind Nami's surface
+has nothing to absorb behind. Until that date this paragraph read "a consumer never forks the
+engine and never forks Nami, there are two ways to change behaviour", which offered both axes
+to consumers and made ADR-0027 parameter E look incomplete for listing only the ports. What
+would make axis two consumer-facing is named in ADR-0021 parameter F, and it is a Nami-owned
+constants surface rather than a change of mind.
 
 **Axis one, swap an adapter behind a port.** Implement the port from `Abstractions` and
 register it; last registration wins. Infrastructure and business capability change without
