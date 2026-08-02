@@ -103,6 +103,17 @@ pure removal now fails the build on `RS0017`. `dotnet format` does **not** see `
 it reads `.editorconfig` and not MSBuild properties, so the two paths ADR-0065 keeps separate
 diverge here by one diagnostic and the build path is the one that holds.
 
+**`scripts/test-public-api-gate.sh` re-proves all of that on every CI run**, added immediately
+after the measurements above in its own job. It writes a throwaway project against the real
+three files, then asserts six breaks are caught: a member absent from the API file, a stale
+entry, a missing nullable header, a `Version` on a `PackageReference`, a package with no
+`PackageVersion` row, and a pack without `PrivateAssets` declaring the analyzer as a real
+dependency. The reason it exists is the `RS0017` finding above and not diligence: that defect
+would have returned silently under any of the four `.editorconfig` placements a later
+maintainer might reasonably try, and no other gate in this repository watches for it. The
+script itself was proven by removing each severity in turn and confirming which assertions
+moved.
+
 Parameters B through I are untouched by this and remain unenforced: nothing yet promotes
 `Unshipped` to `Shipped`, no release gate exists, and parameter I's manifest of configuration
 keys and asset paths has no file.

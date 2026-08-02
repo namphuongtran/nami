@@ -92,6 +92,14 @@ python3 scripts/check-decisions-index.py
 # Skips with exit 0 when dotnet is absent, and says a skip is not a pass.
 bash scripts/test-editorconfig.sh
 
+# The public-API gate, since 2026-08-02. Its own CI job, for the same SDK reason and
+# for one more: a red here means the GATE stopped biting, not that the code is wrong.
+# Writes a throwaway project to .publicapi-probe/ against the real .editorconfig,
+# Directory.Build.props and Directory.Packages.props, then breaks it six ways and
+# asserts each break is caught. It exists because one third of that gate was inert on
+# the day it landed and nothing would have noticed it coming back.
+bash scripts/test-public-api-gate.sh
+
 # The solution build and the format gate, since 2026-08-02. One CI job, two steps,
 # and NOT one gate under two names: the format path needs no EnforceCodeStyleInBuild,
 # reports whitespace as WHITESPACE rather than IDE0055, and exits 2 rather than 1.
@@ -104,10 +112,19 @@ dotnet format Nami.Identity.slnx --verify-no-changes   # drop the flag and it fi
 git config core.hooksPath scripts/hooks
 ```
 
-**The hook runs two of the six gates**, so a green hook is not a green build. The
-markdownlint line above, `scripts/test-editorconfig.sh`, the solution build and the format
-gate are separate CI steps, and so is `scripts/test-check-adrs.sh`. This has already
-produced a commit message that claimed a self-test was green before it had been run.
+**The hook runs two of the seven gates**, so a green hook is not a green build. The
+markdownlint line above, `scripts/test-editorconfig.sh`, `scripts/test-public-api-gate.sh`,
+the solution build and the format gate are separate CI steps, and so is
+`scripts/test-check-adrs.sh`. This has already produced a commit message that claimed a
+self-test was green before it had been run.
+
+**Three of the seven are self-tests, and that ratio is deliberate.** A gate that has never
+been run against the bug it exists for is not known to work, and each of the three was
+written after a real inert-gate defect rather than as a precaution: an untracked file the
+guardrail could not see, a severity that failed nothing without an MSBuild property, and an
+`RS0017` that no `.editorconfig` placement could reach. **When you add a gate, ask what would
+have to break for it to go quiet, then write the break down.** A gate with no self-test is
+the shape all three of those defects had.
 
 **`global.json` is a pin that can be inert, and the shape that makes it inert is the
 one the design corpus writes.** Measured 2026-08-02 on SDK 10.0.301: `10.0.999` with

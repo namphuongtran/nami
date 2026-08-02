@@ -153,6 +153,59 @@ actually changed before reading anything into a green, which is the same rule th
 self-test learned from the other direction when its worktree tested the committed script
 instead of the edited one.
 
+## test-public-api-gate.sh
+
+A self-test for the public-API lock (ADR-0044 parameter A) and for Central Package
+Management (ADR-0026 section C), run in CI as its own job because it needs a .NET SDK:
+
+```bash
+bash scripts/test-public-api-gate.sh
+```
+
+Like the script above it writes a throwaway project, here to `.publicapi-probe/`, inside the
+repository so it inherits the real [`../.editorconfig`](../.editorconfig),
+[`../Directory.Build.props`](../Directory.Build.props) and
+[`../Directory.Packages.props`](../Directory.Packages.props) rather than copies. The
+directory is removed on every exit path and is git-ignored as a backstop, and it **skips
+with exit 0 when `dotnet` is absent**, saying out loud that a skip is not a pass.
+
+It is a different job from `Solution build` rather than a step in it, because it is not a
+build of this repository: a red here means the gate stopped biting, not that the code is
+wrong, and the two should not arrive under one name.
+
+**It exists because one third of the gate was inert on the day it landed.** `RS0017` sat at
+its default severity of warning, so a public member deleted from the code with its lines
+left in the API file produced `2 Warning(s)`, `Build succeeded`, exit 0. That is the
+MAJOR-breaking direction of ADR-0044 parameter B passing a gate that read as configured, and
+nothing in the tree would have noticed it returning. Part 3 is that case.
+
+Six breaks are asserted: a public member absent from the API file (`RS0016`, on the build
+path and again under `dotnet format`), a stale API entry (`RS0017`, build path only), a
+missing `#nullable enable` header (`RS0037`), a `Version` on a `PackageReference` (`NU1008`),
+a package with no `PackageVersion` row (`NU1010`), and a pack without `PrivateAssets="all"`
+declaring the analyzer as a real dependency. Part 1 is the control: a compliant fixture must
+build clean, and it also proves CPM is supplying the version, since the probe's reference
+carries none.
+
+Proven by breaking the subject, five times, each reverted:
+
+- Removing `dotnet_diagnostic.RS0016.severity` moves 2 assertions, all in Part 2.
+- Removing `RS0017` from `WarningsAsErrors` moves 2, all in Part 3.
+- Removing `dotnet_diagnostic.RS0037.severity` moves 2, all in Part 4.
+- `ManagePackageVersionsCentrally = false` moves 8, across every part.
+- Deleting the `PackageVersion` row moves 6, across every part.
+
+The first three isolating cleanly is what makes a red readable: the failing part names the
+file to open. The last two cascading is correct rather than noisy, since nothing can restore,
+and Part 1's control fires first and says so.
+
+**Part 4 needed a second attempt to be worth its assertion, and the reason generalises.** Its
+first fixture was the compliant API file with the header deleted, which also fires `RS0016`,
+so removing the `RS0037` severity left the build failing anyway and only the count assertion
+noticed. The entries are now written unannotated so `RS0037` is the only diagnostic present.
+**An exit code is a weak assertion when several rules watch one fixture**, and Parts 3 and 4
+each carry an explicit check that the *other* diagnostic did not fire.
+
 ## Pre-commit hook (opt-in, maintainers)
 
 Enable once per clone:

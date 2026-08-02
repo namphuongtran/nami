@@ -132,3 +132,9 @@ field, the build path exits 1 and the format path exits 2, both on IDE1006.
 
 **`dotnet format` also fixes.** Run it without `--verify-no-changes` before pushing rather
 than hand-editing to satisfy the diagnostic.
+
+**A third gate watches the gates themselves.** `scripts/test-public-api-gate.sh` breaks a
+throwaway project six ways and asserts each break is caught, so a severity deleted from
+`.editorconfig` or `Directory.Build.props` reddens CI even when nothing in `src/` changed. If
+it fails on a change that only touched code here, read it as a report about the three config
+files rather than about the code: the failing part names which one.

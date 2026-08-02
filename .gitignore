@@ -455,3 +455,8 @@ scripts/.local/
 # was renamed). Ignored here rather than relying on a developer's global gitignore,
 # which is how it was being excluded until 2026-08-01 and would not protect anyone else.
 .claude/settings.local.json
+
+# The public-API gate self-test probe (scripts/test-public-api-gate.sh), written
+# inside the repository so it inherits the real .editorconfig,
+# Directory.Build.props and Directory.Packages.props. Removed on exit.
+.publicapi-probe/

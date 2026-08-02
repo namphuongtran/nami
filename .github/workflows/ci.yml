@@ -79,6 +79,28 @@ jobs:
         # by measurement while writing it, and each is a live assertion here.
         run: bash scripts/test-editorconfig.sh
 
+  public-api-gate:
+    name: Public-API gate self-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install the .NET SDK
+        uses: actions/setup-dotnet@v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+      - name: Public-API gate self-test
+        # Its own job rather than a step in `Solution build`, because it is not
+        # a build of this repository: it writes a throwaway project, breaks it
+        # six ways and asserts each break is caught. A red here means the gate
+        # stopped biting, not that the code is wrong, and the two should not
+        # arrive under one name.
+        #
+        # The gate it guards was one third inert on the day it landed: RS0017
+        # sat at warning, so deleting a public member and leaving its lines in
+        # the API file built green at exit 0. Nothing in the tree would have
+        # noticed it coming back. Part 3 of the script is that exact case.
+        run: bash scripts/test-public-api-gate.sh
+
   build:
     name: Solution build
     runs-on: ubuntu-latest
