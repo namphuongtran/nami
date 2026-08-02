@@ -35,6 +35,13 @@ against each ADR's own H1 title, since that column quotes the title rather than 
 it. Guardrail Check 7 covers only **membership**, that every ADR has a row here and every row
 resolves, and says nothing about either column's contents.
 
+**Since 2026-08-02 this runs in CI**, as a second step of the `adr-guardrail` job, and in the
+pre-commit hook. Before that it ran when someone remembered, which is the weakest form a
+check can take: this table's whole failure mode is a cell that is wrong while the row exists,
+and a row that exists is what Check 7 reports green on. The wiring was earned rather than
+assumed, by blanking one view from a row and confirming that `check-adrs.sh` still passed
+while this exited non-zero.
+
 **This replaced an inline generator on 2026-08-01, and the two sentences it replaced were
 both wrong.** The first claimed the table was generated "from the views' `Sources` sections",
 which the caveat below already contradicts. The second claimed that being generated meant it

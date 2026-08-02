@@ -62,15 +62,20 @@ govern, accepted ADRs are binding until superseded.
 
 ```bash
 # The whole local gate, in one place. Also available as the /gate slash command.
-bash scripts/hooks/pre-commit                          # guardrail + local name scrub
+bash scripts/hooks/pre-commit                          # guardrail + decisions index + name scrub
 npx --yes markdownlint-cli2@0.23.1 "**/*.md"           # the one thing the hook omits
 
-# Docs guardrail alone: the CI gate. Must pass before any docs/ADR change merges.
+# Docs guardrail alone: a CI gate. Must pass before any docs/ADR change merges.
 # It reads tracked files, so `git add` first. It now warns when untracked markdown
 # exists rather than reporting a green that covered nothing.
 bash scripts/check-adrs.sh
 
-# Enable the opt-in local pre-commit hook (guardrail + local name-scrub). Per clone.
+# The second CI gate, since 2026-08-02. Check 7 above verifies that every ADR has a
+# row in the reverse index; this verifies what the row says. Guardrail-green with a
+# wrong cell is the failure it exists for, and that is how it was proven before wiring.
+python3 scripts/check-decisions-index.py
+
+# Enable the opt-in local pre-commit hook (both gates + local name-scrub). Per clone.
 git config core.hooksPath scripts/hooks
 ```
 

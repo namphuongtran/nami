@@ -31,5 +31,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: ADR/docs hygiene checks
         run: bash scripts/check-adrs.sh
+      - name: Decisions index
+        # Check 7 above verifies only that every ADR has a row in the reverse index.
+        # This verifies what the row says, which is the half no other gate reads:
+        # proven on 2026-08-02 by blanking one view from a row's "Views that cite it"
+        # cell, on which check-adrs.sh still printed OK and this exited 1.
+        run: python3 scripts/check-decisions-index.py
 
   # .NET build/test/license-scan gates are added when the solution lands (M1).

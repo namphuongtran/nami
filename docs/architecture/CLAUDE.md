@@ -47,6 +47,10 @@ Two things follow for anyone editing a view here:
 
   A spot-check of a few rows has given a false green here before, which is why the printed
   snippet that used to live in section 1 was replaced by a script that exits non-zero.
+  **Since 2026-08-02 that script is a CI gate and runs in the pre-commit hook**, so running
+  it here is now about finding the drift before the push rather than about whether it gets
+  found at all. Guardrail Check 7 is not a substitute and never was: it passes on a row
+  whose cells are wrong, which was demonstrated rather than assumed before the wiring.
   **Do not write a concrete four-digit ADR reference into this file.** The old snippet
   globbed every markdown file in this folder, so one written here emitted `CLAUDE.md` as a
   phantom view; the script excludes it, but the habit is what the numbered-view rule

@@ -10,6 +10,15 @@ root="$(git rev-parse --show-toplevel)"
 
 bash "$root/scripts/check-adrs.sh" || exit 1
 
+# The decisions-index checker, same gate CI runs. Skipped rather than failed when
+# python3 is absent, because the hook is opt-in convenience and CI is the authority;
+# a hook that refuses to run on a machine without python3 is a hook people disable.
+if command -v python3 >/dev/null 2>&1; then
+  python3 "$root/scripts/check-decisions-index.py" || exit 1
+else
+  echo "pre-commit: python3 not found, skipping the decisions-index check (CI still runs it)"
+fi
+
 denylist="$root/scripts/.local/name-denylist"
 allowlist="$root/scripts/.local/name-allowlist"
 if [ -f "$denylist" ]; then

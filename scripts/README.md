@@ -44,7 +44,18 @@ python3 scripts/check-decisions-index.py --print-table   # emit the correct rows
 It never writes to the index. Python 3 with no third-party packages, kept separate from
 `check-adrs.sh` rather than folded into it: that script is deliberately portable bash, and
 comparing two derived tables in bash 3.2 would be a weaker copy of a rule that can be
-written once here. Not currently a CI gate, though it exits non-zero so it can become one.
+written once here.
+
+**It is a CI gate as of 2026-08-02**, a second step in the `adr-guardrail` job, and it runs
+in the pre-commit hook too. It was proven against the defect it exists for before being
+wired, which is this folder's standing rule: blanking one view from a row's "Views that cite
+it" cell left `check-adrs.sh` printing `ADR/docs guardrail OK.` while this exited 1. Until
+then it had run only when someone remembered to, and the gap it covers is exactly the kind
+nothing else notices, since a wrong cell in a table that exists reads as maintained.
+
+The hook **skips** this check when `python3` is absent rather than failing, because the hook
+is opt-in convenience and CI is the authority. A hook that refuses to run on a machine
+missing an interpreter is a hook people turn off, which costs more than the check earns.
 
 ## Pre-commit hook (opt-in, maintainers)
 
