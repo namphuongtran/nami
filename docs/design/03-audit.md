@@ -190,6 +190,19 @@ token endpoint is the credential-stuffing signal, and `unhandled_exception` cove
 category rather than only operational failure, so a crash is auditable rather than merely
 logged.
 
+**Bulk egress of the audit log itself, added 2026-08-02.** This document did not mention
+export at all until that date, while [15](15-admin-api.md) carried the route, which is why
+ADR-0008 now owns it: an export is **always** dual-control, and approving it mints a
+single-use time-boxed grant that the proposer redeems in one streaming transfer, so no file
+bearing personal data is ever written. Two things that costs this design. The exported rows
+carry `RecordHash`, `PrevHash`, and the canonical fields section 5.2 hashes over, not the
+read DTO, because a recipient who cannot recompute the chain has evidence of nothing and the
+prev-first operand order exists precisely for that recipient. And the transfer needs its own
+entry, `audit.export.delivered`, carrying the grant id, the digest of the frozen filter, the
+row count transferred, and the actor: the data moves at redemption rather than at approval,
+so the proposal events alone would record an authorisation to export and never the export.
+It joins the net-new set awaiting Security and DPO ratification with the rest.
+
 The consent receipt (`consent_grant`, with `consent_revoke` on revocation) carries a fixed
 payload: subject, client, tenant, scope set, purpose, legal basis, policy version hash,
 consent timestamp, interface locale, and method. It is the immutable historical record, and

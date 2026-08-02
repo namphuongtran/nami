@@ -46,7 +46,7 @@ contract ([24](24-bff.md)). The end-user login/consent UI (11) is a different ap
 | Tenants | registry; provision wizard (→ proposal, per-step status); **Suspend/Resume** (→ proposal, semantics warning); `Identifier` read-only post-provision; Memberships editor; Delegated-admin grant picker (capability + subtree + expiry; it warns that a proposal will open when the capability set is no-cascade **or the chosen root tenant has descendants**, ADR-0010, so the warning matches the reach rule rather than the "dangerous" label; a request above the actor's own capabilities is refused `403` by the ceiling and must be shown as a refusal, never as a pending approval) and grant **revoke**, which is single-actor and step-up gated rather than a proposal (ADR-0010), so the UI must not present it as needing a second approver | bodies in 18 |
 | Branding | design-token form (colors/fonts), https-only logo URL (ProblemDetails validation), live preview | |
 | Approval Inbox | proposals awaiting me / mine / history; diff + justification + **the guard appropriate to the proposal's `TargetClass`** (an ETag for `mutate`, the create preconditions for `create`, the frozen filter for `query`, ADR-0081), so the two thirds of action types that have no target ETag do not render an empty field; **Approve = step-up**; Reject/Cancel; a `precondition_failed` failure is presented exactly like `target_changed`, since both mean the world moved under the proposal | dual-control core |
-| Audit viewer | taxonomy filter; chain-verify badge; controlled export (a filtered request within 90 days and 10k rows goes direct and is still audited; full, unfiltered, longer or larger is dual-control, and the thresholds are org-configurable) | 15 / 07 |
+| Audit viewer | taxonomy filter; chain-verify badge, which is the server asserting its own chain and is not independent verification; export is **always** dual-control with no direct path (ADR-0008, changed 2026-08-02), so the viewer raises a proposal and the approved grant is redeemed once by the proposer | 15 / 07 |
 | Sessions | list / revoke server-side sessions | |
 | Account/StepUp | re-auth / MFA challenge landing | reuses 11's page |
 
@@ -251,7 +251,9 @@ preview + a rejected http/private-IP logo; and a back-channel-logout that ends t
 ## 11. Sources
 
 - ADRs: ADR-0020 (admin architecture), ADR-0029 (BFF), ADR-0003 (sessions), ADR-0019
-  (back-channel logout), ADR-0013 (step-up, referenced).
+  (back-channel logout), ADR-0013 (step-up, referenced), ADR-0008 (the audit subsystem the
+  viewer reads, and the export rule it enforces), ADR-0072 and ADR-0091 (the rendering stack
+  and the UI response profile this app is served under).
 - Design docs: [Admin API](15-admin-api.md) (the backend it consumes), [11 login/consent/logout
   UI](11-login-consent-ui.md) (the `SecurityHeadersAttribute`, step-up page, open-redirect
   guard, i18n), [07 authorization](07-authorization.md) (step-up enforcement),

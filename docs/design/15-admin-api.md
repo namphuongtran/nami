@@ -253,20 +253,46 @@ SSRF-safe), `Theme?` (design tokens (colors/fonts) not raw CSS), `DisplayName?`,
 **read** path is itself audited (`audit_read`) and tenant-filtered deny-by-default on the
 shared Pool store (below).
 
-**A bulk export is a dual-control action, not a bigger read.** Audit rows carry personal
-data and actor identity, so a bulk egress is a genuine data-protection risk rather than a
-convenience: `audit-export` is in the destructive-action catalogue (07) whenever the request
-is full or unfiltered, spans more than 90 days, or exceeds 10k rows. A small filtered export
-goes direct and is still audited. There is **no ungated** bulk export: `POST /audit/export`
-raises the `audit-export` proposal whenever the request crosses one of those thresholds and
-runs it through a keyed `IProposalExecutor` like every other catalogue action, and paged
-`GET /audit` is not a substitute for that gate.
+**An export is a dual-control action, not a bigger read, and there is only one of them.**
+Audit rows carry personal data and actor identity, so a bulk egress is a genuine
+data-protection risk rather than a convenience. `POST /audit/export` **always** raises the
+`audit-export` proposal and answers `202` with a proposal id, and paged `GET /audit` is not a
+substitute for that gate. **This section described a below-threshold direct path until
+2026-08-02**, and ADR-0008 removed it rather than specifying it: the purpose of an export is
+to hand a defined record set to a party outside the console and outside the SIEM, which does
+not vary with size, and anyone able to call a direct path already has the viewer. Four
+documents described that path and none said what it returned.
+
+**What the export contains is not `AuditEntryDto`.** The DTO above carries no `RecordHash`
+and no `PrevHash`, and `GET /audit/chain-status` is the server asserting its own chain is
+intact, so neither lets a recipient verify anything. The export carries the per-row hashes
+and the canonical fields the chain is computed over, which is what makes ADR-0008's
+prev-first operand order usable by an independent verifier (ADR-0008).
+
+**Delivery is a grant, not a file.** Approving the proposal mints a single-use, time-boxed
+**export grant** bound to the frozen filter, and the proposer redeems it in one streaming
+transfer from the audit store. Nothing bearing personal data is written anywhere, so there is
+no artifact, no retention window, and no per-tenant object storage to isolate. Two
+consequences follow and both are load-bearing:
+
+- **`ExecutedAt` on this proposal means the grant was minted, not that the data left.** The
+  ADR-0081 `query` guard (the filter is not widened, the size and scope that gated the
+  approval still hold, the proposer still holds the capability) is therefore evaluated **at
+  redemption**, which is the moment data actually leaves.
+- **The redemption is audited in its own right.** `proposal.executed` alone would leave a
+  bulk personal-data egress with no record of the egress, so `audit.export.delivered` records
+  the grant id, the digest of the frozen filter (5.2), the row count actually transferred, and
+  the actor. It joins the net-new catalog set proposed in section 6 rather than being settled
+  here.
 
 **That route was missing until 2026-08-01, and this section had talked itself out of it.**
 The text read "there is deliberately no ungated bulk-export endpoint in v1; **if one is
 added** it routes through a keyed `IProposalExecutor`", one sentence after saying that a
 small filtered export goes direct, which cannot happen through an endpoint that does not
-exist. The conditional lost the argument on evidence: ADR-0081 gives `audit-export` the only
+exist. (That second half was itself removed a day later, above, so the contradiction is now
+resolved on both sides rather than one. Keeping this paragraph is deliberate: the lesson is
+about a document contradicting itself, and editing the history to match the current answer
+would delete the evidence that produced it.) The conditional lost the argument on evidence: ADR-0081 gives `audit-export` the only
 `query`-class row in its target-guard table, complete with executor semantics for a filter
 frozen in the payload that may not be widened, and ADR-0079 rule 5 forbids raising a proposal
 from a generic route, so this action can be raised from nowhere else. Read together, two
@@ -644,16 +670,17 @@ first-admin seed is idempotent and forces a change; Scalar performs a real OIDC 
 
 ## 10. Open and build-time items
 
-- **The direct export has no response shape yet, and no document owns the export itself.**
-  `POST /audit/export` above settles the route and the gate: over a threshold it raises the
-  `audit-export` proposal and answers `202` with a proposal id like every other catalogue
-  action (5.2). Under the threshold it "goes direct", and what *direct* returns is not
-  specified anywhere: format, whether it streams or is a job with a retrievable artifact,
-  and how long the artifact lives if there is one. Note also that [03](03-audit.md), which is
-  the authority for the audit subsystem, does not mention export at all, so the retention and
-  format questions currently have no owner. Raise it there rather than growing it here, and
-  keep it away from the DPO items in the pre-GA checklist, which govern *whether* an export
-  may happen rather than what it looks like.
+- **The export got an owner on 2026-08-02, and the answer was to remove a path rather than
+  specify one.** This entry used to say the direct export had no response shape and that
+  [03](03-audit.md) did not mention export at all. ADR-0008 now owns the export: one gated
+  path, an artifact that carries the chain, grant-and-redeem delivery with nothing at rest,
+  and a delivered event. The three questions this entry listed dissolved rather than being
+  answered: there is no format for a direct path because there is no direct path, and there is
+  no artifact lifetime because there is no artifact. **What remains open is narrower and is a
+  pre-GA item**: whether an export has an absolute cap at all, and how much the row count may
+  drift between approval and redemption before the ADR-0081 guard refuses. The 90-day and
+  10k-row figures were a gate on *whether* dual-control applied; with dual-control always
+  applying they no longer have that job, and they were never ratified here in the first place.
 - `Admin.TenantScope` rehome (move its set-tenant-context side effect before retiring it, 07).
 - **Verify at build (ADR-0084): does a tenant-scoped subject revoke actually honour the tenant
   filter?** Step 3 of the membership-removal cascade revokes that subject's tokens and

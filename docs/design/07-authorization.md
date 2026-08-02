@@ -364,8 +364,9 @@ claims parameter and its authentication-context values.
 A fixed catalogue of destructive or irreversible actions additionally requires
 **dual-control**: `delete-application`, `delete-scope`, `delete-tenant`, `suspend-tenant`
 and `resume-tenant`, `offboard-user`, `revoke-all-tokens`, a dangerous delegated-admin
-grant, `secret-revoke`, key purge, and a bulk `audit-export` (full or unfiltered, a range
-over 90 days, or over 10k rows; a small export goes direct but is still audited). A
+grant, `secret-revoke`, key purge, and `audit-export`, which as of 2026-08-02 is **every**
+audit export rather than only a bulk one: ADR-0008 removed the below-threshold direct path,
+because the purpose of an export does not vary with its size. A
 proposer creates an approval bound to a `request_hash` over the capability, target, and
 parameters; a different principal approves, itself step-up gated, single-use and time-boxed
 against that hash; then the action executes. A constructive variant, `approve-user-invite`,
