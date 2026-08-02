@@ -423,7 +423,7 @@ git tag; ADR-0044 governs what may change under it. The SDK is pinned.
 | Finbuckle.MultiTenant | Tenant resolution and per-tier stores | Apache-2.0 | 0001 |
 | Quartz.NET | Clustered background jobs | Apache-2.0 | 0025, 0031 |
 | OpenTelemetry .NET, `Microsoft.Extensions.Logging` | Telemetry and redacted diagnostics | Apache-2.0, MIT | 0022 |
-| MinVer | Git-tag-driven lock-step versioning | MIT | 0027 |
+| MinVer | Git-tag-driven lock-step versioning | Apache-2.0 | 0027 |
 | `Microsoft.CodeAnalysis.PublicApiAnalyzers` | The public-surface gate | MIT | 0044 |
 | TngTech.ArchUnitNET | Architecture tests | Apache-2.0 | 0024, 0060 |
 | xUnit | Test framework | Apache-2.0 | 0060 |

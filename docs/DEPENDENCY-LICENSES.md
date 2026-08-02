@@ -232,6 +232,38 @@ telemetry. ADR-0032 is the only decision in range and it governs **Nami's own** 
 anonymous telemetry, not a build-time tool reporting to its vendor. What this search would miss
 is an ADR discussing the idea without any of those spellings.
 
+### 3.2 MinVer, read to settle a three-way disagreement, 2026-08-02
+
+**Not adopted yet**, and recorded anyway because three documents in this repository stated its
+licence and one of them was wrong. `design/01-foundations.md` said MIT while
+`design/21-cicd-and-deployment.md` and ADR-0026 section D both said Apache-2.0. Two against
+one is not a licence read, and the read settles it: **Apache-2.0**, from
+`<license type="expression">Apache-2.0</license>` in MinVer's own `.nuspec` at **7.0.0**,
+repository `github.com/adamralph/minver` commit `288e752d82a772660e740178ba11c8adba5e217a`.
+The same expression appears at 6.0.0 and 5.0.0, so this is not a recent relicence. The design
+row has been corrected to match the artifact rather than to match the majority.
+
+**The bundle read is the part worth keeping.** MinVer's nuspec declares **no `<dependencies>`
+element at all**, so a package reader sees a leaf node. The package is not a leaf: unpacked at
+7.0.0 it ships `NuGet.Versioning.dll` and `System.CommandLine.dll` beside its own assemblies,
+declared in `build/bin/net10.0/MinVer.deps.json` as `NuGet.Versioning/7.0.1` and
+`System.CommandLine/2.0.1`. Both read at their own nuspecs on 2026-08-02: NuGet.Versioning is
+Apache-2.0 (`github.com/NuGet/NuGet.Client`) and System.CommandLine is MIT
+(`github.com/dotnet/dotnet`). Both are inside ADR-0026 section A, so nothing here needs an
+exception.
+
+This is the **third** package here to declare its composition nowhere a package reader would
+look, after OWASP ZAP and the CycloneDX dotnet tool in section 7, and the second to do it by
+shipping self-contained with an empty dependency element. The pattern is now frequent enough
+to expect rather than to discover: **a build-time or tool package with no `<dependencies>` is
+a prompt to unpack it, not evidence that it is a leaf.**
+
+**Not verified**: `build/bin/net472/MSBuild.Caching.dll` and its net8.0 twin. The file is in
+the package, its strings reference `Microsoft.Build.Framework` and
+`Microsoft.Build.Utilities.Core`, and it appears in **no** `deps.json` in the package,
+including the net10.0 one read above. Its provenance and licence are therefore unestablished,
+and this is owed before MinVer is adopted rather than closed here.
+
 **ADR-0026 section D does not list this package**, which is not a defect in either document.
 Section D is a list of packages confirmed permissive at the time it was written, not a gate;
 the gate is section A, which classifies **licences**, and MIT is on its permissive list. This

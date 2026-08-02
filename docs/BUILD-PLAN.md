@@ -53,12 +53,15 @@ Not scheduled. Each has a decision or a document that already names it.
 | Architecture rules (b) through (e): Application layering, slice decoupling, adapter placement, BFF isolation | [`adr/0024-architecture-style.md:55`](adr/0024-architecture-style.md) | When the projects they constrain exist |
 | The licence-scan CI gate | [`adr/0026-dependency-license-policy.md`](adr/0026-dependency-license-policy.md) section C | M1 |
 | Reconciling the stack-of-record table against `Directory.Packages.props` | [`adr/0061-technology-stack-of-record.md:84`](adr/0061-technology-stack-of-record.md) | M1, and it is no longer blocked: the manifest exists |
+| The provenance and licence of `MSBuild.Caching.dll`, bundled in MinVer and declared in no `deps.json` | [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) section 3.2 | Before MinVer is adopted |
 | `TreatWarningsAsErrors` as its own decision | [`../Directory.Build.props:95`](../Directory.Build.props) | Open; no ADR asks for it, the design corpus does |
 
-## 3. Not verified, and one contradiction
+## 3. Not verified
 
 These are claims this repository has **not** established. None may be cited as fact until
-read at source.
+read at source. MinVer's licence left this section on 2026-08-02: three documents disagreed,
+the read was taken at the artifact, and the outcome is recorded by its owner in section 3.2 of
+[`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) rather than here.
 
 - **Does the options binder populate `required` members?**
   [`../src/CLAUDE.md:49`](../src/CLAUDE.md) records the question against
@@ -69,14 +72,6 @@ read at source.
   the answer: if it is the library's, declaring it in `Abstractions` would put a
   third-party dependency inside the assembly that must depend on nothing. Answerable only
   against a restored package graph.
-- **MinVer's licence is recorded two different ways in three places.**
-  [`design/01-foundations.md:426`](design/01-foundations.md) says MIT;
-  [`design/21-cicd-and-deployment.md:243`](design/21-cicd-and-deployment.md) and
-  [`adr/0026-dependency-license-policy.md:61`](adr/0026-dependency-license-policy.md)
-  section D both say Apache-2.0. **One of them is wrong** and nobody has read the licence at
-  the distributed artifact, which is what section 7 of
-  [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) requires and what two-against-one does
-  not substitute for. Owed before MinVer is adopted.
 - **A working-tree rewrite of `Nami.Identity.slnx` on 2026-08-02 has no identified cause.**
   The file was found rewritten with an empty `<Folder Name="/tests/" />`, dropping the test
   project. No commit carried that state. All eight gates plus the three self-tests were
