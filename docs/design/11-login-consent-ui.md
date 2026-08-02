@@ -21,7 +21,7 @@ tags: [design, ui, login, consent, logout, razor, theming, localization]
 | ADR-0053 / ADR-0008 | A hash-chained consent receipt on grant and `consent.revoked` on revoke; branding changes are an `admin_config_change` security event |
 | ADR-0042 / ADR-0038 | Risk-triggered `IChallengeProvider` on login/reset/device/signup (off in Development); per-IP plus per-account lockout; constant-time anti-enumeration |
 | ADR-0062 | OWASP ASVS 5.0 L2 baseline for this whole surface, with each security test tagged to its requirement id |
-| ADR-0072 / ADR-0091 | Razor Pages with no client runtime, and the browser-facing response headers as three profiles: the `SecurityHeadersAttribute` applies the UI profile, `form_post` takes its own, framing is denied outright, and no nonce is available to theming (section 7.4) |
+| ADR-0072 / ADR-0091 | Razor Pages with no client runtime, and the browser-facing response headers as three profiles: the header **middleware** writes one on every response and the `SecurityHeadersAttribute` only *selects* which (0091 parameter K, so a page with no attribute gets the UI profile rather than nothing), `form_post` takes its own, framing is denied outright, and no nonce is available to theming (section 7.4) |
 | ADR-0027 / ADR-0044 | These pages ship in `Nami.Identity.Host` and in no NuGet package (0027 parameter G), so an embedder supplies its own, which is why section 5.5 has two override points and not three; UI customization is an extension point per distribution channel (0027 parameter E) and its configuration keys and asset paths are a versioned surface (0044 parameter I) |
 
 ## 2. Purpose and scope
@@ -495,6 +495,14 @@ flowchart TB
   FH --> MT --> CK --> SH --> LOC --> RT --> AUTH --> AF --> OI
 ```
 
+**One ordering consequence, recorded 2026-08-02 and not yet verified.** The security-headers stage
+sits **before** routing, and ADR-0091 parameter K makes it the only writer of a response profile
+while endpoint metadata merely selects which profile. A middleware at that position has no
+endpoint on the way in, so selecting from metadata means writing the headers on the way out.
+Whether that is available there is a verify-before-build item carried by ADR-0091's Confirmation.
+If it does not hold, what moves is this stage's position or the selection mechanism, not the
+decision: a response still gets a profile either way.
+
 ### 6.2 Key libraries and patterns
 
 Razor Pages on ASP.NET Core, now owned by **ADR-0072**, which records why Blazor is not
@@ -568,6 +576,11 @@ to all UI pages; the concrete CSP policy values are finalized in the observabili
 hardening phase (referenced, deferred). Theming must not loosen the CSP (no
 `unsafe-inline`; colors come from CSS variables or a nonce).
 
+**That paragraph is the imported one and two of its three clauses have since been overturned.**
+It is kept because the corrections below are only readable against it, and because "applies ... to
+all UI pages" was a **true total** in the corpus it came from, where Nami wrote every page. It
+stopped being one, and the fifth bullet says when.
+
 **Who owns which half of that, because until 2026-08-01 this section named no owner and
 [20](20-testing.md) section 10 recorded the policy as ownerless.** The **strictness** is
 decided: ADR-0072 parameter C rules that "theming must never loosen the Content Security
@@ -586,10 +599,17 @@ page's own protocol**: `response_mode=form_post` returns HTML the engine writes,
 inline submit script and posting cross-origin to the client, so `script-src 'self'` and
 `form-action 'self'` each stop authorization dead with a blank page and a clean server log.
 ADR-0091 therefore replaces the single policy this section assumed with **three profiles**
-selected by response class, and four consequences land directly on this design:
+selected by response class, and **six** consequences land directly on this design. That count
+read "four" against a list of five until 2026-08-02, when parameter K added the sixth: a count
+and a list disagreeing means one was derived and the other transcribed, and here the list was
+the derived one, so it is the count that is corrected.
 
 - The `SecurityHeadersAttribute` named above applies the **UI** profile, not one global policy,
-  and the `form_post` response takes the Protocol HTML profile instead.
+  and the `form_post` response takes the Protocol HTML profile instead. **Corrected 2026-08-02 by
+  ADR-0091 parameter K**: the attribute does not *apply* anything. The middleware in section 6.1
+  is the only writer, the attribute is a **selector**, and a response whose endpoint carries no
+  such attribute gets the UI profile by default rather than no headers. See the fifth bullet
+  below, which is why the distinction turned out to matter.
 - `frame-ancestors 'none'` with `X-Frame-Options: DENY`, on the strength of ADR-0014 and
   ADR-0019 having already removed every iframe this design once had (section 5.3). A per-tenant
   framing allowlist is rejected rather than deferred, so `TenantBranding` gains no such field.
@@ -597,8 +617,21 @@ selected by response class, and four consequences land directly on this design:
   foreclosed: ADR-0091 parameter D admits no nonce anywhere, and the per-tenant tokens of
   section 5.5 are served as a **stylesheet response** rather than an inline `<style>` block, which
   is ADR-0072 parameter E's external-files rule applied to style.
-- Two of ADR-0043's startup invariants now assert the policy, so a consumer who weakens it
-  through configuration fails startup rather than serving.
+- **Three** of ADR-0043's startup invariants now assert the policy, so a consumer who weakens it
+  through configuration fails startup rather than serving. Two of them read the policy's contents;
+  the third, added 2026-08-02, reads whether the middleware that would apply any policy is
+  registered at all.
+- **The profile set is total, added 2026-08-02 by ADR-0091 parameter K, and this is the bullet the
+  first one points at.** The gap it closes did not live in this document: it lived in ADR-0091
+  parameter B's table, whose three `Applies to` cells each enumerate a surface Nami authors, while
+  ADR-0027 parameter G ships these pages in the host and in no package, so a consumer on the
+  meta-package path writes their own login page and it matched none of the three. **The startup
+  checks could not see it**, because they assert what a profile contains and a response outside
+  every profile contains nothing to check. The fix is structural: the middleware writes on every
+  response, the attribute selects, absent metadata means the UI profile, and leaving the policy
+  needs an explicit opt-out. For this document that means the `SecurityHeadersAttribute` is a
+  routing detail rather than the security boundary, and forgetting it on a new page is a
+  wrong-profile bug rather than a no-profile one.
 - The deferral in the first paragraph, that the values "are finalized in the
   observability/security hardening phase", is **discharged**. They are decided at ADR level
   instead, which is where they belonged: a build-time task with no owner is how this sat open for

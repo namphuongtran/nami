@@ -256,8 +256,13 @@ this view deliberately stops at the mechanism.
   axis, and both halves of it now have an owner: the **strictness** of the Content Security
   Policy is ADR-0072 parameter C, a rendering-stack decision rather than an edge one, and the
   concrete directive values, the anti-framing posture, and the rest of the browser-facing set
-  are ADR-0091, which fixes them as three profiles selected by response class and lands two
-  invariants in ADR-0043.
+  are ADR-0091, which fixes them as three profiles selected by response class and lands **three**
+  invariants in ADR-0043. That count read two until 2026-08-02, when ADR-0091 parameter K made the
+  profile set total: the header middleware writes a profile on **every** response and endpoint
+  metadata only selects which one, so a page nobody anticipated is served under the strictest
+  profile rather than under none. The third invariant follows from it, and it is the only row in
+  that table asserting **reachability alone**, since it has no value to read and asks only whether
+  the middleware is registered at all.
   The application emits its own strict-transport-security header
   rather than relying on the edge to, with a one-year `max-age` and with `includeSubDomains` and
   `preload` left **off and owned by the operator**, because both reach domains Nami does not own.

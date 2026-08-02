@@ -261,7 +261,8 @@ lands on the operator's infrastructure is stated as the operator's rather than d
 ### I. Enforcement (binding)
 
 Two rows are added to ADR-0043's startup self-check table, in its existing "executable
-enforcement of a decision owned elsewhere" category:
+enforcement of a decision owned elsewhere" category. **Parameter K adds a third on 2026-08-02**,
+and this sentence is amended rather than left to be contradicted four paragraphs below:
 
 | Invariant | Assertion |
 |---|---|
@@ -288,6 +289,94 @@ class ADR-0021 requires to fail CI before production. Recording that seam in the
   verified** when this ADR was written. It does not affect anything decided here, because
   parameter C denies framing outright; it becomes a blocking question only if parameter C is
   reopened, and the revisit trigger says so.
+
+### K. Every response carries a profile, and metadata selects one rather than applying it (binding, added 2026-08-02)
+
+**This parameter is appended after J rather than inserted among the binding ones**, which reads
+oddly and is deliberate: the letters above are public identifiers that **five other documents**
+point at (counted 2026-08-02 by searching for `0091 parameter` followed by a letter: ADR-0027,
+ADR-0043, and designs [11](../design/11-login-consent-ui.md),
+[16](../design/16-admin-app.md), and [22](../design/22-openiddict-seam-catalogue.md)). Appending
+is the same reasoning the design layer applies to its own file numbers, and it is cheaper than
+being right about which letters a given insertion point would move.
+
+**What it fixes: parameter B's table was a partition of the response space, and it was not
+total.** Each of its three `Applies to` cells enumerates a surface Nami authors. The UI row
+names "the Razor Pages end-user surface and the MVC Razor admin surface (ADR-0072 parameters A
+and B)", and ADR-0072 parameter A enumerates login, consent, logout, passkey enrollment,
+account management, and the error inventory. The Protocol HTML row says "only the `form_post`
+authorization response". The API row is a closed endpoint list. **ADR-0027 parameter G, accepted
+the same day as this ADR, ships those pages in `Nami.Identity.Host` and in no package**, so a
+consumer on the meta-package path writes their own login page, and that page is in none of the
+three rows. The gap is therefore not a forgotten attribute on a page; it is a partition that
+stopped being total on the day it was drawn, and the fix below makes it total **by construction
+rather than by a longer list**, since the next unanticipated response class would fall out of a
+list again.
+
+**The mechanism, which two documents described two ways and neither settled.** Design
+[11](../design/11-login-consent-ui.md) section 6.1 places a **middleware** stage in the pipeline
+and its section 7.4 says a `SecurityHeadersAttribute` "applies CSP, `X-Frame-Options`, and
+`X-Content-Type-Options` to all UI pages", while parameter A of this ADR says "the middleware's
+position is already fixed by design 11 section 6.1". The design corpus did not settle it either:
+its Phase 05 audit calls the item "Standard middleware/attribute", one phrase covering both, and
+its file listing names an attribute source file. Whether the failure mode was *no headers* or
+*the wrong headers* depended entirely on which of the two writes, so this parameter fixes it:
+
+* **The middleware registered by parameter A writes a profile on every response it handles.**
+  It is the only writer.
+* **Endpoint metadata selects which profile.** An attribute is a selector and never a writer, so
+  **an endpoint with no metadata is not an endpoint with no headers.**
+* **The default, when no metadata names a profile, is the UI profile.** It is the strictest of
+  the three, and the response class a consumer adds on this path is by construction a
+  human-facing page. Defaulting to the UI profile rather than inventing a fourth also keeps
+  `csp-no-relaxation` meaningful on those responses, since a fourth profile would need its own
+  invariant row and would be the same gap under a new name.
+* **An endpoint that must not carry a Nami profile says so explicitly**, with opt-out metadata.
+  The absence of an opt-out is never how a response escapes the policy, so every uncovered
+  response is a deliberate, greppable act rather than an omission.
+
+**The argument against this default, stated rather than buried, because this ADR is the one
+place it is strongest.** The entire Context above is a case where a strict default silently broke
+a page Nami does not render: `form_post` is exactly "a response Nami did not author, served under
+a strict policy", and the result was a blank page with a clean server log. An embedder's page
+under a defaulted UI profile is the same shape. What makes the default defensible is **who sees
+the failure and when**, not that the shape is different. The `form_post` break lands in
+production, on an end user, on a flow that is otherwise succeeding, and it is invisible to the
+server. A defaulted UI profile breaks the embedder's own page, on their own machine, in their own
+development loop, with a policy violation printed in their browser console. The failure is loud
+and it is theirs. That asymmetry is the whole justification, and if it ever stops holding, this
+parameter is what should be reopened.
+
+**Enforcement: a third row in ADR-0043**, and it asserts registration rather than content, which
+is a shape that table already carries.
+
+| Invariant | Assertion |
+|---|---|
+| `response-headers-registered` | the browser-facing response-header middleware is registered in the pipeline, in every environment |
+
+`hsts-enabled-outside-dev` already asserts that "the HSTS middleware **is registered**", so this
+is the existing pattern rather than a new kind of check, which is consistent with parameter A
+saying it follows ADR-0076 parameter A exactly. **It fails startup rather than warning**: a
+warning is the one option here that satisfies nobody, since it neither stops the deployment nor
+gets read, and the two rows already in parameter I are failures for the same reason.
+
+**What this row cannot see, said out loud so its green is not over-read.** It can tell that the
+middleware is registered. It cannot tell that any particular response received a profile, because
+that is a property of a response and a startup check has none. Coverage of the second half is a
+test, under Confirmation.
+
+**What this parameter does not do.** It makes an embedder's page *covered*, not *correct*. A UI
+profile on a page that loads a third-party script will break that page, and that is the intended
+direction of failure. ADR-0027's build-time follow-up already obliges the embedder path to be
+documented as pages-not-included; this gives that documentation a specific thing to say, which is
+that the pages arrive under Nami's strictest profile unless the consumer opts out per endpoint.
+
+**Verify-before-build, and it is an ordering question rather than a policy one.** Design 11
+section 6.1 places the header stage **before** routing, so a middleware there cannot read endpoint
+metadata on the way in, and selecting a profile from metadata means writing the headers on the way
+out instead. Whether that is available at that position was **not verified** when this parameter
+was written. It does not change what is decided here, and it is tracked with the other
+verify-before-build items under Confirmation.
 
 ### Consequences
 
@@ -316,6 +405,15 @@ class ADR-0021 requires to fail CI before production. Recording that seam in the
   trigger.
 * Neutral, because parameter C forecloses embedded login. Nothing today uses it, and the revisit
   trigger states what reopening it would cost.
+* **Good, because parameter K makes the profile set total, so the failure mode changes shape**
+  (added 2026-08-02). Before it, a page nobody had anticipated was served with no policy and
+  nothing anywhere reported that. After it, the same page is served with the strictest policy and
+  breaks visibly in the author's own browser. Neither is "correct" for a page Nami has never seen,
+  and that is the point: the choice was between a silent wrong answer and a loud one.
+* **Bad, because parameter K will break embedder pages that were working**, specifically any page
+  loading a script or stylesheet from another origin. Accepted, with the opt-out as the sanctioned
+  escape and the ADR-0027 documentation obligation as the warning. The alternative, defaulting to
+  no policy, is the state this parameter exists to leave.
 
 ### Confirmation
 
@@ -331,10 +429,19 @@ class ADR-0021 requires to fail CI before production. Recording that seam in the
   `cssText` nor `setAttribute('style', ...)` appears in the shipped script.
 * A test asserts the per-tenant theme stylesheet is tenant-scoped, including its cache key, under
   the tenant-isolation suite.
-* Startup fails when either ADR-0043 row is violated, including in Development.
+* Startup fails when any of the three ADR-0043 rows is violated, including in Development.
+* **A test registers an endpoint carrying no profile metadata at all and asserts the response
+  arrives under the UI profile** (parameter K). This is the test that would have failed before
+  2026-08-02 and reported nothing, so it is written as the positive case rather than as a negative
+  one, and its companion asserts that an endpoint carrying the opt-out receives no Nami policy.
+  The pair is what stops the default from being quietly reverted to "no metadata, no headers".
 * **Verify-before-build:** confirm at the pinned version that the engine rejects an unregistered
   `redirect_uri` before any `form_post` response is written, which is the property parameter E's
   per-response `form-action` rests on. Tracked with the other pinned-version reads under ADR-0021.
+* **Verify-before-build:** confirm that a middleware at the position design 11 section 6.1 fixes,
+  before routing, can read endpoint metadata when writing headers on the way out. Parameter K
+  rests on that and states it as unverified; if it does not hold, the middleware's position or the
+  selection mechanism moves, and the decision does not.
 * These tests carry their OWASP ASVS requirement identifiers, per ADR-0062.
 
 ## Pros and Cons of the Options
@@ -388,7 +495,29 @@ class ADR-0021 requires to fail CI before production. Recording that seam in the
   directive: how a framing allowlist is validated and audited, that `X-Frame-Options` is dropped
   product-wide as a consequence, and whether WebAuthn still functions in a cross-origin frame
   (the unverified question in parameter J). Separately, re-open if logos become proxied, so
-  `img-src` can drop `https:`.
+  `img-src` can drop `https:`. **A third trigger, from parameter K:** re-open if the asymmetry
+  that parameter argues from stops holding, which is that a defaulted UI profile breaks the
+  embedder's page loudly in their own development loop while no profile at all breaks nothing
+  until an attacker arrives.
+* **Parameter K's own provenance, added 2026-08-02.** It was not deferred by this ADR. It was
+  recorded as open in **ADR-0027** at parameter G's second open consequence, which is the right
+  place for it to have been noticed and the wrong place for it to have been decided, and it was
+  routed from there to the Pre-GA checklist under Security. It comes back here because the
+  question is which responses receive one of this ADR's profiles, which is this ADR's subject.
+  Two things were found while closing it that the original framing did not have:
+  * **The failure was in parameter B's table, not in the attribute.** The open item said an
+    attribute "reaches only the pages it is applied to", which is true and is the second-order
+    effect. The first-order fact is that all three `Applies to` cells enumerate surfaces Nami
+    authors, so the partition stopped being total the moment ADR-0027 parameter G made the
+    interaction pages the consumer's, on the same date this ADR was accepted. Framing it as an
+    attribute problem would have produced a fix that a fourth unanticipated response class defeats.
+  * **The three options on the checklist omitted the one this repository already had a precedent
+    for.** They were documentation, a default, or a startup *warning*. ADR-0043's
+    `hsts-enabled-outside-dev` row already asserts that a middleware **is registered**, so a
+    startup *failure* on registration was available, precedented, and unlisted. Parameter K takes
+    the default and that failure together, because each closes a different half: the default
+    covers a response the middleware saw and could not classify, and the row covers a consumer who
+    never registered the middleware at all.
 * **Evidence, and the class of each source.**
   * The `form_post` template was read from the shipped assembly
     `lib/net10.0/OpenIddict.Server.AspNetCore.dll` at **7.5.0**, the pinned version (ADR-0061),
@@ -421,17 +550,27 @@ class ADR-0021 requires to fail CI before production. Recording that seam in the
     policy every time, and the document it defers to carries only a checklist row naming the same
     three headers again. So this ADR is original to this repository rather than an import, and
     there was no corpus value to copy.
+  * **The corpus does not fix the mechanism either**, read 2026-08-02 for parameter K. Its Phase
+    05 UI document lists the item as an attribute, both in its file listing and in its task table,
+    and says the attribute is applied to the whole UI. Its Phase 05 native-versus-build audit
+    classifies the same item as "Standard **middleware/attribute**", one phrase covering both,
+    and defers the policy detail. So the two-mechanism ambiguity this repository carried was
+    inherited rather than introduced, and neither source is authority for one over the other.
+    Note the corpus's "applied to the whole UI" was a true total in a world where Nami wrote every
+    page; ADR-0027 parameter G is what made the same sentence partial.
 * **Related decisions:** ADR-0072 (parameter C, which owns the policy's strictness, and parameter
   E, whose no-inline rule this ADR applies to style as well as script), ADR-0043 (the startup
-  self-check that carries the two invariants in parameter I, and whose cookie row already
+  self-check that carries the two invariants in parameter I and the third in parameter K, whose
+  `hsts-enabled-outside-dev` row is the precedent for that third one, and whose cookie row already
   reconciles with `form_post`), ADR-0014 and ADR-0019 (the de-scoped `check_session_iframe` and
   the dropped front-channel iframe, which together are why parameter C costs no capability),
   ADR-0073 (the edge posture whose parameter A does not list browser-facing headers, and whose
   parameter C fallback is why the application must emit them), ADR-0076 (the precedent this ADR
   follows three times: the application emits the header itself, operator-owned parameters are
   stated as such, and enforcement lands in ADR-0043), ADR-0021 (the seam mechanism the `form_post`
-  hash is registered under), ADR-0027 (the meta-package path where a consumer writes their own
-  host), ADR-0031 (the configuration precedence a consumer overrides through, and which is why
+  hash is registered under), ADR-0027 (parameter A, the meta-package path where a consumer writes
+  their own host, and parameter G, which makes the interaction pages the consumer's too and is
+  what parameter K exists for), ADR-0031 (the configuration precedence a consumer overrides through, and which is why
   the invariants guard the instance rather than the default), ADR-0035 (the self-service
   registration guardrail on `redirect_uri` that parameter E relies on, and whose limits parameter
   E states), ADR-0048 (the introspection and revocation endpoints the API profile covers),
@@ -443,6 +582,13 @@ class ADR-0021 requires to fail CI before production. Recording that seam in the
   ("no ADR in this repository owns the policy values"), design 20 section 10 (the open item), and
   architecture 13 section 7 ("decided nowhere"). Reconciling them is the companion change to this
   one and is deliberately separate, so this ADR can be read before the layers that cite it move.
+* **What parameter K closes, on 2026-08-02, and it is a different set.** ADR-0027 parameter G's
+  second open consequence, and the Pre-GA checklist entry it was routed to, both end. Four
+  documents move with it and are again a deliberately separate change: design 11 section 7.4 and
+  its section 1 table, which name the attribute as the thing that applies the profile; design 16,
+  which reuses that posture in two places; and architecture 13 section 7, which says this ADR
+  "lands two invariants in ADR-0043".
 * Authored 2026-08-01 for this repository, prompted by the ownership gap the design and
-  architecture layers had recorded in four places. Third-party technologies and specifications are
-  named factually for identification; no commercial competitor is named.
+  architecture layers had recorded in four places. **Parameter K added 2026-08-02**, closing an
+  item ADR-0027 recorded and the Pre-GA checklist carried. Third-party technologies and
+  specifications are named factually for identification; no commercial competitor is named.

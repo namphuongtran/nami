@@ -134,18 +134,23 @@ ADR-0076); no client-credentials client is registered with the `admin-api` scope
 per-client endpoint, grant-type, response-type, scope, resource, and audience checks all
 stay on (ADR-0001, ADR-0035); the UI response profile's `script-src` and `style-src` carry
 no `unsafe-*` source and no `nonce-` source in **any** environment, Development included;
-and every browser-facing response profile sets `frame-ancestors 'none'` with
-`X-Frame-Options: DENY` (the last two from ADR-0091). Fifteen in total, and the list here
-is a restatement: **ADR-0043's table is the one to diff against**.
+every browser-facing response profile sets `frame-ancestors 'none'` with
+`X-Frame-Options: DENY`; and the browser-facing response-header middleware is registered in
+the pipeline in every environment (the last three from ADR-0091). Sixteen in total, and the
+list here is a restatement: **ADR-0043's table is the one to diff against**.
 
 This enumeration already carried a warning that it had fallen behind once, and on
 2026-08-01 it was found behind **again**: it still said eleven while ADR-0043's table held
 twelve, having missed `no-app-only-admin` entirely. Which drift the earlier warning referred
-to is not recorded and is deliberately not guessed at here. The two ADR-0091 rows are the
+to is not recorded and is deliberately not guessed at here. The two ADR-0091 rows were the
 first addition to reach this page **in the same change as the ADR that added them**, which
 is the discipline the warning asks for rather than a third instance of the drift, and the
-count above was produced by enumerating ADR-0043's table rather than by adding two to the
-previous figure. A restatement that drifts is worse than a pointer, so treat the count as
+count was produced by enumerating ADR-0043's table rather than by adding two to the previous
+figure. **`response-headers-registered` is the second addition to arrive that way, on
+2026-08-02**, and the count above was re-enumerated rather than incremented. It is the one
+row in the set that asserts nothing about a value: it asks whether the middleware exists,
+because ADR-0091 parameter K makes that middleware the only writer of a response profile and
+the two rows before it are blind to a response that received no profile at all. A restatement that drifts is worse than a pointer, so treat the count as
 the thing most likely to be stale on this page. It does **not** assert access-token
 encryption, which is intentionally off by design (ADR-0005).
 

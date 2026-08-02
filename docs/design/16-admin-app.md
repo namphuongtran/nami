@@ -225,6 +225,13 @@ product. Everything else on this surface is ASP.NET Core MVC, Razor, and Bootstr
   from [11](11-login-consent-ui.md) section 7.4, which now carries the full policy rather than
   half of it. This console takes the **UI** profile of ADR-0091 parameter B, the same one as the
   end-user surface; open-redirect guard (`IsLocalUrl`/allow-list) on every `returnUrl`.
+  **Since ADR-0091 parameter K (2026-08-02) the attribute is not what puts the profile there.**
+  The header middleware writes on every response and the attribute only selects, with the UI
+  profile as the default when nothing selects, which for this console means the attribute and the
+  default agree and a page that forgets it is still covered. That is worth stating rather than
+  reading as redundancy: the reason parameter K exists is a surface where the two would **not**
+  agree, an embedder's own pages under ADR-0027 parameter G, and this console is simply on the
+  side of the split where the old mechanism happened to be sufficient.
 - **No secret/key display;** a newly created secret is shown once and not persisted
   client-side; the live-preview never executes tenant-supplied CSS.
 - **Back-channel logout receiver** ends the console session when the IdP revokes it.
