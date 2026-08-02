@@ -37,7 +37,15 @@ Nami is an open-source, multi-tenant OAuth 2.0 / OpenID Connect identity provide
 servers. It is **pre-alpha**: the architecture is fully designed and its risk spikes were
 validated in a separate design corpus, while this repository holds the decision records,
 governance, and docs scaffolding. `src/` began on 2026-08-02 with
-`Nami.Identity.Abstractions`; `tests/` is still a placeholder.
+`Nami.Identity.Abstractions`, and `tests/` on the same day with
+`Nami.Identity.ArchitectureTests`.
+
+**Starting a session with no other instruction? Read
+[`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md) first.** It holds what is built next and what
+blocks it, what is owed with the trigger that comes due, and what has not been verified. It
+exists because that answer used to live only in a conversation and did not survive one. It
+is a queue pointing at owners, never an authority; a row disagreeing with the ADR or design
+it cites is a bug in the row.
 
 ## Commands
 
