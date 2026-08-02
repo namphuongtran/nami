@@ -88,6 +88,33 @@ It is therefore a guarantee about what is **distributed**, not a guarantee that 
 Category X is touched anywhere. The release bundle's own `LICENSE` and `NOTICE` are still
 checked at adopt time (see Confirmation).
 
+**Corrected 2026-08-02: the limit stated above is real but it is not the load-bearing one, and
+the paragraph above guarded the wrong flank.** It warned about a Category X component being
+*used* in development. The limit that matters is that the same ASF policy **expressly permits
+Category B in the very artifact this decision consumes**, read at the same source on 2026-08-02:
+*"Any Category B licensed works may be included in binary-only form in Apache Software
+Foundation convenience binaries."* Category B is weak copyleft, and ADR-0026 section A is
+stricter than Category X: it forbids GPL and AGPL outright, but it also does not list EPL, CDDL,
+OFL, CC-BY-SA or Apache-1.1 in any of its three buckets. So the ASF guarantee eliminates exactly
+the class that was already banned and leaves untouched the class that needs a decision. The
+adopt-time read in Confirmation was therefore not a formality, and doing it early proved it:
+JMeter 5.6.3's own release `LICENSE` declares fourteen SPDX identifiers, of which **nine
+components sit outside section A's permissive set**, enumerated with their identifiers in
+[`docs/DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 2.1.
+
+**This does not reverse the decision, and the reason is the classification rather than the
+licences.** Nami runs an unmodified JMeter as a separate process against its own service and
+ships none of it, so every one of the nine is answerable as execution rather than conveying,
+which is the distinction ADR-0026 section C draws and enforces with the `execute-only` boundary
+check. What does change is the question put to Legal before GA, which was written as an
+inventory confirmation and is now a named-component judgement; the Pre-GA checklist entry
+carries the corrected wording. It should also be said plainly that **no candidate here would have
+survived this test better**, because none of them was ever tested on it: a packaged load tool
+bundles a hundred-odd components whoever publishes it, and this enumeration was performed on the
+chosen option only. What the options above were separated on is a different and worse defect,
+one candidate's own licence (option E) and another's proprietary companion module (option D),
+and neither finding says anything about the bundle behind an option that passed.
+
 **The open-model requirement is met in core, not by a plugin.** Verified present in
 `apache/jmeter` `master` on 2026-08-01: `PreciseThroughputTimer.java`, in the package
 `org.apache.jmeter.timers.poissonarrivals`, and `ConstantThroughputTimer.java`, both under
@@ -112,8 +139,11 @@ that does not exist.
 
 ### Consequences
 
-* Good, because the license position is structural, so it does not depend on anyone repeating
-  the check that this ADR had to perform twice before finding a clean candidate.
+* Good, because the license position is structural **against Category X**, so the failure that
+  disqualified two candidates cannot recur here without anyone repeating the check. Qualified
+  2026-08-02: it is structural against that class only, and the bundle carries nine components
+  outside section A's permissive set that the `execute-only` boundary, not the ASF policy, is
+  what answers.
 * Good, because the open-model property is satisfied by core rather than by a plugin, removing
   a companion-dependency surface.
 * Good, because the tool now has a row in the ADR-0061 stack table and a marked ADR, so the
@@ -136,15 +166,22 @@ that does not exist.
   source, and the date.
 * **M1 items**, both stated as open rather than guessed: the mechanism that asserts percentiles
   from the JMeter result file and fails the build, and whether the test plan is authored through
-  a code-level DSL instead of raw XML. Also at M1, read the shipped release's `LICENSE` and
-  `NOTICE` rather than relying on the ASF policy alone.
+  a code-level DSL instead of raw XML.
+* **The shipped release's own `LICENSE` and `NOTICE` were read on 2026-08-02, ahead of M1 rather
+  than at it**, at version 5.6.3, and the result is in
+  [`docs/DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 2.1: nine bundled components
+  outside ADR-0026 section A's permissive set, no AGPL. This item was written because relying on
+  the ASF policy alone is not enough, and it was right. It does not close: at M1 the read is
+  repeated against whatever version is actually pinned, and what that read has to produce is a
+  **diff** against section 2.1 rather than a fresh investigation.
 
 ## Pros and Cons of the Options
 
 ### A. Apache JMeter (chosen)
 
 * Good, because ASF policy forbids distributing Category X components, making the licence
-  position structural.
+  position structural against that class. It permits Category B in a convenience binary, so the
+  bundle still had to be enumerated, and was (section 2.1 of the licence record).
 * Good, because the open arrival-rate model is in core (`PreciseThroughputTimer`, verified).
 * Good, because extractors express correlated multi-step OAuth flows natively.
 * Bad, because it adds a JVM to CI.

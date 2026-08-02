@@ -339,7 +339,7 @@ Not verified offline, to be confirmed by the ADR-0026 license-scan gate:
 
 | Component | Purpose | License as stated | ADR |
 |---|---|---|---|
-| OIDF conformance suite | OpenID conformance gate (self-hosted container image, not a compiled dependency) | **MIT**, read at `openid/conformance-suite` `LICENSE.txt` on 2026-08-01 | ADR-0027 |
+| OIDF conformance suite | OpenID conformance gate (self-hosted container image, not a compiled dependency) | **MIT** at the root, read at `openid/conformance-suite` `LICENSE.txt` on 2026-08-01. The bundle behind that root licence is **not** enumerated: the image declares its composition in three places (`pom.xml`, `package-lock.json`, and a `Dockerfile` base image), and the read is owed when a version is pinned. A root licence is not a bundle, which cost this project a wrong answer twice | ADR-0027 |
 | (no assertion library) | Assertions come from `xunit.v3.assert` itself | n/a, no package is taken (ADR-0060, 2026-08-02). Two candidates stay verified in [`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 5 against a possible reversal | ADR-0060, ADR-0026 |
 
 > **Patterns applied (ADR-0066).** Behavior-first tests as an application of Separation

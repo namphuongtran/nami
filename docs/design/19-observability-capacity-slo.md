@@ -556,7 +556,7 @@ confirmed by the ADR-0026 license-scan gate when the solution lands:
 | Library | Purpose | License as stated | ADR |
 |---|---|---|---|
 | `Microsoft.Extensions.Compliance.Redaction` | The redaction primitives the pipeline calls | MIT (not in the local cache) | ADR-0022 |
-| Apache JMeter | Load-test tool, open arrival-rate model, executed as an external binary | **Apache-2.0**, read at `apache/jmeter` `master` `LICENSE` on 2026-08-01 | ADR-0078 |
+| Apache JMeter | Load-test tool, open arrival-rate model, executed as an external binary | **Apache-2.0** at the root, verified offline on 2026-08-02 in the released `apache-jmeter-5.6.3.tgz`, whose own `LICENSE` declares fourteen SPDX identifiers across the bundle; the nine components outside the permissive set are enumerated in [`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 2.1 | ADR-0078 |
 
 > **JMeter is an external tool, so it sits outside the ADR-0026 section C gate by
 > construction.** That gate reads the license of every package from the NuGet restore graph;
@@ -568,6 +568,15 @@ confirmed by the ADR-0026 license-scan gate when the solution lands:
 > Foundation project, whose third-party policy forbids distributing Category X components
 > (GPL and AGPL among them) in a release. ADR-0078 records why the two previously named tools
 > failed here and how each was found.
+>
+> **Narrowed 2026-08-02.** The ASF assurance covers Category X only; the same policy permits
+> Category B, which is weak copyleft, in a convenience binary. Enumerating the 5.6.3 release
+> bundle found **nine components outside the ADR-0026 section A permissive set**, none of them
+> AGPL. What answers them is the `execute-only` classification, since Nami runs an unmodified
+> binary and ships none of it, and the components are listed by name in section 2.1 of the
+> licence record. The row above is therefore verified offline and the sentence introducing this
+> table no longer describes it; the license-scan gate still cannot confirm it, for the reason
+> this note opens with.
 
 Dev-stack container images, licenses as verified in ADR-0063 on 2026-07-18 and not
 re-verified here:

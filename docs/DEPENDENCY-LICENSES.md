@@ -37,12 +37,29 @@ shipped inside any Nami artifact. Bundling any of them into a distribution artif
 reference host image, the Helm chart, the NuGet meta-package, the `dotnet new` template) would
 change the question from execution to conveying, and would need a new decision.
 
-| Tool | Role | Licence | Boundary | Read at | Date | Decision |
-|---|---|---|---|---|---|---|
-| Apache JMeter | Load and soak testing, the SLO release gate | Apache-2.0 | `execute-only` | `apache/jmeter` `master` `LICENSE` | 2026-08-01 | [ADR-0078](adr/0078-load-test-tooling.md) |
-| OIDF conformance suite | OpenID certification profiles, self-hosted image | MIT | `execute-only` | `openid/conformance-suite` `LICENSE.txt` (GitLab, `master`) | 2026-08-01 | [ADR-0027](adr/0027-packaging-and-distribution.md) |
-| cosign (sigstore) | Keyless signing and attestation of the image, the SBOM and the build provenance | Apache-2.0 | `execute-only` | `sigstore/cosign` `LICENSE`, default branch | 2026-08-02 | [ADR-0051](adr/0051-release-supply-chain-integrity.md) |
-| CycloneDX for .NET | The per-release SBOM | Apache-2.0 | `execute-only` | `CycloneDX/cyclonedx-dotnet` `LICENSE`, default branch | 2026-08-02 | [ADR-0026](adr/0026-dependency-license-policy.md) section C |
+| Tool | Version read | Role | Licence | Boundary | Read at | Date | Decision |
+|---|---|---|---|---|---|---|---|
+| Apache JMeter | **5.6.3** | Load and soak testing, the SLO release gate | Apache-2.0 at the root, over a bundle carrying thirteen further SPDX identifiers, enumerated in section 2.1 | `execute-only` | the `LICENSE` and `licenses/` tree inside the released `apache-jmeter-5.6.3.tgz` | 2026-08-02 | [ADR-0078](adr/0078-load-test-tooling.md) |
+| OIDF conformance suite | **not pinned** | OpenID certification profiles, self-hosted image | MIT at the root, bundle not enumerated | `execute-only` | `openid/conformance-suite` `LICENSE.txt` (GitLab, `master`) | 2026-08-01 | [ADR-0027](adr/0027-packaging-and-distribution.md) |
+| cosign (sigstore) | **not pinned** | Keyless signing and attestation of the image, the SBOM and the build provenance | Apache-2.0 at the root, bundle not enumerated | `execute-only` | `sigstore/cosign` `LICENSE`, default branch | 2026-08-02 | [ADR-0051](adr/0051-release-supply-chain-integrity.md) |
+| CycloneDX for .NET | **not pinned** | The per-release SBOM | Apache-2.0 at the root, bundle not enumerated | `execute-only` | `CycloneDX/cyclonedx-dotnet` `LICENSE`, default branch | 2026-08-02 | [ADR-0026](adr/0026-dependency-license-policy.md) section C |
+
+**The `Version read` column was added on 2026-08-02, and three of its four cells say `not
+pinned` because that is true, not because the reading was lazy.** Section 6 states the rule
+that a tool enters this section "in the change that first runs it, when there is a pinned
+version to read a licence against instead of a default branch". That rule was written two
+commits *after* two of the rows above were added (`d95acaf` after `91e47a6`, both on
+2026-08-02), so it was never applied to the incumbents, and nothing in
+`.github/workflows/ci.yml` runs any of the four today. The rows stay, because the check
+ADR-0026 section C describes reads this table and a tool absent from it is the exact failure
+this file exists for. What changes is that the table now distinguishes a licence read against
+something that will actually be executed from one read against a branch that moves. **A row
+with no version can be neither re-verified nor bundle-enumerated.** Until this change, section 5
+was the only table in this file carrying a version column, and it is the one recording packages
+this project deliberately did **not** adopt: the licences read most precisely were the ones
+behind a decision to say no, while the inventory the boundary check actually reads had none.
+Sections 3, 4 and 6 still have no version column either; that is worth less there, because none
+of them carries a `Boundary` classification whose correctness depends on a composition.
 
 The CycloneDX row is worth one sentence, because it is the blind spot wearing a disguise: it is
 installed as a `dotnet tool`, so it *is* a NuGet package and still appears in no project's restore
@@ -53,17 +70,97 @@ tool classified `execute-only` appears in the file list of a published artifact,
 when an executable used in the pipeline is **missing from this table**. The second direction is
 the one that catches the case this whole file exists for: a tool nobody recorded is exactly
 what the restore-graph scan reports clean on, so an inventory with no completeness check is
-another control that reads as coverage while inspecting nothing. Both tools above are
-`execute-only`; neither is permissive-only by luck, but the classification is what makes the
-distinction enforceable rather than a sentence someone has to remember.
+another control that reads as coverage while inspecting nothing. **All four rows above are
+`execute-only`, and the classification is load-bearing rather than a formality**: section 2.1
+enumerates one of the four bundles and finds nine components the permissive set does not cover,
+every one of which is answerable as execution rather than conveying and by nothing else.
 
-JMeter carries a second, structural assurance worth recording: it is an Apache Software
-Foundation project, and the ASF third-party policy states that "Apache projects may not
-distribute Category X licensed components, in source or binary form; in ASF source code or in
-convenience binaries" (read at `apache.org/legal/resolved.html`, 2026-08-01), with GPL 1/2/3 and
-AGPL 3 named as Category X. The limit of that assurance is stated in ADR-0078: it governs what
-is distributed, not what may be relied on during development, so the shipped release's own
-`LICENSE` and `NOTICE` are still read at adopt time.
+JMeter carries a second, structural assurance, and it is narrower than it reads. The ASF
+third-party policy states that "Apache projects may not distribute Category X licensed
+components, in source or binary form; in ASF source code or in convenience binaries" (read at
+`apache.org/legal/resolved.html`, 2026-08-01), with GPL 1/2/3 and AGPL 3 named as Category X.
+**The same policy expressly permits Category B**, read at the same source on 2026-08-02: "Any
+Category B licensed works may be included in binary-only form in Apache Software Foundation
+convenience binaries." Category B is where weak copyleft sits, and ADR-0026 section A is
+stricter than Category X, so the ASF guarantee rules out precisely the class Nami forbids
+outright and permits the class Nami routes through Legal. ADR-0078 stated a limit on this
+argument, but the wrong one: it warned that a Category X component may be *relied on* during
+development, and said nothing about Category B being *distributed* in the binary, which is what
+section 2.1 found nine of.
+
+### 2.1 What the JMeter bundle actually contains, enumerated at 5.6.3
+
+Section 7's composition rule is owed to every `execute-only` row. This is the first row it has
+been paid on, and it is paid against a pinned release rather than a branch. The enumeration cost
+one archive, not a hundred lookups: `apache-jmeter-5.6.3.tgz` ships a `licenses/` tree carrying
+the licence text of each bundled component under its group and version, and its root `LICENSE`
+groups every component under an SPDX identifier. **Fourteen identifiers appear; six are inside
+ADR-0026 section A's permissive set and eight are not.**
+
+The split is by the identifier **as section A writes it**, and one case has to be called out or
+the count is not reproducible. `MIT-0` is counted inside although section A names only `MIT`: the
+text bundled here is headed "MIT No Attribution" and carries the grant and the warranty
+disclaimer without the notice-retention clause, so it cannot be narrower than the licence section
+A does name. `Apache-1.1` is counted outside on the same strict reading, and it is left outside
+rather than waved through, because a name-based allow-list that starts accepting neighbouring
+versions stops being checkable.
+
+Two other places state part of the composition and neither is sufficient alone.
+`src/dist/src/dist/expected_release_jars.csv`, read at tag `rel/v5.6.3`, lists **140 jars** and
+is verified against the release archive by an upstream Gradle task described as "Verifies if
+binary release archive contains the expected set of external jars"
+(`src/dist/build.gradle.kts:185`), wired into `check` at `:276-278`. It covers jars only, while
+the root `LICENSE` also declares bundled JavaScript, CSS and fonts used by the HTML report
+(`bootstrap`, `jquery`, `datatables`, `flot`, `font-awesome`). **A jar manifest is not a
+composition**: two of the nine components listed below appear nowhere in that CSV, checked by
+searching it for each of the nine on 2026-08-02, and they are the two that are not jars,
+`openiconlibrary` and `font-awesome-font`. Taking the machine-checked list for the whole would
+have dropped exactly the `CC-BY-SA-3.0` and `OFL-1.1` findings, which is the more interesting
+failure, since a manifest that upstream CI enforces is the one a reader is most likely to trust.
+
+The nine components outside the permissive set, with the identifier quoted as the release's own
+`LICENSE` writes it:
+
+| SPDX, as the release declares it | Component | Where section A puts it |
+|---|---|---|
+| `MPL-2.0` | `net.sf.saxon:Saxon-HE:11.6`, `org.mozilla:rhino:1.7.14` | case-by-case, needing Architect and Legal approval |
+| `CDDL-1.0 AND GPL-2.0-or-later WITH Classpath-exception-2.0` | `javax.mail:mail:1.5.0-b01` | the GPL leg is in the forbidden bucket; the classpath exception is not addressed |
+| `EPL-1.0` | `junit:junit:4.13.2` | no bucket |
+| `CDDL-1.0` | `com.sun.activation:javax.activation:1.2.0` | no bucket |
+| `CC-BY-SA-3.0` | `openiconlibrary:openiconlibrary:` | no bucket |
+| `OFL-1.1` | `font-awesome-font:font-awesome-font:4.2.0` | no bucket |
+| `Apache-1.1` | `jcharts:jcharts:0.7.5` | no bucket; section A names Apache-2.0, and 1.1 is a different licence |
+| Indiana University Extreme! Lab Software License | `io.github.x-stream:mxparser:1.2.2` | no bucket |
+
+**There is no AGPL**, verified by searching the release's `LICENSE` and `NOTICE` for the word
+Affero on 2026-08-02 and finding no occurrence. That is worth stating because AGPL is what
+removed the previous load tool.
+
+Three things follow, and the last is the one that changes what a person has to do.
+
+* **The `execute-only` classification answers all nine, and now demonstrably rather than by
+  assumption.** Nami runs an unmodified JMeter as a separate process against its own service and
+  ships none of it, so each of the nine is answerable as execution rather than conveying, which
+  is the same disposition section 6 records for OWASP ZAP. Section 4 already warned that an
+  `execute-only` classification "settles nothing until the composition of the thing being
+  executed is known". For this row the composition is now known.
+* **Six of the nine fall into none of section A's three buckets.** Section A allows a named set,
+  routes MPL-2.0 and LGPL through Architect and Legal, and forbids commercial, viral copyleft and
+  source-available. `EPL-1.0`, `CDDL-1.0`, `CC-BY-SA-3.0`, `OFL-1.1`, `Apache-1.1` and the
+  Indiana University licence are in none of the three. That is a gap in the policy rather than a
+  fault in the tool, and it is recorded here and not patched here, because section A belongs to
+  ADR-0026.
+* **The reason recorded for dropping the previous load tool no longer describes this project's
+  posture.** k6 was removed "rather than carved out" because it is AGPL, and the tool chosen in
+  its place bundles a `GPL-2.0-or-later WITH Classpath-exception-2.0` leg plus four other
+  copyleft licences, answerable only by the execute-versus-convey carve-out that ADR-0026
+  section C does provide and does check. The decision is not inconsistent; the sentence claiming
+  no copyleft question remained open was, and it is corrected in
+  [`PRE-GA-RATIFICATION-CHECKLIST.md`](PRE-GA-RATIFICATION-CHECKLIST.md).
+
+**This enumeration expires when the pinned version changes.** ADR-0078 already schedules the
+read at M1; what it now inherits is a method and a baseline rather than a research task, and a
+diff against this table is what the M1 read has to produce.
 
 ## 3. Named exceptions under ADR-0026
 
@@ -172,6 +269,14 @@ subject is executables the pipeline actually runs. **A tool moves from this sect
 in the change that first runs it**, when there is a pinned version to read a licence against
 instead of a default branch.
 
+**That rule was written after the rows it would have held back, and saying so is cheaper than
+letting a reader discover it.** All four of section 2's rows predate it, none is run by any
+workflow that exists today, and until 2026-08-02 none carried a version at all, so applying the
+rule literally would empty a table whose whole purpose is to be over-complete. The rule stands
+for what comes next, section 2's `Version read` column records where each incumbent actually
+stands, and **the promotion is what owes the bundle enumeration**: a row arriving here with a
+pinned version and no composition read is the same unchecked classification in a newer table.
+
 **One stage has no row here at all, and its absence is a decision rather than a gap.**
 ADR-0092 section 6 covers GitHub Actions workflow definitions with two rules inside the
 existing `scripts/check-adrs.sh` guardrail and takes **no tool**, so there is no licence to
@@ -246,9 +351,23 @@ analyzer choice.
   looks at, then read the licence of each bundled part that the intended use actually exercises.
   Section 6 carries the first worked example, on OWASP ZAP, where the root licence is Apache-2.0
   and seven of thirty bundled components are not. This is owed to every `execute-only` row in
-  section 2: all four were classified on a root licence and none has had its bundled parts
-  enumerated. Do it at adopt time, when the exact released version is known, and record the
-  enumeration alongside the licence.
+  section 2. **One of the four has been paid, at a pinned version, in section 2.1**, and it found
+  nine components outside the permissive set behind an Apache-2.0 root. The other three are owed
+  at promotion, when a version is pinned; **where each one declares its composition was located
+  on 2026-08-02 so that the read is a read and not a search**, and the three are not the same
+  shape:
+  * **cosign** publishes an SBOM per released artifact as a release asset, verified at `v3.1.2`
+    (`cosign-linux-amd64_3.1.2_linux_amd64.sbom.json`). The enumeration is a download.
+  * **The OIDF conformance suite** declares its composition in **three** places, not one:
+    `pom.xml` for the Java side, `package-lock.json` for the frontend, and a base image in its
+    `Dockerfile` (`FROM eclipse-temurin:21`, read at `master`). A base image is itself a bundle,
+    so this row nests.
+  * **CycloneDX for .NET** declares its composition **nowhere a package reader would look**: the
+    6.2.0 `.nuspec` carries `<license type="expression">Apache-2.0</license>` and **no
+    `<dependencies>` element at all**, because a `dotnet tool` ships self-contained. The
+    composition is the assembly set inside the package; at source it is the project's own
+    `Directory.Packages.props`. This is the disguise the section 2 note describes, one layer
+    deeper than that note goes.
 * Re-verify at adopt time. ADR-0026 already says a licence "can change again in either
   direction", and this project has now been wrong in both directions: a commercial package
   recorded as permissive, and a permissive package recorded as the wrong permissive licence.
