@@ -144,8 +144,13 @@ Legal and OSS constraints; the CI guardrail and the local hook enforce parts of 
 
 - **DCO sign-off on every commit** (`git commit -s`); this repo uses the DCO, not a CLA.
 - **Conventional Commits**; the changelog is generated from them.
-- Branch for changes. **Commit or push only when asked.** One ADR per commit when
-  authoring or importing ADRs.
+- **The maintainer works directly on `main`** (2026-08-02, replacing a branch-to-PR-to-merge
+  flow that ran for four increments). Commit and push when an increment is finished and its
+  gates are green, not before and not spontaneously: **the plan still needs approval before
+  the work starts**, and it is only the branch and the pull request that stopped being
+  required. An outside contribution goes through a pull request as
+  [`CONTRIBUTING.md`](CONTRIBUTING.md) describes, and nothing here changes that. One ADR per
+  commit when authoring or importing ADRs.
 - **ADR-0065 is the authority on naming and coding conventions** (Microsoft conventions
   adopted by reference, with the Nami tailoring). Quick reference: assemblies under
   `Nami.Identity.*`; config keys `Nami:X` (env `Nami__X`), env alias `NAMI_X`.
