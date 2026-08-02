@@ -157,27 +157,31 @@ had narrowed the assertion-library constraint to "MIT or BSD", which would have 
 Apache-2.0 candidate above for no reason the policy gives. Those were corrected in the same
 change as this section.
 
-## 6. Pipeline scan tools, verified ahead of the decision
+## 6. Pipeline scan tools
 
-[ADR-0062](adr/0062-owasp-asvs-security-baseline.md) leaves the analyzer choice open ("The
-specific analyzers are an open, replaceable choice, not pinned here"), and design
-[21](design/21-cicd-and-deployment.md) writes most of the CD scan stages as slash-alternatives.
-None of the tools below is adopted. They are verified first anyway, for two reasons. ADR-0026
-section C's second limb requires an executable used in the pipeline to be in an inventory at all,
-and these were in none. And a licence is an **input** to the choice rather than a consequence of
-it: two of the nine turned out not to be permissive, which removes them from the shortlist before
-anyone weighs their merits.
+These rows were read on 2026-08-02 while
+[ADR-0062](adr/0062-owasp-asvs-security-baseline.md)'s analyzer choice was still open, and the
+reading is what closed it: a licence is an **input** to that choice rather than a consequence of
+it, and two of the tools turned out not to be permissive before anyone weighed their merits.
+[ADR-0092](adr/0092-ci-security-scan-tooling.md) then pinned each stage the same day, so the
+`Status` column below records the outcome rather than a shortlist.
+
+Nothing here has moved to section 2 yet, and that is deliberate rather than an oversight. Section
+2 is the inventory ADR-0026 section C's second limb makes CI check for completeness, and its
+subject is executables the pipeline actually runs. **A tool moves from this section to section 2
+in the change that first runs it**, when there is a pinned version to read a licence against
+instead of a default branch.
 
 | Tool | Role in the pipeline | Licence | Read at | Date | Status |
 |---|---|---|---|---|---|
-| Trivy | Dependency scan and container scan | Apache-2.0 | `aquasecurity/trivy` `LICENSE`, default branch | 2026-08-02 | Verified, choice open |
-| Grype | Container scan, the alternative to Trivy | Apache-2.0 | `anchore/grype` `LICENSE`, default branch | 2026-08-02 | Verified, choice open |
-| OWASP Dependency-Check | Dependency scan, the alternative to Trivy | Apache-2.0 | `dependency-check/DependencyCheck` `LICENSE.txt`, default branch | 2026-08-02 | Verified, choice open |
-| gitleaks | Secret scan | MIT | `gitleaks/gitleaks` `LICENSE`, default branch | 2026-08-02 | Verified. No ADR owns it, see below |
-| OWASP ZAP | DAST pass against staging | Apache-2.0 at the root, but the distributed package bundles thirty third-party components and seven are outside section A's permissive set | `zaproxy/zaproxy` `LICENSE` and `LEGALNOTICE.md`, default branch | 2026-08-02 | Verified, choice open. Answerable only as `execute-only` |
-| Semgrep | SAST | **LGPL-2.1**, identically at the root `LICENSE` and at `cli/LICENSE` | `semgrep/semgrep`, `develop` | 2026-08-02 | Not permissive; section A routes LGPL through the exception process with Legal |
+| Trivy | Dependency scan and container scan | Apache-2.0 | `aquasecurity/trivy` `LICENSE`, default branch | 2026-08-02 | **Chosen for both stages** (ADR-0092) |
+| Grype | Container scan, the alternative to Trivy | Apache-2.0 | `anchore/grype` `LICENSE`, default branch | 2026-08-02 | Verified alternative, not chosen |
+| OWASP Dependency-Check | Dependency scan, the alternative to Trivy | Apache-2.0 | `dependency-check/DependencyCheck` `LICENSE.txt`, default branch | 2026-08-02 | Verified alternative, not chosen |
+| gitleaks | Secret scan | MIT | `gitleaks/gitleaks` `LICENSE`, default branch | 2026-08-02 | **Chosen** (ADR-0092), which is also now its owning decision |
+| OWASP ZAP | DAST pass against staging | Apache-2.0 at the root, but the distributed package bundles thirty third-party components and seven are outside section A's permissive set | `zaproxy/zaproxy` `LICENSE` and `LEGALNOTICE.md`, default branch | 2026-08-02 | **Chosen** (ADR-0092), answerable only as `execute-only` |
+| Semgrep | SAST | **LGPL-2.1**, identically at the root `LICENSE` and at `cli/LICENSE` | `semgrep/semgrep`, `develop` | 2026-08-02 | Not chosen. Kept as ADR-0092's named reversal candidate; section A routes LGPL through the exception process with Legal |
 | CodeQL, the query packs | The queries, not the thing that executes them | MIT | `github/codeql` `LICENSE`, default branch | 2026-08-02 | Verified, and not the artifact that matters |
-| CodeQL CLI, the engine | SAST | **GitHub CodeQL Terms and Conditions**, a proprietary licence and not OSI-approved | `github/codeql-cli-binaries` `LICENSE.md`, default branch | 2026-08-02 | Fails section A as a dual licence with a paid tier |
+| CodeQL CLI, the engine | SAST | **GitHub CodeQL Terms and Conditions**, a proprietary licence and not OSI-approved | `github/codeql-cli-binaries` `LICENSE.md`, default branch | 2026-08-02 | Not taken. Fails section A as a dual licence with a paid tier, and ADR-0092 rejects it on the host coupling as well |
 
 Four details, quoted, because each one changes what the pending decision can choose from.
 

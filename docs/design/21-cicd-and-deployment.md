@@ -65,7 +65,7 @@ member.
 4. OpenID conformance on the reference host (Basic, Config, Form Post profiles).
 5. License-scan (permissive-only, ADR-0026) plus the CycloneDX SBOM.
 6. A reproducible, deterministic build.
-7. Container-scan: the base image is digest-pinned and passes a Trivy/Grype vulnerability scan.
+7. Container-scan: the base image is digest-pinned and passes a **Trivy** vulnerability scan (ADR-0092; Grype was the alternative and stays verified, not chosen).
 
 These run alongside the foundational gates already owned by [01](01-foundations.md)
 (build, test, license-scan, `PublicApiAnalyzers`, ArchUnitNET, `dotnet format
@@ -94,9 +94,22 @@ and with more access than the image the paragraph above pins. The rule was adopt
 floating major tag on the markdown-lint action moved and silently changed the linter
 version out from under the version this repository documents for local use.
 
-The CD scans are SAST (CodeQL/Semgrep), a **blocking** dependency scan (Trivy/OWASP
-Dependency-Check), a gitleaks secret scan, the container scan (Trivy/Grype), and a DAST
-pass (OWASP ZAP) on staging. A config test forbids dangerous toggles such as
+The CD scans are fixed by [ADR-0092](../adr/0092-ci-security-scan-tooling.md), which
+replaced the slash-alternatives this section used to carry. **SAST runs no third-party
+engine**: it is the .NET SDK's own `AnalysisLevelSecurity` rule set at all-plus-error,
+which is where the CA3xxx taint-analysis family lives, so the stage costs no dependency
+and no licence and an adopter with a private fork runs the same gate. The **blocking**
+dependency scan and the container scan are both **Trivy**, one tool for two stages so
+there is one licence to re-verify rather than two. Secrets are **gitleaks**, whose owning
+decision is now that ADR rather than this document. DAST is **OWASP ZAP** on staging,
+classified `execute-only`, which is what makes it answerable given that seven of its
+thirty bundled components sit outside the ADR-0026 permissive set.
+
+One gap is deliberate and named rather than absent: the SDK analyzers read C#, so nothing
+in this pipeline analyses what a workflow definition does with untrusted input. ADR-0086
+pins which action code runs and does not reach that. It is a Pre-GA ratification item.
+
+A config test forbids dangerous toggles such as
 `DisableTransportSecurityRequirement` outside development; it targets transport security,
 **not** access-token encryption, which is intentionally off by design (ADR-0005).
 
@@ -211,12 +224,24 @@ are real code built in CI. Examples use neutral tenant names (tenant A, tenant B
 | Microsoft.CodeAnalysis.PublicApiAnalyzers | Public-API lock | MIT | ADR-0044 |
 | CycloneDX (dotnet tool) | SBOM per release | Apache-2.0 | ADR-0026, ADR-0051 |
 | cosign / sigstore | Keyless signing and attestation | Apache-2.0 | ADR-0051 |
-| Trivy / Grype | Container vulnerability scan | Apache-2.0 | ADR-0051 |
-| gitleaks | Secret scan | MIT | this doc |
+| Trivy | Dependency scan and container scan, one tool for both stages | Apache-2.0 | ADR-0092, ADR-0051 |
+| gitleaks | Secret scan | MIT | ADR-0092 |
+| OWASP ZAP | DAST against staging; `execute-only`, and its bundle is not permissive throughout | Apache-2.0 at the root | ADR-0092 |
+| (no third-party SAST) | The .NET SDK's own `AnalysisLevelSecurity` rules carry the stage | MIT, in the SDK | ADR-0092 |
 | OpenTofu | IaC (state encryption) | MPL-2.0 | ADR-0023 |
 | Helm | App deployment | Apache-2.0 | ADR-0023 |
 | Quartz.NET | Clustered background jobs | Apache-2.0 | ADR-0031 |
 | DocFX | Docs site + API reference | MIT | this doc |
+
+**The `License` column above is a convenience, not the record.** A licence asserted in a
+design document with no read location is the second of the three blind spots
+[`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) exists for, and that file carries the
+version read, the file the licence was read in, and the date for every tool here that runs
+as a separate process. Read it there before relying on a cell in this table. Two entries
+above are shorter than the truth on purpose and the detail is in that file: ZAP's root
+licence is Apache-2.0 while seven of its thirty bundled components are not, and the SDK
+row means the analyzers ship inside the .NET SDK rather than as a package this project
+references.
 
 > **Patterns applied (ADR-0066).** Build/release/run separation and the immutable
 > versioned artifact (12-factor); pipeline with quality gates (fail-closed release);
@@ -299,7 +324,7 @@ canary, collector-outage, and chaos suite are owned by [19](19-observability-cap
 
 ## References
 
-- ADRs: ADR-0025 (local dev and first-run), ADR-0023 (OpenTofu IaC), ADR-0031 (12-factor baseline), ADR-0051 (release supply-chain integrity), ADR-0046 (dual-control publish), ADR-0045 (coordinated disclosure), ADR-0044 (SemVer and public-API stability), ADR-0026 (permissive dependencies, SBOM, license-scan), ADR-0021/ADR-0030 (contract-regression and version pins), ADR-0017 (no migrate-on-startup; migration model), ADR-0012 (key bootstrap), ADR-0015 (first-admin break-glass), ADR-0063/ADR-0070 (dev observability and TLS).
+- ADRs: ADR-0092 (the five CI security scans, which replaced this document's slash-alternatives and took ownership of the gitleaks choice from it), ADR-0025 (local dev and first-run), ADR-0023 (OpenTofu IaC), ADR-0031 (12-factor baseline), ADR-0051 (release supply-chain integrity), ADR-0046 (dual-control publish), ADR-0045 (coordinated disclosure), ADR-0044 (SemVer and public-API stability), ADR-0026 (permissive dependencies, SBOM, license-scan), ADR-0021/ADR-0030 (contract-regression and version pins), ADR-0017 (no migrate-on-startup; migration model), ADR-0012 (key bootstrap), ADR-0015 (first-admin break-glass), ADR-0063/ADR-0070 (dev observability and TLS).
 - Design docs: [20 testing](20-testing.md) (the suites the pipeline runs), [18 tenant lifecycle](18-tenant-lifecycle.md) (migration fan-out and expand/contract), [19 observability](19-observability-capacity-slo.md) (load/SLO gate, canary), [01 foundations](01-foundations.md) (foundational CI gates, health endpoints), [12 key management](12-key-management.md) (DR drill, break-glass), [15 Admin API](15-admin-api.md) (dual-control).
 - [Architecture](../architecture/README.md); [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
 

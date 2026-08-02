@@ -312,8 +312,12 @@ audit), each of which carries an explicit test. The static-analysis, dependency-
 secret-scan, container-scan, and dynamic-scan stages, and the configuration test that
 forbids dangerous toggles outside Development, are pipeline stages owned by
 [21 CI/CD and deployment](21-cicd-and-deployment.md); the load and SLO gate is
-[19](19-observability-capacity-slo.md)'s separate job. The specific analyzers are an
-open, replaceable choice and are not pinned here (ADR-0062).
+[19](19-observability-capacity-slo.md)'s separate job. **The analyzers stopped being an
+open choice on 2026-08-02**: ADR-0092 pins one tool to each of those stages and takes no
+third-party SAST engine at all, because the .NET SDK already ships the taint-analysis rule
+family that stage existed for. This document previously repeated ADR-0062's
+"open, replaceable choice" sentence, which ADR-0092 supersedes; the stages themselves and
+their ownership by [21 CI/CD and deployment](21-cicd-and-deployment.md) are unchanged.
 
 ### Key libraries and licenses
 
@@ -381,7 +385,8 @@ projects at M1.
 
 - ADRs: ADR-0060 (testing strategy, the taxonomy, behavior-first and test-first), ADR-0062 (the ASVS and API Top 10 baseline, the ASVS-identifier rule, the self-assessment posture, and the penetration-test gate), ADR-0027 parameter F (the conformance profile set, the CI run, re-certification, and certification as a pre-public-release step), ADR-0043 (the startup secure-invariant table this file tests against), ADR-0076 (the three transport invariants), ADR-0020, ADR-0001, and ADR-0035 (the two invariants added on 2026-08-01), ADR-0072 (parameter C, which owns the Content Security Policy's strictness), ADR-0091 (the browser-facing response-header baseline that fixes the directive values ADR-0072 left open, whose two invariants section 5.2 enumerates, and whose `form_post` finding is why a strict policy needed a decision rather than a build-time task), ADR-0058 (Separation of Concerns), ADR-0021 and ADR-0030 (contract-regression per bump), ADR-0024 (architecture tests), ADR-0025 (Testcontainers, end-to-end, CI), ADR-0041 (the load/SLO gate, owned by 19), ADR-0049 (the tenant-isolation binding the gate proves), ADR-0047 and ADR-0033 (the authorization engine and shared-keyset case in the isolation and penetration scope), ADR-0026 (permissive dependencies), ADR-0040 (overload protection, why volumetric denial of service is out of the penetration scope), ADR-0014 and ADR-0056 (the FAPI de-scope and its demand-driven successor), ADR-0061 (the pinned-and-tracked discipline the OWASP-edition rule reuses), ADR-0071 (the v2 outbox the A-9 regression covers), ADR-0008 and ADR-0081 (the audit
   subsystem and the dual-control guard taxonomy behind the reachability row and the two
-  export assertions added on 2026-08-02).
+  export assertions added on 2026-08-02), ADR-0092 (the five CI security scans, which
+  supersedes the "open, replaceable choice" sentence this document carried in section 6).
 - Architecture: [14 threat model](../architecture/14-threat-model.md) (the threats whose test obligations section 5.7 must resolve), [20 NFR catalogue](../architecture/20-nfr-catalogue.md) (the targets the load and SLO suites are measured against).
 - Design docs: [21 CI/CD and deployment](21-cicd-and-deployment.md) (the pipeline that runs these suites and owns the scan stages), [19 observability](19-observability-capacity-slo.md) (load/SLO gate, canary, chaos, collector outage), [18 tenant lifecycle](18-tenant-lifecycle.md) (migration CI checks), [01 foundations](01-foundations.md) (the foundational CI gates), and the feature docs cited in the acceptance-test catalog.
 - [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md).
