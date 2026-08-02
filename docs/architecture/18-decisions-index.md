@@ -9,8 +9,11 @@ tags: [architecture, decisions, index, navigation]
 > **Part of:** the [Software Architecture Document](README.md), decisions and evolution.
 
 **This is the reverse index, and it deliberately does not restate any decision.** The forward
-direction, view to decision, already exists: every view ends with a `Sources` section naming
-the ADRs it rests on, maintained in the same change as the view. What no other document
+direction, view to decision, already exists: every view but one ends with a `Sources` section
+naming the ADRs it rests on, maintained in the same change as the view, the exception being
+[11-cross-cutting-concepts](11-cross-cutting-concepts.md), whose whole body is already a table
+of owning decisions. This sentence read "every view" until 2026-08-02 and was wrong about two
+of them. What no other document
 answers is the reverse question, which is the one asked when a decision changes:
 
 > I am about to change ADR-NNNN. **Which views must I re-read?**

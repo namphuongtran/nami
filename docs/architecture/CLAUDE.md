@@ -69,14 +69,20 @@ Both found on 2026-08-01 by enumerating all 24 views, and recorded rather than s
 changed.
 
 - **`18-decisions-index.md:11-13` says every view ends with a `Sources` section naming the
-  ADRs it rests on. Twenty-two do; two do not.** `11-cross-cutting-concepts.md` has no
-  `Sources` section and does not need one, because its entire body is a table of owning
-  decisions and a second list would be the duplicate summary that file's own opening
-  paragraph warns against. **`06-domain-model.md` has none either, and cites nine ADRs
-  inline** (`0001`, `0003`, `0010`, `0020`, `0024`, `0033`, `0058`, `0059`, `0084`). That
-  one looks accidental rather than deliberate, and it is left open because choosing which
-  of the nine the view *rests on* rather than merely mentions is the author's judgement,
-  not a mechanical fix.
+  ADRs it rests on. Twenty-three do; one does not, deliberately.**
+  `11-cross-cutting-concepts.md` has no `Sources` section and does not need one, because its
+  entire body is a table of owning decisions and a second list would be the duplicate summary
+  that file's own opening paragraph warns against. **`06-domain-model.md` was the other, and
+  gained one on 2026-08-02.** It is worth knowing how that resolved, because this entry
+  predicted a filter and there was none to apply: each of the nine inline citations
+  (`0001`, `0003`, `0010`, `0020`, `0024`, `0033`, `0058`, `0059`, `0084`) was tested with the
+  decisions index's own question, would this view become wrong if the decision changed, and
+  **all nine passed**. The judgement was still worth making rather than skipping, and it
+  found one thing a copy would not have: the Core-IdP row credits ADR-0020 for the Proposal
+  being the only rich aggregate, which is right about what the Proposal is, while *why it is
+  the only one* is ADR-0059's aggregate gate and had no owner named. A `Sources` list that
+  merely equals the inline citations should say so, or the next reader cannot tell reading
+  from transcription.
 - **The footer nav convention is `[Prev: Title](file) · [Index](README.md) · Next:
   [Title](file)`, once per file, no arrows.** On 2026-08-01 `06-domain-model.md` was the
   only file with two nav footers and the only one using an arrow style, and the stray one
