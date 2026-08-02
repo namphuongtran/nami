@@ -49,8 +49,9 @@
     analyzer row it was one node deep, the analyzer bringing no transitive
     packages at all, and that reading is kept because it is what made the
     following one worth taking. Adding the two test rows below took the
-    architecture-test project's graph to TWENTY-THREE nodes, read from its
-    `obj/project.assets.json`, from two direct references.
+    architecture-test project's graph to TWENTY-THREE packages plus its one
+    project reference, read from its `obj/project.assets.json`, out of two
+    direct package references.
 
     That matters to the ADR-0026 licence-scan gate in both directions. A green
     scan over a one-node graph said almost nothing about the scanner; a graph

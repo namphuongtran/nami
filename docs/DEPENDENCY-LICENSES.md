@@ -177,6 +177,9 @@ diff against this table is what the M1 read has to produce.
 | `Yarp.ReverseProxy` | MIT | Not an exception to the policy: recorded because it was named as a dependency in ADR-0029, ADR-0024, ADR-0061 and design [24](design/24-bff.md) with its licence asserted only in prose, which is blind spot 2 above. Read at the `.nuspec` (`<license type="expression">MIT</license>`, version 2.3.0, repository `github.com/dotnet/yarp`) rather than from a badge. | Architect | 2026-08-01 |
 | `Microsoft.CodeAnalysis.PublicApiAnalyzers` **5.6.0** | MIT | Not an exception to the policy, and the same blind spot 2 as the row above: design [21](design/21-cicd-and-deployment.md) line 244 and design [01](design/01-foundations.md) line 427 both asserted MIT for it in prose, and neither is evidence. Read at the `.nuspec` fetched from the nuget.org flat container (`<license type="expression">MIT</license>`, `<repository … url="https://github.com/dotnet/roslyn" commit="c0573ed0a7dc3e3b4d2e70da47f97cc51a35524f" />`). Bundle composition read in the same step and it is not a bundle: the nuspec declares no `<dependencies>` element, and `obj/project.assets.json` after restore shows the target graph as the single node `Microsoft.CodeAnalysis.PublicApiAnalyzers/5.6.0`. | Architect | 2026-08-02 |
 
+| `xunit.v3` **3.2.2** | Apache-2.0 | Not an exception. The test framework ADR-0060 binds the suite to. Read at its own `.nuspec` from the nuget.org flat container (`<license type="expression">Apache-2.0</license>`). | Architect | 2026-08-02 |
+| `TngTech.ArchUnitNET.xUnitV3` **0.13.3** | Apache-2.0 | Not an exception. The architecture-test library ADR-0024 names, in its xUnit v3 integration variant. Read at its own `.nuspec` (`<license type="expression">Apache-2.0</license>`, `<repository … url="https://github.com/TNG/ArchUnitNET" commit="b25c4f940b1d067e97092783d0ef16e4fe12d8c3" />`). **The variant matters and no document in this repository chose it**: the plainly named `TngTech.ArchUnitNET.xUnit` at the same version declares `xunit.assert 2.4.1`, which is xUnit v2, while this one declares `xunit.v3.assert`. Both nuspecs read in the same step. | Architect | 2026-08-02 |
+
 Licences for the first three rows were verified at nuget.org on 2026-07-25 at versions 4.2.0 and
 8.1.0. See ADR-0026 section E for the exact scope of that naming exception and what it does not
 cover.
@@ -190,6 +193,44 @@ completeness cross-check to "once code exists at M1", and the manifest they name
 that item moves from blocked to open. And the ADR-0026 section C licence-scan gate is still not
 wired; when it is, note that a restore graph one node deep cannot demonstrate a scanner works,
 so the gate needs a deliberate negative test rather than a green run.
+
+### 3.1 The first restore graph worth enumerating, at 2026-08-02
+
+The two test rows above are two `PackageReference` items and **twenty-three packages**. Read
+from `tests/Nami.Identity.ArchitectureTests/obj/project.assets.json` after restore on
+2026-08-02, the `net10.0` target holds twenty-four entries: the twenty-three below plus the
+`Nami.Identity.Abstractions` project reference. Every licence here was read at that package's
+own `.nuspec` on the nuget.org flat container on 2026-08-02, one request per package, and every
+one carries an SPDX `<license type="expression">` rather than a licence file or a bare URL.
+
+**Apache-2.0**, eleven: `TngTech.ArchUnitNET.xUnitV3` 0.13.3, `TngTech.ArchUnitNET` 0.13.3,
+`xunit.v3` 3.2.2, `xunit.v3.assert` 3.2.2, `xunit.v3.common` 3.2.2, `xunit.v3.core.mtp-v1`
+3.2.2, `xunit.v3.extensibility.core` 3.2.2, `xunit.v3.mtp-v1` 3.2.2, `xunit.v3.runner.common`
+3.2.2, `xunit.v3.runner.inproc.console` 3.2.2, `xunit.analyzers` 1.27.0.
+
+**MIT**, twelve: `CycleDetection` 2.0.0, `JetBrains.Annotations` 2025.2.2, `Mono.Cecil` 0.11.6,
+`Newtonsoft.Json` 13.0.4, `System.ValueTuple` 4.6.1, `Microsoft.Testing.Platform` 1.9.1,
+`Microsoft.Testing.Platform.MSBuild` 1.9.1, `Microsoft.Testing.Extensions.Telemetry` 1.9.1,
+`Microsoft.Testing.Extensions.TrxReport.Abstractions` 1.9.1, `Microsoft.ApplicationInsights`
+2.23.0, `Microsoft.Bcl.AsyncInterfaces` 6.0.0, `Microsoft.Win32.Registry` 5.0.0.
+
+Both licences are on ADR-0026 section A's permissive list, so nothing here needs an exception.
+
+**Two things this enumeration is worth more for than the verdict.** It is the first graph in
+this repository that could exercise the section C licence-scan gate at all; the note above
+about a one-node graph proving nothing about a scanner now has a counterpart to test against.
+And it surfaced `Microsoft.ApplicationInsights`, which is in a test project's graph because
+`Microsoft.Testing.Platform.MSBuild` auto-registers a telemetry extension rather than waiting
+to be asked. Its licence is not the question; what it does is. The CI job disables it by
+environment variable and says so at the job, and **no ADR rules on transmitting build
+telemetry**, so that is a recorded choice rather than a decision being applied. That absence is
+a claim about a search, so here is the search, run across `docs/adr/` on 2026-08-02:
+`telemetry opt`, `OPTOUT`, `ApplicationInsights` and `Application Insights` return **nothing**;
+`phone home` returns one line of ADR-0032; `opt-out` returns ADR-0032 plus ADR-0027, ADR-0043
+and ADR-0091, and the last three are about response headers and startup switches rather than
+telemetry. ADR-0032 is the only decision in range and it governs **Nami's own** opt-in
+anonymous telemetry, not a build-time tool reporting to its vendor. What this search would miss
+is an ADR discussing the idea without any of those spellings.
 
 **ADR-0026 section D does not list this package**, which is not a defect in either document.
 Section D is a list of packages confirmed permissive at the time it was written, not a gate;

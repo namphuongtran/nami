@@ -50,6 +50,7 @@ bash scripts/test-editorconfig.sh                      # self-test: the C# style
 bash scripts/test-public-api-gate.sh                   # self-test: the public-API lock and CPM
 npx --yes markdownlint-cli2@0.23.1 "**/*.md"           # version-coupled to ci.yml, see .claude/rules/build-and-ci.md
 dotnet build Nami.Identity.slnx --nologo
+dotnet test Nami.Identity.slnx --nologo                # architecture rules (ADR-0024)
 dotnet format Nami.Identity.slnx --verify-no-changes   # drop the flag and it fixes
 
 git config core.hooksPath scripts/hooks                # enable the local hook, once per clone
@@ -58,16 +59,17 @@ git config core.hooksPath scripts/hooks                # enable the local hook, 
 [`scripts/README.md`](scripts/README.md) is the authority on what each gate checks and
 why; this list is not a summary of it.
 
-**The hook runs two of the seven gates, so a green hook is not a green build.** That has
+**The hook runs two of the eight gates, so a green hook is not a green build.** That has
 already produced a commit message claiming a self-test was green before it had been run.
 
-**Three of the seven are self-tests, and that ratio is deliberate.** Each was written
+**Three of the eight are self-tests, and that ratio is deliberate.** Each was written
 after a real inert-gate defect rather than as a precaution: an untracked file the
 guardrail could not see, a severity that failed nothing without an MSBuild property, and
 an `RS0017` that no `.editorconfig` placement could reach. **When you add a gate, ask
 what would have to break for it to go quiet, then write that break down as a test.**
 
-There is no test suite yet; the .NET test and license-scan gates arrive with M1.
+The test gate arrived on 2026-08-02 with the first suite, the architecture rules of
+ADR-0024. The license-scan gate is still owed and arrives with M1.
 
 ## Evidence rule (non-negotiable, applies to every layer)
 
@@ -160,6 +162,7 @@ shorter one wins by being read first. Read both.
 | `docs/kb/` | none, deliberately | [`docs/kb/README.md`](docs/kb/README.md) |
 | `scripts/` | [`scripts/CLAUDE.md`](scripts/CLAUDE.md) | [`scripts/README.md`](scripts/README.md) |
 | `src/` | [`src/CLAUDE.md`](src/CLAUDE.md) | ADR-0065, and design `01` section 3.1 |
+| `tests/` | [`tests/CLAUDE.md`](tests/CLAUDE.md) | ADR-0060, and design `20` |
 | build and CI config | [`.claude/rules/build-and-ci.md`](.claude/rules/build-and-ci.md) | the files themselves |
 
 `docs/kb/` has none on purpose: its README already carries the frontmatter shape, the
