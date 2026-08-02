@@ -442,12 +442,37 @@ here on 2026-08-01.
 **These two routes, and `GET /me/memberships` above, are relative to the base path
 `/api/v1`** ([ADR-0090](../adr/0090-versioned-api-base-path.md) rule 2, which puts this
 surface under the same base as the admin one because a consumer writes code against both).
-**One gap that decision met and deliberately did not close: no document records which host
-serves this surface.** A base path is host-relative so the rule holds either way, but the
-host is this document's to state, and until it does an implementer has to infer it. If it
-turns out to be the runtime host and path-based tenancy is in use, the tenant segment
-composes **outside** the version, `/t/{tenant}/api/v1/me`, because the resolve middleware
-matches the leading `/t/` and the issuer is built from `PathBase` (ADR-0090 rule 3).
+**The host is `Nami.Identity.Host`, the runtime identity host, stated here on 2026-08-02.**
+ADR-0090 left this open because a base path is host-relative and its rule holds either way,
+and the choice was this document's to make. It is a realization rather than a decision: the
+answer follows from decisions already accepted, and the two candidates are the only two hosts
+this project has, the runtime host and `Nami.Identity.Admin.Api`
+([ADR-0080](../adr/0080-health-and-readiness-probe-contract.md) speaks of "both hosts" for that reason).
+
+* **Two of the three routes carry no token at all.** `POST /forgot-password` and
+  `POST /resend-confirmation-email` answer identically whether or not the account exists, so
+  they are anonymous by construction. The Admin API's `RequireActor` policy demands `sub`
+  **and** `auth_time` **and** `aud=admin-api` on every request
+  ([ADR-0020](../adr/0020-admin-architecture.md)), and ADR-0080 states that its two probe
+  routes are the **only** exemption from that policy. Serving these two there would make that
+  sentence false, on the surface whose entire purpose is anti-bypass.
+* **`GET /me/memberships` is an end user's own token.** The Admin API is a resource server of
+  the IdP holding the `admin-api` audience (ADR-0020); a token issued to the person whose
+  memberships these are does not have it, and giving it one to read their own profile would
+  be the bypass ADR-0020 was written against.
+* **The surface exists to replace a framework surface that would mount here.** ADR-0089's
+  driving question is whether the parallel JSON attack surface is mounted, meaning
+  `MapIdentityApi`, and that is a thing you mount on the application that has Identity
+  configured. The routes written in its place belong on the same host, where a reviewer
+  looking for it will look.
+* **It is the host that already serves this journey.** The login and account pages ship in
+  `Nami.Identity.Host` and in no package ([ADR-0027](../adr/0027-packaging-and-distribution.md)
+  parameter G), and forgot-password is the JSON sibling of a page that is already there.
+
+The consequence this document had already written down now applies rather than being
+conditional: with path-based tenancy the tenant segment composes **outside** the version,
+`/t/{tenant}/api/v1/me`, because the resolve middleware matches the leading `/t/` and the
+issuer is built from `PathBase` (ADR-0090 rule 3).
 
 ```mermaid
 sequenceDiagram
@@ -651,7 +676,12 @@ user-management public surface is governed by the SemVer and deprecation policy
 * ADRs: 0028 (user management), 0013 (MFA/assurance producer), 0003 (sessions), 0002
   (federation), 0075 (the choke-point's deny-by-default destinations), 0005 (which claims
   exist and the minimal token), 0001 (global identity/membership), 0008
-  (audit), 0016 (offboard/erasure), 0009 (secret store), 0042 (abuse/lockout).
+  (audit), 0016 (offboard/erasure), 0009 (secret store), 0042 (abuse/lockout), 0089 (the
+  self-service surface's conventions), 0090 (the versioned base path these routes sit under),
+  and, for the host this surface is served on, 0020 (the `RequireActor` policy that rules the
+  Admin API out), 0080 (which states that the probe routes are that policy's only exemption,
+  and which names the two hosts) and 0027 parameter G (the pages already served by the host
+  chosen).
 
 ---
 
