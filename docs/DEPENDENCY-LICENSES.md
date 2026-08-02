@@ -79,7 +79,7 @@ repository as acceptable.
 |---|---|---|---|---|---|
 | NBomber | Apache-2.0 | **NBomber License Agreement v3.0**, commercial | `LICENSE` inside the NBomber 6.5.0 nupkg | 2026-08-01 | Removed, [ADR-0078](adr/0078-load-test-tooling.md) |
 | k6 | AGPL, kept as "a dev-time tool, not a dependency" with no decision behind it | **AGPL-3.0**, section 13 present. Correctly identified, but the carve-out was never decided | `grafana/k6/LICENSE.md` | 2026-08-01 | Removed rather than carved out, [ADR-0078](adr/0078-load-test-tooling.md) |
-| FluentAssertions | (already excluded) | Commercial from v8 | Excluded before this log existed | 2026-07 | Not taken; the assertion library is an M1 pick under section A, from the verified candidates in section 5 |
+| FluentAssertions | (already excluded) | Commercial from v8 | Excluded before this log existed | 2026-07 | Not taken. This cell used to add that the replacement was an M1 pick from section 5; ADR-0060 closed that on 2026-08-02 by taking no assertion library at all, so the exclusion here stands on its own licence ground and nothing is pending behind it |
 | Gatling | Apache-2.0, per repository metadata | Core Apache-2.0, **but the standard report module is proprietary**: "No code modification is authorised, no re-use of the code, no copying of all or any part of the code is allowed" | `license/LICENSE.gatling-highcharts.specific.txt` | 2026-08-01 | Not taken, [ADR-0078](adr/0078-load-test-tooling.md) |
 | MediatR, AutoMapper, MassTransit | n/a | Moved to commercial licensing | ADR-0026 section A | 2026-07-04 | Forbidden by name, ADR-0026 |
 
@@ -98,9 +98,13 @@ The three quoted verbatim details matter:
 ## 5. Verified alternatives, not yet taken
 
 A package can be verified before it is needed, and recording that verification is worth more
-than repeating it. The rows below are **not adopted**: the assertion library is still an open
-M1 pick under ADR-0026 section A. They exist so the pick is a decision rather than a research
-task, and so nobody re-derives a licence this project has already read.
+than repeating it. The rows below are **not adopted**, and as of 2026-08-02 they are not
+pending either: ADR-0060 decided Nami takes **no** assertion library, because xUnit v3's own
+assertions already carry what the pick existed for. The rows stay because the reason to keep a
+verification does not end when the answer is no. They make a later reversal cost a re-verify
+rather than a research task, and they stop anyone re-deriving a licence this project has
+already read. **The status column below means "verified, not taken" in that sense, not
+"shortlisted".**
 
 | Package | Version read | Licence | Read at | Date | Status |
 |---|---|---|---|---|---|

@@ -467,13 +467,16 @@ mechanics themselves are [02](02-data.md).
   intent.
 * **The version tool is settled**, not open: ADR-0027 fixes package versions as generated
   from a single git tag by MinVer. What remains is wiring it, not choosing it.
-* **The assertion library must be permissive** (ADR-0026). A widely used one moved to a
-  commercial licence at its version 8, so it is out; an alternative from ADR-0026 section A's
-  permissive set is picked at M1, the same licence caution ADR-0020 raised for a mediator
-  library. Two candidates are already verified at source and recorded in
-  [`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 5, so the pick is a decision
-  and not a research task. This bullet previously said "an MIT or BSD alternative", which is
-  narrower than the policy it cites and would have excluded the Apache-2.0 candidate.
+* **There is no assertion library, settled 2026-08-02** (ADR-0060). This bullet used to say
+  one was "picked at M1" from ADR-0026 section A's permissive set, with two candidates already
+  verified. The pick was closed by reading the framework instead of the candidates: xUnit v3's
+  own assertions carry both capabilities the pick existed for, so Nami takes none. The two
+  verified rows stay in [`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 5 as
+  evidence for a cheap reversal, not as a pending choice. The licence history that produced the
+  question is still worth carrying: a widely used assertion package moved to a commercial
+  licence at its version 8 and is on ADR-0026's deny-list, the same caution ADR-0020 raised for
+  a mediator library. This bullet also once said "an MIT or BSD alternative", narrower than the
+  policy it cites.
 * **The default continuous-integration provider** is the hosted one for the open-source
   reference; consumers may swap it (ADR-0027).
 * **Standing up a public reference host for certification** is an operations ratification

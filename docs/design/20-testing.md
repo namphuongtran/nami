@@ -61,13 +61,16 @@ rather than re-deciding it.
 
 **SQLite is never substituted** for the database in any test: row-level security,
 `xmin` concurrency, and `uuidv7()` are PostgreSQL-specific, so dev equals test equals the
-production engine (PostgreSQL 18). The assertion library is an open build-time pick under
-the permissive-only policy (ADR-0026); FluentAssertions is excluded because it became
-commercially licensed, so a library from ADR-0026 section A's permissive set is chosen when
-the test projects land. Two candidates are verified at source with dates in
-[`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 5. **Not "MIT/BSD"**, which is
+production engine (PostgreSQL 18). **There is no assertion library** (ADR-0060, settled
+2026-08-02): tests assert with what `xunit.v3.assert` ships, because the object-graph
+comparison and multiple-failure reporting a fluent package is usually taken for are both in
+the pinned version already. This sentence used to call it an open build-time pick, and two
+candidates stay verified at source with dates in
+[`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 5 so a later reversal is cheap.
+FluentAssertions remains excluded on its own ground, having become commercially licensed.
+**Not "MIT/BSD"**, which is
 how this sentence and two others read until 2026-08-01: the policy also allows Apache-2.0,
-and the narrower phrasing would have ruled out the leading candidate on a constraint no ADR
+and the narrower phrasing would have ruled out the Apache-2.0 candidate on a constraint no ADR
 imposes.
 
 ### 3.2 What a test must state
@@ -328,7 +331,7 @@ Not verified offline, to be confirmed by the ADR-0026 license-scan gate:
 | Component | Purpose | License as stated | ADR |
 |---|---|---|---|
 | OIDF conformance suite | OpenID conformance gate (self-hosted container image, not a compiled dependency) | **MIT**, read at `openid/conformance-suite` `LICENSE.txt` on 2026-08-01 | ADR-0027 |
-| (assertion library) | Fluent assertions | Any of ADR-0026 section A's permissive set, chosen at M1 (not FluentAssertions, now commercial). Verified candidates with dates: [`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 5 | ADR-0026 |
+| (no assertion library) | Assertions come from `xunit.v3.assert` itself | n/a, no package is taken (ADR-0060, 2026-08-02). Two candidates stay verified in [`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md) section 5 against a possible reversal | ADR-0060, ADR-0026 |
 
 > **Patterns applied (ADR-0066).** Behavior-first tests as an application of Separation
 > of Concerns (assert the contract, not the internals); the test pyramid (many unit, fewer
@@ -365,7 +368,7 @@ projects at M1.
 ## 10. Open and build-time items
 
 - The **coverage line**, meaning the exact percentage gate on the security-relevant paths, is a build-time pick made when the test projects land, not a figure this design invents.
-- The assertion library is chosen at M1 under the permissive-only policy (not FluentAssertions).
+- **Closed 2026-08-02:** the assertion library was an M1 pick under the permissive-only policy; ADR-0060 decided to take none, since `Equivalent` and `Multiple` are already in the pinned `xunit.v3.assert` and a shipped conformance test kit would push any such package onto adopters as a transitive dependency.
 - The public reference host required for OpenID **certification listing** is a pre-GA ratification (Ops); its ownership, hosting, patch cadence, and cost are unresolved. Tracked in the [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md) against ADR-0027.
 - **Additional conformance profiles** (back-channel logout, Dynamic OP if DCR ships, FAPI 2.0 under ADR-0056) are a Product and Security ratification, not a v1 gate.
 - The **ASVS 5.0 Level 2 self-assessment** coverage (Level 3 for key/token/dual-control/tenant-isolation) and the API Security Top 10 mapping are a pre-GA ratification, and part of that work is **mapping the ASVS 4.x chapter numbers used in earlier records onto their 5.0 equivalents** rather than assuming they carried over (ADR-0062).
