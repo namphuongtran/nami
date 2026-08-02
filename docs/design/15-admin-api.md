@@ -269,6 +269,16 @@ intact, so neither lets a recipient verify anything. The export carries the per-
 and the canonical fields the chain is computed over, which is what makes ADR-0008's
 prev-first operand order usable by an independent verifier (ADR-0008).
 
+**The filter must be closed, ratified 2026-08-02 (ADR-0008).** The export filter is the
+`GET /audit` parameter set above, and it must carry an **absolute upper time bound**, fixed at
+the moment the proposal freezes it. A request without one is refused at creation rather than at
+redemption, because the ADR-0081 guard re-evaluates that bound and cannot re-evaluate one that
+was never frozen. This is what closes the record set: an open-ended filter is why an export
+approved as small could redeem as large, and bounding it removes the drift rather than setting a
+tolerance for it. There is deliberately **no cap on rows or on span**; the reasoning is in
+ADR-0008, and the resource limit on a single streaming redemption is an ADR-0040-family question
+left to the build.
+
 **Delivery is a grant, not a file.** Approving the proposal mints a single-use, time-boxed
 **export grant** bound to the frozen filter, and the proposer redeems it in one streaming
 transfer from the audit store. Nothing bearing personal data is written anywhere, so there is
@@ -435,7 +445,7 @@ constraints are in [02](02-data.md)).
 |---|---|---|---|---|
 | `mutate` | required | the existing row's id | the ETag still matches | `delete-application`, `delete-scope`, `delete-tenant`, `suspend-tenant`, `resume-tenant`, `offboard-user`, `revoke-all-tokens`, `secret-revoke`, key purge, the Pool-to-Silo re-home, and `approve-user-invite` with a **server-filled** ETag |
 | `create` | NULL | the id of the thing **to be created** | the create preconditions still hold: uniqueness, every referenced principal still exists, and the endpoint's own admission rules | `provision-tenant`, a reach-gated `delegated-admin-grant` |
-| `query` | NULL | a SHA-256 digest of the frozen filter | the filter frozen in `PayloadJson` is authoritative and **may not be widened**, and the size or scope threshold that gated the approval is re-evaluated | bulk `audit-export` |
+| `query` | NULL | a SHA-256 digest of the frozen filter | the filter frozen in `PayloadJson` is authoritative and **may not be widened**, and its absolute upper time bound still holds; a failure is terminal | bulk `audit-export` |
 
 For `mutate`, the guard stores the target's `xmin`-derived ETag at propose time and re-checks
 it `FullyConsistent` before execution. `TargetETag` need not come from `If-Match`: a client
@@ -676,11 +686,23 @@ first-admin seed is idempotent and forces a change; Scalar performs a real OIDC 
   path, an artifact that carries the chain, grant-and-redeem delivery with nothing at rest,
   and a delivered event. The three questions this entry listed dissolved rather than being
   answered: there is no format for a direct path because there is no direct path, and there is
-  no artifact lifetime because there is no artifact. **What remains open is narrower and is a
-  pre-GA item**: whether an export has an absolute cap at all, and how much the row count may
+  no artifact lifetime because there is no artifact. **What remained open was narrower and was
+  a pre-GA item**: whether an export has an absolute cap at all, and how much the row count may
   drift between approval and redemption before the ADR-0081 guard refuses. The 90-day and
   10k-row figures were a gate on *whether* dual-control applied; with dual-control always
   applying they no longer have that job, and they were never ratified here in the first place.
+- **That pre-GA item was ratified later the same day and neither half became a number**
+  (ADR-0008). There is **no absolute cap**: a row bound is defeated by looping under it while
+  every export is dual-control regardless of size, so it bounds nothing, and the real reason to
+  limit a redemption is that it is one unbounded streaming read over a hot append-only table,
+  which is an ADR-0040-family engineering limit rather than a threshold Security signs. And the
+  drift is **removed rather than tolerated**: the frozen filter must now carry an absolute upper
+  time bound, so the record set is closed at freeze and the only residual movement is the
+  asynchronous outbox writing rows whose timestamps already fall inside the window, plus
+  retention pruning in the other direction. A guard failure at redemption is terminal. **One
+  consequence for this document**: `POST /audit/export` must refuse a filter with no upper
+  bound at creation, because a bound that was never frozen cannot be re-evaluated, and section
+  3.8 above describes the filter only by reference to the `GET /audit` parameters.
 - `Admin.TenantScope` rehome (move its set-tenant-context side effect before retiring it, 07).
 - **Verify at build (ADR-0084): does a tenant-scoped subject revoke actually honour the tenant
   filter?** Step 3 of the membership-removal cascade revokes that subject's tokens and

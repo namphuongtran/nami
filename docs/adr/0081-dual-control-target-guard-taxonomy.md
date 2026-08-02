@@ -84,7 +84,7 @@ CHECK ("TargetClass" <> 'mutate' OR "TargetETag" IS NOT NULL)
 |---|---|---|---|
 | `mutate` | required | the ETag still matches | `delete-application`, `delete-scope`, `delete-tenant`, `suspend-tenant`, `resume-tenant`, `offboard-user`, `revoke-all-tokens`, `secret-revoke`, key purge, the Pool-to-Silo re-home, and **`approve-user-invite`** with a server-filled ETag |
 | `create` | NULL | the create preconditions still hold: uniqueness, the existence of every referenced principal, and the endpoint's own admission rules | `provision-tenant`, a dangerous `delegated-admin-grant` |
-| `query` | NULL | the filter frozen in the payload is authoritative and **may not be widened**, and any size or scope threshold that gated the approval is re-evaluated, **at redemption rather than at approval** (see below) | bulk `audit-export` |
+| `query` | NULL | the filter frozen in the payload is authoritative and **may not be widened**, and its absolute upper time bound still holds, re-evaluated **at redemption rather than at approval** (see below) | bulk `audit-export` |
 
 **For `query`, the guard runs at redemption, and that is a deliberate exception to the column
 heading above (added 2026-08-02).** ADR-0008 makes a bulk audit export deliver through a
@@ -92,12 +92,54 @@ single-use, time-boxed grant that the proposer redeems, so approval mints the gr
 rows move afterwards. "Re-run before executing" therefore has two candidate moments for this
 class alone, and the useful one is the transfer: re-evaluating a frozen filter and its size at
 approval time checks a moment when nothing is leaving. So `ExecutedAt` on a `query` proposal
-records that the grant was minted, and all three checks (the filter is not widened, the
-threshold that gated the approval still holds, and the proposer still holds the capability)
-are evaluated when the grant is redeemed. This is the only class where the two moments come
+records that the grant was minted, and all three checks (the filter is not widened, its
+absolute upper time bound still holds, and the proposer still holds the capability) are
+evaluated when the grant is redeemed. This is the only class where the two moments come
 apart, because it is the only class whose effect is **data leaving** rather than state
 changing, and reading `ExecutedAt` as "the data left" is exactly the misreading this note
 exists to prevent. The egress gets its own audit event for the same reason (ADR-0008).
+
+**The middle check said something else until later the same day, and what it named no longer
+existed.** It read "the size or scope threshold that gated the approval is re-evaluated",
+which is the wording imported from the corpus, where a threshold genuinely gated approval:
+an export was dual-control only when it was full, unfiltered, spanned over ninety days, or
+exceeded ten thousand rows, and a smaller one went direct. **ADR-0008 removed that direct
+path on this same date**, making every export dual-control, so no threshold gates any
+approval and the clause pointed at nothing. It survived because removing a path and
+re-reading the guards that referred to it are two different acts, and only the first was
+done. The replacement is the invariant the guard was always for: a filter that cannot be
+widened is only checkable if it is closed, so ADR-0008 now requires the frozen filter to
+carry an absolute upper time bound, and that bound is what the guard re-evaluates.
+
+**A drift is a hard failure, terminal, and recovery is a new proposal.** This is not a new
+rule. It is the refusal to make an exception, because `precondition_failed` is already
+terminal and single-use for `create` and `query` alike, stated below in this ADR's own
+executor semantics, and a warning-and-proceed would make `query` the one class whose guard
+can fail while the action goes ahead, on the one action whose effect is a bulk personal-data
+egress.
+
+**The corpus asked this as an open question, and its own decision record had already answered
+it two sections earlier.** Its ratify packet SEC-A4 puts three options to Security, hard
+failure, warning-and-proceed, or a two-tier ceiling, with the decision line left blank. The
+corpus decision record this taxonomy came from, the guard-taxonomy MADR whose number there is
+**not** this one and does not transfer, already rules `precondition_failed` for create and
+query "**terminal and single-use**", and asks whether query should instead warn forty-six lines
+below that ruling, in the same file. So two of the three options were foreclosed by the
+document offering them, and the ratification here is option (a) by consistency rather than by
+severity. This is worth recording because the shape is one this repository has learned to look
+for first: **a document disagreeing with itself is where the wrong claim is**, and the
+disagreement travelled into a ratify packet, which is the artifact least likely to be read
+against its own source.
+
+*(The corpus's number for that document is deliberately not written here. It collides with a
+live `ADR-NNNN` in this repository that decides something unrelated, so writing it would
+produce a citation that passes guardrail Check 2 by resolving to the wrong decision. That is
+the resolving-citation trap in its purest form, and it was hit while drafting this paragraph.)*
+
+**What makes hard failure cheap rather than brittle is the bound above**: with the record set
+closed at freeze, the residual movement is outbox lag and retention pruning rather than an open
+window filling up, so a refusal signals something worth looking at instead of ordinary elapsed
+time.
 
 **`TargetId` is also `NOT NULL`, and the class is what says what it means.** The taxonomy
 above would otherwise have left the same shape of hole one column over: a targetless
@@ -130,7 +172,7 @@ and a comparison the approval inbox can show. It **complements rather than repla
 `Idempotency-Key` header on proposal creation: that header is client-supplied and
 per-request, this is server-derived and content-derived. And it is **not** a guard: a
 mismatch between the digest and the payload indicates a mishandled row, but the guard for
-a `query` proposal is the re-evaluation of the frozen filter and its thresholds, not a
+a `query` proposal is the re-evaluation of the frozen filter and its upper bound, not a
 string comparison.
 
 *(This rule was added on 2026-08-01, hours after the rest of this ADR, once the question
@@ -201,8 +243,11 @@ request-time-only check into a real exposure here.
   on the mutate-class endpoints and absent gives `428`; a create whose uniqueness
   precondition broke fails `precondition_failed` **and is asserted not to be
   retried**, which is the regression for the defect above; a grant proposal whose
-  proposer lost the capability mid-window is refused; a query whose size threshold
-  moved is re-evaluated rather than executed against the old approval; the `CHECK`
+  proposer lost the capability mid-window is refused; a query whose frozen filter no
+  longer holds at redemption fails `precondition_failed` **terminally** rather than
+  executing against the old approval, and a companion asserts that a proposal whose
+  filter carries no absolute upper time bound is refused at creation, since the
+  guard cannot re-evaluate a bound that was never frozen; the `CHECK`
   rejects `mutate` with a null ETag; and `approve-user-invite` carries a
   server-filled ETag.
 

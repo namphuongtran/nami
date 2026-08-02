@@ -128,7 +128,10 @@ assurance is `max(client default, scope, runtime)`, challenged per RFC 9470 with
 `acr_values` and `max_age`. The target guard is re-checked at execution because approval and
 execution are separated by up to 72 hours, and **which** guard runs depends on the
 proposal's `TargetClass`: an ETag comparison for a `mutate`, the create preconditions for a
-`create`, the frozen filter and its thresholds for a `query` (ADR-0081). Three actions here
+`create`, and the frozen filter with its absolute upper time bound for a `query` (ADR-0081;
+this read "and its thresholds" until 2026-08-02, when ADR-0008 removed the threshold that
+phrase named). For a `query` the re-check also happens later than for the other two, at grant
+redemption rather than at execution, because that is the moment the data leaves. Three actions here
 have no target row at all, so a single ETag column could not have guarded them. The executor
 also re-checks that the **proposer** still holds the capability, because approval authorises
 the action and does not waive validation. Execution and its audit append are one atomic
