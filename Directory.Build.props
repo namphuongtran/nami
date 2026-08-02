@@ -15,14 +15,60 @@
     landing the .editorconfig without this file would have shipped a ruleset that
     reads as enforced and is not.
 
-    Deliberately one property. TargetFramework, LangVersion, Nullable, MinVer,
-    and the reproducible-build stack are all owned elsewhere (ADR-0030, ADR-0044)
-    and land with the solution at M1; adding them here ahead of the projects they
-    configure would be guessing at values no source in this repository states.
+    Until 2026-08-02 this was deliberately one property, because the rest had no
+    projects to configure. The first project landed that day and brought the
+    target-framework knob with it (ADR-0030 parameter C). MinVer and the
+    reproducible-build stack are still ADR-0030's and still absent, and the
+    public-API analyzers are still ADR-0044's.
   -->
 
   <PropertyGroup>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <!--
+    The target-framework knob (ADR-0030 parameter C).
+
+    TWO properties, not one, and the reason is parameter B rather than taste: a
+    published library multi-targets the current and next LTS while the host is
+    single-target on the current one. Both read net10.0 today because .NET 12 has
+    not shipped, so the difference is invisible and the shape is the only thing
+    that can be got right in advance. When 12 ships, the library property becomes
+    `net10.0;net12.0` and the application property does not move.
+
+    LangVersion is deliberately ABSENT even though parameter C names it, and this
+    is the one deviation in this file. Measured on SDK 10.0.301 with no
+    Directory.Build.props at all, a net10.0 project already reports
+    LangVersion 14.0: the default is derived from the target framework, so the
+    knob above already centralizes it. Writing it here could only restate that
+    default, which rots against the SDK, or set `latest`, which would make the
+    language version float with whatever SDK is installed and break the very
+    coupling to the target framework that parameter C wants. This applies
+    ADR-0065's "write only what deviates" rule, which that ADR states about
+    .editorconfig, to a second file. Recorded in ADR-0030 rather than only here.
+
+    Nullable is enabled because it is load-bearing rather than tidy: design 23
+    section 3 annotates its definition model with `string?` on some members and
+    not others, and that distinction means nothing to the compiler unless this is
+    on. ADR-0044 parameter A also puts nullable annotations in the public API
+    file, which needs the same. Measured default: off.
+
+    ImplicitUsings is enabled on the design corpus's foundations task 1.4, which
+    is the only source that states it. Measured default: off.
+
+    TreatWarningsAsErrors is NOT set. The corpus task 1.4 asks for it, no ADR
+    does, and turning it on in the same change that lands the first project would
+    make every future warning a build break before anyone has seen what warnings
+    this codebase produces. It is a separate decision with a separate measurement,
+    and ADR-0092's `_warnaserror` globalconfig item is adjacent to it. Measured
+    default: false.
+  -->
+
+  <PropertyGroup>
+    <NamiLibraryTargetFrameworks>net10.0</NamiLibraryTargetFrameworks>
+    <NamiApplicationTargetFramework>net10.0</NamiApplicationTargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
 </Project>

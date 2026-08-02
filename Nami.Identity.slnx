@@ -1,2 +1,5 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Nami.Identity.Abstractions/Nami.Identity.Abstractions.csproj" />
+  </Folder>
 </Solution>

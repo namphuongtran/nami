@@ -34,7 +34,7 @@ something wrong. Read both.
 | `docs/design/` | [`docs/design/CLAUDE.md`](docs/design/CLAUDE.md) | [`docs/design/README.md`](docs/design/README.md) |
 | `docs/kb/` | none, deliberately | [`docs/kb/README.md`](docs/kb/README.md) |
 | `scripts/` | [`scripts/CLAUDE.md`](scripts/CLAUDE.md) | [`scripts/README.md`](scripts/README.md) |
-| `src/` | none yet, lands with the first code at M1 | ADR-0065, and design `01` section 3.1 |
+| `src/` | [`src/CLAUDE.md`](src/CLAUDE.md) | ADR-0065, and design `01` section 3.1 |
 
 `docs/kb/` has no `CLAUDE.md` on purpose: its README already carries the frontmatter
 shape, the no-H1 rule, the `[[slug]]` link form, and the routing rule, and a file whose
@@ -55,12 +55,13 @@ scaffolding**; application source lands under `src/` starting at milestone M1
 the docs guardrail, and since 2026-08-02 a self-test for the C# style ruleset, which
 generates the C# it checks because the repository has none to offer it.
 
-**A solution shell landed 2026-08-02 and it holds no projects**, which is worth saying
-plainly because the two facts read as contradictory otherwise. `Nami.Identity.slnx` and
-`global.json` exist so the SDK pin and the solution file are under a gate before the
-first project rather than after it; there is still no C# under `src/`. `tests/` is a
-placeholder beside it, its location taken from the design corpus, which is the only
-source that states one.
+**The first project landed 2026-08-02**, `Nami.Identity.Abstractions`, holding one type.
+The paragraph above is therefore about to be wrong rather than already wrong: the ADR
+corpus is still what this repository mostly is, and `src/` is one three-property class.
+What changed is that the gates now read C# from this repository instead of from a fixture
+they generate, and that `src/CLAUDE.md` exists, carrying the traps found by landing it.
+`tests/` is still a placeholder, its location taken from the design corpus, which is the
+only source that states one.
 
 Because the product is expressed as decisions, the ADR corpus in `docs/adr/` **is**
 the architecture. Read the relevant ADRs before proposing changes to behavior they
@@ -91,20 +92,22 @@ python3 scripts/check-decisions-index.py
 # Skips with exit 0 when dotnet is absent, and says a skip is not a pass.
 bash scripts/test-editorconfig.sh
 
-# The solution build, since 2026-08-02. Its own CI job. READ ITS SCOPE BEFORE ITS
-# GREEN: the solution holds zero projects, so this proves the global.json pin
-# resolves and the .slnx parses, and nothing else. An empty solution builds with a
-# warning and exits 0, measured. It gains teeth at the first project.
+# The solution build and the format gate, since 2026-08-02. One CI job, two steps,
+# and NOT one gate under two names: the format path needs no EnforceCodeStyleInBuild,
+# reports whitespace as WHITESPACE rather than IDE0055, and exits 2 rather than 1.
+# Both read real C# as of the first project. Measured against a planted `badlyNamed`
+# private field: build exits 1, format exits 2, both on IDE1006.
 dotnet build Nami.Identity.slnx --nologo
+dotnet format Nami.Identity.slnx --verify-no-changes   # drop the flag and it fixes
 
 # Enable the opt-in local pre-commit hook (both gates + local name-scrub). Per clone.
 git config core.hooksPath scripts/hooks
 ```
 
-**The hook runs two of the five gates**, so a green hook is not a green build. The
-markdownlint line above, `scripts/test-editorconfig.sh`, and the solution build are
-separate CI steps, and so is `scripts/test-check-adrs.sh`. This has already produced a
-commit message that claimed a self-test was green before it had been run.
+**The hook runs two of the six gates**, so a green hook is not a green build. The
+markdownlint line above, `scripts/test-editorconfig.sh`, the solution build and the format
+gate are separate CI steps, and so is `scripts/test-check-adrs.sh`. This has already
+produced a commit message that claimed a self-test was green before it had been run.
 
 **`global.json` is a pin that can be inert, and the shape that makes it inert is the
 one the design corpus writes.** Measured 2026-08-02 on SDK 10.0.301: `10.0.999` with

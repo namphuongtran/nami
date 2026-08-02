@@ -229,6 +229,39 @@ architecture test enforces this.
 Declared in `Nami.Identity.Abstractions` at this phase; the default adapters and later
 implementations land with their owning designs.
 
+> **None of the ten can be written from this repository as it stands on 2026-08-02, and
+> the table below is a catalogue of names rather than of contracts.** Found by trying: the
+> `Abstractions` project landed that day and the port intended to be its first type could
+> not be compiled. The counts are enumerated, not estimated, over every occurrence of each
+> name in `docs/` outside `kb/.scratch/`.
+>
+> **Four have no members stated anywhere**: `ISigningCredentialSource`,
+> `IEncryptionCredentialSource`, `IDataProtectionKeyStore`, and `ITenantStore`.
+> [ADR-0006](../adr/0006-disaster-recovery-key-material.md) section on ports constrains all
+> four in prose, and usefully, since it fixes that the two credential sources are **not**
+> scope-aware while the storage port is. That is enough to check a signature against and not
+> enough to write one from.
+>
+> **Three of the six that do have members elide the task type on an `Async` member**:
+> `ISecretResolver` ([09](09-federation-and-claims-profile.md) section 3),
+> `IClaimsProfileService` ([04](04-core-protocol.md) section 3), and `ICheckAccess`
+> ([07](07-authorization.md) section 3) all give the parameter list and then a bare result
+> type. **That is an omission and not a convention**, because the same layer writes
+> `ValueTask~AuditChainEntry~` and `ValueTask` explicitly at
+> [03](03-audit.md) section 3 when it means them. The remaining three
+> (`ISigningKeyStore`, `IAuditSink`, `ISecurityEventSink`) each need a DTO that is specified
+> in its own design and not here.
+>
+> **One is a naming question rather than a gap, and it is the sharpest of the set.**
+> `ITenantStore` may be Nami's own port or may be naming the type that the multi-tenancy
+> library of [ADR-0001](../adr/0001-multi-tenancy-model.md) already ships under that name
+> (**not verified**: no package is available in this repository to read it at source). If it
+> is the library's, it must not be declared here at all, because that would put a
+> third-party dependency inside the assembly section 3.1 requires to depend on nothing. The
+> question is answerable only against a restored package graph.
+>
+> Closing this is per-port work owned by each port's design, not an edit to this table.
+
 | Port | Purpose | Default adapter | Owning ADR |
 |---|---|---|---|
 | `ISigningCredentialSource` | Supply the signing credential to the pipeline | Database | 0006, 0011 |

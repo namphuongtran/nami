@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The dependency-inversion centre (ADR-0065, design 01 section 3.1).
+
+    THIS PROJECT DEPENDS ON NOTHING, and that is a rule rather than a current
+    state: design 01 section 3.1 line 97 says "`Abstractions` depends on
+    nothing". There is no ProjectReference and no PackageReference below, and
+    there is not meant to be one. An architecture test asserts it from the
+    outside as of the test project's arrival, because a rule that only lives in
+    a comment is a rule that gets edited away by whoever needs the reference.
+
+    TargetFrameworks reads the knob rather than naming a framework, so a runtime
+    bump touches Directory.Build.props once (ADR-0030 parameter C). The knob is
+    two properties and not one on purpose: parameter B multi-targets libraries
+    and single-targets the host, so one shared property would be wrong for one
+    of them the day .NET 12 ships. Both read net10.0 today, which is exactly why
+    the shape has to be right now rather than later, when the difference appears
+    and the wrong shape is already load-bearing.
+  -->
+
+  <PropertyGroup>
+    <TargetFrameworks>$(NamiLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+</Project>
