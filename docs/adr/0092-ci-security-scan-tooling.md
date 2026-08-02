@@ -261,8 +261,12 @@ reading a licence at source and adding the row, exactly as the five tools above 
   same change that first runs it in the pipeline.
 * **M1**: the exact property combination that selects the `_warnaserror` variant of the security
   globalconfig was **not** read and is not guessed here. Confirm it against a real build when the
-  first project lands, alongside the C# `.editorconfig` ruleset that ADR-0065 already defers to
-  M1, and record the result.
+  first project lands, and record the result. The companion this named, "the C# `.editorconfig`
+  ruleset that ADR-0065 already defers to M1", **stopped being one on 2026-08-02**, when that
+  ruleset landed early against a throwaway fixture built by `scripts/test-editorconfig.sh`. The
+  item here does not move with it: an MSBuild property combination that selects a globalconfig
+  variant is a property of a **real** project's build, and a fixture written to exercise a style
+  ruleset would answer it only by accident.
 * **At adopt time**: enumerate ZAP's bundled components against the exact released version, per
   the `DEPENDENCY-LICENSES.md` section 7 maintenance rule, rather than relying on the reading
   taken here against the repository's default branch.

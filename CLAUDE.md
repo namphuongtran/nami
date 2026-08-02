@@ -51,8 +51,9 @@ servers. It is in **pre-alpha**: the architecture is fully designed and its risk
 spikes were validated with runnable code, but that code lives in a separate design
 corpus. This repo currently holds the **decision records, governance, and docs
 scaffolding**; application source lands under `src/` starting at milestone M1
-(`src/.gitkeep` is the placeholder). The only executable code today is the docs
-guardrail (`scripts/`).
+(`src/.gitkeep` is the placeholder). The only executable code today is in `scripts/`:
+the docs guardrail, and since 2026-08-02 a self-test for the C# style ruleset, which
+generates the C# it checks because the repository has none to offer it.
 
 Because the product is expressed as decisions, the ADR corpus in `docs/adr/` **is**
 the architecture. Read the relevant ADRs before proposing changes to behavior they
@@ -75,9 +76,20 @@ bash scripts/check-adrs.sh
 # wrong cell is the failure it exists for, and that is how it was proven before wiring.
 python3 scripts/check-decisions-index.py
 
+# The C# style ruleset, since 2026-08-02. Its own CI job, because it needs a .NET SDK.
+# There is no C# here yet, so it builds a throwaway project in .editorconfig-probe/
+# against the real .editorconfig and Directory.Build.props and asserts the rules fire.
+# Skips with exit 0 when dotnet is absent, and says a skip is not a pass.
+bash scripts/test-editorconfig.sh
+
 # Enable the opt-in local pre-commit hook (both gates + local name-scrub). Per clone.
 git config core.hooksPath scripts/hooks
 ```
+
+**The hook runs two of the four gates**, so a green hook is not a green build. The
+markdownlint line above and `scripts/test-editorconfig.sh` are separate CI steps, and
+so is `scripts/test-check-adrs.sh`. This has already produced a commit message that
+claimed a self-test was green before it had been run.
 
 The lint version is not a preference: it is the version bundled by the SHA-pinned
 action in `ci.yml` (ADR-0086), so bump both or neither. `.markdownlint-cli2.jsonc`
@@ -87,6 +99,8 @@ see.
 
 There is no build or test suite yet; the .NET build/test/license-scan CI gates are
 added when the solution lands (see the comment at the end of `.github/workflows/ci.yml`).
+CI does install a .NET SDK, for the style-ruleset job above, and that job is not one of
+those gates: it reads no project in this repository, because there are none.
 
 ## Evidence rule (non-negotiable, applies to every layer)
 
@@ -180,7 +194,12 @@ These are legal/OSS constraints and the CI guardrail + local hook enforce parts 
   C# conventions adopted by reference, enforced via `.editorconfig` + analyzers,
   with the Nami tailoring). Quick reference: assemblies under `Nami.Identity.*`;
   config keys `Nami:X` (env `Nami__X`), env alias `NAMI_X`. The machine-enforceable
-  rules live in `.editorconfig` (the C# ruleset lands with the first code at M1).
+  rules live in `.editorconfig`, whose C# section landed 2026-08-02 ahead of any code,
+  and in `Directory.Build.props` beside it. **Those two files are one mechanism, not
+  two.** Error severity in `.editorconfig` fails nothing on its own; the property in
+  `Directory.Build.props` is what makes it fail a build, measured. Editing either
+  without the other is how the ruleset goes quiet while still reading as enforced,
+  which is what `scripts/test-editorconfig.sh` is there to catch.
 
 ## Ephemeral working areas (git-ignored, local-only)
 

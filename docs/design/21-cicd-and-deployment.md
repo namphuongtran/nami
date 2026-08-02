@@ -231,7 +231,7 @@ are real code built in CI. Examples use neutral tenant names (tenant A, tenant B
 
 | Library / tool | Purpose | License | ADR |
 |---|---|---|---|
-| MinVer | Git-tag-driven versioning | Apache-2.0 | ADR-0044 |
+| MinVer | Git-tag-driven versioning | Apache-2.0 | ADR-0030, ADR-0027 |
 | Microsoft.CodeAnalysis.PublicApiAnalyzers | Public-API lock | MIT | ADR-0044 |
 | CycloneDX (dotnet tool) | SBOM per release | Apache-2.0 | ADR-0026, ADR-0051 |
 | cosign / sigstore | Keyless signing and attestation | Apache-2.0 | ADR-0051 |
@@ -332,6 +332,7 @@ canary, collector-outage, and chaos suite are owned by [19](19-observability-cap
 - **Ops ratifications** (tracked in the [Pre-GA ratification checklist](../PRE-GA-RATIFICATION-CHECKLIST.md)): the OpenTofu state backend and its state-encryption key bootstrap; the public reference host for OpenID certification listing (no owner yet); the RTO/RPO targets and DR runbook (ADR-0006); the Pool-shared-keyset accepted risk before GA (ADR-0033).
 - **Build-time**: the publisher Authenticode certificate and enabling cosign keyless; the release-notes tooling; the protected environment and required reviewers; the container-registry default plus an optional mirror; DCO-versus-CLA; the disclosure window and security contact; the version-support window; and any .NET Foundation membership.
 - The sample set is the nine-sample list (reconciling the older five-sample figure), each CI-tested.
+- **Corrected 2026-08-02: the MinVer row above cited ADR-0044, which contains no occurrence of "MinVer" or "SourceLink".** The tool is chosen by ADR-0030 and used by ADR-0027's package graph; ADR-0044 governs what may change under the version MinVer produces, which is a different claim about the same number. The row now names both owners. This is the resolving-citation shape the docs instructions describe, arriving by its documented route: ADR-0027 names the tool and ADR-0044 in one sentence, and the pointer attached to the wrong clause of it. Found while reconciling `Directory.Build.props` ownership for ADR-0065, not by a checker, and no checker sees it: Check 2 confirms `ADR-0044` resolves to a file, which it does.
 
 ## References
 
