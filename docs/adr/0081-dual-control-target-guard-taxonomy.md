@@ -84,7 +84,20 @@ CHECK ("TargetClass" <> 'mutate' OR "TargetETag" IS NOT NULL)
 |---|---|---|---|
 | `mutate` | required | the ETag still matches | `delete-application`, `delete-scope`, `delete-tenant`, `suspend-tenant`, `resume-tenant`, `offboard-user`, `revoke-all-tokens`, `secret-revoke`, key purge, the Pool-to-Silo re-home, and **`approve-user-invite`** with a server-filled ETag |
 | `create` | NULL | the create preconditions still hold: uniqueness, the existence of every referenced principal, and the endpoint's own admission rules | `provision-tenant`, a dangerous `delegated-admin-grant` |
-| `query` | NULL | the filter frozen in the payload is authoritative and **may not be widened**, and any size or scope threshold that gated the approval is re-evaluated | bulk `audit-export` |
+| `query` | NULL | the filter frozen in the payload is authoritative and **may not be widened**, and any size or scope threshold that gated the approval is re-evaluated, **at redemption rather than at approval** (see below) | bulk `audit-export` |
+
+**For `query`, the guard runs at redemption, and that is a deliberate exception to the column
+heading above (added 2026-08-02).** ADR-0008 makes a bulk audit export deliver through a
+single-use, time-boxed grant that the proposer redeems, so approval mints the grant and the
+rows move afterwards. "Re-run before executing" therefore has two candidate moments for this
+class alone, and the useful one is the transfer: re-evaluating a frozen filter and its size at
+approval time checks a moment when nothing is leaving. So `ExecutedAt` on a `query` proposal
+records that the grant was minted, and all three checks (the filter is not widened, the
+threshold that gated the approval still holds, and the proposer still holds the capability)
+are evaluated when the grant is redeemed. This is the only class where the two moments come
+apart, because it is the only class whose effect is **data leaving** rather than state
+changing, and reading `ExecutedAt` as "the data left" is exactly the misreading this note
+exists to prevent. The egress gets its own audit event for the same reason (ADR-0008).
 
 **`TargetId` is also `NOT NULL`, and the class is what says what it means.** The taxonomy
 above would otherwise have left the same shape of hole one column over: a targetless
@@ -239,7 +252,9 @@ request-time-only check into a real exposure here.
   saga this guards), ADR-0079 (the `If-Match` split, which supplies the mutate
   class's ETag from the wire), ADR-0047 (`ICheckAccess`, the proposer re-check),
   ADR-0010 (the delegated-admin grant model, one create-class action), ADR-0015
-  (break-glass, deliberately outside this saga).
+  (break-glass, deliberately outside this saga), and ADR-0008 (the bulk audit export
+  that is this taxonomy's only `query`-class action, whose grant-and-redeem delivery is
+  what moves this class's guard to redemption).
 * Imported from the design corpus's guard-taxonomy decision on 2026-08-01. The class
   assignments were re-derived against **this** repository's catalogue rather than
   copied: the corpus and this repository do not have identical action lists, and the
