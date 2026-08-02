@@ -73,7 +73,11 @@ consequences, all measured:
   nullability is still being versioned. Both files carry it; keep it that way.
 - **`required` is invisible to the analyzer.** It asks for `Name.set -> void` either way, so
   adding `required` to a shipped member is a breaking change that will not appear in the API
-  diff. Recorded as an open item in ADR-0044's Confirmation.
+  diff. It is not invisible to the *assembly*, though, which is why ADR-0044's Confirmation
+  routes it to that ADR's second compat layer rather than to a hand-kept manifest. **What binds
+  here: the modifier is allowed only while `PublicAPI.Shipped.txt` holds no entries.** Promoting
+  anything into `Shipped` is the event that has to answer this, and a type carrying `required`
+  is the thing that will be asked about.
 - **The gates disagree by one diagnostic.** `RS0016` fails both `dotnet build` (exit 1) and
   `dotnet format --verify-no-changes` (exit 2). `RS0017`, the stale-entry one, fails only the
   build, because it is set through `<WarningsAsErrors>` in `Directory.Build.props` and format

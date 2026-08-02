@@ -91,11 +91,30 @@ and four of the six findings are cases where this parameter reads as satisfied a
   `PublicAPI.Unshipped.txt`, exit 0 and silent. So the header cannot be checked by looking at
   the file the entries are in, and without it every recorded signature loses its `!` and `?`.
 * **`required` is not recorded in the API file**, so parameter A's forcing function does not
-  reach it. The analyzer asks for `…Name.set -> void` whether or not the member is `required`.
-  Adding `required` to a shipped member is breaking for every caller that constructs the type,
-  which parameter B would class as MAJOR, and it would not appear in the API diff. This is the
-  same shape as parameter I's configuration keys: a real part of the contract that
-  `PublicAPI.Shipped.txt` structurally cannot hold. Recorded here as an open item, not closed.
+  reach it. Measured in both directions on 2026-08-02: dropping the modifier from all three
+  members of `ScopeDefinition` left `PublicAPI.Unshipped.txt` unchanged and the build at exit
+  0, with three `CS8618` warnings and no error, because the analyzer asks for
+  `…Name.set -> void` either way. Adding `required` to a shipped member is breaking for every
+  caller that constructs the type, which parameter B classes as MAJOR, and it would not appear
+  in the API diff.
+
+  **This is not parameter I's problem wearing a different hat, and the sentence that stood here
+  said it was.** A `Nami:` configuration key exists in no artifact any tool reads, which is
+  precisely what forces parameter I to keep a manifest by hand. `required` is in the assembly:
+  the same measurement counted `RequiredMemberAttribute`, `CompilerFeatureRequiredAttribute`
+  and `RequiredMembers` in the built `Nami.Identity.Abstractions.dll`, three occurrences with
+  the modifier and none without it. So this is one tool that cannot see a thing, not a thing no
+  tool can see, and the candidate mechanism is the second layer parameter H already names,
+  `Microsoft.DotNet.ApiCompat`. **Not verified**: whether ApiCompat reports an added required
+  member. Nothing has been released, so there is no baseline to compare against, and wiring a
+  comparison gate over an empty `Shipped` file would produce exactly the reads-as-enforced green
+  that the rest of this section is about.
+
+  **The line until then, with a trigger rather than a date**: `required` is allowed on a public
+  member for as long as `PublicAPI.Shipped.txt` holds no entries, since adding it to something
+  never released breaks no caller. The first promotion of `Unshipped` to `Shipped` is what turns
+  this from a note into a gate, and is the point at which either the second layer is wired or
+  `required` leaves the public surface. Open, and now owned by that event.
 
 Two directions are proven working, both exit 1: an undeclared public member fails `dotnet build`
 on `RS0016` (and `dotnet format --verify-no-changes` with exit 2 on the same diagnostic), and a
