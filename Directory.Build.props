@@ -1,0 +1,28 @@
+<Project>
+
+  <!--
+    Inherited by every project under this directory, so the C# ruleset in
+    .editorconfig applies to the whole solution from the first project onward
+    (ADR-0065).
+
+    This file exists because severity is not enough. Measured on 2026-08-02
+    against .NET SDK 10.0.301: an .editorconfig carrying
+    `dotnet_diagnostic.IDE1006.severity = error` and
+    `dotnet_diagnostic.IDE0055.severity = error`, against a file violating both,
+    produced `Build succeeded` and exit 0. Setting the property below turned the
+    same build into `Build FAILED` and exit 1. ADR-0065's "set to error severity
+    so a violation fails the build" is therefore a statement about the pair, and
+    landing the .editorconfig without this file would have shipped a ruleset that
+    reads as enforced and is not.
+
+    Deliberately one property. TargetFramework, LangVersion, Nullable, MinVer,
+    and the reproducible-build stack are all owned elsewhere (ADR-0030, ADR-0044)
+    and land with the solution at M1; adding them here ahead of the projects they
+    configure would be guessing at values no source in this repository states.
+  -->
+
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+</Project>

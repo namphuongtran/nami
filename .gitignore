@@ -440,6 +440,13 @@ docs/kb/.scratch/
 # Local-only guardrail denylist (never committed)
 scripts/.local/
 
+# Throwaway project that scripts/test-editorconfig.sh builds to prove the C#
+# ruleset fires. It lives inside the repository on purpose, because that is the
+# only way it inherits the real .editorconfig and Directory.Build.props rather
+# than a copy. The script removes it on every exit path; this entry is the
+# backstop for an interrupted run.
+.editorconfig-probe/
+
 # Claude Code. The shared project instruction files (CLAUDE.md, per folder) and the
 # shared slash commands (.claude/commands/) ARE committed: they are project tooling.
 # Per-developer settings are not. settings.local.json holds one developer's tool

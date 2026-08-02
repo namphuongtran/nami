@@ -13,3 +13,106 @@ indent_size = 2
 
 [*.md]
 trim_trailing_whitespace = false
+
+# ---------------------------------------------------------------------------
+# C# style and naming (ADR-0065), landed 2026-08-02.
+#
+# Only deviations are written here. ADR-0065 adopts the Microsoft naming and C#
+# coding conventions *by reference*, and they "govern anything this ADR and its
+# .editorconfig do not explicitly override", so a rule the built-in defaults
+# already enforce is deliberately absent rather than restated. IDE1006 ships
+# default rules for the I-prefix on interfaces and PascalCase on types and
+# members: they fire with no dotnet_naming_* entry present at all, measured on
+# SDK 10.0.301. The Microsoft template that `dotnet new editorconfig` writes is
+# 389 lines; vendoring it would restate those defaults and rot against them.
+#
+# The [*] section above already gives .cs the right indentation, charset, line
+# ending, and final newline. The Microsoft template's insert_final_newline =
+# false for [*.cs] is deliberately not taken.
+#
+# Every claim in these comments was measured on 2026-08-02 against .NET SDK
+# 10.0.301, and scripts/test-editorconfig.sh re-proves the rules on every CI
+# run rather than trusting that measurement forward.
+# ---------------------------------------------------------------------------
+[*.cs]
+
+# These two lines are what reach the build, and they are the whole "agreed core
+# at error severity" that ADR-0065 leaves to this file to name.
+#
+# A per-rule `dotnet_naming_rule.<name>.severity = error` does NOT reach it: with
+# a naming rule set to error and no IDE1006 line present, `dotnet build`
+# succeeded on a violation and reported nothing, while `dotnet format
+# --verify-no-changes` exited 2 on the same file. Adding the line below turned
+# the same build into exit 1.
+#
+# Severity here is also not tierable. IDE1006 governs every naming rule at once,
+# so a rule declared `suggestion` still fails the build under an error IDE1006.
+# That is why all four rules below read `error`: it is a description of what
+# happens, not four separate choices.
+#
+# Neither line fails a build on its own either. That needs EnforceCodeStyleInBuild,
+# which is an MSBuild property rather than an editorconfig key, and it lives in
+# Directory.Build.props beside this file.
+dotnet_diagnostic.IDE1006.severity = error
+dotnet_diagnostic.IDE0055.severity = error
+
+# ADR-0065: "Private instance fields: _camelCase, following the Microsoft C#
+# convention; this is the deliberate house choice, recorded so it is not
+# re-litigated."
+#
+# The ADR says *instance*, and the two rules ahead of the general one are what
+# hold it to instance fields. Neither is decoration. Measured by deleting each
+# one: with the const rule gone, `private const int maxRetries` is required to
+# be `s_maxRetries`, because the symbol matcher counts a constant as static;
+# with the static rule gone, `private static int counter` is required to be
+# `_counter`. Either omission extends the ADR's instance-field rule to a kind of
+# member the ADR does not mention, on this file's own authority. Both preceding
+# styles are the Microsoft baseline ADR-0065 adopts by reference, read in the
+# SDK's own `dotnet new editorconfig` output rather than paraphrased.
+#
+# Declaration order is NOT the mechanism, and the plausible opposite was checked
+# rather than assumed: moving the general rule above the other two left every
+# field matched by exactly the same rule as before, so the more specific symbol
+# specification wins regardless of position. The order below is for readability.
+# Do not turn that into a rule about order in either direction.
+
+dotnet_naming_rule.private_constant_fields_are_pascal_case.severity = error
+dotnet_naming_rule.private_constant_fields_are_pascal_case.symbols = private_constant_fields
+dotnet_naming_rule.private_constant_fields_are_pascal_case.style = pascal_case
+dotnet_naming_symbols.private_constant_fields.applicable_kinds = field
+dotnet_naming_symbols.private_constant_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_constant_fields.required_modifiers = const
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_rule.private_static_fields_are_s_camel_case.severity = error
+dotnet_naming_rule.private_static_fields_are_s_camel_case.symbols = private_static_fields
+dotnet_naming_rule.private_static_fields_are_s_camel_case.style = s_camel_case
+dotnet_naming_symbols.private_static_fields.applicable_kinds = field
+dotnet_naming_symbols.private_static_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_static_fields.required_modifiers = static
+dotnet_naming_style.s_camel_case.required_prefix = s_
+dotnet_naming_style.s_camel_case.capitalization = camel_case
+
+dotnet_naming_rule.private_instance_fields_are_underscore_camel_case.severity = error
+dotnet_naming_rule.private_instance_fields_are_underscore_camel_case.symbols = private_instance_fields
+dotnet_naming_rule.private_instance_fields_are_underscore_camel_case.style = underscore_camel_case
+dotnet_naming_symbols.private_instance_fields.applicable_kinds = field
+dotnet_naming_symbols.private_instance_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+
+# ADR-0065: "Asynchronous methods: the Async suffix, per the Microsoft
+# guideline, enforced."
+#
+# Coverage has a hard edge worth knowing before relying on it: the match is on
+# the `async` modifier, so `public async Task Poll()` is caught and
+# `public Task Poll()` returning a Task without the modifier is not. There is no
+# return-type filter available in a naming symbol, so the uncovered half is a
+# review matter rather than a gap this file can close.
+dotnet_naming_rule.async_methods_end_in_async.severity = error
+dotnet_naming_rule.async_methods_end_in_async.symbols = async_methods
+dotnet_naming_rule.async_methods_end_in_async.style = ends_with_async
+dotnet_naming_symbols.async_methods.applicable_kinds = method
+dotnet_naming_symbols.async_methods.required_modifiers = async
+dotnet_naming_style.ends_with_async.required_suffix = Async
+dotnet_naming_style.ends_with_async.capitalization = pascal_case
