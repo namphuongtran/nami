@@ -199,6 +199,16 @@ push people toward. Writing it also found that the script's untracked-file cover
 named only markdown, so a new workflow would have been invisible **and** unannounced, which is
 the same false-green shape that warning was added for; it now covers workflows too.
 
+**That proof was then made permanent, because a one-off proof was not enough here.** The rules
+match with `awk`, and the CI runner's awk is a different implementation from the one they were
+authored against, so a green guardrail on a clean tree proves only that the awk parses: a clean
+tree has no violation to match. `scripts/test-check-adrs.sh` plants the violations on every run,
+in a throwaway worktree, and CI runs it beside the guardrail. **Building it turned up a false
+green of its own**, which is worth recording because the shape recurs: the first version ran the
+guardrail inside a worktree checked out at `HEAD`, so deleting the block-scalar rule from the
+working tree left the test green, it having tested the committed script rather than the edited
+one. Found by breaking the subject deliberately rather than by reading the test.
+
 **The reversal condition is recorded and no candidate is named, which is deliberate.** Reverse
 this when the bright lines stop being able to hold the surface, concretely when a `with:`-input
 flow or a `permissions:` scope question becomes a real one rather than a hypothetical, or when

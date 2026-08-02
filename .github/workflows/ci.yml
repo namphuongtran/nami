@@ -37,5 +37,13 @@ jobs:
         # proven on 2026-08-02 by blanking one view from a row's "Views that cite it"
         # cell, on which check-adrs.sh still printed OK and this exited 1.
         run: python3 scripts/check-decisions-index.py
+      - name: Guardrail self-test
+        # Check 8 uses awk, and this runner's awk is a different implementation from
+        # the one it was authored against. A green guardrail on a clean tree proves
+        # only that the awk parses: a clean tree has no violation to match. This
+        # plants three in a throwaway worktree and asserts they are caught while four
+        # look-alikes are not, so the matching is proven on the awk that runs it, on
+        # every run rather than once.
+        run: bash scripts/test-check-adrs.sh
 
   # .NET build/test/license-scan gates are added when the solution lands (M1).

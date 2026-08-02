@@ -27,6 +27,32 @@ for coverage it did not have. It warns rather than fails, because an untracked
 work-in-progress file is legitimate mid-edit; staging is still what makes the verdict cover
 it. CI cannot reach this case, its checkout being tracked-only.
 
+## test-check-adrs.sh
+
+A self-test for `check-adrs.sh` Check 8, run in CI alongside the guardrail itself:
+
+```bash
+bash scripts/test-check-adrs.sh
+```
+
+It creates a throwaway `git worktree` at `HEAD`, copies the **working-tree** guardrail into
+it, plants a workflow carrying three violations and four look-alikes, and asserts that
+exactly the three are reported. The worktree is removed on every exit path, so neither the
+real working tree nor the real index is ever written to.
+
+It exists because Check 8 matches with `awk`, and the awk on the CI runner is a different
+implementation from the one the check was authored against. A green guardrail on a clean
+tree proves only that the awk parses, since a clean tree has nothing to match; this supplies
+the bug so the matching is proven on the awk that runs it, on every run rather than once.
+
+Two properties are load-bearing and easy to lose in an edit. **It copies the working-tree
+guardrail into the worktree**, because a worktree at `HEAD` otherwise tests the committed
+script rather than the one being edited: the first version of this file omitted that copy,
+and deleting Check 8's block-scalar detection outright still produced a green. And **the two
+finding-count assertions are what prove the look-alikes did not trip**; the per-line checks
+are diagnostics, and the negative ones among them pass vacuously if a line number drifts,
+which also happened on the first run.
+
 ## check-decisions-index.py
 
 Checks the architecture layer's reverse index,

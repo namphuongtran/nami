@@ -36,6 +36,21 @@ an `ADR-` reference whose four digits match no file produced **no problem at all
 same file staged produced both. A check that has never been run against the bug it exists
 for is not known to work.
 
+**That rule now has a permanent instance, and writing it exposed the rule's own weak spot.**
+`test-check-adrs.sh` plants three Check 8 violations in a throwaway worktree on every CI run,
+so the matching is proven on the runner's awk rather than only on the author's. Two things
+went wrong while building it and both generalise beyond this script:
+
+- **A test can pass on a deliberately broken subject.** The first version ran the guardrail
+  inside a worktree checked out at `HEAD`, so deleting Check 8's block-scalar detection from
+  the working tree changed nothing and the test stayed green. It now copies the working-tree
+  script in. **Whenever a test builds an isolated environment, ask which copy of the subject
+  ended up in it**, and prove the answer by breaking the subject on purpose.
+- **A negative assertion fails open.** Every hard-coded line number in the first run was off
+  by one. The positive assertions reported it immediately; the four `grep && fail` negatives
+  passed against lines that do not exist and said nothing. Where a property must hold
+  negatively, assert a **count** and keep the per-line checks as diagnostics.
+
 That last sentence is written without a literal dangling reference on purpose, and the
 reason generalises. **Check 2 has no escape hatch, so prose cannot quote a broken
 reference as an example.** Describe the shape instead. The same constraint already shaped
