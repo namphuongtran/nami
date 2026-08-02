@@ -116,3 +116,54 @@ dotnet_naming_symbols.async_methods.applicable_kinds = method
 dotnet_naming_symbols.async_methods.required_modifiers = async
 dotnet_naming_style.ends_with_async.required_suffix = Async
 dotnet_naming_style.ends_with_async.capitalization = pascal_case
+
+# ---------------------------------------------------------------------------
+# Public-API lock (ADR-0044 parameter A), landed 2026-08-02 with the analyzer.
+#
+# ADR-0044 parameter A sets RS0016, RS0017 and the nullable-annotation RS0037
+# to ERROR. TWO of the three are set here. The third, RS0017, cannot be set from
+# this file at all and lives in Directory.Build.props; the paragraph after the
+# lines below says why, and it is the finding of the change that landed them.
+#
+# The two below are load-bearing rather than a restatement. Measured 2026-08-02
+# against Microsoft.CodeAnalysis.PublicApiAnalyzers 5.6.0: adding the package
+# with no severity line anywhere reported eight RS0016 and three RS0037 against
+# a type absent from the API file and still finished `Build succeeded`, exit 0.
+# The package on its own is a reporter; the severity is what makes it a gate.
+#
+# This is NOT the shape the two IDE lines above have. IDE1006 and IDE0055 need
+# EnforceCodeStyleInBuild before an error severity fails anything, and these do
+# not: measured with `-p:EnforceCodeStyleInBuild=false` against an undeclared
+# public member, `dotnet build` still exited 1 on RS0016. Do not "make them
+# consistent" with the block above by routing them through that property.
+dotnet_diagnostic.RS0016.severity = error
+dotnet_diagnostic.RS0037.severity = error
+
+# RS0017 IS DELIBERATELY ABSENT FROM THIS FILE, and adding it here is the
+# mistake that looks correct and does nothing.
+#
+# A diagnostic's severity is matched against the file it is REPORTED IN. RS0017
+# reports a stale line in the API text file, so its location is
+# `PublicAPI.Unshipped.txt(N,1)` rather than any `.cs`. Measured 2026-08-02,
+# four placements were tried and four left it at its default of warning: under
+# `[*.cs]`, under a section naming the two API files explicitly, under `[*]`,
+# and in a root `.globalconfig` added through an MSBuild item. The one that did
+# work was a `.globalconfig` sitting in the project's own directory, rejected
+# because it is per-project and would have to be copied into every package.
+#
+# So it is `<WarningsAsErrors>` in Directory.Build.props, measured exit 1, one
+# place, inherited by every project. That file carries the same note.
+#
+# What this costs is worth stating: RS0017 is therefore an error to
+# `dotnet build` and stays a warning to `dotnet format`, because format reads
+# this file and not MSBuild properties. The two paths are already not one gate;
+# this is one more line along that seam, and the build path is the one that
+# holds here.
+#
+# Why it matters that RS0017 bites at all: it is the ONLY one of the three that
+# fires on a pure removal, where a public member is deleted from the code and
+# its lines are left in the API file. Measured while it was still a warning,
+# that produced `2 Warning(s)`, `Build succeeded`, exit 0. Removal is the
+# MAJOR-breaking direction parameter B treats most seriously. It hid through
+# the first break test because a member that is retyped rather than removed
+# fires RS0016 alongside it, and one error is enough to fail a build.

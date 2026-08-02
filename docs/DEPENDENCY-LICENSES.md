@@ -175,10 +175,27 @@ diff against this table is what the M1 read has to produce.
 | `Duende.AccessTokenManagement.OpenIdConnect` | Apache-2.0 | As above. | Architect | 2026-07-25 |
 | `Duende.IdentityModel` | Apache-2.0 | As above; transitive through the two packages above. | Architect | 2026-07-25 |
 | `Yarp.ReverseProxy` | MIT | Not an exception to the policy: recorded because it was named as a dependency in ADR-0029, ADR-0024, ADR-0061 and design [24](design/24-bff.md) with its licence asserted only in prose, which is blind spot 2 above. Read at the `.nuspec` (`<license type="expression">MIT</license>`, version 2.3.0, repository `github.com/dotnet/yarp`) rather than from a badge. | Architect | 2026-08-01 |
+| `Microsoft.CodeAnalysis.PublicApiAnalyzers` **5.6.0** | MIT | Not an exception to the policy, and the same blind spot 2 as the row above: design [21](design/21-cicd-and-deployment.md) line 244 and design [01](design/01-foundations.md) line 427 both asserted MIT for it in prose, and neither is evidence. Read at the `.nuspec` fetched from the nuget.org flat container (`<license type="expression">MIT</license>`, `<repository … url="https://github.com/dotnet/roslyn" commit="c0573ed0a7dc3e3b4d2e70da47f97cc51a35524f" />`). Bundle composition read in the same step and it is not a bundle: the nuspec declares no `<dependencies>` element, and `obj/project.assets.json` after restore shows the target graph as the single node `Microsoft.CodeAnalysis.PublicApiAnalyzers/5.6.0`. | Architect | 2026-08-02 |
 
-Licences for the three above were verified at nuget.org on 2026-07-25 at versions 4.2.0 and
+Licences for the first three rows were verified at nuget.org on 2026-07-25 at versions 4.2.0 and
 8.1.0. See ADR-0026 section E for the exact scope of that naming exception and what it does not
 cover.
+
+**The analyzer row is the first entry in this file for a package this repository actually
+compiles against**, added 2026-08-02 in the change that created `Directory.Packages.props`. Every
+row above it records something decided, rejected, or asserted elsewhere; this one records a
+restore that happens. Two consequences follow and neither is automatic yet. The section 7
+maintenance rule and [ADR-0061](adr/0061-technology-stack-of-record.md)'s both defer the
+completeness cross-check to "once code exists at M1", and the manifest they name now exists, so
+that item moves from blocked to open. And the ADR-0026 section C licence-scan gate is still not
+wired; when it is, note that a restore graph one node deep cannot demonstrate a scanner works,
+so the gate needs a deliberate negative test rather than a green run.
+
+**ADR-0026 section D does not list this package**, which is not a defect in either document.
+Section D is a list of packages confirmed permissive at the time it was written, not a gate;
+the gate is section A, which classifies **licences**, and MIT is on its permissive list. This
+is stated because section A's "not named above is not permitted" rule reads, at a glance, as
+though it applied to package names.
 
 ## 4. Rejected packages and tools, with the evidence
 

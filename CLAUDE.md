@@ -231,6 +231,15 @@ These are legal/OSS constraints and the CI guardrail + local hook enforce parts 
   `Directory.Build.props` is what makes it fail a build, measured. Editing either
   without the other is how the ruleset goes quiet while still reading as enforced,
   which is what `scripts/test-editorconfig.sh` is there to catch.
+- **A severity is matched against the file a diagnostic is REPORTED IN, which is not
+  always a `.cs` file.** Learned 2026-08-02 landing the ADR-0044 public-API analyzers:
+  `RS0017` reports a stale entry inside `PublicAPI.Unshipped.txt`, so `[*.cs]` never
+  matches it, and neither did a section naming the API files, nor `[*]`, nor a root
+  `.globalconfig` added through an MSBuild item. It sat at its default of warning while
+  reading as configured, and the case it uniquely covers, a public member deleted with
+  its API-file lines left behind, built green. It is now `<WarningsAsErrors>` in
+  `Directory.Build.props`. **Before trusting any severity line, break the rule and read
+  the exit code**, because the placement that looks right is the one that fails quietly.
 
 ## Ephemeral working areas (git-ignored, local-only)
 

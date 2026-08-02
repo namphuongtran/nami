@@ -1,0 +1,9 @@
+#nullable enable
+Nami.Identity.Abstractions.ScopeDefinition
+Nami.Identity.Abstractions.ScopeDefinition.DisplayName.get -> string!
+Nami.Identity.Abstractions.ScopeDefinition.DisplayName.set -> void
+Nami.Identity.Abstractions.ScopeDefinition.Name.get -> string!
+Nami.Identity.Abstractions.ScopeDefinition.Name.set -> void
+Nami.Identity.Abstractions.ScopeDefinition.Resources.get -> string![]!
+Nami.Identity.Abstractions.ScopeDefinition.Resources.set -> void
+Nami.Identity.Abstractions.ScopeDefinition.ScopeDefinition() -> void

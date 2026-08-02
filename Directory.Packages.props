@@ -1,0 +1,64 @@
+<Project>
+
+  <!--
+    Central Package Management: the single place a package version is declared
+    (ADR-0026 section C, "Central Package Management is the single place that
+    declares versions, which makes scanning and pinning straightforward").
+
+    It lands with the first package rather than with the first project, and that
+    was deliberate. `ManagePackageVersionsCentrally` over zero packages proves
+    nothing at all: nothing can violate it, so nothing can demonstrate it works.
+    With one package it is measurable, and it was measured on 2026-08-02:
+    putting `Version="5.6.0"` back on the PackageReference fails the build with
+    NU1008, and deleting the PackageVersion line below fails it with NU1010.
+    Two different errors for two different mistakes, both exit 1.
+
+    This file is also the answer to an item two documents have been carrying.
+    ADR-0061's maintenance rule and `docs/DEPENDENCY-LICENSES.md` section 7 both
+    say the durable completeness check is to reconcile their prose lists against
+    the real dependency manifest "once code exists at M1", because two lists
+    derived from prose can agree with each other while both omit the same thing.
+    That manifest is this file. It is one row long, so the check is not worth
+    automating yet, but it is no longer blocked, and it should be automated
+    before the row count makes a manual read unreliable.
+
+    A VERSION WRITTEN LIKE THE ONE BELOW IS A FLOOR, NOT A PIN, and the two are
+    easy to confuse in exactly the file whose job is pinning. Read out of
+    `obj/project.assets.json` after restore on 2026-08-02, this declaration
+    produces the constraint `Microsoft.CodeAnalysis.PublicApiAnalyzers >= 5.6.0`
+    and resolves to `5.6.0`, because NuGet takes the lowest version satisfying a
+    direct constraint. The resolution is what a reader sees and the constraint
+    is what is actually written, so a yanked or unlisted 5.6.0 would float this
+    forward silently. Exact pinning is the bracket form, `[5.6.0]`.
+
+    This is not a defect today and it is a decision owed before OpenIddict
+    lands: ADR-0021 parameter A wants OpenIddict "pinned exactly through Central
+    Package Management", and "exactly" is not what the plain form expresses.
+    Whether every row here becomes bracketed, or only the engine's, is an open
+    item and belongs in ADR-0021's own terms rather than being settled by
+    whoever adds the next line to this file.
+
+    The restore graph is currently ONE node deep, also read from the assets
+    file: the analyzer brings no transitive packages at all. Worth knowing when
+    the ADR-0026 licence-scan gate is wired, because a green scan over a
+    one-node graph says almost nothing about the scanner.
+
+    Licence, before adoption rather than after (ADR-0026, and section 7 of the
+    licence record: "read the licence text of the thing that is actually
+    distributed"). Microsoft.CodeAnalysis.PublicApiAnalyzers 5.6.0 is MIT, read
+    on 2026-08-02 in the package's own .nuspec fetched from the nuget.org flat
+    container, which carries `<license type="expression">MIT</license>`. Two
+    documents in this repository already asserted MIT for it in prose, which is
+    blind spot 2 of the licence record and is not evidence. Recorded with its
+    source in `docs/DEPENDENCY-LICENSES.md` section 3.
+  -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
+  </ItemGroup>
+
+</Project>

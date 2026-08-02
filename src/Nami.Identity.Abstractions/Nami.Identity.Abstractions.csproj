@@ -5,10 +5,28 @@
 
     THIS PROJECT DEPENDS ON NOTHING, and that is a rule rather than a current
     state: design 01 section 3.1 line 97 says "`Abstractions` depends on
-    nothing". There is no ProjectReference and no PackageReference below, and
-    there is not meant to be one. An architecture test asserts it from the
-    outside as of the test project's arrival, because a rule that only lives in
-    a comment is a rule that gets edited away by whoever needs the reference.
+    nothing". There is no ProjectReference, and there is not meant to be one. An
+    architecture test asserts it from the outside as of the test project's
+    arrival, because a rule that only lives in a comment is a rule that gets
+    edited away by whoever needs the reference.
+
+    Until 2026-08-02 the sentence above also said there was no PackageReference.
+    There is one now, and the rule is unchanged, because the rule is about what
+    a CONSUMER inherits and an analyzer is not that. What makes that true is
+    `PrivateAssets="all"`, which is load-bearing and was proven so rather than
+    assumed. The analyzer's own nuspec declares `developmentDependency=true`,
+    which reads like it settles the question and does not: packed WITHOUT
+    PrivateAssets, `Nami.Identity.Abstractions.nuspec` carried
+    `<dependency id="Microsoft.CodeAnalysis.PublicApiAnalyzers" version="5.6.0"
+    exclude="Build,Analyzers" />`, so every consumer restoring this package
+    would have pulled it. With PrivateAssets the dependency group packs empty.
+    Both nuspecs were read out of the built .nupkg, not inferred.
+
+    So the architecture test named above must assert against the PACKED SURFACE
+    or against compile-time references, not against the bare presence of a
+    PackageReference item. The item is legitimately here and the rule still
+    holds; a test that reads this file would fail on a correct project and would
+    be "fixed" by deleting the analyzer.
 
     TargetFrameworks reads the knob rather than naming a framework, so a runtime
     bump touches Directory.Build.props once (ADR-0030 parameter C). The knob is
@@ -22,5 +40,9 @@
   <PropertyGroup>
     <TargetFrameworks>$(NamiLibraryTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
 
 </Project>

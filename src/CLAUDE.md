@@ -53,6 +53,59 @@ sourced.
   flat in one folder will be wrong; inventing the grouping from one type would be worse.
   Settle it when the catalogue lands, not before.
 
+## A public type is two files, and the second one is not optional
+
+Since 2026-08-02 every project under `src/` carries `PublicAPI.Shipped.txt` and
+`PublicAPI.Unshipped.txt` beside its `.csproj`, and `Microsoft.CodeAnalysis.PublicApiAnalyzers`
+fails the build when a public member is missing from them (ADR-0044 parameter A). Practical
+consequences, all measured:
+
+- **Do not hand-write the entries.** Build, and copy the exact signature out of the `RS0016`
+  message. The analyzer's spelling is not guessable: an array of non-nullable strings is
+  `string![]!`, and a property is two lines (`.get -> T!` and `.set -> void`) plus a line for
+  the type and one for the constructor. Eight lines for a three-property class.
+- **New surface goes in `Unshipped`, never in `Shipped`.** `Shipped` is what a release promoted
+  and is immutable within a major. Nothing has been released, so `Shipped` holds exactly one
+  line today, the `#nullable enable` header.
+- **That header is project-wide, not per-file, and this is a trap.** With it present in
+  `Shipped` only, deleting it from `Unshipped` where all the entries are left the build green
+  and silent. So a review that checks the file the entries are in cannot tell whether
+  nullability is still being versioned. Both files carry it; keep it that way.
+- **`required` is invisible to the analyzer.** It asks for `Name.set -> void` either way, so
+  adding `required` to a shipped member is a breaking change that will not appear in the API
+  diff. Recorded as an open item in ADR-0044's Confirmation.
+- **The gates disagree by one diagnostic.** `RS0016` fails both `dotnet build` (exit 1) and
+  `dotnet format --verify-no-changes` (exit 2). `RS0017`, the stale-entry one, fails only the
+  build, because it is set through `<WarningsAsErrors>` in `Directory.Build.props` and format
+  reads `.editorconfig`. Both files say why at length; the short version is that a severity is
+  matched against the file the diagnostic is reported in, and `RS0017` is reported inside the
+  API text file, where no `.editorconfig` section this repository tried could reach it.
+
+## An analyzer reference does not break "Abstractions depends on nothing", but only because of one attribute
+
+`PrivateAssets="all"` on the `PackageReference` is load-bearing and was proven so. The
+analyzer's own nuspec declares `developmentDependency=true`, which reads as settling the
+question and does not: packed without `PrivateAssets`, the produced
+`Nami.Identity.Abstractions.nuspec` carried a real
+`<dependency id="Microsoft.CodeAnalysis.PublicApiAnalyzers" version="5.6.0" …/>`, so every
+consumer would have restored it. With it, the dependency group packs empty. Both readings came
+out of the built `.nupkg`.
+
+So when the architecture test lands, **assert against the packed surface or the compile-time
+references, not against the presence of a `PackageReference` item.** A build-only reference is
+legitimate and the rule still holds; a test that reads the csproj would fail on a correct file
+and would be "fixed" by deleting the analyzer.
+
+## Versions live in `Directory.Packages.props`, and what is written there is a floor
+
+Never put `Version=` on a `PackageReference`: Central Package Management is on, and that is
+`NU1008`. Omitting the row entirely is `NU1010`. Both exit 1, both measured.
+
+Read the constraint rather than the number: `Version="5.6.0"` restores as
+`>= 5.6.0` in `obj/project.assets.json` and resolves to `5.6.0` only because NuGet takes the
+lowest match. Exact pinning is `[5.6.0]`, which ADR-0021 parameter A will need for OpenIddict
+and which no row uses yet.
+
 ## `Directory.Build.props` and `.editorconfig` are one mechanism, and the knob is two properties
 
 Both facts are in the root `CLAUDE.md` and in ADR-0065 and ADR-0030. What belongs here is

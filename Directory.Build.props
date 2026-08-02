@@ -27,6 +27,42 @@
   </PropertyGroup>
 
   <!--
+    RS0017 at error (ADR-0044 parameter A), landed 2026-08-02.
+
+    Its two siblings, RS0016 and RS0037, are set in .editorconfig where a
+    severity belongs. This one is here because .editorconfig cannot reach it,
+    which was found by measurement rather than expected.
+
+    A diagnostic's severity is matched against the file it is REPORTED IN, and
+    RS0017's subject is a stale line in the API text file, so it is reported at
+    `PublicAPI.Unshipped.txt(N,1)` and not in any `.cs`. Measured 2026-08-02 on
+    SDK 10.0.301 with analyzer 5.6.0, four placements were tried and four left
+    it at its default of warning: `[*.cs]`, a section naming the two API files
+    explicitly, `[*]`, and a root `.globalconfig` added through an MSBuild item.
+    A `.globalconfig` in the project's own directory did work, and is rejected
+    because it is per-project and would have to be copied into every package.
+    This property is one line, inherited, and measured to exit 1.
+
+    Do not "tidy" this into .editorconfig for symmetry. The symmetry is the bug.
+
+    Why RS0017 specifically has to bite: it is the only one of the three that
+    fires on a pure removal, a public member deleted from the code with its
+    lines left in the API file. Measured while it was still a warning, that
+    produced `2 Warning(s)`, `Build succeeded`, exit 0, which is the
+    MAJOR-breaking direction of ADR-0044 parameter B passing a gate that read
+    as configured.
+
+    The $(WarningsAsErrors) prefix preserves anything a project or a future
+    property sets, so this appends rather than replaces. TreatWarningsAsErrors
+    is still NOT set, and this is not the beginning of it: this promotes one
+    named diagnostic that an accepted ADR already calls an error.
+  -->
+
+  <PropertyGroup>
+    <WarningsAsErrors>$(WarningsAsErrors);RS0017</WarningsAsErrors>
+  </PropertyGroup>
+
+  <!--
     The target-framework knob (ADR-0030 parameter C).
 
     TWO properties, not one, and the reason is parameter B rather than taste: a

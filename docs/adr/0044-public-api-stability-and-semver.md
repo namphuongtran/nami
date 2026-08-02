@@ -58,6 +58,55 @@ Chosen option: "An analyzer-gated formal policy", so that every API change is de
 * A contract-regression test catches an observable behavior change even when the API shape is unchanged.
 * An OpenIddict major bump is shown to surface as a Nami major with a migration guide, not as an unexplained break.
 
+**Parameter A went live on 2026-08-02**, on the one project `src/` then contained, together with
+Central Package Management. `Microsoft.CodeAnalysis.PublicApiAnalyzers` **5.6.0** (MIT, read at
+its `.nuspec`, recorded in `docs/DEPENDENCY-LICENSES.md` section 3) is referenced by
+`Nami.Identity.Abstractions`, which carries `PublicAPI.Shipped.txt` and
+`PublicAPI.Unshipped.txt`. Everything below was measured on SDK 10.0.301 rather than expected,
+and four of the six findings are cases where this parameter reads as satisfied and is not.
+
+* **The package alone is a reporter, not a gate.** Referenced with no severity set anywhere, it
+  produced eight `RS0016` and three `RS0037` against a type absent from the API file and
+  finished `Build succeeded`, exit 0. Parameter A's word ERROR is the whole mechanism.
+* **Severity here does not need `EnforceCodeStyleInBuild`.** That property is what makes an
+  error-severity `IDExxxx` fail a build under ADR-0065; `RS00xx` are ordinary analyzer
+  diagnostics and do not go through it. Measured with `-p:EnforceCodeStyleInBuild=false`
+  against an undeclared public member: still exit 1 on `RS0016`. The two mechanisms look alike
+  and are not, and assuming either shape for the other silences a gate.
+* **`RS0017` cannot be set from `.editorconfig` at all, which is the finding of the day.** A
+  severity is matched against the file a diagnostic is *reported in*, and `RS0017`'s subject is
+  a stale line in the API text file, so it is reported at `PublicAPI.Unshipped.txt(N,1)` and
+  never in a `.cs`. Four placements were tried and four left it at its default of warning:
+  `[*.cs]`, a section naming both API files, `[*]`, and a root `.globalconfig` added through an
+  MSBuild item. It is therefore set as `<WarningsAsErrors>` in `Directory.Build.props`.
+* **Why that mattered rather than being tidy.** `RS0017` is the only one of the three that
+  fires on a *pure removal*, a public member deleted from the code with its lines left in the
+  API file. While it was still a warning, that produced `2 Warning(s)`, `Build succeeded`,
+  exit 0: the MAJOR-breaking direction of parameter B passing a gate that read as configured.
+  It hid through the first break test because a member that is *retyped* fires `RS0016`
+  alongside it, and one error is enough to fail a build.
+* **The nullability half of parameter A is one line, and it is project-wide rather than
+  per-file.** With the `#nullable enable` header absent from both API files, exit 1 on
+  `RS0037`; present in `PublicAPI.Shipped.txt` only, with the entries and the omission both in
+  `PublicAPI.Unshipped.txt`, exit 0 and silent. So the header cannot be checked by looking at
+  the file the entries are in, and without it every recorded signature loses its `!` and `?`.
+* **`required` is not recorded in the API file**, so parameter A's forcing function does not
+  reach it. The analyzer asks for `…Name.set -> void` whether or not the member is `required`.
+  Adding `required` to a shipped member is breaking for every caller that constructs the type,
+  which parameter B would class as MAJOR, and it would not appear in the API diff. This is the
+  same shape as parameter I's configuration keys: a real part of the contract that
+  `PublicAPI.Shipped.txt` structurally cannot hold. Recorded here as an open item, not closed.
+
+Two directions are proven working, both exit 1: an undeclared public member fails `dotnet build`
+on `RS0016` (and `dotnet format --verify-no-changes` with exit 2 on the same diagnostic), and a
+pure removal now fails the build on `RS0017`. `dotnet format` does **not** see `RS0017`, because
+it reads `.editorconfig` and not MSBuild properties, so the two paths ADR-0065 keeps separate
+diverge here by one diagnostic and the build path is the one that holds.
+
+Parameters B through I are untouched by this and remain unenforced: nothing yet promotes
+`Unshipped` to `Shipped`, no release gate exists, and parameter I's manifest of configuration
+keys and asset paths has no file.
+
 ## Pros and Cons of the Options
 
 ### Best-effort/informal API stability enforced by review
