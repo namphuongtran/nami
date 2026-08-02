@@ -547,11 +547,14 @@ Named per ADR-0066:
   `OpenIddictValidationBuilder` in `OpenIddict.Validation`; `UseLocalServer` is **not**, and
   lives in `OpenIddict.Validation.ServerIntegration`, with `UseAspNetCore` in
   `OpenIddict.Validation.AspNetCore` and `UseSystemNetHttp` in
-  `OpenIddict.Validation.SystemNetHttp`. Finbuckle.MultiTenant at release tag v10.1.2:
+  `OpenIddict.Validation.SystemNetHttp`. Finbuckle.MultiTenant **re-read at release tag
+  v10.1.1 on 2026-08-02**, which is the tag the project pins; the original reading was taken
+  at v10.1.2 and is superseded by this one, for the reason in the note below:
   `ConfigurePerTenant<TOptions, TTenantInfo>` is an `OptionsBuilder<TOptions>` extension in
   `Finbuckle.MultiTenant/Extensions/OptionsBuilderExtensions.cs`, taking
   `Action<TOptions, TTenantInfo>` and constrained `where TTenantInfo : ITenantInfo`, with
-  five arity overloads. The constraining interface is **`ITenantInfo`**, in
+  five arity overloads and a sixth left commented out. The constraining interface is
+  **`ITenantInfo`**, in
   `Finbuckle.MultiTenant.Abstractions`; there is no `IMultiTenantInfo`, and the design corpus
   names that non-existent type three times, so the type argument here is the concrete
   `NamiTenantInfo`. Microsoft.IdentityModel.Tokens: `TokenValidationParameters` carries
@@ -560,6 +563,19 @@ Named per ADR-0066:
   `null`** and which, for a JWE, applies only to the inner token header. It is present on the
   branch whose version file reads 9.0.0 and absent on that repository's `main`, which is the
   seam recorded in section 10.
+* **Why the tenancy re-read happened, and the one thing it changed (2026-08-02).** The original
+  verification was taken at v10.1.2 while the pin is v10.1.1, which
+  [22](22-openiddict-seam-catalogue.md) had recorded as an open item: verifying against a
+  version the project does not pin is how a false confirmation gets in, even when it happens
+  not to be one. Both tags were read and **the API is identical**, same five public overloads,
+  same `Action<TOptions, TTenantInfo>` parameter, same `where TTenantInfo : ITenantInfo`
+  constraint, same namespace, with only line numbers shifted. So nothing above changed except
+  the tag it is asserted at, which is the whole point: the claim is now true of the version
+  Nami runs rather than true of a neighbouring one. Worth knowing while reading it: **the pin
+  itself is not in the stack of record.** ADR-0061's table carries no version column, so
+  Finbuckle 10.1.1 is pinned by [ADR-0018](../adr/0018-dbcontext-pooling-for-pool-mode.md)'s
+  spike record and nowhere else, and it becomes machine-checkable only when
+  `Directory.Packages.props` lands at M1.
 * Reconciled against the design corpus's resource-server-validation design on 2026-07-26.
   Taken from it: the two-mode split, the two resource-server shapes with the per-tenant-host
   and shared-host distinction, the three-part invariant, the A-7 test set with what each test

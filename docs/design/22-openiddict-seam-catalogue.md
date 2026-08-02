@@ -573,10 +573,18 @@ in no row" reads like one finding and is not.
   `OpenIddictServerConfiguration.cs:41-46`), so an assertion that only watched for the
   builder call would have missed the path a developer is more likely to take. An open item
   that describes a switch is worth less than one that has read it.
-* **Reconcile the verification version gap**: [05](05-resource-server-validation.md) records
-  an API verified at tenancy-library 10.1.2 while the pinned stack is 10.1.1. Harmless today,
-  but verifying against a version the project does not pin is how a false confirmation gets
-  in.
+* ~~**Reconcile the verification version gap**~~: **closed 2026-08-02.**
+  [05](05-resource-server-validation.md) recorded an API verified at tenancy-library 10.1.2
+  while the pin is 10.1.1. Both tags were read and the API is identical, same five public
+  overloads, same parameter and constraint, same namespace, only line numbers shifted, so the
+  item closes on evidence rather than on the reasoning that it was probably fine. That
+  distinction was the point of raising it: "harmless today" was a guess until someone opened
+  the other tag, and the cost of checking turned out to be one read. Left behind by the close,
+  and larger than the item was: **the pin has no machine-checkable home.** ADR-0061's table
+  carries no version column, so 10.1.1 rests on ADR-0018's spike record alone, and the same is
+  true of every other version this catalogue verifies against. That closes when
+  `Directory.Packages.props` lands at M1, which ADR-0061's own maintenance rule already names
+  as the durable fix for the shared-omission blindness of its guardrail check.
 
 ## 11. Sources
 
