@@ -55,6 +55,13 @@ scaffolding**; application source lands under `src/` starting at milestone M1
 the docs guardrail, and since 2026-08-02 a self-test for the C# style ruleset, which
 generates the C# it checks because the repository has none to offer it.
 
+**A solution shell landed 2026-08-02 and it holds no projects**, which is worth saying
+plainly because the two facts read as contradictory otherwise. `Nami.Identity.slnx` and
+`global.json` exist so the SDK pin and the solution file are under a gate before the
+first project rather than after it; there is still no C# under `src/`. `tests/` is a
+placeholder beside it, its location taken from the design corpus, which is the only
+source that states one.
+
 Because the product is expressed as decisions, the ADR corpus in `docs/adr/` **is**
 the architecture. Read the relevant ADRs before proposing changes to behavior they
 govern, accepted ADRs are binding until superseded.
@@ -84,14 +91,29 @@ python3 scripts/check-decisions-index.py
 # Skips with exit 0 when dotnet is absent, and says a skip is not a pass.
 bash scripts/test-editorconfig.sh
 
+# The solution build, since 2026-08-02. Its own CI job. READ ITS SCOPE BEFORE ITS
+# GREEN: the solution holds zero projects, so this proves the global.json pin
+# resolves and the .slnx parses, and nothing else. An empty solution builds with a
+# warning and exits 0, measured. It gains teeth at the first project.
+dotnet build Nami.Identity.slnx --nologo
+
 # Enable the opt-in local pre-commit hook (both gates + local name-scrub). Per clone.
 git config core.hooksPath scripts/hooks
 ```
 
-**The hook runs two of the four gates**, so a green hook is not a green build. The
-markdownlint line above and `scripts/test-editorconfig.sh` are separate CI steps, and
-so is `scripts/test-check-adrs.sh`. This has already produced a commit message that
-claimed a self-test was green before it had been run.
+**The hook runs two of the five gates**, so a green hook is not a green build. The
+markdownlint line above, `scripts/test-editorconfig.sh`, and the solution build are
+separate CI steps, and so is `scripts/test-check-adrs.sh`. This has already produced a
+commit message that claimed a self-test was green before it had been run.
+
+**`global.json` is a pin that can be inert, and the shape that makes it inert is the
+one the design corpus writes.** Measured 2026-08-02 on SDK 10.0.301: `10.0.999` with
+`rollForward: disable` fails a build with exit 155, so a real pin bites; but `9.0.x`
+with the same `disable` exits 0 on a machine carrying no 9.0 SDK, because a `version`
+string the SDK cannot parse makes the whole `sdk` block inert. The corpus writes
+`"10.0.x"`. This repository writes `10.0.100` with `latestFeature`, which is a parseable
+floor rather than a wildcard, and a wildcard is not available: the `rollForward` key is
+what expresses the range.
 
 The lint version is not a preference: it is the version bundled by the SHA-pinned
 action in `ci.yml` (ADR-0086), so bump both or neither. `.markdownlint-cli2.jsonc`
