@@ -101,6 +101,29 @@ jobs:
         # noticed it coming back. Part 3 of the script is that exact case.
         run: bash scripts/test-public-api-gate.sh
 
+  warnings-gate:
+    name: Warnings-as-errors gate self-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install the .NET SDK
+        uses: actions/setup-dotnet@v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+      - name: Warnings-as-errors gate self-test
+        # Its own job rather than a step in `Solution build`, for the reason the
+        # public-API job above gives: a red here means the gate stopped biting,
+        # not that the code is wrong, and the two should not arrive under one
+        # name.
+        #
+        # The ordinary build cannot stand in for it. Measured 2026-08-03 on SDK
+        # 10.0.301, the solution builds `0 Warning(s)` both with the four
+        # properties of ADR-0093, ADR-0094 and ADR-0092 section 1 and without
+        # them, so `Solution build` is green either way and says nothing about
+        # whether a warning would fail if there were one. This script is the
+        # only thing in the tree that can tell the difference.
+        run: bash scripts/test-warnings-as-errors.sh
+
   build:
     name: Solution build
     runs-on: ubuntu-latest

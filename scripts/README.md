@@ -206,6 +206,76 @@ noticed. The entries are now written unannotated so `RS0037` is the only diagnos
 **An exit code is a weak assertion when several rules watch one fixture**, and Parts 3 and 4
 each carry an explicit check that the *other* diagnostic did not fire.
 
+## test-warnings-as-errors.sh
+
+A self-test for the warning-escalation gate, run in CI as its own job because it needs a
+.NET SDK:
+
+```bash
+bash scripts/test-warnings-as-errors.sh
+```
+
+Four properties sit in one `PropertyGroup` in
+[`../Directory.Build.props`](../Directory.Build.props) and each can be silenced alone, so the
+parts are grouped by the failure rather than by the decision:
+
+| Part | Subject | Owner | Fixture |
+|---|---|---|---|
+| 1 | the control: a compliant fixture must build clean | none | a plain `public sealed class` |
+| 2 | `TreatWarningsAsErrors` | ADR-0093 parameter A | `CS0219`, an unused local |
+| 3 | `AnalysisLevelSecurity` | ADR-0092 section 1 | `CA5392`, a `DllImport` with no `DefaultDllImportSearchPaths` |
+| 4 | `AnalysisMode` | ADR-0094 | `CA1050`, a type outside any namespace |
+| 5 | `WarningsNotAsErrors` | ADR-0093 parameter C | the evaluated property |
+
+Like the two scripts above it writes a throwaway project inside the repository, here to
+`.warnaserror-probe/`, because MSBuild walks **up** from a project directory and that is the
+only way the probe inherits the real `Directory.Build.props` rather than a copy that could
+drift from what is being edited. The directory is removed on every exit path and is
+git-ignored as a backstop, and it **skips with exit 0 when `dotnet` is absent**, saying out
+loud that a skip is not a pass.
+
+It is a different job from `Solution build` rather than a step in it, for the same reason the
+public-API job gives: a red here means the gate stopped biting, not that the code is wrong.
+
+**It exists because the ordinary build cannot see this gate at all.** Measured 2026-08-03 on
+SDK 10.0.301, the solution builds `0 Warning(s)` with the four properties and `0 Warning(s)`
+without them. There is no backlog for the switch to turn into a wall, which is what made
+landing all four at once affordable, and it is also why `Solution build` is green either way
+and says nothing about whether the gate is armed. Until this script existed, nothing in the
+tree would have noticed any of the four being deleted.
+
+Each fixture was measured to raise its diagnostic **alone**, which is the lesson
+`test-public-api-gate.sh` Part 4 paid for, and each part asserts that isolation as well as the
+exit code. Part 3 needed a second fixture for exactly that reason: `CA5351` on `MD5` is a
+security-sounding rule that also sits in the `Recommended` tier, so the part passed both with
+the inert bare `all` and with the property deleted outright while reading as armed. `CA5392`
+is outside the overlap, and the script's comment carries the counted evidence.
+
+Proven by breaking the subject, five times, each reverted, on 2026-08-03 on SDK 10.0.301:
+
+- Deleting `TreatWarningsAsErrors` moves 7 assertions, across Parts 2, 3, 4 and 5, cascading.
+- Setting `AnalysisLevelSecurity` to the inert bare `all` moves 2, Part 3 only.
+- Deleting `AnalysisLevelSecurity` outright moves 2, Part 3 only.
+- Deleting `AnalysisMode` moves 2, Part 4 only.
+- Dropping the four `NU19xx` codes from the carve-out moves 4, Part 5 only.
+
+The three isolating cleanly is what makes a red readable: the failing part names the property
+to open. `TreatWarningsAsErrors` cascading is correct rather than noisy, since it is the
+property that turns every other axis from a warning into a failure, and Part 2 fires first and
+says so. **The two `AnalysisLevelSecurity` breaks moving the same 2 assertions is the finding
+worth keeping**: the bare `all` is indistinguishable from the property being absent, because it
+parses as a level rather than as a level-mode pair and names a globalconfig the SDK never
+shipped, and the include is guarded by `Exists()` so nothing is logged.
+`Directory.Build.props` carries that trace property by property, and
+[`../.claude/rules/build-and-ci.md`](../.claude/rules/build-and-ci.md) carries it as a trap.
+
+**What Part 5 does not cover, stated because its green is easy to over-read: it asserts the
+value of `WarningsNotAsErrors`, not that NuGet honours it at restore.** That was measured
+once, on 2026-08-03, and it lives in ADR-0093 with the two package fixtures it was taken
+against. Asserting it on every run would need a network restore and a live advisory that can
+change under the test, so the property is what this file checks and the behaviour is what the
+ADR records.
+
 ## Pre-commit hook (opt-in, maintainers)
 
 Enable once per clone:

@@ -246,16 +246,25 @@ a property passed on a command line can fail to arrive, and the failure looks li
 
 ### Confirmation
 
-* **Part 4 of `scripts/test-warnings-as-errors.sh` is the mechanism, and it is owed in this same
-  increment.** It is not written, not run, and therefore not green at the time this ADR is
-  accepted. What it has to assert is the `CA1050` table above as a gate rather than as a
-  measurement: that with `AnalysisMode` removed from `Directory.Build.props` the fixture stops
-  failing, since a gate never broken on purpose is not known to bite. `CA1050` is the right
-  fixture for exactly the reason the middle row of that table gives, that it is absent at the
-  default, so a rule already firing without `AnalysisMode` would give a green indistinguishable
-  from the property being missing. A dated green belongs in the commit that runs it, not here:
-  this repository has already shipped a commit message claiming a self-test was green before it
-  had been run, which is why the root `CLAUDE.md` says a green hook is not a green build.
+* **Part 4 of `scripts/test-warnings-as-errors.sh` is the mechanism, and it is green.** Written
+  and run on 2026-08-03 on SDK 10.0.301, the whole script reporting
+  `warnings-as-errors self-test OK` at exit 0, and running in CI as its own job,
+  `Warnings-as-errors gate self-test`. Part 4 asserts the `CA1050` table above as a gate rather
+  than as a measurement: a type outside any namespace must be reported as `CA1050`, must fail the
+  build, and must raise nothing else, that last check being there because an exit code is a weak
+  assertion when several rules watch one fixture. `CA1050` is the right fixture for the reason the
+  middle row of that table gives, that it is absent at the default, so a rule already firing
+  without `AnalysisMode` would give a green indistinguishable from the property being missing.
+* **The property was deleted on purpose and the part went red**, on 2026-08-03 on SDK 10.0.301,
+  since a gate never broken is not known to bite. Removing `AnalysisMode` from
+  `Directory.Build.props` moves 2 assertions, both in Part 4 and nowhere else. That isolation is
+  what makes a red readable, because the failing part names the property to open, and it is the
+  reason Part 4's fixture is not a security-tier rule: the two tiers overlap, and `CA5351` was
+  rejected from Part 3 for passing under a broken configuration for exactly that reason.
+  `scripts/README.md` records this break beside the four others taken the same day.
+* **`Solution build` cannot see this property at all.** Measured the same day and SDK, the
+  solution builds `0 Warning(s)` with `AnalysisMode=Recommended` and `0 Warning(s)` without it,
+  so the ordinary build is green whether or not the breadth this ADR chose is in force.
 * **The zero measured against the solution is a fact about a repository with one project.** It
   is not a claim that `Recommended` is liveable, which is ADR-0065's distinction between a rule
   "known to work" and one known to be liveable (`0065:109`). The point to re-read this is when

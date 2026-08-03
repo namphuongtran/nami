@@ -53,9 +53,13 @@
     as configured.
 
     The $(WarningsAsErrors) prefix preserves anything a project or a future
-    property sets, so this appends rather than replaces. TreatWarningsAsErrors
-    is still NOT set, and this is not the beginning of it: this promotes one
-    named diagnostic that an accepted ADR already calls an error.
+    property sets, so this appends rather than replaces. When this landed on
+    2026-08-02, TreatWarningsAsErrors was not set and this was deliberately not
+    the beginning of it: it promotes one named diagnostic that an accepted ADR
+    already calls an error. TreatWarningsAsErrors arrived separately on
+    2026-08-03 under ADR-0093, in the last group in this file, and it does not
+    make this line redundant: RS0017 is promoted by name, so it stays an error
+    even for a project that carves something out.
   -->
 
   <PropertyGroup>
@@ -92,12 +96,18 @@
     ImplicitUsings is enabled on the design corpus's foundations task 1.4, which
     is the only source that states it. Measured default: off.
 
-    TreatWarningsAsErrors is NOT set. The corpus task 1.4 asks for it, no ADR
-    does, and turning it on in the same change that lands the first project would
-    make every future warning a build break before anyone has seen what warnings
-    this codebase produces. It is a separate decision with a separate measurement,
-    and ADR-0092's `_warnaserror` globalconfig item is adjacent to it. Measured
-    default: false.
+    TreatWarningsAsErrors was WITHHELD here on 2026-08-02 and is set in the
+    group below from 2026-08-03. The reason for withholding it is kept because
+    it is the record of what changed rather than of what was decided: the
+    corpus task 1.4 asked for it, no ADR did, and turning it on in the same
+    change that landed the first project would have made every future warning a
+    build break before anyone had seen what warnings this codebase produces.
+    What resolved that was seeing them. Measured 2026-08-03 on SDK 10.0.301,
+    the solution builds `0 Warning(s)` with the property and `0 Warning(s)`
+    without it, so there is no backlog the switch would turn into a wall. It
+    then became a separate decision with its own measurement, which is ADR-0093,
+    and ADR-0092's `_warnaserror` globalconfig item is discussed there too.
+    Measured default: false.
   -->
 
   <PropertyGroup>
@@ -105,6 +115,120 @@
     <NamiApplicationTargetFramework>net10.0</NamiApplicationTargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!--
+    The warning gate (ADR-0093), the analyzer breadth it reads (ADR-0094), and
+    the security axis ADR-0092 section 1 already chose but could not spell.
+
+    Measured 2026-08-03 on SDK 10.0.301, and the measurement is the reason all
+    four could land at once: the solution builds `0 Warning(s)` with them and
+    `0 Warning(s)` without them. There is no backlog to clear, which will not
+    be true again once `src/` fills.
+
+    AnalysisLevelSecurity is `latest-all` and NOT `all`. This is the trap in
+    this group and it was found by measurement rather than expected. Measured
+    2026-08-03 on SDK 10.0.301, against a project calling `MD5.HashData`: the
+    bare word produced exit 0 with CA5351 never firing, even alongside
+    TreatWarningsAsErrors, while `latest-all` reported it. ADR-0092 quotes the
+    SDK's own comment describing the compound `<level>-<mode>` form.
+
+    The bare word does NOT fail to parse, and knowing that is what explains why
+    the failure is silent rather than an error. It parses as the LEVEL, and the
+    mode it does not supply falls back to a default, so the SDK goes looking for
+    a globalconfig that was never shipped. Traced through
+    `Microsoft.CodeAnalysis.NetAnalyzers.targets` lines 498 to 553 and then
+    confirmed by evaluating the computed properties on 2026-08-03, SDK 10.0.301:
+
+      AnalysisLevelSecurity=all           AnalysisLevelSecurity=latest-all
+        PrefixSecurity   ''                 PrefixSecurity   'latest'
+        SuffixSecurity   ''                 SuffixSecurity   'all'
+        Effective        'all'              Effective        '10.0'
+        mode             'Default'          mode             'all'
+        file name        analysislevelsecurity_all_default.globalconfig
+                                            analysislevelsecurity_10_all.globalconfig
+
+    `AnalysisLevelPrefixSecurity` is only assigned when the value contains a `-`
+    (targets:512), and the suffix only when the prefix is non-empty
+    (targets:513), so a bare word leaves both empty; the effective level then
+    takes the raw value (targets:524-525) and the mode falls through to the
+    literal `Default` (targets:531-535). Every shipped file under
+    `analyzers/build/config` is named for a NUMERIC level, 5 through 11, so
+    `ls analysislevelsecurity_all*` in that directory matches nothing. The
+    include is guarded by `Exists()` (targets:551), so MSBuild rejects nothing,
+    logs nothing, and applies no configuration. That is the whole reason this
+    misspelling is silent instead of loud.
+
+    That measurement was taken against a project with NO AnalysisMode set, and
+    the scope matters if it is ever re-run from here. CA5351 is also a
+    Recommended-tier rule (`analysislevel_10_recommended.globalconfig` carries
+    `dotnet_diagnostic.CA5351.severity = warning`), so under the group below it
+    fires from either axis and cannot tell the two apart. Counted 2026-08-03 in
+    the globalconfigs shipped with SDK 10.0.301, 70 of the 94 rules in
+    `analysislevelsecurity_10_all.globalconfig` are NOT in the Recommended set,
+    the CA3xxx taint family among them, and only one of those 70 can show
+    whether this line is doing anything. Every count and line number in this
+    paragraph and the next is read in that SDK and moves with it.
+
+    `scripts/test-warnings-as-errors.sh` Part 3 is that proof, and it uses
+    CA5392 (line 252 of the security globalconfig, absent from the Recommended
+    and default ones) against an `internal` DllImport. Its comment carries the
+    measured table. Change this line to the bare `all` and that part goes red;
+    it is the only thing in the tree that notices.
+
+    CodeAnalysisTreatWarningsAsErrors is deliberately NOT set. It is the
+    property that selects the `_warnaserror` variant of the shipped
+    globalconfig (`Microsoft.CodeAnalysis.NetAnalyzers.props:22` feeds it into
+    `EffectiveCodeAnalysisTreatWarningsAsErrors`, and `.targets:18-19` is where
+    that chooses the suffix), and it has no SDK default: measured 2026-08-03 on
+    SDK 10.0.301 against a project outside this repository, it evaluates to the
+    empty string rather than to `false`. Both routes were measured on the same
+    day and SDK reaching exit 1 on the same CA5351 violation, so setting it as
+    well would be two
+    mechanisms for one outcome, and TreatWarningsAsErrors covers every axis
+    rather than one.
+
+    WarningsNotAsErrors carves out the four NuGet audit codes, and the
+    `$(...)` prefix preserves anything another file sets, so this appends
+    rather than replaces, the same shape as the WarningsAsErrors line above.
+    NuGet audit is ON by default and at its strictest values already
+    (`NuGet.targets:73-82`: NuGetAudit true, NuGetAuditLevel low,
+    NuGetAuditMode all for net10.0), and `NuGet.targets:946-948` puts these
+    three warning properties on the restore graph entry that `NuGet.targets:199`
+    hands to the RestoreTask, so without the carve-out a newly published
+    advisory reddens an unchanged tree AT RESTORE, before anything can be built
+    to investigate it. Those three NuGet.targets line numbers are read in SDK
+    10.0.301 and move with the SDK.
+
+    Measured 2026-08-03 on SDK 10.0.301 against System.Text.Encodings.Web
+    4.5.0, restoring for net10.0. This is the one figure here that depends on a
+    live advisory as well as on the SDK, so it is the first to go stale:
+
+      no TreatWarningsAsErrors      warning NU1904, exit 0
+      TreatWarningsAsErrors, no
+        carve-out                   error NU1904: Warning As Error, exit 1
+      TreatWarningsAsErrors, with
+        the carve-out below         NU1904 back to warning
+
+    The third row is why the carve-out is four codes and not a blanket. NU1510,
+    the package-pruning advisory, is raised by the same restore and stays an
+    error under the carve-out, so the restore still exits 1. That is intended
+    and ADR-0093 section C says so: NU1510's remedy is available immediately,
+    and it is the absence of an available remedy that earns an exemption.
+
+    Blocking on dependency vulnerabilities is ADR-0092 stage 2's job, not this
+    file's.
+
+    Do not add a fifth code to this list to make a build pass. ADR-0093
+    parameter D routes an exemption to a per-project NoWarn with a comment
+    naming what and why.
+  -->
+
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <AnalysisLevelSecurity>latest-all</AnalysisLevelSecurity>
+    <AnalysisMode>Recommended</AnalysisMode>
   </PropertyGroup>
 
 </Project>

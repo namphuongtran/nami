@@ -5,7 +5,7 @@ including **never edit a document to silence a checker** and **a false positive 
 checker is a defect in the checker**. Both are rules about this folder's output and they
 live at the root because the file that gets wrongly edited is a document, not a script.
 
-[`README.md`](README.md) in this folder is the authority on what each of the eight checks
+[`README.md`](README.md) in this folder is the authority on what each of the nine checks
 does, on how to run them, and on the opt-in pre-commit hook with its git-ignored denylist
 and allowlist. Read it. What follows is what it does not carry.
 

@@ -62,6 +62,61 @@ corpus writes `"10.0.x"`, so copying it would produce a pin that constrains noth
 repository writes `10.0.100` with `latestFeature`, a parseable floor rather than a
 wildcard; a wildcard is not available, because `rollForward` is what expresses the range.
 
+## `AnalysisLevelSecurity` takes a compound value, and the bare mode word is inert
+
+Same shape as the `global.json` row above: a value that parses as nothing and configures
+nothing. Measured 2026-08-03 on SDK 10.0.301 against a project calling `MD5.HashData`, with
+the properties set in a project file rather than on the command line:
+
+| `AnalysisLevelSecurity` | `CA5351` | Exit |
+|---|---|---|
+| `latest-all` | `error CA5351` | 1 |
+| `all` | never fires | **0** |
+
+Both rows carry `TreatWarningsAsErrors=true`, so the difference is the spelling and nothing
+else. The form the SDK wants is compound, `<level>-<mode>`, which its own comment in
+`Microsoft.CodeAnalysis.NetAnalyzers.targets` states and ADR-0092 quotes.
+
+**State the mechanism when you touch this, because the symptom invites the wrong fix.** The
+bare `all` does not fail to parse. It parses as the **level**, since the prefix is assigned
+only when the value contains a `-`; with no prefix the mode falls through to the literal
+`Default`; and the SDK then looks for `analysislevelsecurity_all_default.globalconfig`, which
+does not ship, every shipped file being named for a numeric level. The include is guarded by
+`Exists()`, so MSBuild rejects nothing, logs nothing, and applies no configuration. That is
+why the misspelling is silent rather than loud.
+[`../../Directory.Build.props`](../../Directory.Build.props) carries the full trace, property
+by property with the line numbers it was read at; read it there rather than re-deriving it.
+
+`CodeAnalysisTreatWarningsAsErrors` is the neighbouring property, and it is deliberately
+**not** set. It is what selects the `_warnaserror` variant of the shipped globalconfig, and it
+has no SDK default: measured 2026-08-03 on SDK 10.0.301 against a project outside this
+repository, it evaluates to the empty string rather than to `false`. Both routes were measured
+the same day reaching exit 1 on the same `CA5351` violation, so setting it as well would be two
+mechanisms for one outcome, and `TreatWarningsAsErrors` covers every axis rather than the
+analyzer one. `scripts/test-warnings-as-errors.sh` Part 3 is the standing check, and it is the
+only thing in the tree that notices the bare `all` coming back.
+
+## Two `-p:` flags in one shell argument silence every analyzer at exit 0
+
+Measured 2026-08-03 on SDK 10.0.301, and it cost real time before it was understood. zsh does
+not word-split an unquoted expansion, so `dotnet build $flags` with both flags in one variable
+arrives as a **single** argument. MSBuild then reads `AnalysisMode` as
+`Recommended -p:AnalysisLevelSecurity=latest-all` and `AnalysisLevelSecurity` as empty,
+verified with `-getProperty`. A garbage `AnalysisMode` names a globalconfig that does not
+exist, so **both** axes configure nothing and every analyzer diagnostic disappears, including
+ones either property reports on its own. Exit 0 with no diagnostic, which is indistinguishable
+from a gate that is genuinely off. **Pass each `-p:` as its own argument.**
+
+Related, and stated so nobody "fixes" it: `-p:A=1;B=2` **does** work. MSBuild splits a `-p:`
+argument on `;` into `name=value` pairs, so that is two valid pairs. The same rule is why
+`-p:WarningsNotAsErrors=NU1901;NU1902` fails with `MSB1006`, the bare `NU1902` having no `=`.
+One rule, two consequences, and the second is why a multi-valued property has to be set in a
+project file rather than on the command line.
+
+The third way to read a false green by hand is an incremental build after a property-only
+change: nothing in the compilation inputs moved, so MSBuild skips the compiler and reports the
+previous run's silence. Add `-t:Rebuild` when comparing property values.
+
 ## The markdownlint version is coupled to the action, not chosen
 
 `npx --yes markdownlint-cli2@0.23.1` must match the version bundled by the version-pinned

@@ -54,7 +54,14 @@ Not scheduled. Each has a decision or a document that already names it.
 | The licence-scan CI gate | [`adr/0026-dependency-license-policy.md`](adr/0026-dependency-license-policy.md) section C | M1 |
 | Reconciling the stack-of-record table against `Directory.Packages.props` | [`adr/0061-technology-stack-of-record.md:84`](adr/0061-technology-stack-of-record.md) | M1, and it is no longer blocked: the manifest exists |
 | The provenance and licence of `MSBuild.Caching.dll`, bundled in MinVer and declared in no `deps.json` | [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) section 3.2 | Before MinVer is adopted |
-| `TreatWarningsAsErrors` as its own decision | [`../Directory.Build.props:95`](../Directory.Build.props) | Open; no ADR asks for it, the design corpus does |
+| Whether the `NU1901`-`NU1904` carve-out should be reversed once a blocking dependency-vulnerability gate exists | [`adr/0093-warnings-as-errors.md`](adr/0093-warnings-as-errors.md) parameter C | When ADR-0092 stage 2's Trivy scan lands, M1 |
+| DocFX and `CS1591` at error on the public surface are stated by a design and owned by no ADR | [`design/21-cicd-and-deployment.md:232`](design/21-cicd-and-deployment.md) | M1 |
+
+The DocFX row is an absence claim, so the search is recorded with it. Seven spellings were
+searched across `docs/adr/` on 2026-08-03 and all seven returned nothing: `DocFX`, `docfx`,
+`CS1591`, `1591`, case-insensitive `xml doc`, `GenerateDocumentationFile`, and
+`documentation file`. `design/21-cicd-and-deployment.md:232-233` states the requirement; the
+design layer realizes decisions and does not make them, so the entry has no owner.
 
 ## 3. Not verified
 

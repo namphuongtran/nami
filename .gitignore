@@ -460,3 +460,8 @@ scripts/.local/
 # inside the repository so it inherits the real .editorconfig,
 # Directory.Build.props and Directory.Packages.props. Removed on exit.
 .publicapi-probe/
+
+# The warning-gate self-test probe (scripts/test-warnings-as-errors.sh), written
+# inside the repository so it inherits the real Directory.Build.props. Removed
+# on exit; this entry is the backstop for an interrupted run.
+.warnaserror-probe/

@@ -56,6 +56,7 @@ python3 scripts/check-decisions-index.py               # verifies what each inde
 bash scripts/test-check-adrs.sh                        # self-test: the guardrail
 bash scripts/test-editorconfig.sh                      # self-test: the C# style ruleset
 bash scripts/test-public-api-gate.sh                   # self-test: the public-API lock and CPM
+bash scripts/test-warnings-as-errors.sh                # self-test: the warning gate and the two analyzer axes
 npx --yes markdownlint-cli2@0.23.1 "**/*.md"           # version-coupled to ci.yml, see .claude/rules/build-and-ci.md
 dotnet build Nami.Identity.slnx --nologo
 dotnet test Nami.Identity.slnx --nologo                # architecture rules (ADR-0024)
@@ -67,14 +68,16 @@ git config core.hooksPath scripts/hooks                # enable the local hook, 
 [`scripts/README.md`](scripts/README.md) is the authority on what each gate checks and
 why; this list is not a summary of it.
 
-**The hook runs two of the eight gates, so a green hook is not a green build.** That has
+**The hook runs two of the nine gates, so a green hook is not a green build.** That has
 already produced a commit message claiming a self-test was green before it had been run.
 
-**Three of the eight are self-tests, and that ratio is deliberate.** Each was written
+**Four of the nine are self-tests, and that ratio is deliberate.** Each was written
 after a real inert-gate defect rather than as a precaution: an untracked file the
-guardrail could not see, a severity that failed nothing without an MSBuild property, and
-an `RS0017` that no `.editorconfig` placement could reach. **When you add a gate, ask
-what would have to break for it to go quiet, then write that break down as a test.**
+guardrail could not see, a severity that failed nothing without an MSBuild property, an
+`RS0017` that no `.editorconfig` placement could reach, and a warning gate whose subject
+produces no warnings at all, so the ordinary build is green whether or not it is armed.
+**When you add a gate, ask what would have to break for it to go quiet, then write that
+break down as a test.**
 
 The test gate arrived on 2026-08-02 with the first suite, the architecture rules of
 ADR-0024. The license-scan gate is still owed and arrives with M1.

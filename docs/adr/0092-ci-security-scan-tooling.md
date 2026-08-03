@@ -259,14 +259,48 @@ reading a licence at source and adding the row, exactly as the five tools above 
 * Licence rows exist for every tool named here, with the read location and the date, in
   `DEPENDENCY-LICENSES.md` sections 2 and 6. A tool moves from section 6 to section 2 in the
   same change that first runs it in the pipeline.
-* **M1**: the exact property combination that selects the `_warnaserror` variant of the security
+* ~~**M1**: the exact property combination that selects the `_warnaserror` variant of the security
   globalconfig was **not** read and is not guessed here. Confirm it against a real build when the
   first project lands, and record the result. The companion this named, "the C# `.editorconfig`
   ruleset that ADR-0065 already defers to M1", **stopped being one on 2026-08-02**, when that
   ruleset landed early against a throwaway fixture built by `scripts/test-editorconfig.sh`. The
   item here does not move with it: an MSBuild property combination that selects a globalconfig
   variant is a property of a **real** project's build, and a fixture written to exercise a style
-  ruleset would answer it only by accident.
+  ruleset would answer it only by accident.~~
+  **Closed 2026-08-03**, ahead of M1, because the first project landed on 2026-08-02 and made the
+  question answerable against a real build. Everything below was measured that day on SDK 10.0.301
+  and read in the files that SDK ships, so every figure and file name moves with the SDK.
+  * **The spelling is the finding, and it is not the one the property name suggests.**
+    `AnalysisLevelSecurity` takes a compound `<level>-<mode>` value. The bare mode word `all` is
+    **inert**: against a project calling `MD5.HashData` it produced exit 0 with `CA5351` never
+    firing, even alongside `TreatWarningsAsErrors=true`, while `latest-all` reported it. It does
+    not fail to parse; it parses as the level, the mode falls back to `Default`, and the SDK looks
+    for a globalconfig that was never shipped behind an `Exists()` guard, so nothing is applied and
+    nothing is logged. `Directory.Build.props` carries the property-by-property trace.
+  * **Two combinations reach an error, and this repository takes the first.**
+    `AnalysisLevelSecurity=latest-all` plus `TreatWarningsAsErrors=true` (taken, ADR-0093), and
+    `AnalysisLevelSecurity=latest-all` plus `CodeAnalysisTreatWarningsAsErrors=true` (not taken).
+    Both were measured to exit 1 on the same `CA5351` violation. Only the second selects the
+    `_warnaserror` variant this item asked about, which is why the answer had to be measured rather
+    than reasoned: the variant is one route to the outcome and not the outcome itself.
+    `CodeAnalysisTreatWarningsAsErrors` has no SDK default, evaluating to the empty string rather
+    than to `false`, and is deliberately left unset because the property already taken covers every
+    warning axis rather than the analyzer one.
+  * **What the variant is, counted rather than described.**
+    `analysislevelsecurity_10_all.globalconfig` sets 94 rules to `warning`;
+    `analysislevelsecurity_10_all_warnaserror.globalconfig` sets the same 94 to `error`; and
+    `analysislevelsecurity_10_default.globalconfig`, which is what an unset axis leaves in place, is
+    9 lines carrying no severity at all.
+  * **The axis costs nothing against the code that exists.** With `latest-all` set,
+    `dotnet build Nami.Identity.slnx` reports `0 Warning(s)`, measured 2026-08-03. That is a fact
+    about a solution whose only hand-written C# is `src/Nami.Identity.Abstractions/ScopeDefinition.cs`
+    and `tests/Nami.Identity.ArchitectureTests/DependencyRuleTests.cs`, not a claim that the 94 rules
+    are liveable.
+  * **Part 3 of `scripts/test-warnings-as-errors.sh` is now the standing mechanism**, and it asserts
+    the spelling rather than the property's presence. It uses `CA5392`, which is in the security set
+    and absent from the `Recommended` and default ones, so it goes red on the inert `all` as well as
+    on the line being deleted. `CA5351` was the first fixture and was rejected on measurement: it
+    sits in both tiers, so it passed under the inert value while reading as armed.
 * **At adopt time**: enumerate ZAP's bundled components against the exact released version, per
   the `DEPENDENCY-LICENSES.md` section 7 maintenance rule, rather than relying on the reading
   taken here against the repository's default branch.

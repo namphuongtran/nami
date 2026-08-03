@@ -170,9 +170,21 @@ with one unused local, rebuilt so the compiler actually runs:
 `low`, and, for `net10.0` and above, `NuGetAuditMode` to `all`, each guarded by an
 `'$(X)' == ''` condition, which is what makes them defaults rather than settings. The file's
 own comment on the level reads: *"Report all severity vulnerabilities (low severity and
-higher). Allowed values are: low, moderate, high, critical"*. `NuGet.targets:264-266` passes
-`TreatWarningsAsErrors`, `WarningsAsErrors` and `WarningsNotAsErrors` into the restore task,
-which is the mechanism by which a compiler-facing property reaches a restore-time code.
+higher). Allowed values are: low, moderate, high, critical"*. `NuGet.targets:946-948` puts
+`TreatWarningsAsErrors`, `WarningsAsErrors` and `WarningsNotAsErrors` on the restore graph
+entry that `_GenerateRestoreProjectSpec` (`NuGet.targets:877`) returns, and
+`NuGet.targets:199` hands that item set to the `RestoreTask` declared on the line above it.
+That is the mechanism by which a compiler-facing property reaches a restore-time code.
+
+**Those three line numbers were corrected on 2026-08-03, and the correction is worth keeping
+rather than quietly applying.** This paragraph first cited `NuGet.targets:264-266`, which does
+carry those same three property names and has nothing to do with restore: they are attributes
+on `CheckForDuplicateNuGetItemsTask` inside the `CollectPackageReferences` target
+(`NuGet.targets:251`), whose `LogCode` is `NU1504` (`NuGet.targets:262`), a duplicate
+`PackageReference` check. A pointer that resolves to real lines carrying the right words is
+exactly the shape the root `CLAUDE.md` warns about, and this one passed every mechanical check
+and a review before the read that found it. Every `NuGet.targets` line number here was read in
+SDK 10.0.301 and moves with the SDK.
 
 **Two fixtures were measured, and the second one is the one worth reading.** Both are
 throwaway `net10.0` projects with the properties set **in the project file**, which is not
@@ -267,14 +279,23 @@ existing, unchanged code red on the day it lands.
 
 ### Confirmation
 
-* **`scripts/test-warnings-as-errors.sh` is the mechanism, and it is owed in this same
-  increment.** It is not written, not run, and therefore not green at the time this ADR is
-  accepted. A dated result belongs in the commit that has actually run it, not here: this
-  repository has already shipped a commit message claiming a self-test was green before it
-  had been run, which is why the root `CLAUDE.md` says a green hook is not a green build.
-  What the self-test has to assert is that removing the property from `Directory.Build.props`
-  makes a violating fixture stop failing, since a gate that is never broken on purpose is not
-  known to bite.
+* **`scripts/test-warnings-as-errors.sh` is the mechanism, and it is green.** Written and run
+  on 2026-08-03 on SDK 10.0.301, reporting `warnings-as-errors self-test OK` at exit 0. It runs
+  in CI as its own job, `Warnings-as-errors gate self-test`, rather than as a step in
+  `Solution build`, because a red there would mean the gate stopped biting and not that the code
+  is wrong. Part 2 is this ADR's parameter A, a `CS0219` on an unused local measured to be a
+  warning at exit 0 without the property and an error at exit 1 with it; Part 5 is parameter C.
+* **The gate was broken on purpose before it was believed**, on 2026-08-03 on SDK 10.0.301, five
+  times and each reverted, because a gate never broken is not known to bite. Deleting
+  `TreatWarningsAsErrors` moves 7 assertions, across Parts 2, 3, 4 and 5, cascading, which is
+  correct rather than noisy: it is the property that turns every other axis from a warning into a
+  failure, and Part 2 fires first and names it. Dropping the four `NU19xx` codes from the
+  parameter C carve-out moves 4, in Part 5 alone. The other three breaks belong to ADR-0094 and
+  to ADR-0092 section 1, and `scripts/README.md` records all five in one table.
+* **`Solution build` cannot stand in for any of this, which is why the self-test is a gate of its
+  own.** Measured the same day and SDK, the solution builds `0 Warning(s)` with the four
+  properties and `0 Warning(s)` without them, so the ordinary build is green whether or not the
+  gate is armed and says nothing either way.
 * **The parameter C exemption is asserted on the evaluated property, not end to end.** Proving
   the demotion against a live advisory needs a network restore and advisory data that can
   change under the test. What the two tables above record is a statement about 2026-08-03 and
