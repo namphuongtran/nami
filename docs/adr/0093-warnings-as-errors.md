@@ -10,8 +10,9 @@ informed: all contributors, and any adopter building this repository
 
 ## Context and Problem Statement
 
-`TreatWarningsAsErrors` has been withheld from this repository on purpose, and the file that
-withholds it records why. `Directory.Build.props:95-100` reads:
+`TreatWarningsAsErrors` had been withheld from this repository on purpose, and the file that
+withheld it recorded why. In the tree this ADR was written against, commit `98bba32`,
+`Directory.Build.props:95-100` read:
 
 > TreatWarningsAsErrors is NOT set. The corpus task 1.4 asks for it, no ADR does, and turning
 > it on in the same change that lands the first project would make every future warning a
@@ -19,8 +20,16 @@ withholds it records why. `Directory.Build.props:95-100` reads:
 > decision with a separate measurement, and ADR-0092's `_warnaserror` globalconfig item is
 > adjacent to it. Measured default: false.
 
-`docs/BUILD-PLAN.md:57` carries the matching owed row, pointing at that same line, with the
-trigger written as "Open; no ADR asks for it, the design corpus does".
+**That text is no longer in the file, and the quotation above is history rather than a reading
+of the current tree.** The change this ADR governs landed on 2026-08-03 and replaced the
+comment with a past-tense record of the same withholding, now at
+`Directory.Build.props:99-110`. The quotation is kept because it is the evidence for why the
+property was absent, and the replacement summarizes that reasoning rather than reproducing it.
+
+`docs/BUILD-PLAN.md` carried the matching owed row, at line 57 of commit `98bba32`, pointing at
+that same comment, with the trigger written as "Open; no ADR asks for it, the design corpus
+does". That row was deleted on 2026-08-03 by the change that set the property; "More
+Information" below names the maintenance rule the deletion followed.
 
 Both halves of the withholding have now expired, and each expired for a different reason.
 The first, "no ADR does", is what this ADR is. The second, "before anyone has seen what
@@ -29,7 +38,7 @@ landed on 2026-08-02, so there is finally something to measure the property agai
 measurement below is that turning it on today costs nothing at all.
 
 What is not in question is whether a warning can fail a build here, because two narrower
-versions of this rule already run. `Directory.Build.props:62` promotes one named diagnostic,
+versions of this rule already run. `Directory.Build.props:66` promotes one named diagnostic,
 `RS0017`, through `<WarningsAsErrors>`, which is where ADR-0044 parameter A had to put it
 (`0044:81`). `.editorconfig` plus `EnforceCodeStyleInBuild` makes `IDE1006` and `IDE0055`
 build failures, which ADR-0065 states as its agreed core of "exactly two diagnostics"
@@ -95,7 +104,7 @@ re-reads. Where a specific test genuinely needs a warning, parameter D is the ro
 ```
 
 The `$(...)` prefix appends rather than replaces, which is the same shape and the same reason
-as the `WarningsAsErrors` line at `Directory.Build.props:62`: it preserves anything a project
+as the `WarningsAsErrors` line at `Directory.Build.props:66`: it preserves anything a project
 or a later property sets.
 
 Two reasons, and they are independent.
@@ -129,7 +138,7 @@ a broad list in `Directory.Build.props`**, because a repo-wide suppression is a 
 retraction of this decision for every project that inherits it.
 
 This is the root `CLAUDE.md` rule applied to a build rather than to a document: "Never edit a
-document to silence a checker" (`CLAUDE.md:112`). ADR-0065 predicts the pressure that produces
+document to silence a checker" (`CLAUDE.md:115`). ADR-0065 predicts the pressure that produces
 that edit and names it as the risk arriving with real code (`0065:109`). A narrow, commented,
 per-project exemption is the legitimate version of that pressure's outlet, and its existence
 is what makes the broad version indefensible rather than merely discouraged.
@@ -237,7 +246,7 @@ strictest values the properties accept: auditing on, the lowest severity thresho
 transitive rather than direct-only. Writing them into `Directory.Build.props` could only
 restate a default, which rots against the SDK without adding enforcement.
 
-That is the precedent `Directory.Build.props:75-84` set for `LangVersion`, and the reasoning
+That is the precedent `Directory.Build.props:79-88` set for `LangVersion`, and the reasoning
 is quoted from it rather than reinvented: writing the value "could only restate that default,
 which rots against the SDK", and the alternative of writing a floating value "would make the
 language version float with whatever SDK is installed". The same file records that this is
@@ -285,13 +294,26 @@ existing, unchanged code red on the day it lands.
   `Solution build`, because a red there would mean the gate stopped biting and not that the code
   is wrong. Part 2 is this ADR's parameter A, a `CS0219` on an unused local measured to be a
   warning at exit 0 without the property and an error at exit 1 with it; Part 5 is parameter C.
+* **Part 6 asserts both properties on the projects this repository actually ships**, and it was
+  added on 2026-08-03 to close a hole the whole of the rest of the script has: Parts 1 to 5
+  assert against a throwaway probe at the repository root, so a
+  `<TreatWarningsAsErrors>false</TreatWarningsAsErrors>` in a real `.csproj`, or a
+  `src/Directory.Build.props` that does not import the root one, would retract this decision for
+  the only code there is while every gate stayed green. Measured that day on SDK 10.0.301 and
+  reverted: with that override planted in `src/Nami.Identity.Abstractions`, Part 6 reported it
+  and `Solution build`, `dotnet test` and `dotnet format --verify-no-changes` were all still
+  green at exit 0.
 * **The gate was broken on purpose before it was believed**, on 2026-08-03 on SDK 10.0.301, five
-  times and each reverted, because a gate never broken is not known to bite. Deleting
-  `TreatWarningsAsErrors` moves 7 assertions, across Parts 2, 3, 4 and 5, cascading, which is
-  correct rather than noisy: it is the property that turns every other axis from a warning into a
-  failure, and Part 2 fires first and names it. Dropping the four `NU19xx` codes from the
-  parameter C carve-out moves 4, in Part 5 alone. The other three breaks belong to ADR-0094 and
-  to ADR-0092 section 1, and `scripts/README.md` records all five in one table.
+  times and each reverted, because a gate never broken is not known to bite. The counts below
+  were re-run in full on the same day when Part 6 was added, because a count is a measurement of
+  a specific script and adding a part changes the subject; the bracketed figure is what the same
+  break moved before Part 6 existed. Deleting `TreatWarningsAsErrors` moves 9 assertions (was 7),
+  across Parts 2, 3, 4, 5 and 6, cascading, which is correct rather than noisy: it is the
+  property that turns every other axis from a warning into a failure, and Part 2 fires first and
+  names it. Dropping the four `NU19xx` codes from the parameter C carve-out moves 12 (was 4), in
+  Parts 5 and 6, four codes on the probe and four on each of the two real projects. The other
+  three breaks belong to ADR-0094 and to ADR-0092 section 1, and `scripts/README.md` records all
+  five in one table.
 * **`Solution build` cannot stand in for any of this, which is why the self-test is a gate of its
   own.** Measured the same day and SDK, the solution builds `0 Warning(s)` with the four
   properties and `0 Warning(s)` without them, so the ordinary build is green whether or not the
@@ -340,9 +362,9 @@ existing, unchanged code red on the day it lands.
 * Bad, because it does not scale past a handful of rules. Every diagnostic worth failing on
   needs its own decision, and the ones nobody thought to name stay survivable by default,
   which is the whole class this ADR is about.
-* Bad, because the two reasons `Directory.Build.props:95-100` gives for withholding are both
-  spent, so leaving it unset would now be a decision with no stated ground rather than a
-  deferral with one.
+* Bad, because the two reasons the withholding comment gave, quoted in the Context above and
+  now kept as dated history at `Directory.Build.props:99-110`, are both spent, so leaving it
+  unset would now be a decision with no stated ground rather than a deferral with one.
 
 ## More Information
 
@@ -361,15 +383,18 @@ existing, unchanged code red on the day it lands.
   upgrade cadences whose deprecations this converts into build breaks), ADR-0026 (the
   dependency policy, whose gate reads licences and not vulnerabilities, which is why parameter
   C does not route there), and ADR-0060 (the CI composition the gate runs inside).
-* **The `docs/BUILD-PLAN.md:57` row is closed by this ADR**, per that file's own maintenance
-  rule that a row is deleted when its owner records the outcome and is never marked done. The
-  deletion lands with the change that sets the property, not with this one, because until the
-  property exists the outcome is decided and not yet recorded.
-* **The withholding comment at `Directory.Build.props:95-100` is rewritten rather than
-  deleted** when the property lands. It is the record of why the property was absent while the
-  repository had no code to measure against, and that record is worth more than the two lines
-  it costs.
+* **The `docs/BUILD-PLAN.md` row that owed this property is closed by this ADR**, per that
+  file's own maintenance rule that a row is deleted when its owner records the outcome and is
+  never marked done. It was line 57 of that file in commit `98bba32`. The deletion did not land
+  with the commit carrying this ADR, because until the property existed the outcome was decided
+  and not yet recorded; it landed on 2026-08-03 with the later commit in this same increment
+  that set the property.
+* **The withholding comment was rewritten rather than deleted** when the property landed on
+  2026-08-03. It was `Directory.Build.props:95-100` in commit `98bba32` and is now
+  `Directory.Build.props:99-110`, restated in the past tense. It is the record of why the
+  property was absent while the repository had no code to measure against, and that record is
+  worth more than the two lines it costs.
 * Authored fresh for this repository, not imported from the design corpus. The corpus asks for
-  the property in its foundations task 1.4, which is what `Directory.Build.props:95` names and
+  the property in its foundations task 1.4, which is what `Directory.Build.props:102` names and
   what made this an owed decision rather than a new idea; the carve-out, the exemption
   mechanism, and the measurements are this repository's.

@@ -289,8 +289,22 @@ reading a licence at source and adding the row, exactly as the five tools above 
   * **What the variant is, counted rather than described.**
     `analysislevelsecurity_10_all.globalconfig` sets 94 rules to `warning`;
     `analysislevelsecurity_10_all_warnaserror.globalconfig` sets the same 94 to `error`; and
-    `analysislevelsecurity_10_default.globalconfig`, which is what an unset axis leaves in place, is
-    9 lines carrying no severity at all.
+    `analysislevelsecurity_10_default.globalconfig` is 9 lines carrying no severity at all.
+  * **What an unset axis leaves in place is nothing, which is not what this item first said.**
+    Corrected 2026-08-03 after the counted figures above were already right: the `_default`
+    security globalconfig is what the axis selects when it is set to the `default` MODE, and
+    not what it falls back to when it is set to nothing. Measured that day on SDK 10.0.301
+    against a project outside this repository, reading the computed item set with
+    `dotnet msbuild -t:CoreCompile -getItem:EditorConfigFiles` rather than deriving it, an
+    unset axis includes **no** security globalconfig at all; `latest-default` and
+    `AnalysisModeSecurity=Default` each include the `_default` one; and the inert bare `all`
+    produces the same included set as setting nothing, which independently reproduces the
+    finding above. The mechanism is the target's own condition,
+    `'$(AnalysisLevelSecurity)' != '' or '$(AnalysisModeSecurity)' != ''`
+    (`Microsoft.CodeAnalysis.NetAnalyzers.targets:498`, read in that SDK and moving with it):
+    with both unset the target is skipped and adds nothing. Recorded rather than silently
+    applied, because the conclusion was right and only the mechanism was wrong, which is the
+    same defect shape this section's own trace was written to catch one file over.
   * **The axis costs nothing against the code that exists.** With `latest-all` set,
     `dotnet build Nami.Identity.slnx` reports `0 Warning(s)`, measured 2026-08-03. That is a fact
     about a solution whose only hand-written C# is `src/Nami.Identity.Abstractions/ScopeDefinition.cs`
@@ -300,7 +314,12 @@ reading a licence at source and adding the row, exactly as the five tools above 
     the spelling rather than the property's presence. It uses `CA5392`, which is in the security set
     and absent from the `Recommended` and default ones, so it goes red on the inert `all` as well as
     on the line being deleted. `CA5351` was the first fixture and was rejected on measurement: it
-    sits in both tiers, so it passed under the inert value while reading as armed.
+    sits in both tiers, so it passed under the inert value while reading as armed. Part 3 is the
+    only behavioural check, and since 2026-08-03 Part 6 of the same script asserts the evaluated
+    spelling on each real project under `src/` and `tests/` as well, which is the per-project
+    override Part 3's repository-root probe cannot see. Measured that day on SDK 10.0.301, the
+    bare `all` moves 4 assertions, 2 in Part 3 and 2 in Part 6, and deleting the line outright
+    moves the same 4.
 * **At adopt time**: enumerate ZAP's bundled components against the exact released version, per
   the `DEPENDENCY-LICENSES.md` section 7 maintenance rule, rather than relying on the reading
   taken here against the repository's default branch.

@@ -94,7 +94,10 @@ repository, it evaluates to the empty string rather than to `false`. Both routes
 the same day reaching exit 1 on the same `CA5351` violation, so setting it as well would be two
 mechanisms for one outcome, and `TreatWarningsAsErrors` covers every axis rather than the
 analyzer one. `scripts/test-warnings-as-errors.sh` Part 3 is the standing check, and it is the
-only thing in the tree that notices the bare `all` coming back.
+only thing in the tree that notices the bare `all` coming back **behaviourally**, by a rule
+ceasing to be reported. Since 2026-08-03 that script's Part 6 also goes red on it, asserting the
+evaluated spelling on each real project under `src/` and `tests/`, which is the per-project
+override Part 3's probe cannot see. Nothing outside that script notices either way.
 
 ## Two `-p:` flags in one shell argument silence every analyzer at exit 0
 

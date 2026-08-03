@@ -35,7 +35,7 @@ return no file at all.
 ADR-0093 makes that gap load-bearing rather than tidy. It flips the default for an unnamed
 warning from pass to fail, and it deliberately left this axis open: "The analyzer breadth that
 decides how many diagnostics this gate reads is not decided here. This ADR fixes what happens
-to a warning, not which rules produce one" (`0093:234-235`). The two questions are now the two
+to a warning, not which rules produce one" (`0093:255-256`). The two questions are now the two
 halves of one gate, and only one half has been answered.
 
 So the question is not whether quality analyzers should run. It is which of the three settings
@@ -50,7 +50,7 @@ answer can be measured instead of estimated.
 * **Breadth fails differently from severity, so it is decided differently.** ADR-0093 names the
   distinction: its own parameter "is measured at zero cost today and changes nothing until a
   warning appears, while a breadth change can turn existing, unchanged code red on the day it
-  lands" (`0093:237-239`). A breadth decision therefore has to be taken against the code that
+  lands" (`0093:258-260`). A breadth decision therefore has to be taken against the code that
   exists, not against the code that is imagined.
 * **Take the strictest setting the evidence supports, and no stricter.** Pre-alpha is when a
   ruleset is cheapest to adopt, which argues for reaching as far up as the measurement allows,
@@ -84,20 +84,20 @@ It goes in `Directory.Build.props` so it is inherited by every project, and it a
 contributor's `dotnet build` exactly as it applies to CI. That is the same shape and the same
 reason as ADR-0093 parameter A, which rejected the CI-only form on ADR-0065's measured finding
 that a divergent local build leaves "the cost lands on contributors, whose local build goes
-quiet while CI does not" (`0093:79-80`, quoting `0065:102`). Nothing about this axis makes that
+quiet while CI does not" (`0093:88-89`, quoting `0065:102`). Nothing about this axis makes that
 reasoning different, so it is reused rather than re-argued.
 
 **Tests are included**, for ADR-0093 parameter B's reason: a suppression by directory is one
-nobody re-reads (`0093:85-89`).
+nobody re-reads (`0093:94-98`).
 
 **This property alone is written, and the neighbouring analyzer properties are not.**
 `EnableNETAnalyzers` and `AnalysisLevel` are not set by this ADR. The `CA1050` probe below sets
 nothing but `TargetFramework` and `AnalysisMode`, and `CA1050` fires in it, so the quality
 analyzers already run without this repository writing a property to switch them on. Writing one
-anyway would restate something the SDK is doing, which is the rule ADR-0093 states at `0093:232`
+anyway would restate something the SDK is doing, which is the rule ADR-0093 states at `0093:253`
 as ADR-0065's "write only what deviates" applied to a build file. The analyzer set's version
 travels with the SDK, and the SDK version is ADR-0030's, which is the same attribution ADR-0092
-uses at `0092:319-320`: "ADR-0030 (the runtime version that determines which SDK ships the
+uses at `0092:372-373`: "ADR-0030 (the runtime version that determines which SDK ships the
 analyzers)".
 
 ### B. `All` is rejected, and the finding that rejects it is named
@@ -217,7 +217,7 @@ unquoted expansion, so the two-property row was handed to `dotnet` as a single a
 `TreatWarningsAsErrors` never took effect, and the run reported `Build succeeded`, 0 warnings,
 exit 0. That output is indistinguishable from the property doing nothing. Re-run with the two
 flags as two arguments it produced `error CA1050` and exit 1, which is the row above. The
-general shape is the one ADR-0093 already recorded for `MSBUILD : error MSB1006` (`0093:211-218`):
+general shape is the one ADR-0093 already recorded for `MSBUILD : error MSB1006` (`0093:232-239`):
 a property passed on a command line can fail to arrive, and the failure looks like a result.
 
 ### Consequences
@@ -232,7 +232,7 @@ a property passed on a command line can fail to arrive, and the failure looks li
   moment it is written, which `CA1050` demonstrates end to end above.
 * Bad, because `Recommended` will eventually flag code that its author considers correct, and
   under ADR-0093 that is a stop-work item rather than a warning. Accepted: ADR-0093 parameter D,
-  a per-project `<NoWarn>` with a comment (`0093:124-129`), is the route, and it is deliberately
+  a per-project `<NoWarn>` with a comment (`0093:133-138`), is the route, and it is deliberately
   narrow enough to be visible in a diff.
 * Bad, because the set of rules this enables is the SDK's rather than this project's, so an SDK
   bump under ADR-0030 can widen the gate without any change in this repository. That is the
@@ -257,11 +257,18 @@ a property passed on a command line can fail to arrive, and the failure looks li
   without `AnalysisMode` would give a green indistinguishable from the property being missing.
 * **The property was deleted on purpose and the part went red**, on 2026-08-03 on SDK 10.0.301,
   since a gate never broken is not known to bite. Removing `AnalysisMode` from
-  `Directory.Build.props` moves 2 assertions, both in Part 4 and nowhere else. That isolation is
-  what makes a red readable, because the failing part names the property to open, and it is the
-  reason Part 4's fixture is not a security-tier rule: the two tiers overlap, and `CA5351` was
-  rejected from Part 3 for passing under a broken configuration for exactly that reason.
-  `scripts/README.md` records this break beside the four others taken the same day.
+  `Directory.Build.props` moves 4 assertions, 2 in Part 4 and 2 in Part 6, and nowhere else. It
+  moved 2 when the break was first taken, before Part 6 existed; the count was re-run in full the
+  same day that part was added, because a count is a measurement of a specific script. That
+  isolation is what makes a red readable, because the failing part names the property to open,
+  and it is the reason Part 4's fixture is not a security-tier rule: the two tiers overlap, and
+  `CA5351` was rejected from Part 3 for passing under a broken configuration for exactly that
+  reason. `scripts/README.md` records this break beside the four others taken the same day.
+* **Part 6 asserts `AnalysisMode` on the real projects rather than on the probe.** Part 4's
+  fixture lives in a throwaway project at the repository root, so it cannot see a per-project
+  override or a `Directory.Build.props` under `src/` shadowing the root one. Part 6 evaluates the
+  property on every `.csproj` under `src/` and `tests/` through each project's own import chain,
+  which is the only route to that class of break.
 * **`Solution build` cannot see this property at all.** Measured the same day and SDK, the
   solution builds `0 Warning(s)` with `AnalysisMode=Recommended` and `0 Warning(s)` without it,
   so the ordinary build is green whether or not the breadth this ADR chose is in force.
@@ -298,7 +305,7 @@ a property passed on a command line can fail to arrive, and the failure looks li
   leave the quality rules unconfigured, it leaves them configured by a default no document here
   names. The `CA1050` row above is what that costs, one rule at a time.
 * Bad, because it leaves ADR-0093's gate reading a rule set nobody chose, which is the half of
-  that ADR's open question this one exists to close (`0093:234-235`).
+  that ADR's open question this one exists to close (`0093:255-256`).
 
 ### C. `AnalysisMode=All`
 

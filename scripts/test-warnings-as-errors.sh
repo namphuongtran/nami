@@ -8,6 +8,12 @@
 #   AnalysisMode            ADR-0094                 -> Part 4
 #   WarningsNotAsErrors     ADR-0093 parameter C     -> Part 5
 #
+# Parts 2 to 5 all assert against a throwaway probe, which is what lets them be
+# behavioural. Part 6 asserts the same four properties as EVALUATED values on
+# the projects the repository actually ships, because a per-project override is
+# invisible to the probe by construction. Its own comment carries the
+# measurement and the reason the probe cannot stand in for it.
+#
 # Until this script existed nothing in the tree would have noticed any of them
 # being deleted: measured 2026-08-03 on SDK 10.0.301, the solution builds
 # 0 Warning(s) with the properties and 0 Warning(s) without them, so the
@@ -315,10 +321,85 @@ for code in NU1901 NU1902 NU1903 NU1904; do
   esac
 done
 
+# --- Part 6: the REAL projects, not the probe (all four properties) ---
+#
+# THE BREAK THIS CATCHES AND NOTHING ELSE DOES. Every part above asserts
+# against .warnaserror-probe, a project this script writes and deletes, so
+# until this part existed nothing in the tree said anything about the projects
+# the repository ships. A <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+# in a real .csproj, or a src/Directory.Build.props that does not <Import> the
+# root one, disarms the gate for the only code there is. That is the exact
+# shape the root CLAUDE.md calls the worst outcome available here, and it is
+# what this script exists to close.
+#
+# WHY THE PROBE CANNOT CATCH IT, and it is not an oversight in how the probe is
+# written. MSBuild walks UP from a project directory. The probe sits at the
+# repository root, so it inherits the root Directory.Build.props and there is
+# no edit under src/ or tests/ that can reach it. The blind spot is a property
+# of where the probe lives, and the only way to see a per-project override is
+# to evaluate the project it overrides.
+#
+# Proven rather than argued, 2026-08-03 on SDK 10.0.301, then reverted: with
+# <TreatWarningsAsErrors>false</TreatWarningsAsErrors> planted in
+# src/Nami.Identity.Abstractions/Nami.Identity.Abstractions.csproj, this part
+# reported the override and NOTHING else moved. Parts 1 to 5 stayed green, and
+# so did every other gate measured the same day:
+#
+#   dotnet build Nami.Identity.slnx -t:Rebuild   0 Warning(s) 0 Error(s), exit 0
+#   dotnet test Nami.Identity.slnx                                       exit 0
+#   dotnet format Nami.Identity.slnx --verify-no-changes                 exit 0
+#   bash scripts/test-warnings-as-errors.sh      1 FAIL, this part,      exit 1
+#
+# -getProperty is the same mechanism Part 5 uses on the probe, pointed at a
+# different project: it reads the real import chain. It evaluates rather than
+# builds, so it costs no compile time.
+#
+# The project list is DISCOVERED rather than written down, so a project added
+# later is covered without anyone remembering this file. A discovery that finds
+# nothing would be the quiet failure, so the count is asserted first. Two
+# projects exist on 2026-08-03:
+# src/Nami.Identity.Abstractions/Nami.Identity.Abstractions.csproj and
+# tests/Nami.Identity.ArchitectureTests/Nami.Identity.ArchitectureTests.csproj.
+real_projects=$(find src tests -type f -name '*.csproj' 2>/dev/null | sort)
+real_n=$(printf '%s\n' "$real_projects" | grep -c '\.csproj$')
+if [ "$real_n" -lt 2 ]; then
+  fail "found $real_n project file(s) under src/ and tests/, expected at least 2. Every assertion below is per-project, so an empty discovery would report a pass having checked nothing."
+fi
+
+get_proj_prop() {
+  # $1: project path, $2: property name, through that project's import chain
+  dotnet msbuild "$1" -getProperty:"$2" 2>/dev/null
+}
+
+for proj in $real_projects; do
+  p_twae=$(get_proj_prop "$proj" TreatWarningsAsErrors)
+  if [ "$p_twae" != "true" ]; then
+    fail "TreatWarningsAsErrors evaluates to '$p_twae' in $proj, expected 'true' (ADR-0093 parameter A). The probe cannot see this: a per-project override or a Directory.Build.props shadowing the root one leaves every part above green."
+  fi
+
+  p_wnae=$(get_proj_prop "$proj" WarningsNotAsErrors)
+  for code in NU1901 NU1902 NU1903 NU1904; do
+    case ";$p_wnae;" in
+      *";$code;"*) ;;
+      *) fail "WarningsNotAsErrors does not carry $code in $proj (ADR-0093 parameter C). Evaluated value: '$p_wnae'." ;;
+    esac
+  done
+
+  p_als=$(get_proj_prop "$proj" AnalysisLevelSecurity)
+  if [ "$p_als" != "latest-all" ]; then
+    fail "AnalysisLevelSecurity evaluates to '$p_als' in $proj, expected 'latest-all' (ADR-0092 section 1). The bare 'all' is inert and reads as armed."
+  fi
+
+  p_am=$(get_proj_prop "$proj" AnalysisMode)
+  if [ "$p_am" != "Recommended" ]; then
+    fail "AnalysisMode evaluates to '$p_am' in $proj, expected 'Recommended' (ADR-0094)."
+  fi
+done
+
 # --- Report ---
 if [ "$fails" -gt 0 ]; then
   echo "warnings-as-errors self-test FAILED: $fails assertion(s)."
   exit 1
 fi
-echo "warnings-as-errors self-test OK: the compliant fixture builds clean; a plain compiler warning, an unsafe DllImport that only the security axis reports, and a Recommended-tier violation each fail the build alone; and the NuGet audit carve-out is present in the evaluated WarningsNotAsErrors."
+echo "warnings-as-errors self-test OK: the compliant fixture builds clean; a plain compiler warning, an unsafe DllImport that only the security axis reports, and a Recommended-tier violation each fail the build alone; the NuGet audit carve-out is present in the evaluated WarningsNotAsErrors; and all four properties evaluate as decided on the $real_n real project(s) under src/ and tests/, not only on the probe."
 exit 0

@@ -226,6 +226,20 @@ parts are grouped by the failure rather than by the decision:
 | 3 | `AnalysisLevelSecurity` | ADR-0092 section 1 | `CA5392`, a `DllImport` with no `DefaultDllImportSearchPaths` |
 | 4 | `AnalysisMode` | ADR-0094 | `CA1050`, a type outside any namespace |
 | 5 | `WarningsNotAsErrors` | ADR-0093 parameter C | the evaluated property |
+| 6 | all four, on the **real** projects | all three ADRs | the evaluated properties, no fixture |
+
+Parts 1 to 5 assert against the throwaway probe, which is what lets them be behavioural. **Part
+6 exists because that is also their blind spot.** A
+`<TreatWarningsAsErrors>false</TreatWarningsAsErrors>` in a real `.csproj`, or a
+`src/Directory.Build.props` that does not `<Import>` the root one, disarms the gate for the only
+code in the repository, and the probe cannot see either: MSBuild walks **up** from a project
+directory, so a probe at the repository root inherits the root `Directory.Build.props` and no
+edit under `src/` or `tests/` can reach it. Part 6 therefore evaluates all four properties on
+every `.csproj` it discovers under `src/` and `tests/`, through each project's own import chain,
+and asserts the discovered count first so an empty discovery cannot report a pass having checked
+nothing. Measured 2026-08-03 on SDK 10.0.301 and reverted: with that override planted in
+`src/Nami.Identity.Abstractions`, Part 6 reported it and `Solution build`, `dotnet test` and
+`dotnet format --verify-no-changes` were all still green at exit 0.
 
 Like the two scripts above it writes a throwaway project inside the repository, here to
 `.warnaserror-probe/`, because MSBuild walks **up** from a project directory and that is the
@@ -251,19 +265,26 @@ security-sounding rule that also sits in the `Recommended` tier, so the part pas
 the inert bare `all` and with the property deleted outright while reading as armed. `CA5392`
 is outside the overlap, and the script's comment carries the counted evidence.
 
-Proven by breaking the subject, five times, each reverted, on 2026-08-03 on SDK 10.0.301:
+Proven by breaking the subject, five times, each reverted. Taken first against Parts 1 to 5 and
+**re-run in full on 2026-08-03 on SDK 10.0.301 when Part 6 was added**, because a count is a
+measurement of a specific script and adding a part changes the subject rather than the answer.
+The figure in brackets is what the same break moved before Part 6 existed:
 
-- Deleting `TreatWarningsAsErrors` moves 7 assertions, across Parts 2, 3, 4 and 5, cascading.
-- Setting `AnalysisLevelSecurity` to the inert bare `all` moves 2, Part 3 only.
-- Deleting `AnalysisLevelSecurity` outright moves 2, Part 3 only.
-- Deleting `AnalysisMode` moves 2, Part 4 only.
-- Dropping the four `NU19xx` codes from the carve-out moves 4, Part 5 only.
+- Deleting `TreatWarningsAsErrors` moves 9 assertions (was 7), across Parts 2, 3, 4, 5 and 6,
+  cascading.
+- Setting `AnalysisLevelSecurity` to the inert bare `all` moves 4 (was 2), Parts 3 and 6.
+- Deleting `AnalysisLevelSecurity` outright moves 4 (was 2), Parts 3 and 6.
+- Deleting `AnalysisMode` moves 4 (was 2), Parts 4 and 6.
+- Dropping the four `NU19xx` codes from the carve-out moves 12 (was 4), Parts 5 and 6, four
+  codes on the probe and four on each of the two real projects.
 
-The three isolating cleanly is what makes a red readable: the failing part names the property
-to open. `TreatWarningsAsErrors` cascading is correct rather than noisy, since it is the
-property that turns every other axis from a warning into a failure, and Part 2 fires first and
-says so. **The two `AnalysisLevelSecurity` breaks moving the same 2 assertions is the finding
-worth keeping**: the bare `all` is indistinguishable from the property being absent, because it
+The other three properties isolating cleanly is what makes a red readable: the failing part
+names the property to open, and where Part 6 also fires it names the same property and the
+project it was overridden in. `TreatWarningsAsErrors` cascading is correct rather than noisy,
+since it is the property that turns every other axis from a warning into a failure, and Part 2
+fires first and says so. **The two `AnalysisLevelSecurity` breaks moving the same 4 assertions
+is the finding worth keeping**: the bare `all` is indistinguishable from the property being
+absent, because it
 parses as a level rather than as a level-mode pair and names a globalconfig the SDK never
 shipped, and the include is guarded by `Exists()` so nothing is logged.
 `Directory.Build.props` carries that trace property by property, and

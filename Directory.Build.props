@@ -173,8 +173,12 @@
     `scripts/test-warnings-as-errors.sh` Part 3 is that proof, and it uses
     CA5392 (line 252 of the security globalconfig, absent from the Recommended
     and default ones) against an `internal` DllImport. Its comment carries the
-    measured table. Change this line to the bare `all` and that part goes red;
-    it is the only thing in the tree that notices.
+    measured table. Change this line to the bare `all` and that part goes red.
+    Part 6 of the same script, added 2026-08-03, also goes red, but on the
+    evaluated spelling on each real project rather than on a diagnostic, which
+    is the per-project override Part 3's probe cannot see. Part 3 is the only
+    thing in the tree that notices BEHAVIOURALLY, that a rule stops being
+    reported. Nothing outside that script notices either way.
 
     CodeAnalysisTreatWarningsAsErrors is deliberately NOT set. It is the
     property that selects the `_warnaserror` variant of the shipped
