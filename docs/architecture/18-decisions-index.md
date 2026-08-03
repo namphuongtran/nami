@@ -166,6 +166,7 @@ look for a wrong claim**, and the wiring change is exactly the kind that leaves 
 | [0090](../adr/0090-versioned-api-base-path.md) | Serve Nami's own APIs under the base path `/api/v1`, and rule... | 18 |
 | [0091](../adr/0091-browser-facing-response-headers.md) | Fix the browser-facing response-header baseline as three prof... | 13, 18 |
 | [0092](../adr/0092-ci-security-scan-tooling.md) | Pin the five CI security scans, and take no third-party SAST... | 11, 18 |
+| [0093](../adr/0093-warnings-as-errors.md) | Every warning fails the build, with the restore-time vulnerability codes carved out | NONE |
 
 ## 3. What the shape of that table says
 
