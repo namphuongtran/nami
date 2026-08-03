@@ -1,0 +1,21 @@
+{
+  "enabledPlugins": {
+    "dotnet-upgrade@dotnet-agent-skills": true,
+    "dotnet@dotnet-agent-skills": true,
+    "dotnet-advanced@dotnet-agent-skills": true,
+    "dotnet-ai@dotnet-agent-skills": true,
+    "dotnet-aspnetcore@dotnet-agent-skills": true,
+    "dotnet-data@dotnet-agent-skills": true,
+    "dotnet-diag@dotnet-agent-skills": true,
+    "dotnet-msbuild@dotnet-agent-skills": true,
+    "dotnet-nuget@dotnet-agent-skills": true,
+    "dotnet-template-engine@dotnet-agent-skills": true,
+    "dotnet-test@dotnet-agent-skills": true,
+    "dotnet-test-migration@dotnet-agent-skills": true,
+    "dotnet11@dotnet-agent-skills": true,
+    "context7@claude-plugins-official": true,
+    "pr-review-toolkit@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "microsoft-docs@claude-plugins-official": true
+  }
+}
