@@ -95,6 +95,49 @@ bare absence gets quoted forward. The same failure in a single layer is recorded
 `design/CLAUDE.md`, which reached it one increment earlier and caught it as a near miss
 rather than as a committed claim.
 
+## A line number ages, and the edit that ages it is usually your own
+
+The section above is about a citation that was wrong when it was written. This one is
+about a citation that was **right** when it was written and is wrong now. They need
+different habits: the first is caught by reading at source before writing, the second only
+by re-reading after editing, which is the step an increment treats as finished business.
+
+**An increment spanning more than one commit can invalidate its own pointers.** On
+2026-08-03, in the increment that added ADR-0093 and ADR-0094: commits `c875328` and
+`8832769` wrote `file:line` pointers that were correct when written, commit `da1af46` then
+edited the files those pointers point into, and nothing re-read the earlier two. Sixteen
+went stale at once, found only by a whole-branch review. The repair is `aa1667f`, whose
+message is the record: twenty corrected and four re-confirmed, all twenty-four re-derived
+against the final tree.
+
+**No gate sees this, and that is by design rather than by oversight.** Check 2 matches
+`ADR-[0-9]{4}` and confirms that `docs/adr/NNNN-*.md` exists (`scripts/check-adrs.sh`,
+Check 2). It never reads a line number, and neither does anything else here: searched on
+2026-08-03 across `check-adrs.sh` and `check-decisions-index.py` for a digit-and-colon
+pattern, for `line number`, and for a trailing `:[0-9]+`, with no hits. So a pointer that
+has aged looks exactly like a pointer that is fine, in green CI, forever.
+
+Three habits, in the order they pay:
+
+- **Re-derive the numbers last**, after every prose change is final. This is not a
+  preference: a correction is itself an edit, so fixing numbers before prose shifts the
+  lines below each fix and requires a second pass, which is the pass that gets skipped.
+- **Re-read every pointer into a file you touched**, not only the ones you suspect. The
+  sixteen above were found by opening all of them rather than by sampling.
+- **Prefer an anchor that survives an edit.** A quoted phrase, a section heading, or a
+  named property still identifies its target after lines move above it; a bare number does
+  not. Where the pointer must be numeric, quote enough of the target alongside it that a
+  drift reads as drift instead of as a different claim.
+
+**A pointer at a file you are deleting from is a different problem and needs prose, not a
+number.** Five of that increment's twenty were of this kind: ADR-0093 quoted, in the
+present tense, a block of `Directory.Build.props` that the same increment deleted, and
+cited a `BUILD-PLAN.md` row the same increment removed under that file's own rule that a
+row goes when its owner records the outcome. A sentence asserting what another file
+*currently* contains is a measurement, so it is dated, written in the past tense, and names
+the commit it was true at. Done that way it stays true after the target changes again,
+which is the whole point.
+
 ## Reading the external design corpus
 
 The corpus is a separate tree, not part of this repository, and its path comes from the
