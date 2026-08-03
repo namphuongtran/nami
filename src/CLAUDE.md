@@ -26,7 +26,7 @@ signature, and the missing piece is not a convention that can be assumed: the sa
 layer writes `ValueTask~AuditChainEntry~` and `ValueTask` explicitly at
 [`../docs/design/03-audit.md:61,65`](../docs/design/03-audit.md), so it says the task type
 when it means one. The omission is an omission. `ScopeDefinition` was landed instead
-because [`../docs/design/23-configuration-and-client-declaration.md:87-91`](../docs/design/23-configuration-and-client-declaration.md)
+because [`../docs/design/23-configuration-and-client-declaration.md:89-93`](../docs/design/23-configuration-and-client-declaration.md)
 gives all three of its members **and** their nullability, that diagram annotating `string?`
 on other members in the same block.
 
