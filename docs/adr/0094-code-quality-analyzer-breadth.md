@@ -131,7 +131,7 @@ checked.
 So `All` offers exactly two ways forward on the first type in the repository, and both are
 worse than not taking it. Changing `Resources` to a read-only collection would deviate from the
 design that fixes its members, in the one place where `src/CLAUDE.md` says deviation is how "an
-invented decision enters the codebase wearing the design's authority" (`src/CLAUDE.md:17-18`).
+invented decision enters the codebase wearing the design's authority" (`src/CLAUDE.md:16-17`).
 Suppressing `CA1819` instead would mean the repository's first `NoWarn` is written in the same
 change that adopts the ruleset it exempts.
 
