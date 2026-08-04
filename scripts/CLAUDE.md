@@ -26,6 +26,13 @@ change. The generalisation is cheap and worth carrying: **when a check joins thi
 ask what its input set is before asking what it matches**, because the coverage warning is a
 list of input sets and not a property of the script.
 
+**Check 9 arrived on 2026-08-03 with the identical omission, which is what turns that
+sentence from an anecdote into a rule.** Its input set is tracked `*.props`, `*.targets`,
+`*.csproj` and `NuGet.config`, a third set the warning block did not name, so an untracked
+`NuGet.config` would have been unread and unannounced. Found the same way, by writing the
+check. Two for two: assume the next check will need its own warning entry rather than
+checking whether it does.
+
 It warns rather than fails, deliberately. An untracked work-in-progress file is legitimate
 mid-edit, and failing on one would make the script unrunnable exactly when it is most
 useful, which is how a check gets skipped. **The warning is not a substitute for staging**:

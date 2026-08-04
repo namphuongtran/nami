@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Self-test for check-adrs.sh Check 8 (GitHub Actions workflow hygiene).
+# Self-test for check-adrs.sh Check 8 (GitHub Actions workflow hygiene) and Check 9
+# (dependency-source hygiene, the two premises ADR-0095 rests on).
 #
 # Why this exists as a permanent test rather than a one-off proof. scripts/CLAUDE.md
 # holds that a check never run against the bug it exists for is not known to work.
@@ -51,6 +52,19 @@ cp "$(pwd)/scripts/check-adrs.sh" "$wt/scripts/check-adrs.sh" || {
 # check cannot be introduced in the same commit as the fix it demands.
 cp "$(pwd)"/.github/workflows/*.yml "$wt/.github/workflows/" 2>/dev/null || {
   echo "self-test FAILED: could not stage the working-tree workflows into the worktree"
+  exit 1
+}
+
+# Check 9's input is the tracked build files, so they are staged for the same reason
+# the workflows above are. Without this, a change that fixed a floating version and
+# added the rule forbidding it in one commit would test the rule against HEAD's
+# unfixed file, which is the trap the paragraph above records one layer out.
+cp "$(pwd)"/Directory.Packages.props "$wt/Directory.Packages.props" 2>/dev/null || {
+  echo "self-test FAILED: could not stage the working-tree Directory.Packages.props into the worktree"
+  exit 1
+}
+cp "$(pwd)"/Directory.Build.props "$wt/Directory.Build.props" 2>/dev/null || {
+  echo "self-test FAILED: could not stage the working-tree Directory.Build.props into the worktree"
   exit 1
 }
 
@@ -171,6 +185,89 @@ printf '%s\n' "$out4" | grep -q 'zz-pins.yml:16:' && fail "a docker:// reference
 
 ( cd "$wt" && git rm -q --cached .github/workflows/zz-pins.yml >/dev/null 2>&1; rm -f .github/workflows/zz-pins.yml )
 
+# Case 2's planted workflow is still staged at this point, and it has to go before any
+# later case asserts an exit code. Found by running these cases against a guardrail with
+# no Check 9 at all: the two "expected exit 1" assertions below PASSED, because case 2's
+# three violations were still in the index and failing the run on their own. An exit code
+# is a property of the whole script, so it is only evidence about the case at hand when
+# the case at hand is the only violation staged. The count assertions were the ones that
+# reported the missing check, which is the same lesson the paragraph above case 2 records
+# about negatives failing open, arriving by a different route.
+( cd "$wt" && git rm -q --cached .github/workflows/zz-selftest.yml >/dev/null 2>&1; rm -f .github/workflows/zz-selftest.yml )
+
+# --- Case 5: Check 9a, floating versions in a build file (ADR-0095 parameter B) ---
+# Two violations and four look-alikes. The comment look-alike is the load-bearing one
+# and it is not hypothetical: Directory.Packages.props opens with a ninety-line comment
+# that discusses version forms, so a rule matching any asterisk in the file would flag
+# the documentation explaining the rule. ADR-0095 parameter B states the same boundary
+# in prose, because that ADR quotes a floating version in order to forbid it.
+cat > "$wt/zz-selftest.props" <<'XML'
+<Project>
+  <!-- A documented example must not trip the rule: Version="7.*" is what
+       parameter B forbids, and saying so here has to stay legal. -->
+  <ItemGroup>
+    <PackageVersion Include="A.Floating" Version="7.*" />
+    <PackageVersion Include="B.Override" VersionOverride="1.2.*" />
+    <PackageVersion Include="C.Bracket" Version="[5.6.0]" />
+    <PackageVersion Include="D.Plain" Version="5.6.0" AssemblyVersion="1.0.*" />
+  </ItemGroup>
+</Project>
+XML
+
+out5=$( cd "$wt" && git add zz-selftest.props && bash scripts/check-adrs.sh 2>&1 )
+rc5=$?
+
+[ "$rc5" -eq 1 ] || fail "expected exit 1 on the planted floating versions, got $rc5"
+
+floathits=$(printf '%s\n' "$out5" | grep -c 'floating version')
+
+# The count is the load-bearing assertion, for the reason cases 2 and 4 record: the
+# negatives below fail open if a line number drifts.
+[ "$floathits" -eq 2 ] || fail "expected 2 floating-version findings, got $floathits (more means a look-alike tripped; fewer means a real one was missed)"
+
+printf '%s\n' "$out5" | grep -q 'zz-selftest.props:5:' || fail "the floating Version=\"7.*\" on line 5 was not reported"
+printf '%s\n' "$out5" | grep -q 'zz-selftest.props:6:' || fail "the floating VersionOverride on line 6 was not reported"
+
+printf '%s\n' "$out5" | grep -q 'zz-selftest.props:2:' && fail "an asterisk inside an XML comment was flagged; a rule cannot forbid its own explanation"
+printf '%s\n' "$out5" | grep -q 'zz-selftest.props:3:' && fail "the second line of the XML comment was flagged"
+printf '%s\n' "$out5" | grep -q 'zz-selftest.props:7:' && fail "the bracket form was flagged; it is the form ADR-0021 parameter A requires"
+printf '%s\n' "$out5" | grep -q 'zz-selftest.props:8:' && fail "a wildcard in a differently-named attribute was flagged; the rule anchors on whitespace before Version= so AssemblyVersion is out of scope, and line 8 carries a legal Version on the same line to prove the anchor rather than the line"
+
+( cd "$wt" && git rm -q --cached zz-selftest.props >/dev/null 2>&1; rm -f zz-selftest.props )
+
+# --- Case 6: Check 9b, a package source configuration file (ADR-0095 parameter C) ---
+# Two violations, one at the root and one nested, and one look-alike whose name merely
+# starts the same way. The two spellings differ in case on purpose: the rule matches
+# case-insensitively because the filename is written both ways in the wild.
+mkdir -p "$wt/build"
+printf '%s\n' '<configuration />' > "$wt/NuGet.config"
+printf '%s\n' '<configuration />' > "$wt/build/nuget.config"
+printf '%s\n' '<configuration />' > "$wt/NuGet.config.example"
+
+out6=$( cd "$wt" && git add NuGet.config build/nuget.config NuGet.config.example && bash scripts/check-adrs.sh 2>&1 )
+rc6=$?
+
+[ "$rc6" -eq 1 ] || fail "expected exit 1 on the planted package source config, got $rc6"
+
+cfghits=$(printf '%s\n' "$out6" | grep -c 'package source configuration file')
+[ "$cfghits" -eq 2 ] || fail "expected 2 package-source findings, got $cfghits (a third means the .example look-alike tripped)"
+
+printf '%s\n' "$out6" | grep -q 'NuGet.config.example' && fail "a file whose name merely starts with the config name was flagged"
+
+( cd "$wt" && git rm -q --cached NuGet.config build/nuget.config NuGet.config.example >/dev/null 2>&1
+  rm -f NuGet.config build/nuget.config NuGet.config.example; rmdir build 2>/dev/null )
+
+# --- Case 7: untracked means unread for Check 9 too, and it must say so ---
+# The same false green case 3 covers for workflows. The coverage block named markdown
+# and workflows only, so Check 9 arrived carrying this blind spot open, exactly as
+# Check 8 did on 2026-08-02. scripts/CLAUDE.md states the generalisation: when a check
+# joins this script, ask what its input set is before asking what it matches.
+printf '%s\n' '<Project><ItemGroup><PackageVersion Include="Z" Version="9.*" /></ItemGroup></Project>' > "$wt/zz-untracked.props"
+out7=$( cd "$wt" && bash scripts/check-adrs.sh 2>&1 )
+printf '%s\n' "$out7" | grep -q 'zz-untracked.props' || fail "an untracked build file produced no coverage warning, which is the false green the warning exists for"
+printf '%s\n' "$out7" | grep -q 'untracked dependency file(s) were NOT read by Check 9' || fail "the coverage warning does not name Check 9 as the check that did not read it"
+rm -f "$wt/zz-untracked.props"
+
 # --- Case 3: untracked means unread, and the script must say so rather than pass quietly ---
 cat > "$wt/.github/workflows/zz-untracked.yml" <<'YAML'
 name: Untracked
@@ -191,5 +288,5 @@ if [ "$fails" -gt 0 ]; then
   echo "check-adrs self-test FAILED: ${fails} assertion(s) above."
   exit 1
 fi
-echo "check-adrs self-test OK: Check 8 catches 3 planted hygiene violations and 4 planted pin violations, leaves 8 look-alikes alone, and warns on untracked."
+echo "check-adrs self-test OK: Check 8 catches 3 planted hygiene violations and 4 planted pin violations, Check 9 catches 2 planted floating versions and 2 planted source configs, together they leave 13 look-alikes alone, and both warn on untracked."
 exit 0

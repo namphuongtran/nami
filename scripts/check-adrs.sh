@@ -2,8 +2,8 @@
 # ADR / docs guardrail (neutral, public). Run by CI and available locally.
 # Checks: template placeholders, ADR cross-reference integrity, ADR index/status,
 # ADR-0061 stack-of-record table membership, the no-em-dash style rule,
-# design-corpus test identifiers, architecture decisions-index membership, and
-# GitHub Actions workflow-definition hygiene.
+# design-corpus test identifiers, architecture decisions-index membership,
+# GitHub Actions workflow-definition hygiene, and dependency-source hygiene.
 # Contains no competitor/real-name logic; that is a local, git-ignored concern
 # (see scripts/README.md).
 #
@@ -220,6 +220,59 @@ if [ -n "$wf" ]; then
   done
 fi
 
+# --- Check 9: dependency-source hygiene (ADR-0095) ---
+# ADR-0095 declines a committed lock file, and that decline rests on two facts about
+# this repository rather than on a property of NuGet: no version floats, and nuget.org
+# is the only package source. NuGet reproduces a closure unless one of three documented
+# cases applies, and two of them are reachable only through the constructs below.
+# Without this check those two premises could stop being true with nothing failing,
+# which is the shape of silence the root CLAUDE.md asks a new gate to be tested against.
+#   9a. No wildcard in a `Version` or `VersionOverride` attribute of a tracked build
+#       file. Asterisks inside XML comments are blanked before matching, because a rule
+#       that flagged its own documentation would be a defect: the manifest this protects
+#       opens with a ninety-line comment about version forms. The match requires
+#       whitespace before the attribute name, so `AssemblyVersion` and `FileVersion`
+#       are out of scope; those are legitimate MSBuild wildcards and mean something else.
+#   9b. No tracked package-source configuration file, matched by exact filename,
+#       case-insensitively, at any depth.
+#
+# What this does NOT see, stated where its result is read: a source added on the command
+# line, in a user-level or machine-level NuGet configuration, or through an environment
+# variable; a wildcard reaching a build through an MSBuild property defined elsewhere;
+# and any change to a package's content under a fixed version, which is ADR-0095
+# parameter D.1 and has no instrument here at all. Rule 9b reads a filename, so it also
+# cannot tell a configuration that ADDS a source from one that clears every source but
+# nuget.org, which is what the NuGet security guidance recommends and would strengthen
+# parameter C rather than break it. If that form is ever wanted, 9b is what changes.
+dep=$(git ls-files '*.props' '*.targets' '*.csproj' 2>/dev/null)
+if [ -n "$dep" ]; then
+  for f in $dep; do
+    [ -f "$f" ] || continue
+    floats=$(awk -v F="$f" '
+      { line = $0; sub(/\r$/, "", line)
+        if (incomment) {
+          p = index(line, "-->")
+          if (p == 0) next
+          line = substr(line, p + 3); incomment = 0
+        }
+        while ((s = index(line, "<!--")) > 0) {
+          rest = substr(line, s + 4)
+          e = index(rest, "-->")
+          if (e == 0) { line = substr(line, 1, s - 1); incomment = 1; break }
+          line = substr(line, 1, s - 1) " " substr(rest, e + 3)
+        }
+        if (line ~ /[[:space:]](Version|VersionOverride)="[^"]*\*/) print F ":" NR ": " line
+      }' "$f" 2>/dev/null || true)
+    if [ -n "$floats" ]; then
+      while IFS= read -r l; do add "floating version (ADR-0095 parameter B forbids a wildcard version; write the exact version, or the bracket form ADR-0021 parameter A requires): $l"; done <<< "$floats"
+    fi
+  done
+fi
+srccfg=$(git ls-files 2>/dev/null | grep -iE '(^|/)nuget\.config$' || true)
+if [ -n "$srccfg" ]; then
+  while IFS= read -r l; do add "package source configuration file (ADR-0095 parameter C makes nuget.org the only source, and adding one is a revisit trigger for that ADR rather than a configuration change): $l"; done <<< "$srccfg"
+fi
+
 # --- Coverage warning: untracked input is not read at all ---
 # Checks 1, 2, 5, 6 and 8 read `git ls-files`, which lists the index. A file that
 # has never been `git add`-ed is therefore not read, and without this warning
@@ -245,6 +298,19 @@ if [ -n "$untrackedwf" ]; then
   n=$(printf '%s\n' "$untrackedwf" | wc -l | tr -d ' ')
   echo "coverage warning: ${n} untracked workflow file(s) were NOT read by Check 8."
   printf '%s\n' "$untrackedwf" | sed 's/^/  ? /'
+  echo "  Run 'git add' on them and re-run, or this verdict says nothing about their contents."
+fi
+# Build files joined markdown and workflows here on 2026-08-03 with Check 9, and the
+# omission was again found by writing the check rather than by it firing. That is now
+# twice, which is what makes it a rule rather than an anecdote: this block is a list of
+# input sets, so a new check needs an entry here or its input is unread AND unannounced.
+untrackeddep=$(git ls-files --others --exclude-standard '*.props' '*.targets' '*.csproj' 2>/dev/null || true)
+untrackedcfg=$(git ls-files --others --exclude-standard 2>/dev/null | grep -iE '(^|/)nuget\.config$' || true)
+untracked9=$(printf '%s\n%s\n' "$untrackeddep" "$untrackedcfg" | grep -v '^$' || true)
+if [ -n "$untracked9" ]; then
+  n=$(printf '%s\n' "$untracked9" | wc -l | tr -d ' ')
+  echo "coverage warning: ${n} untracked dependency file(s) were NOT read by Check 9."
+  printf '%s\n' "$untracked9" | sed 's/^/  ? /'
   echo "  Run 'git add' on them and re-run, or this verdict says nothing about their contents."
 fi
 

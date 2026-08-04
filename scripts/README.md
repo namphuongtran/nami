@@ -12,6 +12,7 @@ Neutral ADR/docs hygiene checks, run in CI (`.github/workflows/ci.yml`) and loca
 - no design-corpus test identifier appears in tracked markdown: the `9.T`, `8.K` and `25.T` families point into a numbered test register this repository does not have, so an obligation is stated by what it asserts and listed in `docs/design/20-testing.md` instead. The families are named by prefix here on purpose, because writing a whole identifier would trip this very check; `docs/adr/README.md` carries the full convention and the reason it is enforced;
 - every ADR has a row in the architecture layer's reverse index, `docs/architecture/18-decisions-index.md`, and every row there resolves to a file (bidirectional). This is a second index, and the first one passing says nothing about it: nine ADRs had drifted out of this one while every other check was green. Membership only, never the "Views that cite it" column, which is regenerated from the views themselves;
 - GitHub Actions workflow hygiene, **three** rules. Two were added 2026-08-02 as the no-new-dependency half of the workflow-analysis gap ADR-0092 names: no `${{ ... }}` expression appears inside any `run:` script, and no workflow uses a `pull_request_target:` or `workflow_run:` trigger. The third, 8c, landed the same day with ADR-0086 parameter A's reversal and is what makes that reversal a decision rather than a loosening: every `uses:` must be a full version tag, `@vX.Y.Z`, so a floating major (`@v7`), a branch (`@main`), a partial version (`@v7.0`) and a commit SHA are all rejected. The floating major is the form that actually moved this repository's linter under an unchanged workflow file, and it differs from the sanctioned form by four characters in a diff. Local (`./...`) and container (`docker://...`) references are out of scope, image digests being ADR-0051 section D. **Read the scope before reading the green.** Interpolating into a shell is the injection vector and passing the value through `env:` is the standard mitigation, so the first rule enforces the mitigation rather than judging whether a value is trusted, which is the part that would need a real analyser. What neither rule sees: interpolation into an action's `with:` inputs, the scope of a `permissions:` block, composite actions and reusable workflows in other repositories, and what a pinned action does once it runs (ADR-0086 constrains *which* action code runs, and since its parameter A was reversed on 2026-08-02 it constrains it by a movable tag, so even that is weaker than it reads; nothing here governs an action's behaviour).
+- dependency-source hygiene, **two** rules, added 2026-08-03 to enforce the two premises ADR-0095 rests on. That ADR declines a committed lock file on the ground that NuGet reproduces a closure unless one of three documented cases applies, and that two of the three are absent here; these rules are what stop those two from silently becoming present. **9a**: no wildcard in a `Version` or `VersionOverride` attribute of a tracked `*.props`, `*.targets` or `*.csproj`. **9b**: no tracked `NuGet.config`, matched by exact filename, case-insensitively, at any depth. Two boundaries are deliberate and both are tested. Asterisks inside XML comments are blanked before matching, because `Directory.Packages.props` opens with a ninety-line comment about version forms and a rule that flagged its own documentation would be a defect in the rule; and the match requires whitespace before the attribute name, so `AssemblyVersion` and `FileVersion` wildcards are out of scope, those being legitimate and meaning something else. **Read the scope before reading the green.** What neither rule sees: a source added on the command line, in a user-level or machine-level NuGet configuration, or by an environment variable; a wildcard reaching a build through an MSBuild property defined elsewhere; and any change to a package's *content* under a fixed version, which is ADR-0095 parameter D.1 and has no instrument here at all. Rule 9b reads a filename, so it also cannot distinguish a configuration that **adds** a source from one that clears every source but nuget.org, which is what the NuGet security guidance recommends and would strengthen the premise rather than break it; if that form is ever wanted, 9b is the thing that changes.
 
 Run locally:
 
@@ -20,26 +21,44 @@ bash scripts/check-adrs.sh
 ```
 
 The checks that read tracked files from `git ls-files` (markdown for 1, 2, 5, 6; workflows
-for 8) do not see a file that has never been `git add`-ed. The script prints a
-`coverage warning:` listing any untracked markdown, and separately any untracked workflow,
-**above** its verdict in both the passing and the failing case, so a green is never mistaken
-for coverage it did not have. It warns rather than fails, because an untracked
+for 8; build files and `NuGet.config` for 9) do not see a file that has never been
+`git add`-ed. The script prints a `coverage warning:` listing any untracked markdown, and
+separately any untracked workflow, and separately any untracked dependency file, **above**
+its verdict in both the passing and the failing case, so a green is never mistaken
+for coverage it did not have. There are three warnings rather than one because this block is
+a list of **input sets**: a new check needs its own entry, or its input is unread and
+unannounced at once. Both Check 8 and Check 9 arrived carrying that omission and it was found
+by writing the check rather than by it firing, which is what makes it a rule and not an
+anecdote. It warns rather than fails, because an untracked
 work-in-progress file is legitimate mid-edit; staging is still what makes the verdict cover
 it. CI cannot reach this case, its checkout being tracked-only.
 
 ## test-check-adrs.sh
 
-A self-test for `check-adrs.sh` Check 8, run in CI alongside the guardrail itself:
+A self-test for `check-adrs.sh` Checks 8 and 9, run in CI alongside the guardrail itself:
 
 ```bash
 bash scripts/test-check-adrs.sh
 ```
 
 It creates a throwaway `git worktree` at `HEAD`, copies the **working-tree** guardrail and
-the **working-tree** workflows into it, then plants two workflows: one carrying three
-hygiene violations and four look-alikes, and one carrying four pin violations and four
-look-alikes. It asserts that exactly the three and exactly the four are reported. The worktree is removed on every exit path, so neither the
-real working tree nor the real index is ever written to.
+the **working-tree** inputs into it (the workflows for Check 8, `Directory.Packages.props`
+and `Directory.Build.props` for Check 9), then plants violations and look-alikes side by
+side: two workflows carrying three hygiene violations and four look-alikes, and four pin
+violations and four look-alikes; a build file carrying two floating versions and four
+look-alikes; and two package-source configurations with one look-alike. It asserts that
+exactly those are reported and that the thirteen look-alikes are not, plus that an untracked
+file of either input set produces its coverage warning. The worktree is removed on every exit
+path, so neither the real working tree nor the real index is ever written to.
+
+Check 9's three cases were added 2026-08-03 and one of them found a defect in the others
+before Check 9 existed. **An exit code is a property of the whole script, so a later case
+asserting `exit 1` proves nothing while an earlier case's violation is still staged.** Case
+2's workflow was never unstaged, so the two new "expected exit 1" assertions passed against a
+guardrail that had no Check 9 at all; the finding-count assertions were the only ones that
+reported the truth. The fix is one `git rm --cached` before the new cases, and the lesson is
+the same one the count-versus-line-number paragraph below states, reached from the other
+direction.
 
 It exists because Check 8 matches with `awk`, and the awk on the CI runner is a different
 implementation from the one the check was authored against. A green guardrail on a clean
