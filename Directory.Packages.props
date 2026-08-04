@@ -42,8 +42,22 @@
     direct constraint and nothing beneath it, so transitive versions remain
     whatever the graph allows on the day of the restore, which reaches the
     ADR-0026 licence scan as much as it reaches the pin. That gap is named in
-    the same parameter, no decision in this repository covers it yet, and it is
-    owed before M1.
+    the same parameter and was decided on 2026-08-03 by ADR-0095, which
+    DECLINES a committed lock file: NuGet reproduces a closure unless one of
+    three documented cases applies, and none is reachable while every row here
+    is fixed and nuget.org is the only source. Two of those three conditions
+    are now rules rather than circumstances, enforced by Check 9 of the docs
+    guardrail, so a wildcard in this file or a tracked NuGet.config fails the
+    build. What the decline gives up is content-hash verification of package
+    content and a reviewable diff of transitive change, both recorded there as
+    accepted risk and carried to the pre-GA checklist.
+
+    ONE SENTENCE BELOW IS NOT ESTABLISHED, and ADR-0095 parameter D.3 says so
+    rather than repeating it. The claim that an unlisted 5.6.0 would float this
+    forward silently is this file's own; the source read for that ADR covers a
+    package version being REMOVED from a repository, which nuget.org does not
+    permit, and says nothing about a version that is unlisted there and still
+    restorable by exact reference. Treat it as an open question, not a fact.
 
     THE RESTORE GRAPH STOPPED BEING TRIVIAL ON 2026-08-02. With only the
     analyzer row it was one node deep, the analyzer bringing no transitive

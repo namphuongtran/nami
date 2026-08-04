@@ -48,7 +48,6 @@ Not scheduled. Each has a decision or a document that already names it.
 
 | Item | Owner | Trigger |
 |---|---|---|
-| Whole-graph restore determinism (committed lock file, locked-mode CI restore) | [`adr/0021-openiddict-version-adaptation.md:41`](adr/0021-openiddict-version-adaptation.md) | Before M1 |
 | Whether `required` may stay on a public member | [`adr/0044-public-api-stability-and-semver.md:113`](adr/0044-public-api-stability-and-semver.md) | The first promotion of `Unshipped` to `Shipped` |
 | Architecture rules (b) through (e): Application layering, slice decoupling, adapter placement, BFF isolation | [`adr/0024-architecture-style.md:55`](adr/0024-architecture-style.md) | When the projects they constrain exist |
 | The licence-scan CI gate | [`adr/0026-dependency-license-policy.md`](adr/0026-dependency-license-policy.md) section C | M1 |
