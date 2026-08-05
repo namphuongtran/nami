@@ -8,6 +8,7 @@ paths:
   - ".markdownlint-cli2.jsonc"
   - "Nami.Identity.slnx"
   - "src/**/*.csproj"
+  - "tests/**/*.csproj"
 ---
 
 # Build and CI configuration
