@@ -67,6 +67,9 @@ classDiagram
   class AuditEvent {
     +string EventType
     +string ActorSubCiphertext
+    +Guid? SubjectRef
+    +byte[]? SourceIpHash
+    +string? ClientId
     +Guid TargetTenantId
     +string PayloadCanonical
     +Guid CorrelationId
@@ -125,6 +128,16 @@ ADR-0077, so they must be answerable here. They were not.
 All three are in the **canonical hashed field set from genesis**. Adding one later is a chain
 schema version rather than an ordinary migration, which is the reason they are decided before
 the first rule is written rather than when one is needed.
+
+**Both event types carry all three, corrected 2026-08-05.** Until that date the diagram above
+put the three on `SecurityEvent` only. That was an unfinished edit and not a decision. Commit
+`fbdc93a` (2026-08-01) added the three members to the `SecurityEvent` block and wrote the three
+bullets above. It did not touch the `AuditEvent` block, which had last changed in `4f510f9` on
+2026-07-27, five days before ADR-0082 was accepted. Two of the lane-A rules ADR-0082 names land
+on this sink rather than on the other one, so the omission was load-bearing: "issuance spike
+per client" needs `ClientId` on `token_issued`, and "keyring access from an unknown source"
+needs `SourceIpHash` on `key_rotation`. Both of those events are the business trail that
+`IAuditSink` records.
 
 **Three anti-patterns are forbidden, and each has been seen in the wild:**
 

@@ -229,11 +229,17 @@ architecture test enforces this.
 Declared in `Nami.Identity.Abstractions` at this phase; the default adapters and later
 implementations land with their owning designs.
 
-> **None of the ten can be written from this repository as it stands on 2026-08-02, and
-> the table below is a catalogue of names rather than of contracts.** Found by trying: the
+> **None of the ten could be written from this repository as it stood on 2026-08-02, and
+> the table below was a catalogue of names rather than of contracts.** Found by trying: the
 > `Abstractions` project landed that day and the port intended to be its first type could
 > not be compiled. The counts are enumerated, not estimated, over every occurrence of each
 > name in `docs/` outside `kb/.scratch/`.
+>
+> **Two of the ten became writable on 2026-08-05**, and the finding above still holds for the
+> other eight. `IAuditSink` and `ISecurityEventSink` were re-read against
+> [03](03-audit.md) section 3, which fixes every member of `AuditEvent`, `SecurityEvent`, and
+> `AuditChainEntry`, and states the task type on both `Async` members. The paragraph below
+> records why the third port routed the same way did not join them.
 >
 > **Four have no members stated anywhere**: `ISigningCredentialSource`,
 > `IEncryptionCredentialSource`, `IDataProtectionKeyStore`, and `ITenantStore`.
@@ -249,8 +255,15 @@ implementations land with their owning designs.
 > type. **That is an omission and not a convention**, because the same layer writes
 > `ValueTask~AuditChainEntry~` and `ValueTask` explicitly at
 > [03](03-audit.md) section 3 when it means them. The remaining three
-> (`ISigningKeyStore`, `IAuditSink`, `ISecurityEventSink`) each need a DTO that is specified
-> in its own design and not here.
+> (`ISigningKeyStore`, `IAuditSink`, `ISecurityEventSink`) each need a DTO that its own design
+> owns rather than this one.
+>
+> **Those three did not turn out to sit together, re-read 2026-08-05.** For the audit pair the
+> routing paid off: [03](03-audit.md) section 3 gives all three DTOs in full, so both ports
+> were writable. For `ISigningKeyStore` it did not:
+> [12](12-key-management.md) section 3.2 named two members and neither return type, and no
+> design gave `KeyRecord` any members or `KeyScope` a C# form. That section now carries both
+> signatures and enumerates the two gaps that remain, with the searches that establish them.
 >
 > **One is a naming question rather than a gap, and it is the sharpest of the set.**
 > `ITenantStore` may be Nami's own port or may be naming the type that the multi-tenancy

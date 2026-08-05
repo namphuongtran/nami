@@ -26,19 +26,18 @@ In order. Each increment is one branch, small enough to review in one sitting.
 
 | # | Scope | Blocked by |
 |---|---|---|
-| PR-5 | The ports that have a complete source, plus the DTOs they need | **Yes**, see below |
+| PR-5 | `IAuditSink` and `ISecurityEventSink`, plus `AuditEvent`, `SecurityEvent`, and `AuditChainEntry` | No |
 | PR-6 | `Nami.Identity.Core`: engine wiring, the builder, the first slice | PR-5 |
 
-**PR-5 cannot start as written, and the blocker is documented rather than guessed.**
-[`design/01-foundations.md:232`](design/01-foundations.md) states that none of the ten
-ports in the catalogue can be written from this repository as it stands: four have no
-members stated anywhere, three elide the task type on an `Async` member, three need a DTO
-specified in another design, and one is a naming question. The same note says closing it is
-per-port work owned by each port's own design, not an edit to that table. So the real next
-step is to pick one port, read its owning design, and either write the contract there or
-record what the design does not fix.
+**PR-5 was blocked until 2026-08-05.** The blocker was
+[`design/01-foundations.md`](design/01-foundations.md) section 3.3: none of the ten ports could
+be written from this repository as it stood on 2026-08-02. That note said closing it was
+per-port work owned by each port's own design. That work was done for the three ports it routed
+elsewhere, and only the audit pair turned out to be ready. Both owners hold the outcome, which
+is why this row does not: design 01 section 3.3 records what closed, and
+[`design/12-key-management.md`](design/12-key-management.md) section 3.2 records what did not.
 
-`ScopeDefinition` landed instead of a port for exactly this reason
+`ScopeDefinition` landed instead of a port in the increment before this one
 ([`../src/CLAUDE.md`](../src/CLAUDE.md) records how that was found: by trying to compile one
 and failing).
 
@@ -55,6 +54,7 @@ Not scheduled. Each has a decision or a document that already names it.
 | The provenance and licence of `MSBuild.Caching.dll`, bundled in MinVer and declared in no `deps.json` | [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) section 3.2 | Before MinVer is adopted |
 | Whether the `NU1901`-`NU1904` carve-out should be reversed once a blocking dependency-vulnerability gate exists | [`adr/0093-warnings-as-errors.md`](adr/0093-warnings-as-errors.md) parameter C | When ADR-0092 stage 2's Trivy scan lands, M1 |
 | DocFX and `CS1591` at error on the public surface are stated by a design and owned by no ADR | [`design/21-cicd-and-deployment.md:232`](design/21-cicd-and-deployment.md) | M1 |
+| `KeyRecord`'s members, and the C# form of `KeyScope`, which are what still block `ISigningKeyStore` | [`design/12-key-management.md`](design/12-key-management.md) section 3.2 | The rotation subsystem, which is the first thing that needs the key store |
 
 The DocFX row is an absence claim, so the search is recorded with it. Seven spellings were
 searched across `docs/adr/` on 2026-08-03 and all seven returned nothing: `DocFX`, `docfx`,
@@ -74,7 +74,7 @@ the read was taken at the artifact, and the outcome is recorded by its owner in 
   `design/23-configuration-and-client-declaration.md` section 6. It needs the configuration
   packages, which are not referenced yet.
 - **Is `ITenantStore` Nami's own port, or the multi-tenancy library's type of that name?**
-  [`design/01-foundations.md:256`](design/01-foundations.md) states it either way changes
+  [`design/01-foundations.md`](design/01-foundations.md) section 3.3 states it either way changes
   the answer: if it is the library's, declaring it in `Abstractions` would put a
   third-party dependency inside the assembly that must depend on nothing. Answerable only
   against a restored package graph.

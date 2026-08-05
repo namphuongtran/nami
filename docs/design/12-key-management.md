@@ -78,6 +78,39 @@ second component to build. `IDataProtectionKeyStore` persists and loads the Data
 Protection keyring that wraps the key `Data`. `ISecretResolver` (01) resolves the store
 credential itself.
 
+**The two `ISigningKeyStore` signatures, stated here 2026-08-05.** This section named both
+members and neither return type until that date, which is not enough to write the port from.
+The shapes below are reconciled from the external design corpus this layer was built against,
+and they are now this design's own.
+
+| Member | Parameters | Returns |
+|---|---|---|
+| `LoadAsync` | `KeyScope`, `CancellationToken` | `Task<IReadOnlyList<KeyRecord>>` |
+| `AdvanceLifecycleAsync` | `KeyScope`, `CancellationToken` | `Task` |
+
+`Task` here differs from the `ValueTask` the audit ports use ([03](03-audit.md) section 3),
+and that is not a contradiction. No decision in this repository rules on which task type a
+port takes. Each store reaches a database on nearly every call, so a synchronous completion
+is not the common case that `ValueTask` exists to serve.
+
+**What is still missing, so this port cannot be written yet.** Two gaps, both enumerated on
+2026-08-05 rather than estimated.
+
+1. **`KeyRecord` has no members stated in this repository.** The corpus states them only in
+   its digest layer, which is not its implementer source, and it writes database types rather
+   than C# ones with no nullability marked. Its `TenantId` is a string where section 4 of
+   [02](02-data.md) declares the column `uuid NULL`. So the member list needs writing here
+   against that schema, not transcribing.
+2. **`KeyScope` has no C# form anywhere.** Searched both trees on 2026-08-05 for
+   `enum KeyScope`, `class KeyScope`, and `KeyScope.` with no definition returned. It appears
+   only as a parameter type and as the column vocabulary `pool-group` or `tenant`, given in
+   section 4 of [02](02-data.md). Whether it is an enum is open. So is how the C# type spans
+   the two vocabularies section 8 below reconciles, since `Tenants.KeyScope` reads `own` where
+   `SigningKeys.KeyScope` reads `tenant`.
+
+Both are per-port work owned here. Closing them is what unblocks the port, and
+[`../BUILD-PLAN.md`](../BUILD-PLAN.md) carries the queue entry.
+
 ### 3.3 Three keyrings (kept separate)
 
 | Keyring | Protects | Public? | Rotation |
