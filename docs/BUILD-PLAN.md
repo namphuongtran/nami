@@ -78,6 +78,20 @@ the read was taken at the artifact, and the outcome is recorded by its owner in 
   the answer: if it is the library's, declaring it in `Abstractions` would put a
   third-party dependency inside the assembly that must depend on nothing. Answerable only
   against a restored package graph.
+- **Does a `paths:` glob in `.claude/rules/` actually load the file when a matching file is
+  edited?** [`../.claude/rules/csharp.md`](../.claude/rules/csharp.md) landed 2026-08-05 and its
+  whole value depends on this. Two halves, and only the first is established. **The gating is
+  real**: in the session that wrote the file, the two rules files with no `paths` field were
+  present in context and [`../.claude/rules/build-and-ci.md`](../.claude/rules/build-and-ci.md),
+  the only one carrying the field, was absent. **The matching is not**: reading
+  `src/Nami.Identity.Abstractions/ScopeDefinition.cs` did not load `csharp.md`, and reading
+  `.editorconfig` did not load `build-and-ci.md` either, so the observation says nothing about
+  either glob. It is consistent with evaluation at session start rather than on file access, which
+  would make a mid-session read the wrong test. The file carries `**/*.cs` plus the explicit
+  `src/**/*.cs` and `tests/**/*.cs`, mirroring the `src/**/*.csproj` form already in
+  `build-and-ci.md`, because no form is proven. Answerable by starting a session with a `.cs` file
+  in play and reading what loaded. Until then, treat both rules files as best-effort in the same
+  way a nested `CLAUDE.md` is after a `/compact`.
 - **A working-tree rewrite of `Nami.Identity.slnx` on 2026-08-02 has no identified cause.**
   The file was found rewritten with an empty `<Folder Name="/tests/" />`, dropping the test
   project. No commit carried that state. All eight gates plus the three self-tests were

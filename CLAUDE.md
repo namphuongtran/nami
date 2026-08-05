@@ -184,6 +184,7 @@ shorter one wins by being read first. Read both.
 | `scripts/` | [`scripts/CLAUDE.md`](scripts/CLAUDE.md) | [`scripts/README.md`](scripts/README.md) |
 | `src/` | [`src/CLAUDE.md`](src/CLAUDE.md) | ADR-0065, and design `01` section 3.1 |
 | `tests/` | [`tests/CLAUDE.md`](tests/CLAUDE.md) | ADR-0060, and design `20` |
+| any `.cs` file, in any folder | [`.claude/rules/csharp.md`](.claude/rules/csharp.md) | ADR-0065, and `.editorconfig` |
 | build and CI config | [`.claude/rules/build-and-ci.md`](.claude/rules/build-and-ci.md) | the files themselves |
 | any prose, in any folder | [`.claude/rules/writing-style.md`](.claude/rules/writing-style.md) | the Microsoft Style Guide |
 
