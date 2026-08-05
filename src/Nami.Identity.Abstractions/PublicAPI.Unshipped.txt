@@ -1,4 +1,32 @@
 #nullable enable
+Nami.Identity.Abstractions.AuditChainEntry
+Nami.Identity.Abstractions.AuditChainEntry.AuditChainEntry() -> void
+Nami.Identity.Abstractions.AuditChainEntry.PrevHash.get -> byte[]!
+Nami.Identity.Abstractions.AuditChainEntry.PrevHash.init -> void
+Nami.Identity.Abstractions.AuditChainEntry.RecordHash.get -> byte[]!
+Nami.Identity.Abstractions.AuditChainEntry.RecordHash.init -> void
+Nami.Identity.Abstractions.AuditEvent
+Nami.Identity.Abstractions.AuditEvent.ActorSubCiphertext.get -> string!
+Nami.Identity.Abstractions.AuditEvent.ActorSubCiphertext.init -> void
+Nami.Identity.Abstractions.AuditEvent.AuditEvent() -> void
+Nami.Identity.Abstractions.AuditEvent.ClientId.get -> string?
+Nami.Identity.Abstractions.AuditEvent.ClientId.init -> void
+Nami.Identity.Abstractions.AuditEvent.CorrelationId.get -> System.Guid
+Nami.Identity.Abstractions.AuditEvent.CorrelationId.init -> void
+Nami.Identity.Abstractions.AuditEvent.EventType.get -> string!
+Nami.Identity.Abstractions.AuditEvent.EventType.init -> void
+Nami.Identity.Abstractions.AuditEvent.PayloadCanonical.get -> string!
+Nami.Identity.Abstractions.AuditEvent.PayloadCanonical.init -> void
+Nami.Identity.Abstractions.AuditEvent.SourceIpHash.get -> byte[]?
+Nami.Identity.Abstractions.AuditEvent.SourceIpHash.init -> void
+Nami.Identity.Abstractions.AuditEvent.SubjectRef.get -> System.Guid?
+Nami.Identity.Abstractions.AuditEvent.SubjectRef.init -> void
+Nami.Identity.Abstractions.AuditEvent.TargetTenantId.get -> System.Guid
+Nami.Identity.Abstractions.AuditEvent.TargetTenantId.init -> void
+Nami.Identity.Abstractions.IAuditSink
+Nami.Identity.Abstractions.IAuditSink.AppendAsync(Nami.Identity.Abstractions.AuditEvent! auditEvent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Nami.Identity.Abstractions.AuditChainEntry!>
+Nami.Identity.Abstractions.ISecurityEventSink
+Nami.Identity.Abstractions.ISecurityEventSink.AppendAsync(Nami.Identity.Abstractions.SecurityEvent! securityEvent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 Nami.Identity.Abstractions.ScopeDefinition
 Nami.Identity.Abstractions.ScopeDefinition.DisplayName.get -> string!
 Nami.Identity.Abstractions.ScopeDefinition.DisplayName.set -> void
@@ -7,3 +35,21 @@ Nami.Identity.Abstractions.ScopeDefinition.Name.set -> void
 Nami.Identity.Abstractions.ScopeDefinition.Resources.get -> string![]!
 Nami.Identity.Abstractions.ScopeDefinition.Resources.set -> void
 Nami.Identity.Abstractions.ScopeDefinition.ScopeDefinition() -> void
+Nami.Identity.Abstractions.SecurityEvent
+Nami.Identity.Abstractions.SecurityEvent.ActorSubCiphertext.get -> string!
+Nami.Identity.Abstractions.SecurityEvent.ActorSubCiphertext.init -> void
+Nami.Identity.Abstractions.SecurityEvent.ClientId.get -> string?
+Nami.Identity.Abstractions.SecurityEvent.ClientId.init -> void
+Nami.Identity.Abstractions.SecurityEvent.CorrelationId.get -> System.Guid
+Nami.Identity.Abstractions.SecurityEvent.CorrelationId.init -> void
+Nami.Identity.Abstractions.SecurityEvent.EventType.get -> string!
+Nami.Identity.Abstractions.SecurityEvent.EventType.init -> void
+Nami.Identity.Abstractions.SecurityEvent.Outcome.get -> string!
+Nami.Identity.Abstractions.SecurityEvent.Outcome.init -> void
+Nami.Identity.Abstractions.SecurityEvent.SecurityEvent() -> void
+Nami.Identity.Abstractions.SecurityEvent.SourceIpHash.get -> byte[]?
+Nami.Identity.Abstractions.SecurityEvent.SourceIpHash.init -> void
+Nami.Identity.Abstractions.SecurityEvent.SubjectRef.get -> System.Guid?
+Nami.Identity.Abstractions.SecurityEvent.SubjectRef.init -> void
+Nami.Identity.Abstractions.SecurityEvent.TargetTenantId.get -> System.Guid
+Nami.Identity.Abstractions.SecurityEvent.TargetTenantId.init -> void

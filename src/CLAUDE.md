@@ -49,9 +49,46 @@ sourced.
   **Not verified**: that the options binder at `23:356` populates `required` members. That needs
   the configuration packages, which land with Central Package Management. It is an open item
   rather than a settled fact.
+- **`init` rather than `set` on the three audit DTOs, landed 2026-08-05.** The bullet above
+  chose `set` for `ScopeDefinition` because a configuration binder writes that type. Nothing
+  binds `AuditEvent`, `SecurityEvent`, or `AuditChainEntry`, and design 03 section 3 states no
+  accessor either way. `init` was chosen because it makes an event immutable once the sink has
+  hashed it, which is the property the chain exists to give. **The open verification above does
+  not widen to these three**: no binder touches them, so the `required` question there stays
+  about `ScopeDefinition`.
+- **`sealed class` rather than `record` for those three.** No source states a shape. A record
+  synthesizes `ToString()` over every property, and `ActorSubCiphertext` and `SourceIpHash` are
+  exactly the values design 03 keeps off every other lane, so the generated `ToString()` would
+  be a leak wearing a convenience. It also adds roughly ten synthesized lines per type to
+  `PublicAPI.Unshipped.txt`, and ADR-0044 then owes compatibility on every one of them.
+- **No `= default` on the `CancellationToken` of either sink.** A default value is public API
+  under ADR-0044, and removing one later is breaking. An explicit token also forces the caller
+  on the fail-closed critical path to supply one, which is the path design 03 section 5.3
+  describes.
 - **The folder taxonomy inside `Abstractions` is flat**, and no source states one. Ten ports
   flat in one folder will be wrong. Inventing the grouping from one type would be worse. Settle
-  it when the catalogue lands, not before.
+  it when the catalogue lands, not before. Counted 2026-08-05, the folder holds six public
+  types: two of the ten ports, three of their DTOs, and `ScopeDefinition`.
+
+## Where a source exists and this repository does not simply copy it
+
+The section above is for a gap. This one is for the two other shapes, and they are recorded
+differently because a reader has to be able to tell them apart. One is a **departure**, where a
+source says something and a second source overrules it. The other is a **forced inference**,
+where no source states the answer but only one answer is possible.
+
+- **Departure: the parameter names `auditEvent`, `securityEvent`, and `cancellationToken`.**
+  The external design corpus this layer was reconciled from writes `e` and `ct`, and gives the
+  token a `= default`. ADR-0065 adopts the Microsoft naming conventions by reference, and three
+  Microsoft Learn pages read on 2026-08-05 rule against both spellings: "DO use descriptive
+  parameter names", "DO NOT use abbreviations or contractions as part of identifier names", and
+  avoid single-letter names except as loop counters. A parameter name is public API under
+  ADR-0044, because a named argument binds to it, so this is a decision and not formatting.
+- **Forced inference: the audit DTOs live here and not in `Nami.Identity.Contracts`.** Design
+  01 section 3.1 gives that package the shared DTOs and gives this one the ports, which reads
+  as ambiguous for a DTO that only a port uses. The same section settles it anyway:
+  `Abstractions` depends on nothing, so a type in a port's signature cannot come from a package
+  `Abstractions` may not reference.
 
 ## A public type is two files, and the second one is not optional
 
@@ -143,3 +180,10 @@ throwaway project six ways and asserts each break is caught. So a severity delet
 `.editorconfig` or `Directory.Build.props` reddens CI even when nothing in `src/` changed. If it
 fails on a change that only touched code here, read it as a report about the three config files
 rather than about the code. The failing part names which file.
+
+**`AnalysisMode` is `Recommended`, and CA1819 is not in it.** Measured 2026-08-05 on SDK
+10.0.301: five public `byte[]` and `string[]` members across `AuditEvent`, `SecurityEvent`,
+`AuditChainEntry`, and `ScopeDefinition` produce no CA1819, and the whole build reports zero
+warnings. So "properties should not return arrays" is a review matter here and not a gate. The
+designs state `byte[]` and `string[]`, which is why the members are shaped that way, but do not
+read the green build as the analyzer having approved them.
