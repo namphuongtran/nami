@@ -90,8 +90,15 @@ the read was taken at the artifact, and the outcome is recorded by its owner in 
   would make a mid-session read the wrong test. The file carries `**/*.cs` plus the explicit
   `src/**/*.cs` and `tests/**/*.cs`, mirroring the `src/**/*.csproj` form already in
   `build-and-ci.md`, because no form is proven. Answerable by starting a session with a `.cs` file
-  in play and reading what loaded. Until then, treat both rules files as best-effort in the same
-  way a nested `CLAUDE.md` is after a `/compact`.
+  in play and reading what loaded. Until then, treat all **three** rules files carrying the field
+  as best-effort in the same way a nested `CLAUDE.md` is after a `/compact`. The count was two
+  until 2026-08-07, when [`../.claude/rules/razor.md`](../.claude/rules/razor.md) added the third.
+  **One adjacent observation from that session, recorded for its limits rather than its result.**
+  Reading `docs/design/11-login-consent-ui.md` mid-session did inject `docs/CLAUDE.md` and
+  `docs/design/CLAUDE.md`, so on-file-access loading is real in this harness and evaluation is not
+  only at session start. That is the **folder `CLAUDE.md`** mechanism and not the `paths:`
+  frontmatter, so it does not answer the question above. It removes one of the two explanations
+  the row offers for the negative result, and nothing more.
 - **A working-tree rewrite of `Nami.Identity.slnx` on 2026-08-02 has no identified cause.**
   The file was found rewritten with an empty `<Folder Name="/tests/" />`, dropping the test
   project. No commit carried that state. All eight gates plus the three self-tests were
