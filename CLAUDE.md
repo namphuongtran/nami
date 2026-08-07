@@ -189,7 +189,7 @@ shorter one wins by being read first. Read both.
 | `tests/` | [`tests/CLAUDE.md`](tests/CLAUDE.md) | ADR-0060, and design `20` |
 | any `.cs` file, in any folder | [`.claude/rules/csharp.md`](.claude/rules/csharp.md) | ADR-0065, and `.editorconfig` |
 | any `.cshtml` file, in any folder | [`.claude/rules/razor.md`](.claude/rules/razor.md) | ADR-0072, and design `11` |
-| any `.resx` file, and `Resources/` | [`.claude/rules/localization.md`](.claude/rules/localization.md) | design `11` section 5.6, and design `10` section 5.4 |
+| any `.resx` file, and `Resources/` | [`.claude/rules/localization.md`](.claude/rules/localization.md) | ADR-0038 parameter G, design `11` section 5.6, and design `10` section 5.4 |
 | any `.css`, `.html`, or `.js` file, and `wwwroot/` | [`.claude/rules/html-css.md`](.claude/rules/html-css.md) | ADR-0091, ADR-0072, and design `11` |
 | build and CI config | [`.claude/rules/build-and-ci.md`](.claude/rules/build-and-ci.md) | the files themselves |
 | any prose, in any folder | [`.claude/rules/writing-style.md`](.claude/rules/writing-style.md) | the Microsoft Style Guide |

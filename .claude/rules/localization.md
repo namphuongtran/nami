@@ -10,20 +10,23 @@ This file loads when a `.resx`, or anything under a `Resources/` folder, is in p
 gap between generic ASP.NET Core localization guidance and what Nami decided. Read it as a list of
 traps, not as a style guide.
 
-It holds nothing the files beside it already hold. [`razor.md`](razor.md) carries the row that an
-English string in a `.cshtml` goes to `.resx` plus `IStringLocalizer<T>`, and it carries the
-two-surface split between the end-user pages and the admin console. [`csharp.md`](csharp.md)
-carries naming, target framework, and analyzer breadth. [`writing-style.md`](writing-style.md)
-carries the English house style, which governs a source string and rules on nothing about a
-translation of it.
+It holds almost nothing the files beside it already hold, and it names the one place where it does.
+[`razor.md`](razor.md) carries the row that an English string in a `.cshtml` goes to `.resx` plus
+`IStringLocalizer<T>`, and it carries the two-surface split between the end-user pages and the
+admin console. The first row of the table below repeats that mechanism deliberately, because a
+table comparing two surfaces cannot be read with one of the two cells missing. Everything else here
+is new. [`csharp.md`](csharp.md) carries naming, target framework, and analyzer breadth.
+[`writing-style.md`](writing-style.md) carries the English house style, which governs a source
+string and rules on nothing about a translation of it.
 
 **No `.resx` file and no localization code exists in this repository, measured 2026-08-07.** So
 every row below is derived from an accepted decision, and none was learned by getting something
 wrong. That is the same footing [`razor.md`](razor.md) stands on, and it matters to a later
 reader: a decision-derived rule has never been tested by use.
 
-Design documents are cited by **section** rather than by line, because `docs/design/CLAUDE.md:93`
-says to prefer a section number inside that folder, since these documents grow in the middle.
+Design documents are cited by **section** rather than by line, because
+`docs/design/CLAUDE.md:93-94` says to prefer a section number inside that folder, since these
+documents grow in the middle.
 
 ## Two surfaces, one language
 
@@ -49,31 +52,33 @@ Each row was read at its source on 2026-08-07.
 | Razor for an email template, so the strings sit beside the markup | "never Razor for tenant-editable templates, which would execute C#". A sandboxed engine, Fluid or Scriban, implementation-open | design 10 section 5.4, ADR-0038:45 |
 | One fallback chain | Two, and they are different. Strings fall culture-ward. Templates fall `(flow, tenant, culture)`, then tenant-override-any-culture, then global-template-that-culture, then global `en` | design 10 section 5.4 |
 | Adding right-to-left support while you are in there | "RTL is out of scope for v1" | design 11 section 5.6 |
-| Moving `UseRequestLocalization` earlier, so more of the pipeline sees the culture | Design 11 section 6.1 fixes request localization after security headers and CSP, and before routing. ADR-0091:123 fixes the **security-headers** middleware relative to request localization, which pins the pair from the other side | design 11 section 6.1, ADR-0091:123 |
+| Moving `UseRequestLocalization` earlier, so more of the pipeline sees the culture | Design 11 section 6.1 fixes request localization after security headers and CSP, and before routing. ADR-0091:123 relies on that order for the **security-headers** middleware, and attributes it to design 11 section 6.1 rather than fixing it itself. So there is one source here, not two | design 11 section 6.1, and ADR-0091:123 as a dependent |
 
 ### Two of those fail silently, so they need more than a row
 
-Neither generic answer merely differs. Each breaks something, and the break leaves a clean server
-log.
+Neither generic answer merely differs. Each breaks something, and neither break announces itself,
+but they go quiet in different ways. The first leaves a clean server log. The second leaves
+warn-level log volume that nobody is watching.
 
 **1. Translating the error copy can undo anti-enumeration.** Design 11 section 5.8 makes E1
 (lockout at login) and E2 (a disabled user) render the **same** uniform "invalid credentials", and
 E1 adds "never 'account locked'". The vagueness is the feature. A translator handed a string table
-and no context writes the helpful version, because that is what good translation looks like
+and no context can write the helpful version, because that is what good translation looks like
 everywhere else. The page renders, the flow completes, every test stays green, and the deployment
 has gained an account-enumeration oracle. Two things that look like coverage are not. The mandatory
-latency-invariance test (ADR-0038:42) measures timing, not wording. Design 11 section 9 asserts
-"Error states: E1-E7 render the specified copy and behavior", which is written for the copy and
-says nothing about a translation of it. Design 11 section 5.8 closes with "all copy passes through
-localization", so the translated string is the one the user actually reads.
+latency-invariance test (ADR-0038:42) measures timing and not wording, and parameter D scopes it to
+`/forgot-password` and `/resend-confirmation-email` rather than to login. Design 11 section 9
+asserts "Error states: E1-E7 render the specified copy and behavior", which is written for the copy
+and says nothing about a translation of it. Design 11 section 5.8 closes with "all copy passes
+through localization", so the translated string is the one the user actually reads.
 
-**2. The `en` floor makes a missing translation look like success.** Four sources scope the warning
-to a missing **key**, and not one of them scopes it to a culture or to a deployment. Design 11
-section 5.6 says "the `en` floor that always renders, warning once on a missing key", and its
-section 9 acceptance line says "a missing key falls to the `en` floor and warns once". Design 10
-section 5.4 says "never throw, warn once on a missing key", and its section 9 acceptance line says
-"a missing key falls through to the `en` floor and warns once". So an absent culture with N keys
-warns N times. Do not read "once" as one log line for the deployment.
+**2. The `en` floor makes a missing translation look like success.** Four passages in two documents
+scope the warning to a missing **key**, and not one of them scopes it to a culture or to a
+deployment. Design 11 section 5.6 says "the `en` floor that always renders, warning once on a
+missing key", and its section 9 acceptance line says "a missing key falls to the `en` floor and
+warns once". Design 10 section 5.4 says "never throw, warn once on a missing key", and its section 9
+acceptance line says "a missing key falls through to the `en` floor and warns once". So an absent
+culture with N keys warns N times. Do not read "once" as one log line for the deployment.
 
 So what makes this quiet is not the volume. It is that nothing fails: the page renders, no
 exception is thrown, and the only signal is warn-level log volume that somebody has to be counting.
@@ -87,9 +92,12 @@ repository. Searched 2026-08-07 with `git grep -niE` over every tracked file exc
 Neither row is a defect to fix here. Each is a reason to read a `.resx` by eye where a `.cs` is
 read by a tool. The two rows differ in strength, and the second says so.
 
-1. **Neither the name scrub nor the docs guardrail reaches a `.resx`.** Both are scoped to
-   markdown. [`razor.md`](razor.md) carries that mechanism with its pointers, so it is not
-   restated here. What is specific to a `.resx`: the root
+1. **Neither the name scrub nor the docs guardrail reaches a `.resx`.** The name scrub is scoped to
+   markdown, and [`razor.md`](razor.md) carries that mechanism with its pointers, so it is not
+   restated here. The guardrail is **wider** than markdown, and still never reaches a `.resx`:
+   Check 8 globs `.github/workflows/*.yml` (`scripts/check-adrs.sh:177`), and Check 9 globs
+   `*.props`, `*.targets`, and `*.csproj` (`:247`) plus `nuget.config` (`:271`). No check globs
+   `*.resx`. What is specific to a `.resx`: the root
    [`../../CLAUDE.md`](../../CLAUDE.md) rule against naming the direct commercial competitor
    applies to **every** committed file, and localized user-facing copy is a plausible place for a
    product comparison. No gate sees it.
@@ -120,6 +128,14 @@ file **except this one**, in **substring** form. Excluding this file is what kee
 re-derivable, because every term below now appears here. The substring form over-counts and never
 under-counts, so a zero is reliable. Do not re-run these with `\b`: `docs/CLAUDE.md` records that
 `git grep -E` ignores it here and returns zero for every term.
+
+**The method was proved on terms known to be present, before any zero below was trusted.**
+`docs/CLAUDE.md` requires that, because a zero produced by a syntax the tool ignored looks exactly
+like a real absence. Run the same way on 2026-08-07 and excluding this file: `localization`
+returned **15**, `IStringLocalizer` returned **4**, and `culture` returned **11**. So the tool was
+matching. Re-run the controls first whenever you re-run the list, and expect different numbers,
+because these are measurements rather than constants: `localization` returned 14 on the same day
+before this file's routing row was added to the root `CLAUDE.md`.
 
 Nineteen spellings returned **zero** hits each: `ui_locales`, `claims_locales`, `CultureInfo`,
 `CurrentUICulture`, `RequestCulture`, `SupportedCultures`, `DefaultRequestCulture`, `plural`,

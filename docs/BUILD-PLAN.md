@@ -47,6 +47,7 @@ Not scheduled. Each has a decision or a document that already names it.
 | No colour palette, contrast target, or accessibility standard is decided for the end-user surface | [`adr/0072-ui-rendering-stack.md`](adr/0072-ui-rendering-stack.md) owns the surface; [`design/11-login-consent-ui.md`](design/11-login-consent-ui.md) section 5.5 bounds the tokens | Before the login pages ship |
 | No tool is decided for driving a browser to author an end-to-end test, and adopting one is an inventory row rather than a configuration file | [`adr/0025-local-development-and-first-run.md`](adr/0025-local-development-and-first-run.md) parameter E scopes Playwright and names no authoring tool; [`adr/0026-dependency-license-policy.md:55`](adr/0026-dependency-license-policy.md) sets what the adoption owes | Before the first admin end-to-end test, M1 |
 | Playwright still has no row in the licence record, and it is the first dependency here read to bundle a second licence behind a correctly declared one. The three prose sources were corrected on 2026-08-07; the record itself was not written | [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) section 3, where section 3.2 is the precedent: a package not yet adopted, recorded because documents here stated its licence wrongly | Before the Playwright pin is added |
+| Two citation defects that `.claude/rules/localization.md` inherited rather than introduced, read at source 2026-08-07. **(a)** `razor.md:94` and `html-css.md:114` both cite `ADR-0092:147` for the four-item quote "Razor markup, SQL held outside C#, Dockerfiles, or GitHub Actions workflow definitions", whose fourth item completes at `ADR-0092:148`. **(b)** `razor.md:99` and `html-css.md:121` both say "The local hook stages `-- '*.md'`", but `scripts/hooks/pre-commit:25` reads a list that is **already** staged rather than staging anything. Four instances across two files. `localization.md` carries the corrected form of both, so three rules files now spell the same two facts two ways | [`../.claude/rules/razor.md`](../.claude/rules/razor.md) and [`../.claude/rules/html-css.md`](../.claude/rules/html-css.md), each for its own two lines | The next edit to either file. Out of scope on 2026-08-07 for two reasons: the approved spec for that increment covered `localization.md` only, and a parallel session had both files staged |
 
 The DocFX row is an absence claim, so the search is recorded with it. Seven spellings were
 searched across `docs/adr/` on 2026-08-03 and all seven returned nothing: `DocFX`, `docfx`,
@@ -110,12 +111,17 @@ read at source.
   would make a mid-session read the wrong test. The file carries `**/*.cs` plus the explicit
   `src/**/*.cs` and `tests/**/*.cs`, mirroring the `src/**/*.csproj` form already in
   `build-and-ci.md`, because no form is proven. Answerable by starting a session with a `.cs` file
-  in play and reading what loaded. Until then, treat all **four** rules files carrying the field
-  as best-effort in the same way a nested `CLAUDE.md` is after a `/compact`. The count was two
-  until 2026-08-07, when [`../.claude/rules/razor.md`](../.claude/rules/razor.md) added the third
-  and [`../.claude/rules/html-css.md`](../.claude/rules/html-css.md) added the fourth later the
-  same day. The fourth is the weakest case of the four, because no `.css`, `.html`, or `.js` file
-  is tracked yet, so its glob has nothing to match until the login surface exists.
+  in play and reading what loaded. Until then, treat all **five** rules files carrying the field
+  as best-effort in the same way a nested `CLAUDE.md` is after a `/compact`. Counted 2026-08-07
+  with `grep -l "^paths:" .claude/rules/*.md`: `build-and-ci.md`, `csharp.md`, `html-css.md`,
+  `localization.md`, and `razor.md`. The count was two until 2026-08-07, when
+  [`../.claude/rules/razor.md`](../.claude/rules/razor.md) added the third,
+  [`../.claude/rules/html-css.md`](../.claude/rules/html-css.md) added the fourth later the same
+  day, and [`../.claude/rules/localization.md`](../.claude/rules/localization.md) added the fifth
+  the same day again. **Two of the five tie for weakest case**, because neither glob has anything
+  to match yet: `git ls-files '*.css' '*.html' '*.js'` and `git ls-files '*.resx'` both returned
+  nothing on 2026-08-07, so `html-css.md` waits for the login surface and `localization.md` waits
+  for the first resource file.
   **One adjacent observation from that session, recorded for its limits rather than its result.**
   Reading `docs/design/11-login-consent-ui.md` mid-session did inject `docs/CLAUDE.md` and
   `docs/design/CLAUDE.md`, so on-file-access loading is real in this harness and evaluation is not
