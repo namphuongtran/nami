@@ -23,7 +23,7 @@ jobs:
       - name: Markdown lint
         # v24.1.0 bundles markdownlint-cli2 0.23.1 / markdownlint 0.41.1. Keep this
         # in step with the version CLAUDE.md tells a contributor to run locally.
-        uses: DavidAnson/markdownlint-cli2-action@v24.1.0
+        uses: DavidAnson/markdownlint-cli2-action@v24.2.0
         with:
           globs: "**/*.md"
 
