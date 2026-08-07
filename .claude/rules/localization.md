@@ -10,12 +10,17 @@ This file loads when a `.resx`, or anything under a `Resources/` folder, is in p
 gap between generic ASP.NET Core localization guidance and what Nami decided. Read it as a list of
 traps, not as a style guide.
 
-It holds almost nothing the files beside it already hold, and it names the one place where it does.
-[`razor.md`](razor.md) carries the row that an English string in a `.cshtml` goes to `.resx` plus
-`IStringLocalizer<T>`, and it carries the two-surface split between the end-user pages and the
-admin console. The first row of the table below repeats that mechanism deliberately, because a
-table comparing two surfaces cannot be read with one of the two cells missing. Everything else here
-is new. [`csharp.md`](csharp.md) carries naming, target framework, and analyzer breadth.
+It holds little that the files beside it already hold, and it names where it overlaps rather than
+claiming it does not. [`razor.md`](razor.md) holds one row, at `razor.md:60`, covering three things
+this file also covers: that an English string in a `.cshtml` goes to `.resx` plus
+`IStringLocalizer<T>`, that validation messages are included, and that a missing key falls to an
+`en` floor that always renders. `razor.md` also carries the two-surface split between the end-user
+pages and the admin console. Two places here repeat that row deliberately. The first row of the
+table below repeats the mechanism, because a table comparing two surfaces cannot be read with one
+of the two cells missing. The `en` floor then appears twice more, once as a row in the
+generic-answer table and once as the second silent-failure argument, which is the part `razor.md`
+states in one clause and this file spends a paragraph on. Everything else here is new.
+[`csharp.md`](csharp.md) carries naming, target framework, and analyzer breadth.
 [`writing-style.md`](writing-style.md) carries the English house style, which governs a source
 string and rules on nothing about a translation of it.
 
@@ -96,8 +101,9 @@ read by a tool. The two rows differ in strength, and the second says so.
    markdown, and [`razor.md`](razor.md) carries that mechanism with its pointers, so it is not
    restated here. The guardrail is **wider** than markdown, and still never reaches a `.resx`:
    Check 8 globs `.github/workflows/*.yml` (`scripts/check-adrs.sh:177`), and Check 9 globs
-   `*.props`, `*.targets`, and `*.csproj` (`:247`) plus `nuget.config` (`:271`). No check globs
-   `*.resx`. What is specific to a `.resx`: the root
+   `*.props`, `*.targets`, and `*.csproj` (`:247`) and reaches `nuget.config` through
+   `git ls-files` piped into `grep -iE` rather than through a glob (`:271`). No check reaches a
+   `.resx` by either route. What is specific to a `.resx`: the root
    [`../../CLAUDE.md`](../../CLAUDE.md) rule against naming the direct commercial competitor
    applies to **every** committed file, and localized user-facing copy is a plausible place for a
    product comparison. No gate sees it.
@@ -106,9 +112,14 @@ read by a tool. The two rows differ in strength, and the second says so.
    ADR-0092:147-148 says "The SDK analyzers see C#", then names four things they do not see:
    "Razor markup, SQL held outside C#, Dockerfiles, or GitHub Actions workflow definitions".
    The quote begins on `:147` and its fourth item completes on `:148`. A `.resx` is **not** among
-   the four. Searched 2026-08-07 with `git grep -niE` over every tracked file except this one:
-   `resx` returned **4** hits, none of them about an analyzer, and `resource file` and `satellite`
-   returned **zero** each. So this row extends ADR-0092's principle rather than
+   the four. Searched 2026-08-07 with `git grep -niE` over every tracked file except this one.
+   `resx` returned **5** hits and the hits are named rather than counted, because a named hit is
+   checkable and a bare total is not: `razor.md:60`, `CLAUDE.md:192`, `docs/BUILD-PLAN.md:123`,
+   `docs/design/11-login-consent-ui.md:437`, and `:515`. Not one is about an analyzer. Three are
+   this repository's own bookkeeping about where the rule lives, and the two design hits say which
+   mechanism the pages use. `resource file` returned **1**, `docs/BUILD-PLAN.md:126`, which is the
+   owed-work row this increment wrote rather than a convention anybody adopted. `satellite`
+   returned **zero**. So this row extends ADR-0092's principle rather than
    quoting its decision, and it is labelled that way on purpose. Do not cite ADR-0092 for a claim
    about a `.resx`.
 
@@ -132,10 +143,20 @@ under-counts, so a zero is reliable. Do not re-run these with `\b`: `docs/CLAUDE
 **The method was proved on terms known to be present, before any zero below was trusted.**
 `docs/CLAUDE.md` requires that, because a zero produced by a syntax the tool ignored looks exactly
 like a real absence. Run the same way on 2026-08-07 and excluding this file: `localization`
-returned **15**, `IStringLocalizer` returned **4**, and `culture` returned **11**. So the tool was
-matching. Re-run the controls first whenever you re-run the list, and expect different numbers,
-because these are measurements rather than constants: `localization` returned 14 on the same day
-before this file's routing row was added to the root `CLAUDE.md`.
+returned **19**, `IStringLocalizer` returned **4**, and `culture` returned **11**. So the tool was
+matching.
+
+**Expect a different number, and read it as expected.** `localization` moved three times inside
+this one increment, and every move was this increment writing about itself: **14** at `f098259`,
+**15** once `303f6ef` added the routing row to the root `CLAUDE.md`, and **19** once `95259e3`
+added four mentions to `docs/BUILD-PLAN.md`. A control is a measurement, not a constant. Re-run
+the controls before the list, and treat a fourth number as bookkeeping until you have read the
+new hits.
+
+**Only this file is excluded, and that is deliberate.** An exclusion list naming three files
+would be a second thing that has to stay true, and the next increment touching a fourth file
+would silently break it. One self-exclusion is what makes writing here unable to move the
+counts. Everything else is counted and named.
 
 Nineteen spellings returned **zero** hits each: `ui_locales`, `claims_locales`, `CultureInfo`,
 `CurrentUICulture`, `RequestCulture`, `SupportedCultures`, `DefaultRequestCulture`, `plural`,

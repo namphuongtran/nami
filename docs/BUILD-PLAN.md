@@ -118,10 +118,13 @@ read at source.
   [`../.claude/rules/razor.md`](../.claude/rules/razor.md) added the third,
   [`../.claude/rules/html-css.md`](../.claude/rules/html-css.md) added the fourth later the same
   day, and [`../.claude/rules/localization.md`](../.claude/rules/localization.md) added the fifth
-  the same day again. **Two of the five tie for weakest case**, because neither glob has anything
-  to match yet: `git ls-files '*.css' '*.html' '*.js'` and `git ls-files '*.resx'` both returned
-  nothing on 2026-08-07, so `html-css.md` waits for the login surface and `localization.md` waits
-  for the first resource file.
+  the same day again. **Three of the five tie for weakest case**, because no glob in any of the
+  three matches a tracked file yet. Counted 2026-08-07: `git ls-files '*.css' '*.html' '*.js'`,
+  `git ls-files '*.cshtml' '*.cshtml.cs'`, and `git ls-files '*.resx'` each returned nothing, and
+  no tracked path contains `wwwroot`, `Resources/`, or `Pages/`. So `html-css.md` waits for the
+  login surface, `razor.md` waits for the first page, and `localization.md` waits for the first
+  resource file. Only `csharp.md` and `build-and-ci.md` match anything today: 7 `.cs` files, 2
+  `.csproj`, 2 `.props`, and 1 workflow file.
   **One adjacent observation from that session, recorded for its limits rather than its result.**
   Reading `docs/design/11-login-consent-ui.md` mid-session did inject `docs/CLAUDE.md` and
   `docs/design/CLAUDE.md`, so on-file-access loading is real in this harness and evaluation is not
