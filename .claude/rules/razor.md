@@ -18,8 +18,9 @@ a list of traps, not as a style guide.
 **No `.cshtml` file exists in this repository yet, measured 2026-08-07.** So every row below is
 derived from an accepted decision, and none was learned by getting something wrong. That is the
 opposite of how [`csharp.md`](csharp.md) was built, and the difference matters to a later reader:
-a decision-derived rule has never been tested by use. `docs/BUILD-PLAN.md` section 1 has PR-5 and
-PR-6 next, and neither one is the host.
+a decision-derived rule has never been tested by use. `Nami.Identity.slnx` listed two projects on
+2026-08-07, `Nami.Identity.Abstractions` and `Nami.Identity.ArchitectureTests`, and neither one is
+the host.
 
 ## Which surface are you in
 

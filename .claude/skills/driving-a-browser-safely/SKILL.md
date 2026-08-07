@@ -144,7 +144,6 @@ searches, and `../generating-a-playwright-test/SKILL.md` records the last two.
 | How the first admin is created, and why no standing credential exists | ADR-0015 |
 | The local address form, and the dev stack it runs on | ADR-0070, and ADR-0025 |
 | Reporting a vulnerability | `SECURITY.md`, which is that and nothing more |
-| What is owed here, and what triggers it | `docs/BUILD-PLAN.md`, a queue and never an authority |
 
 **A tool is a source, never an authority.** The document this skill was scoped from is a personal
 one-off prompt for an unrelated form, not guidance, and it does not override an accepted ADR. Where

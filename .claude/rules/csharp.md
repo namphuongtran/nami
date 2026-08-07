@@ -73,9 +73,10 @@ written into it (`docs/CLAUDE.md:51-96`).
   biases against a third-party library here, but it does not decide it.
 - **XML doc comments and `CS1591` are owned by no ADR.** `design/21-cicd-and-deployment.md:232`
   states the requirement, and the design layer realizes decisions rather than making them.
-  `docs/BUILD-PLAN.md:44`, the row opening "DocFX and `CS1591` at error on the public surface",
-  tracks it as owed at M1 and records the seven spellings searched on
-  2026-08-03. Re-checked `docs/adr/` for `cs1591` and `docfx` on 2026-08-05: still nothing.
+  This is an absence claim, so it carries its own search rather than pointing at one. Seven
+  spellings over `docs/adr/`, case-insensitively, each returning **zero** files on 2026-08-07:
+  `DocFX`, `docfx`, `CS1591`, `1591`, `xml doc`, `GenerateDocumentationFile`, and
+  `documentation file`.
 - **Local-variable and parameter naming are unruled.** `.editorconfig` declares naming symbols
   for `field` three times and `method` once, and none for `local` or `parameter` (grepped
   `applicable_kinds` on 2026-08-05). The C# default happens to be `camelCase`, so nothing is
@@ -108,7 +109,6 @@ Both are recorded already. Both are the kind of coverage a generic answer assume
 | Traps in `src/` and `tests/` | `src/CLAUDE.md`, `tests/CLAUDE.md`, neither re-injected after `/compact` |
 | Traps in build and CI files | `.claude/rules/build-and-ci.md` |
 | What each gate checks, and why | `scripts/README.md` |
-| What is built next, and what is owed | `docs/BUILD-PLAN.md`, a queue and never an authority |
 
 ## Which tool reads a claim at its source
 

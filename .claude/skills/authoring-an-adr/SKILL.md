@@ -183,7 +183,6 @@ supports its claim. Those are two jobs. No gate does either.
 | What each guardrail check does and does not see | `scripts/README.md` |
 | How to prove a new check is not inert | `.claude/skills/adding-a-ci-gate/SKILL.md` |
 | Writing style, which applies to every ADR | `.claude/rules/writing-style.md` |
-| What is owed and what triggers it | `docs/BUILD-PLAN.md`, a queue and never an authority |
 
 ## Which tool reads an ADR's subject at its source
 

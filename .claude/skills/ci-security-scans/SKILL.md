@@ -147,7 +147,6 @@ together.
 | Measured traps in the files that decide whether a gate bites | `.claude/rules/build-and-ci.md` |
 | What each gate checks, and what it does not | `scripts/README.md` |
 | How to prove a new gate is not inert | `.claude/skills/adding-a-ci-gate/SKILL.md` |
-| What is owed and what triggers it | `docs/BUILD-PLAN.md`, a queue and never an authority |
 
 ## Which tool reads a scanner claim at its source
 

@@ -182,7 +182,6 @@ searches, and `.claude/rules/razor.md:119-123` records the same finding independ
 | Where the version is pinned, and in which form | `Directory.Packages.props`, where a bare version "is a floor, not a pin" |
 | Traps learned inside `tests/` | `tests/CLAUDE.md`, not re-injected after `/compact` |
 | Casing, target framework, analyzer breadth | [`../../rules/csharp.md`](../../rules/csharp.md), and `.editorconfig` |
-| What is owed here, and what triggers it | `docs/BUILD-PLAN.md`, a queue and never an authority |
 
 **A tool is a source, never an authority.** Published Playwright guidance, including the document
 this skill was scoped from, does not override an accepted ADR. Where the two disagree, stop and

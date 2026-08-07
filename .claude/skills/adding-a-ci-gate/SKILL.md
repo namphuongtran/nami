@@ -200,7 +200,6 @@ tracked file.
 | Action pinning | ADR-0086 |
 | The markdownlint version, which is coupled and not chosen | `.claude/rules/build-and-ci.md`, and ADR-0086 parameter B |
 | The test suite that gate 9 runs | ADR-0024 for the architecture rules, ADR-0060 for the strategy |
-| What is owed and what triggers it | `docs/BUILD-PLAN.md`, a queue and never an authority |
 
 ## Which tool reads a gate claim at its source
 

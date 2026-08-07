@@ -162,7 +162,8 @@ tracked file.
   quotation of a specific one. `docs/DEPENDENCY-LICENSES.md` has no Bootstrap row either: its only
   `bootstrap` hit is line 114, inside the enumeration of the JMeter HTML report's bundled assets.
   **So do not read "Bootstrap 5" in the stack table as a verified licence or as a pinned version.**
-  `docs/BUILD-PLAN.md` section 2 carries the row and the trigger.
+  ADR-0026 section C owns what taking it would owe, which is a licence read at the distributed
+  artifact rather than at a badge or a repository root.
 - **No decision on where a `.js` file lives, or how it is named.** ADR-0072:45 fixes that script
   arrives "as external files that the policy permits by source", and ADR-0091:130 fixes
   `script-src 'self'`. Neither names a folder, a file-naming form, or a module format. ADR-0065 is
@@ -183,4 +184,3 @@ tracked file.
 | Which packages, including a CSS framework, may be taken at all | ADR-0026, and its package-name deny-list |
 | Markup inside a `.cshtml` | [`razor.md`](razor.md) |
 | C# inside a `.cshtml.cs` | [`csharp.md`](csharp.md) |
-| What is owed here, and what triggers it | `docs/BUILD-PLAN.md`, a queue and never an authority |

@@ -88,9 +88,8 @@ C says exactly that, and says what stands in:
 > in the same change that introduces the tool.
 
 Read at ADR-0026:55. Four obligations follow. **Each is written down, and none is enforced by a
-check that runs today.** The licence-scan gate is owed at M1 (`docs/BUILD-PLAN.md`:40, the row reading "The
-licence-scan CI gate"), and
-ADR-0026:59's completeness check rides on it. So skipping any of the four produces a green build.
+check that runs today.** The licence-scan gate is owed under ADR-0026 section C, and ADR-0026:59's
+completeness check rides on it. So skipping any of the four produces a green build.
 
 1. **A row in the inventory, written in the same change.** The table is
    [`../../../docs/DEPENDENCY-LICENSES.md`](../../../docs/DEPENDENCY-LICENSES.md) section 2, and
@@ -176,9 +175,11 @@ over every tracked file outside `.claude/skills/`.
 - **No admin console exists to drive.** `src/` holds `Nami.Identity.Abstractions` and nothing
   else. Steps 3 through 6 above have no subject until that changes.
 - **Playwright has no row in the licence record.** `playwright` returned **zero** hits in
-  `docs/DEPENDENCY-LICENSES.md`, while ADR-0026:61 lists it in the confirmed-permissive set as
-  Apache-2.0. `../writing-playwright-tests/SKILL.md` records why that licence is wrong. The row
-  is owed, and `docs/BUILD-PLAN.md` section 2 now carries it.
+  `docs/DEPENDENCY-LICENSES.md` on 2026-08-07, while ADR-0026:61 lists it in the
+  confirmed-permissive set. `../writing-playwright-tests/SKILL.md` holds the artifact reading:
+  the package declares MIT and the same nupkg bundles Apache-2.0. ADR-0026:61, ADR-0025:73, and
+  `docs/design/20-testing.md:335` were each corrected to name both on that date. What is still
+  missing is the licence-record row, owed under ADR-0026 section C.
 
 The browser matrix, the headed default, the trace and video policy, the version, and the
 end-to-end project name are **not** repeated here.
@@ -199,7 +200,6 @@ this skill (`docs/CLAUDE.md`, the authority order).
 | Whether a tool may be bundled rather than only executed | ADR-0026:58, which requires an ADR |
 | What MCP means in this repository | ADR-0064, which is `proposed` |
 | Where the end-to-end project lands, and under which name | ADR-0060:69, deferred to M1 |
-| What is owed here, and what triggers it | `docs/BUILD-PLAN.md`, a queue and never an authority |
 
 ## Which tool reads a browser-driving claim at its source
 
