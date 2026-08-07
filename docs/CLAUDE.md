@@ -95,6 +95,21 @@ attached can be re-checked, and a bare absence gets quoted forward. The same fai
 single layer is recorded in `design/CLAUDE.md`. That file reached it one increment earlier, and
 caught it as a near miss rather than as a committed claim.
 
+**A search that returns zero because the tool ignored your syntax is the worst kind of
+absence.** Measured 2026-08-07 over `docs/adr/0021-openiddict-version-adaptation.md`, a file
+that mentions OpenIddict on 18 lines: `git grep -cE "\bOpenIddict\b"` returns nothing and exits
+1, while `git grep -cP` with the same pattern returns 18, the bracket form
+`(^|[^A-Za-z])OpenIddict([^A-Za-z]|$)` returns 18, and a plain substring search returns 18. So
+`git grep -E` does not honour `\b` in this clone, and an absence written with that form reports
+zero for every term, whether the term is present or not. It reports it in exactly the shape a
+real absence takes. Use `git grep -P`, or the bracket form, or a plain substring, which
+over-counts and never under-counts. Prove the method on a term you know is present before you
+trust a zero, and count with `-c` rather than reading a piped list, because a truncating pipe
+produces the same false confidence at one remove. **The local hook is not affected.**
+`scripts/hooks/pre-commit:29` calls `grep -HniE "\b${term}\b"`, which resolves to BSD
+`/usr/bin/grep`, and that binary does honour `\b`. Verified 2026-08-07 against a fixture holding
+`Acme` and `AcmeCorp`, where the word-boundary form matched only the first line.
+
 ## A line number ages, and the edit that ages it is usually your own
 
 The section above is about a citation that was wrong when it was written. This one is about a
