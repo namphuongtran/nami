@@ -447,14 +447,22 @@ scripts/.local/
 # backstop for an interrupted run.
 .editorconfig-probe/
 
-# Claude Code. The shared project instruction files (CLAUDE.md, per folder) and the
-# shared slash commands (.claude/commands/) ARE committed: they are project tooling.
+# Claude Code. The shared project instruction files (CLAUDE.md, per folder), the
+# shared slash commands (.claude/commands/), the rules (.claude/rules/) and the
+# skills (.claude/skills/) ARE committed: they are all project tooling.
 # Per-developer settings are not. settings.local.json holds one developer's tool
 # permission grants, so committing it would push a personal allow-list to everyone
 # and would go stale silently (the copy in this clone still names a design file that
 # was renamed). Ignored here rather than relying on a developer's global gitignore,
 # which is how it was being excluded until 2026-08-01 and would not protect anyone else.
 .claude/settings.local.json
+
+# Agent worktrees, which are ephemeral and each contain their OWN .git. Added
+# 2026-08-07 after `git add .claude` staged one: git reports "adding embedded git
+# repository" and stages a gitlink, so a clone would carry a pointer to a directory
+# that does not exist. Ignoring the parent is the fix, because the name under it is
+# generated per run and cannot be listed.
+.claude/worktrees/
 
 # The public-API gate self-test probe (scripts/test-public-api-gate.sh), written
 # inside the repository so it inherits the real .editorconfig,

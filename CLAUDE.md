@@ -159,6 +159,9 @@ rules this repository declines, are in
   contribution goes through a pull request as
   [`CONTRIBUTING.md`](CONTRIBUTING.md) describes, and nothing here changes that. One ADR per
   commit when authoring or importing ADRs.
+- **Re-derive the citations before the increment is committed.** `/refresh-citations` lists every
+  `file:line` pointer the increment may have aged, because no gate here reads a line number. The
+  `checking-a-citation` skill owns the judgement about what a pointer must satisfy.
 - **ADR-0065 is the authority on naming and coding conventions** (Microsoft conventions
   adopted by reference, with the Nami tailoring). Quick reference: assemblies under
   `Nami.Identity.*`; config keys `Nami:X` (env `Nami__X`), env alias `NAMI_X`.
@@ -186,6 +189,7 @@ shorter one wins by being read first. Read both.
 | `tests/` | [`tests/CLAUDE.md`](tests/CLAUDE.md) | ADR-0060, and design `20` |
 | any `.cs` file, in any folder | [`.claude/rules/csharp.md`](.claude/rules/csharp.md) | ADR-0065, and `.editorconfig` |
 | any `.cshtml` file, in any folder | [`.claude/rules/razor.md`](.claude/rules/razor.md) | ADR-0072, and design `11` |
+| any `.css`, `.html`, or `.js` file, and `wwwroot/` | [`.claude/rules/html-css.md`](.claude/rules/html-css.md) | ADR-0091, ADR-0072, and design `11` |
 | build and CI config | [`.claude/rules/build-and-ci.md`](.claude/rules/build-and-ci.md) | the files themselves |
 | any prose, in any folder | [`.claude/rules/writing-style.md`](.claude/rules/writing-style.md) | the Microsoft Style Guide |
 
@@ -198,8 +202,47 @@ anything that must always hold belongs here, and the folder files are best-effor
 construction. If a session has been compacted, re-read the folder file before trusting that
 its traps are still in context.
 
+**A skill is selected by a description match, not by a path**, and only its `description` is in
+context until it is invoked. So a skill cannot carry anything that must always hold, and it must
+not restate a rule that loads beside it. The skills live in `.claude/skills/`, and each one names
+the owner it defers to rather than summarizing it.
+
+Selecting on a description is what a rules file cannot do.
+[`.claude/rules/csharp.md`](.claude/rules/csharp.md) needs a `.cs` file in play, and the choice
+each skill below governs is made **before** that file exists. Nine skills, counted 2026-08-07:
+
+| Skill | Use it when | Authority it names |
+|---|---|---|
+| [`authoring-an-adr`](.claude/skills/authoring-an-adr/SKILL.md) | Writing, importing, promoting, or superseding an ADR | [`docs/adr/README.md`](docs/adr/README.md), and [`docs/adr/CLAUDE.md`](docs/adr/CLAUDE.md) |
+| [`checking-a-citation`](.claude/skills/checking-a-citation/SKILL.md) | Verifying that a cited source holds the claim, or writing that no source does | the evidence rule above, and [`docs/CLAUDE.md`](docs/CLAUDE.md) |
+| [`writing-a-folder-readme`](.claude/skills/writing-a-folder-readme/SKILL.md) | Giving a folder its first `README.md`, or moving a convention between a README and the `CLAUDE.md` beside it | this section, and [`.claude/rules/writing-style.md`](.claude/rules/writing-style.md) |
+| [`adding-a-ci-gate`](.claude/skills/adding-a-ci-gate/SKILL.md) | Adding or changing anything that is supposed to fail a build | [`scripts/README.md`](scripts/README.md), and [`scripts/CLAUDE.md`](scripts/CLAUDE.md) |
+| [`ci-security-scans`](.claude/skills/ci-security-scans/SKILL.md) | Any code, dependency, secret, container, or DAST scanning question | ADR-0092, and design `21` |
+| [`writing-tests`](.claude/skills/writing-tests/SKILL.md) | Writing a test, or choosing which of the seven suites it belongs to | ADR-0060, and design `20` |
+| [`writing-playwright-tests`](.claude/skills/writing-playwright-tests/SKILL.md) | Writing a Playwright browser test, or porting a published example | ADR-0025 parameter E, and design `16` section 9 |
+| [`generating-a-playwright-test`](.claude/skills/generating-a-playwright-test/SKILL.md) | Turning a scenario into a Playwright test, or adopting a record-then-generate workflow | `writing-playwright-tests`, then ADR-0025 parameter E |
+| [`driving-a-browser-safely`](.claude/skills/driving-a-browser-safely/SKILL.md) | An agent is about to drive a live browser against a running surface, to record, debug, or demo | ADR-0067 |
+
+**Observed on 2026-08-07, with the limit stated.** Every skill was listed as available while no
+file under `.claude/skills/` had been read, and the list grew as skills were added. So selection by
+`description` happens. That says nothing about the `paths:` question in
+[`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md) section 3, which is a different mechanism and stays
+open.
+
 ## Ephemeral working areas (git-ignored, local-only)
 
 `docs/superpowers/` (specs and plans), `.superpowers/` (SDD ledgers, briefs, and reports), and
 `docs/kb/.scratch/` are working artifacts, and they are never published. Clean them with
 `git clean -Xfd docs/superpowers .superpowers docs/kb/.scratch`.
+
+`.claude/worktrees/` is a fourth, and it behaves differently: each worktree under it contains its
+**own** `.git`, so `git add .claude` stages a gitlink rather than the files. That was observed on
+2026-08-07, with git printing `adding embedded git repository`, and it is why `.gitignore` now
+names the parent. Remove one with `git worktree remove`, which is the tool that also updates git's
+worktree list. Whether `git clean` reaches a nested repository was not tested.
+
+**One measured side effect, because it changes how a gate's output reads.** While a worktree
+existed, `markdownlint-cli2 "**/*.md"` reported 371 files. After the ignore entry landed, and with
+the worktree gone, it reported 190, which equals `git ls-files '*.md' | wc -l` on the same tree.
+So an inflated lint count is a real symptom, and `.claude/commands/gate.md` step 3 already tells a
+reader to treat it as one.

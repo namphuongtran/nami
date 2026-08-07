@@ -29,18 +29,6 @@ In order. Each increment is one branch, small enough to review in one sitting.
 | PR-5 | `IAuditSink` and `ISecurityEventSink`, plus `AuditEvent`, `SecurityEvent`, and `AuditChainEntry` | No |
 | PR-6 | `Nami.Identity.Core`: engine wiring, the builder, the first slice | PR-5 |
 
-**PR-5 was blocked until 2026-08-05.** The blocker was
-[`design/01-foundations.md`](design/01-foundations.md) section 3.3: none of the ten ports could
-be written from this repository as it stood on 2026-08-02. That note said closing it was
-per-port work owned by each port's own design. That work was done for the three ports it routed
-elsewhere, and only the audit pair turned out to be ready. Both owners hold the outcome, which
-is why this row does not: design 01 section 3.3 records what closed, and
-[`design/12-key-management.md`](design/12-key-management.md) section 3.2 records what did not.
-
-`ScopeDefinition` landed instead of a port in the increment before this one
-([`../src/CLAUDE.md`](../src/CLAUDE.md) records how that was found: by trying to compile one
-and failing).
-
 ## 2. Owed, with an owner and a trigger
 
 Not scheduled. Each has a decision or a document that already names it.
@@ -55,6 +43,10 @@ Not scheduled. Each has a decision or a document that already names it.
 | Whether the `NU1901`-`NU1904` carve-out should be reversed once a blocking dependency-vulnerability gate exists | [`adr/0093-warnings-as-errors.md`](adr/0093-warnings-as-errors.md) parameter C | When ADR-0092 stage 2's Trivy scan lands, M1 |
 | DocFX and `CS1591` at error on the public surface are stated by a design and owned by no ADR | [`design/21-cicd-and-deployment.md:232`](design/21-cicd-and-deployment.md) | M1 |
 | `KeyRecord`'s members, and the C# form of `KeyScope`, which are what still block `ISigningKeyStore` | [`design/12-key-management.md`](design/12-key-management.md) section 3.2 | The rotation subsystem, which is the first thing that needs the key store |
+| Bootstrap 5 is a stack-of-record entry with no licence row and no version pin | [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md), and [`adr/0026-dependency-license-policy.md`](adr/0026-dependency-license-policy.md) section C | Before Bootstrap is taken, and no later than the first `.cshtml` |
+| No colour palette, contrast target, or accessibility standard is decided for the end-user surface | [`adr/0072-ui-rendering-stack.md`](adr/0072-ui-rendering-stack.md) owns the surface; [`design/11-login-consent-ui.md`](design/11-login-consent-ui.md) section 5.5 bounds the tokens | Before the login pages ship |
+| No tool is decided for driving a browser to author an end-to-end test, and adopting one is an inventory row rather than a configuration file | [`adr/0025-local-development-and-first-run.md`](adr/0025-local-development-and-first-run.md) parameter E scopes Playwright and names no authoring tool; [`adr/0026-dependency-license-policy.md:55`](adr/0026-dependency-license-policy.md) sets what the adoption owes | Before the first admin end-to-end test, M1 |
+| Playwright still has no row in the licence record, and it is the first dependency here read to bundle a second licence behind a correctly declared one. The three prose sources were corrected on 2026-08-07; the record itself was not written | [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) section 3, where section 3.2 is the precedent: a package not yet adopted, recorded because documents here stated its licence wrongly | Before the Playwright pin is added |
 
 The DocFX row is an absence claim, so the search is recorded with it. Seven spellings were
 searched across `docs/adr/` on 2026-08-03 and all seven returned nothing: `DocFX`, `docfx`,
@@ -62,12 +54,40 @@ searched across `docs/adr/` on 2026-08-03 and all seven returned nothing: `DocFX
 `documentation file`. `design/21-cicd-and-deployment.md:232-233` states the requirement; the
 design layer realizes decisions and does not make them, so the entry has no owner.
 
+**The accessibility row and the Bootstrap row arrived on 2026-08-07 with
+[`../.claude/rules/html-css.md`](../.claude/rules/html-css.md), and both are absence claims, so both
+carry their searches.** They are named here rather than placed, because two further rows landed
+below them the same day and "the last two rows" stopped resolving to them. The accessibility row:
+twenty-one spellings returned zero hits each over
+every tracked file at `10df955`, listed in that file's "What is genuinely not decided" section, and
+`WCAG` is one of them. Three places do resolve, and naming them here stops a later reader
+re-finding them as coverage. `adr/0042-abuse-and-bot-defense.md:70` is a consequence of rejecting a
+CAPTCHA, and `design/16-admin-app.md:27` and `:126` are the **admin console**, which "uses its own
+theme" and is not the end-user surface. So design `16`:126 is the only accessibility posture decided
+anywhere, and it does not reach the login pages. The Bootstrap row: `adr/0072-ui-rendering-stack.md`
+line 103 credits ADR-0026 with requiring a permissive licence for Bootstrap, and searching
+`adr/0026-dependency-license-policy.md` for `bootstrap`, `css`, `frontend`, `front-end`, `npm`, and
+`javascript` returned zero hits the same day, so the rule is the general policy applied rather than
+a specific one to quote. `DEPENDENCY-LICENSES.md` has no Bootstrap row: its only `bootstrap` hit is
+line 114, inside the JMeter bundle enumeration.
+
+**The browser-driving row and the Playwright licence row arrived on 2026-08-07 with
+[`../.claude/skills/generating-a-playwright-test/SKILL.md`](../.claude/skills/generating-a-playwright-test/SKILL.md),
+and the first is an absence claim, so it carries its search.** Ten spellings returned zero hits
+each over every tracked file at `10df955`, outside `.claude/skills/`: `playwright mcp`,
+`.mcp.json`, `code generation`, `record the browser`, `browser automation`, `test generation`,
+`generate a test`, `scaffold a test`, `trace viewer`, and `inspector`. Two searches did return
+hits and neither is a tool this repository runs, so naming them stops a later reader re-finding
+them as coverage. `codegen` returned `.gitignore:271`, which is `orleans.codegen.cs` in the
+standard ignore template. `mcp server` returned five files, and all five are the
+authorization-server role ADR-0064 proposes rather than a development tool. The Playwright
+licence row is not an absence claim: `DEPENDENCY-LICENSES.md` still has **no** `playwright` hit,
+and that missing row is the item.
+
 ## 3. Not verified
 
 These are claims this repository has **not** established. None may be cited as fact until
-read at source. MinVer's licence left this section on 2026-08-02: three documents disagreed,
-the read was taken at the artifact, and the outcome is recorded by its owner in section 3.2 of
-[`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) rather than here.
+read at source.
 
 - **Does the options binder populate `required` members?**
   [`../src/CLAUDE.md:49`](../src/CLAUDE.md) records the question against
@@ -90,9 +110,12 @@ the read was taken at the artifact, and the outcome is recorded by its owner in 
   would make a mid-session read the wrong test. The file carries `**/*.cs` plus the explicit
   `src/**/*.cs` and `tests/**/*.cs`, mirroring the `src/**/*.csproj` form already in
   `build-and-ci.md`, because no form is proven. Answerable by starting a session with a `.cs` file
-  in play and reading what loaded. Until then, treat all **three** rules files carrying the field
+  in play and reading what loaded. Until then, treat all **four** rules files carrying the field
   as best-effort in the same way a nested `CLAUDE.md` is after a `/compact`. The count was two
-  until 2026-08-07, when [`../.claude/rules/razor.md`](../.claude/rules/razor.md) added the third.
+  until 2026-08-07, when [`../.claude/rules/razor.md`](../.claude/rules/razor.md) added the third
+  and [`../.claude/rules/html-css.md`](../.claude/rules/html-css.md) added the fourth later the
+  same day. The fourth is the weakest case of the four, because no `.css`, `.html`, or `.js` file
+  is tracked yet, so its glob has nothing to match until the login surface exists.
   **One adjacent observation from that session, recorded for its limits rather than its result.**
   Reading `docs/design/11-login-consent-ui.md` mid-session did inject `docs/CLAUDE.md` and
   `docs/design/CLAUDE.md`, so on-file-access loading is real in this harness and evaluation is not

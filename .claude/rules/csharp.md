@@ -73,7 +73,8 @@ written into it (`docs/CLAUDE.md:51-96`).
   biases against a third-party library here, but it does not decide it.
 - **XML doc comments and `CS1591` are owned by no ADR.** `design/21-cicd-and-deployment.md:232`
   states the requirement, and the design layer realizes decisions rather than making them.
-  `docs/BUILD-PLAN.md:56` tracks it as owed at M1 and records the seven spellings searched on
+  `docs/BUILD-PLAN.md:44`, the row opening "DocFX and `CS1591` at error on the public surface",
+  tracks it as owed at M1 and records the seven spellings searched on
   2026-08-03. Re-checked `docs/adr/` for `cs1591` and `docfx` on 2026-08-05: still nothing.
 - **Local-variable and parameter naming are unruled.** `.editorconfig` declares naming symbols
   for `field` three times and `method` once, and none for `local` or `parameter` (grepped

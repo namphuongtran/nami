@@ -70,7 +70,7 @@ A Makefile/`justfile`/`dotnet` tool wraps these into one `make dev-up`. A produc
 
 ### Confirmation
 
-* Testcontainers for .NET (MIT) is already used in the spike-harness (PostgreSQL 18). Microsoft guidance covers multi-stage .NET Dockerfiles, chiseled images, `WebApplicationFactory` integration testing, and EF Core migrations applied at deployment (a script/bundle, not startup-migrate in production). Playwright (Apache-2.0) covers .NET UI end-to-end testing. The Database-provider default (ADR-0006/0009) runs without a cloud, and PostgreSQL 18 matches the `uuidv7`/RLS requirements.
+* Testcontainers for .NET (MIT) is already used in the spike-harness (PostgreSQL 18). Microsoft guidance covers multi-stage .NET Dockerfiles, chiseled images, `WebApplicationFactory` integration testing, and EF Core migrations applied at deployment (a script/bundle, not startup-migrate in production). Playwright covers .NET UI end-to-end testing, under two licences rather than one (**corrected 2026-08-07**, from a reading of the distributed artifact at 1.61.0 as ADR-0026 section C item 3 requires): the `Microsoft.Playwright` package declares `<license type="expression">MIT</license>` in its own `.nuspec`, and the same nupkg bundles the Apache-2.0 `playwright-core` driver under `.playwright/`. The sentence this replaces named only Apache-2.0, which is the licence of the bundled JavaScript project and not of the package. The Database-provider default (ADR-0006/0009) runs without a cloud, and PostgreSQL 18 matches the `uuidv7`/RLS requirements.
 * This is distinct from ADR-0023 (OpenTofu as production IaC); this ADR is the dev/CI inner loop only.
 
 ## Pros and Cons of the Options

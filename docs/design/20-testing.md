@@ -332,7 +332,7 @@ Verified at package metadata in the local cache:
 |---|---|---|---|
 | xUnit | Unit/integration/e2e test framework | Apache-2.0 (read at v3 3.2.2) | ADR-0025, ADR-0060 |
 | Testcontainers for .NET | Real PostgreSQL 18 / Redis in tests | MIT (read at 4.13.0) | ADR-0025 |
-| `Microsoft.Playwright` | Admin UI end-to-end | **MIT** (read at 1.59.0, from the `playwright-dotnet` repository; the JavaScript `playwright` project is Apache-2.0, and the two are not the same package) | ADR-0025 |
+| `Microsoft.Playwright` | Admin UI end-to-end | **MIT for the package, and Apache-2.0 for what it bundles** (corrected 2026-08-07 at the artifact, replacing a 1.59.0 repository reading. All four 1.61.0 `.nuspec` files declare `<license type="expression">MIT</license>`. The `Microsoft.Playwright` nupkg holds 112 entries under `.playwright/`, and `.playwright/package/package.json` declares `playwright-core` at `Apache-2.0`, so the JavaScript project is bundled rather than separate. The earlier note said the two "are not the same package", which is true of their identifiers and wrong about the distribution) | ADR-0025 |
 | TngTech.ArchUnitNET | Architecture (dependency-rule) tests | Apache-2.0 (read at 0.13.3) | ADR-0024 |
 
 Not verified offline, to be confirmed by the ADR-0026 license-scan gate:
