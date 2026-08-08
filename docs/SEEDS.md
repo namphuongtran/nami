@@ -25,6 +25,10 @@ graph LR
   S002 --> S004[S-004 amend 0061]
   S001 --> S005[S-005 date the claims]
   S002 --> S005
+  S002 --> S018[S-018 architecture layer]
+  S002 --> S019[S-019 amend 0030]
+  S002 --> S020[S-020 amend 0036]
+  S003 --> S021[S-021 re-derive 0093 quote]
   S007[S-007 which identifier] --> S008[S-008 reference engine]
   S002 --> S008
   S007 --> S009[S-009 where the block splits]
@@ -38,12 +42,12 @@ graph LR
 
 | ID | Title | Status | Blocked by |
 |---|---|---|---|
-| S-001 | Classify every `7.5.0` reference before changing any | open | none |
-| S-002 | Bump the manifest to `[7.6.0]` and re-read the nine licences | blocked | S-001 |
+| S-001 | Classify every `7.5.0` reference before changing any | done | none |
+| S-002 | Bump the manifest to `[7.6.0]` and re-read the nine licences | open | S-001 done |
 | S-003 | Amend ADR-0021 for the new pin and the half-run playbook | blocked | S-002 |
 | S-004 | Amend the ADR-0061 stack row to the new pin | blocked | S-002 |
 | S-005 | Date or re-point every source-read claim the bump invalidates | blocked | S-001, S-002 |
-| S-006 | Decide what replaces the offline 7.5.0 source tree | blocked | S-001 |
+| S-006 | Decide what replaces the offline 7.5.0 source tree | open | S-001 done |
 | S-007 | Resolve umbrella versus granular for `Core`'s engine reference | open | none |
 | S-008 | Reference the engine from `Core` and enumerate the restore graph | blocked | S-002, S-007 |
 | S-009 | Decide where the `AddOpenIddict` block splits at the persistence boundary | blocked | S-007 |
@@ -55,12 +59,16 @@ graph LR
 | S-015 | Re-own design 04's boot-validation citation | open | none |
 | S-016 | Define what the first slice is | blocked | S-010 |
 | S-017 | Assign a configuration key to the nine options that have none | open | none |
+| S-018 | Move the architecture layer's four engine-version statements to the new pin | blocked | S-002 |
+| S-019 | Amend ADR-0030's stack sentence to the new pin | blocked | S-002 |
+| S-020 | Amend ADR-0036's live-pin clause to the new pin | blocked | S-002 |
+| S-021 | Re-derive ADR-0093's verbatim quotation of ADR-0021 | blocked | S-003 |
 
 ---
 
 ## S-001. Classify every `7.5.0` reference before changing any
 
-**Status:** open · **Blocked by:** none · **Unblocks:** S-002, S-005, S-006
+**Status:** done · **Blocked by:** none · **Unblocks:** S-002, S-005, S-006
 
 **Why this is a seed and not the first step of the bump.** Counted 2026-08-08, `7.5.0` appears on
 **73 lines across 24 files**, excluding `BUILD-PLAN.md`. They are not the same kind of sentence, and
@@ -69,8 +77,10 @@ rejected option in ADR-0021's own Considered Options list, and rewriting those w
 record of a decision. Many others are dated source reads, which `docs/CLAUDE.md` says must stay in
 the past tense, because "a dated measurement edited to match today stops being evidence".
 
-**End state.** A classification exists, in the seed's own pull request, assigning every one of the
-73 lines to exactly one of three buckets:
+**End state.** A classification exists, in this seed, assigning every one of the
+73 lines to exactly one of three buckets. It was written for a pull request body, and the
+maintainer works directly on `main`, so it lands here instead, which is also what
+`.claude/rules/seeds.md` asks for when prose has no other owner:
 
 - **A, the live pin.** Sentences asserting what Nami pins today. These change.
 - **B, the historical record.** Rejected options, amendment histories, and anything already written
@@ -80,22 +90,158 @@ the past tense, because "a dated measurement edited to match today stops being e
 
 The count per bucket is stated, and the three counts sum to 73.
 
-**Verification.** `git grep -c "7\.5\.0" -- . ':!docs/BUILD-PLAN.md'` re-run on the day of the work,
-because the total is a measurement and this one is dated 2026-08-08. Every line in the output
-appears in exactly one bucket.
+**Verification.** Two searches, not one, because one spelling is not the whole set. This
+requirement is a correction the seed's own work produced, and finding 1 below is why.
+
+```bash
+git grep -n "7\.5\.0"      -- . ':!docs/BUILD-PLAN.md' ':!docs/SEEDS.md' ':!.claude/rules/seeds.md'
+git grep -nP "7\.5(?!\.0)" -- . ':!docs/BUILD-PLAN.md' ':!docs/SEEDS.md' ':!.claude/rules/seeds.md'
+```
+
+Re-run both on the day of the work, because a total is a measurement and this one is dated
+2026-08-08. Every line in the combined output appears in exactly one bucket, and the check runs in
+both directions: no line in the output is unclassified, and no classified line is absent from the
+output. The second search uses `-P` and not `-E`, because `docs/CLAUDE.md` records that `git grep
+-E` does not honour `\b` in this clone.
+
+The three exclusions each have a reason. `BUILD-PLAN.md` may never be cited. `SEEDS.md` and
+`.claude/rules/seeds.md` hold this seed's own prose, so counting them counts the words describing
+the work as if they were the work.
 
 **Sources.** `docs/CLAUDE.md`, the section on a pointer at a file you are deleting from;
 `docs/adr/0021-openiddict-version-adaptation.md:14`, `:32`, `:39`, `:71`;
 `docs/adr/0061-technology-stack-of-record.md:49`.
 
-**Out of scope.** Editing anything. This seed produces a list and changes no file other than adding
-the list to its own pull request body.
+**Out of scope.** Editing any of the 99 lines. This seed produces a classification, and the only
+file it changes is this one.
+
+### Result, measured 2026-08-08
+
+**The test that assigns the bucket.** The seed named three buckets and gave no test, so this is the
+test used: **when the pin becomes 7.6.0, what must happen to this line?** Bucket A means the digits
+change. Bucket B means nothing happens. Bucket C means the digits stay and the line gains a note
+that the pin has moved past them. The boundary between B and C is whether the line is a closed
+record or a fact the repository still rests on. A closed record is B, and a fact still relied on is
+C.
+
+| Spelling searched | Lines | Files | A | B | C |
+|---|---|---|---|---|---|
+| `7.5.0` | 73 | 24 | 14 | 4 | 55 |
+| `7.5` with no patch number | 26 | 18 | 8 | 3 | 15 |
+| **Combined** | **99** | **36** | **22** | **7** | **70** |
+
+**The seed's own figure is confirmed.** Re-running the seed's command today returned 88 lines across
+26 files, against the 73 across 24 it was written with. The whole difference is the tracker carrying
+the seed: `SEEDS.md` held 14 and `.claude/rules/seeds.md` held 1, and both were written after the
+measurement. Excluding those two files reproduces 73 across 24 exactly.
+
+Seven findings follow. The first three change what the bump has to touch.
+
+**1. The seed's own verification command was too narrow, and it hid eight bucket-A lines.** The
+`7.5.0` search cannot see a line writing `OpenIddict 7.5` with no patch number, and 26 such lines
+exist. Twelve of the 36 files carry only that shorter spelling, so the seed's command returned no
+line at all from any of them. Eight of the 26 are bucket A. A bump run against the seed's command as
+written would leave eight live-pin statements reading 7.5.
+
+**2. Four bucket-A lines sit in `docs/architecture/`, and no seed owned them.**
+`01-introduction-scope.md:14`, `03-drivers-and-constraints.md:114`, `04-system-context.md:21`, and
+`README.md:10` each state the engine version. S-003 owns ADR-0021, S-004 owns ADR-0061, and S-005
+owns bucket C, so all four fell outside every existing seed. S-018 now owns them.
+
+**3. The bump amends four ADRs rather than two.** Besides ADR-0021 (S-003) and ADR-0061 (S-004),
+`docs/adr/0030-dotnet-version-upgrade.md:14` names `OpenIddict 7.5` inside its sentence about the
+stack .NET 10 underpins, and `docs/adr/0036-database-key-strategy-uuidv7.md:40` writes "the pin is
+7.5.0 (ADR-0061)" in the present tense. S-019 and S-020 now own them, one seed each, because one ADR
+per commit is the rule.
+
+**4. ADR-0093 quotes a bucket-A line of ADR-0021 word for word.**
+`docs/adr/0093-warnings-as-errors.md:150` writes that the playbook "already instructs the project to
+`clear obsolete warnings on 7.5 now`" and cites `0021:44`. That string is `0021:44` itself, which is
+bucket A. Editing the source falsifies the quotation, and a style pass may not simplify a quotation,
+so the two edits have to land together as two commits. S-021 owns the second one.
+
+**5. Bucket C is not uniform, and S-005 needs the split.** A bucket-C line naming 7.5.0 explicitly
+inside a record that already carries a date needs no edit at all, only confirming, which is what
+S-005 already says of `design/04-core-protocol.md:55`. Six such lines are ADR `consulted:` entries,
+dated by their own frontmatter `date:` field. The lines that do need the note are the ones coupling
+the read to the word **pinned**, because that coupling is what breaks.
+
+**6. Two bucket-B lines are rejected options, and rewriting them would delete a decision.**
+`0021:32` and `0021:71` are both the option "Pin 7.5.0 forever and never upgrade". Three more
+bucket-B lines are illustrations of a bump sequence, `7.5` to `7.6` to `8.0`, at `0011:56`,
+`0021:43`, and `design/12-key-management.md:64`. An illustration of a sequence stays true after the
+pin moves along it.
+
+**7. One false positive, named so a later searcher does not count it again.**
+`docs/DEPENDENCY-LICENSES.md:132` matches a bare `7.5` search and has nothing to do with the engine:
+it is `jcharts:jcharts:0.7.5` in the licence-bucket table.
+
+**Per-file counts.** These sum to the combined row above, and they are what makes the classification
+re-derivable without a 99-row table.
+
+| File | A | B | C |
+|---|---|---|---|
+| `Directory.Packages.props` | 10 | 0 | 0 |
+| `docs/CLAUDE.md` | 0 | 1 | 1 |
+| `docs/DEPENDENCY-LICENSES.md` | 1 | 0 | 9 |
+| `docs/adr/0004-refresh-token-posture.md` | 0 | 0 | 4 |
+| `docs/adr/0011-no-restart-key-rotation.md` | 0 | 1 | 2 |
+| `docs/adr/0014-advanced-protocol-scope.md` | 0 | 0 | 8 |
+| `docs/adr/0018-dbcontext-pooling-for-pool-mode.md` | 0 | 0 | 1 |
+| `docs/adr/0019-single-logout-strategy.md` | 0 | 0 | 1 |
+| `docs/adr/0020-admin-architecture.md` | 0 | 1 | 0 |
+| `docs/adr/0021-openiddict-version-adaptation.md` | 3 | 3 | 1 |
+| `docs/adr/0030-dotnet-version-upgrade.md` | 1 | 0 | 0 |
+| `docs/adr/0033-key-scope-isolation-model.md` | 0 | 0 | 5 |
+| `docs/adr/0035-self-service-client-registration.md` | 0 | 0 | 7 |
+| `docs/adr/0036-database-key-strategy-uuidv7.md` | 1 | 0 | 0 |
+| `docs/adr/0039-revocation-propagation-and-cache-coherence.md` | 0 | 0 | 3 |
+| `docs/adr/0043-security-hardening-invariants-startup-check.md` | 0 | 0 | 1 |
+| `docs/adr/0048-introspection-revocation-endpoint-isolation.md` | 0 | 0 | 2 |
+| `docs/adr/0061-technology-stack-of-record.md` | 1 | 0 | 0 |
+| `docs/adr/0091-browser-facing-response-headers.md` | 0 | 0 | 2 |
+| `docs/adr/0093-warnings-as-errors.md` | 1 | 0 | 0 |
+| `docs/architecture/01-introduction-scope.md` | 1 | 0 | 0 |
+| `docs/architecture/03-drivers-and-constraints.md` | 1 | 0 | 0 |
+| `docs/architecture/04-system-context.md` | 1 | 0 | 0 |
+| `docs/architecture/09-runtime-flow-views.md` | 0 | 0 | 1 |
+| `docs/architecture/README.md` | 1 | 0 | 0 |
+| `docs/design/02-data.md` | 0 | 0 | 3 |
+| `docs/design/04-core-protocol.md` | 0 | 0 | 4 |
+| `docs/design/05-resource-server-validation.md` | 0 | 0 | 3 |
+| `docs/design/06-sender-constrained-tokens.md` | 0 | 0 | 2 |
+| `docs/design/08-user-management.md` | 0 | 0 | 1 |
+| `docs/design/09-federation-and-claims-profile.md` | 0 | 0 | 1 |
+| `docs/design/12-key-management.md` | 0 | 1 | 2 |
+| `docs/design/22-openiddict-seam-catalogue.md` | 0 | 0 | 3 |
+| `docs/design/23-configuration-and-client-declaration.md` | 0 | 0 | 1 |
+| `src/CLAUDE.md` | 0 | 0 | 1 |
+| `src/Nami.Identity.Core/Nami.Identity.Core.csproj` | 0 | 0 | 1 |
+
+**The 22 bucket-A lines in full**, because this is the list S-002 and the four new seeds act on and
+it is short enough to write out. `Directory.Packages.props:122`, `:123`, and `:164` through `:171`;
+`docs/DEPENDENCY-LICENSES.md:183`; `docs/adr/0021-openiddict-version-adaptation.md:14`, `:39`, and
+`:44`; `docs/adr/0030-dotnet-version-upgrade.md:14`;
+`docs/adr/0036-database-key-strategy-uuidv7.md:40`;
+`docs/adr/0061-technology-stack-of-record.md:49`; `docs/adr/0093-warnings-as-errors.md:150`;
+`docs/architecture/01-introduction-scope.md:14`;
+`docs/architecture/03-drivers-and-constraints.md:114`; `docs/architecture/04-system-context.md:21`;
+and `docs/architecture/README.md:10`.
+
+**The 7 bucket-B lines in full**, because leaving a line alone is a decision that a later reader
+will want to check. `docs/CLAUDE.md:182`; `docs/adr/0011-no-restart-key-rotation.md:56`;
+`docs/adr/0020-admin-architecture.md:85`; `docs/adr/0021-openiddict-version-adaptation.md:32`,
+`:43`, and `:71`; `docs/design/12-key-management.md:64`.
+
+Bucket C is the remaining 70 lines, and S-005 owns them. It is not written out here because the two
+searches plus the two lists above produce it by subtraction.
 
 ---
 
 ## S-002. Bump the manifest to `[7.6.0]` and re-read the nine licences
 
-**Status:** blocked · **Blocked by:** S-001 · **Unblocks:** S-003, S-004, S-005, S-008
+**Status:** open · **Blocked by:** S-001, which is done · **Unblocks:** S-003, S-004, S-005, S-008,
+S-018, S-019, S-020
 
 **What 7.6.0 actually contains**, read at the release page on 2026-08-08. It is a maintenance
 release with three changes and no breaking change. The Entity Framework 6.x and EF Core stores
@@ -140,7 +286,7 @@ commit. Adding a `PackageReference`, which is S-008.
 
 ## S-003. Amend ADR-0021 for the new pin and the half-run playbook
 
-**Status:** blocked · **Blocked by:** S-002 · **Unblocks:** nothing yet
+**Status:** blocked · **Blocked by:** S-002 · **Unblocks:** S-021
 
 **The honest difficulty.** This ADR's parameter D requires, for each release, that the
 contract-regression suite runs. Searched 2026-08-08, `tests/` holds only
@@ -154,6 +300,12 @@ and the change is recorded in More Information in this ADR's existing amendment 
 A's bracket example reads `[7.6.0]`. The two Considered Options mentions of 7.5.0 are **unchanged**,
 because they name a rejected option. A new More Information entry records the 2026-08-08 bump, what
 the release contained, which half of parameter D ran, and that S-011 owes the other half.
+
+**Three lines here, not two, and the third is quoted elsewhere.** S-001 classified `:14`, `:39`, and
+`:44` as bucket A, and `:32`, `:43`, and `:71` as bucket B. Line `:44` reads "clear obsolete warnings
+on 7.5 now", and `docs/adr/0093-warnings-as-errors.md:150` quotes that string word for word while
+citing `0021:44`. So editing `:44` falsifies a quotation in another ADR. S-021 re-derives it, and the
+two commits land together.
 
 **Verification.** `bash scripts/check-adrs.sh` after `git add`, and
 `python3 scripts/check-decisions-index.py`. Check 3 requires the index row status to equal the
@@ -200,9 +352,18 @@ a version that is no longer pinned. `design/04-core-protocol.md:55`, which reads
 this block was read at OpenIddict release tag 7.5.0", is already in the correct shape and is
 confirmed rather than edited.
 
+**The set is 70 lines, and S-001 says which.** Subtract S-001's 22 bucket-A lines and its 7 bucket-B
+lines from the 99 its two searches returned. Two facts from that classification change this seed's
+shape. A bucket-C line that already names 7.5.0 inside a record carrying its own date needs
+confirming and no edit, and six of them are ADR `consulted:` entries dated by their frontmatter
+`date:` field. The lines that do need the note are the ones coupling a read to the word **pinned**.
+
 **Verification.** `git grep -n "at the pinned version"` returns only lines whose surrounding text
-names 7.6.0, or names 7.5.0 with a date. Re-run `/refresh-citations` afterwards, because this seed
-edits many files and will age pointers into them.
+names 7.6.0, or names 7.5.0 with a date. **That pattern alone is too narrow to close this seed.**
+Measured 2026-08-08, it matched 7 lines across 5 files outside `SEEDS.md`, while the wider phrase
+`the pinned` matched 34 files. So run the wider phrase as well and read every hit that also names a
+version. Re-run `/refresh-citations` afterwards, because this seed edits many files and will age
+pointers into them.
 
 **Sources.** `docs/design/04-core-protocol.md:55` and `:1054`;
 `docs/design/22-openiddict-seam-catalogue.md:250` and `:606`;
@@ -552,6 +713,138 @@ or is named in a list of code-only options.
 `docs/adr/0044-public-api-stability-and-semver.md` parameter I.
 
 **Out of scope.** Changing any default.
+
+---
+
+## S-018. Move the architecture layer's four engine-version statements to the new pin
+
+**Status:** blocked · **Blocked by:** S-002 · **Unblocks:** nothing yet
+
+**Why this seed exists at all.** S-001 found four bucket-A lines that no seed owned. The reason they
+were missed is the finding worth keeping: S-001's own search spelling was `7.5.0`, and all four write
+`OpenIddict 7.5` with no patch number, so the search that was supposed to find every live-pin
+statement returned none of them.
+
+**End state.** All four lines name the pin S-002 landed:
+
+| Line | What it says today |
+|---|---|
+| `docs/architecture/01-introduction-scope.md:14` | "built on OpenIddict 7.5" |
+| `docs/architecture/03-drivers-and-constraints.md:114` | a table row, "OpenIddict 7.5, version-pinned and seam-isolated" |
+| `docs/architecture/04-system-context.md:21` | a mermaid node label, "on OpenIddict 7.5 and .NET 10" |
+| `docs/architecture/README.md:10` | "built on OpenIddict 7.5 and .NET 10" |
+
+**This layer may not decide, so it may not disagree either.** `docs/architecture/README.md:32-33`
+says this layer "points into them as the authoritative source, and where it disagrees with one of
+them, this layer is the bug". A version statement here that outlives the pin is exactly that
+disagreement, so the fix is a transcription from ADR-0061 and not a judgement.
+
+**Verification.** `git grep -nP "OpenIddict 7\.5(?!\.0)" -- docs/architecture/` returns only
+`09-runtime-flow-views.md:296`, which is bucket C and belongs to S-005. `bash scripts/check-adrs.sh`
+after `git add`, `python3 scripts/check-decisions-index.py`, and `markdownlint-cli2` with its file
+count cross-checked against `git ls-files '*.md'`. The mermaid label at `04:21` is inside a fenced
+block, so read it rather than trusting a link checker, which is the trap `docs/design/CLAUDE.md`
+records for pointers inside fences.
+
+**Sources.** The four lines above, each read 2026-08-08; `docs/architecture/README.md:31-35` for why
+this layer may not hold a version the ADR does not;
+`docs/adr/0061-technology-stack-of-record.md:49` for the row that is authoritative once S-004 lands.
+
+**Out of scope.** `09-runtime-flow-views.md:296`, which is a source-read claim rather than a pin
+statement. Every other version in these four files, including .NET 10.
+
+---
+
+## S-019. Amend ADR-0030's stack sentence to the new pin
+
+**Status:** blocked · **Blocked by:** S-002 · **Unblocks:** nothing yet
+
+**End state.** `docs/adr/0030-dotnet-version-upgrade.md:14` names the engine version S-002 landed.
+The line reads "Nami pins .NET 10 (LTS), the runtime foundation of the entire stack (ASP.NET Core, EF
+Core 10, OpenIddict 7.5, Npgsql, ASP.NET Core Identity, Finbuckle)", so the edit is one item inside a
+list. The change is recorded in this ADR's own maintenance style.
+
+**Why it is its own seed.** One ADR per commit. And this ADR's subject is the .NET pin, not the
+engine pin, so a reader looking for engine-version work would not open it. That is precisely why it
+was missed until S-001 searched the shorter spelling.
+
+**Verification.** `bash scripts/check-adrs.sh` after `git add`, and
+`python3 scripts/check-decisions-index.py`. Check 3 compares the index row status against the
+frontmatter status, so confirm neither moved. Read the line rather than the exit code, because no
+gate here reads a version.
+
+**Sources.** `docs/adr/0030-dotnet-version-upgrade.md:14`, read 2026-08-08.
+
+**Out of scope.** Every other technology in that sentence. The .NET pin itself, which this ADR
+decides and this seed does not touch.
+
+---
+
+## S-020. Amend ADR-0036's live-pin clause to the new pin
+
+**Status:** blocked · **Blocked by:** S-002 · **Unblocks:** nothing yet
+
+**One line carrying two claims, and only one of them moves.**
+`docs/adr/0036-database-key-strategy-uuidv7.md:40` says the key-type mapping was "**Read at
+`OpenIddict.EntityFrameworkCore` 7.4.0**, the only version in the local package cache; the pin is
+7.5.0 (ADR-0061), so re-confirm on the pinned package at M1". The dated read at 7.4.0 is a
+measurement and stays. The clause "the pin is 7.5.0" is present tense about the pin and moves.
+
+**End state.** The clause names the pin S-002 landed. The 7.4.0 read keeps its version, its wording,
+and its "re-confirm at M1" instruction, because that instruction is now more owed rather than less:
+the pin has moved twice past the version actually read.
+
+**Verification.** `bash scripts/check-adrs.sh` after `git add`, and
+`python3 scripts/check-decisions-index.py`. Then read the line and confirm that the sentence still
+distinguishes the version read from the version pinned. A single edit collapsing the two into one
+version is the failure mode here, and it would delete a measurement.
+
+**Sources.** `docs/adr/0036-database-key-strategy-uuidv7.md:40`, read 2026-08-08;
+`docs/CLAUDE.md`, the section on a pointer at a file you are deleting from, for why the 7.4.0 read
+stays in the past tense.
+
+**Out of scope.** Re-confirming the key-type mapping against the new pin. That is the M1 item the
+line already names, and it needs a restored package rather than a document edit.
+
+---
+
+## S-021. Re-derive ADR-0093's verbatim quotation of ADR-0021
+
+**Status:** blocked · **Blocked by:** S-003 · **Unblocks:** nothing yet
+
+**Blocked by S-003 and not by S-002, and the distinction is the whole seed.** The quotation only
+breaks if S-003 actually edits the line it quotes. So this seed cannot be written until S-003 has
+landed, and it must read the final text rather than predict it.
+
+**The coupling, quoted from both sides.**
+`docs/adr/0093-warnings-as-errors.md:150` writes that ADR-0021's playbook "already instructs the
+project to `clear obsolete warnings on 7.5 now`" and cites `0021:44`.
+`docs/adr/0021-openiddict-version-adaptation.md:44` is the source of that string and is bucket A in
+S-001's classification.
+
+**End state.** ADR-0093's quotation matches ADR-0021:44 word for word after S-003 landed, and the
+`0021:44` pointer is re-derived against the final tree rather than assumed. If S-003 moved lines
+above `:44`, the pointer changes even when the quoted words do not.
+
+**Which rule owns this, stated exactly, because the near-miss answer is wrong.**
+`.claude/rules/writing-style.md` rule 2 of its "Nami only" section says "Quoted **outside** text
+stays word for word". ADR-0021 is not outside text, so that rule is a precedent here and not the
+owner. What owns it is the root `CLAUDE.md` evidence rule: "Quote before you assert. Citing
+`ADR-NNNN` means the fact is *in* that ADR". A quotation that no longer matches its source is that
+rule's failure, not a style defect. So the only correct repair is to re-read the source and copy it,
+never to paraphrase the quotation into agreement.
+
+**Verification.** `bash scripts/check-adrs.sh` after `git add`, and
+`python3 scripts/check-decisions-index.py`. Then open `0021:44` and compare the quoted substring
+character by character. `/refresh-citations` covers the pointer, and the `checking-a-citation` skill
+owns what the pointer must satisfy.
+
+**Sources.** `docs/adr/0093-warnings-as-errors.md:150` and
+`docs/adr/0021-openiddict-version-adaptation.md:44`, both read 2026-08-08; the root
+[`../CLAUDE.md`](../CLAUDE.md) evidence rule, its "Quote before you assert" bullet;
+`.claude/rules/writing-style.md`, the "Nami only" section, rule 2, as the precedent it is.
+
+**Out of scope.** Every other citation in ADR-0093, and ADR-0021 itself, which S-003 owns.
 
 ---
 
