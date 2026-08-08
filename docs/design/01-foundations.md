@@ -452,7 +452,7 @@ git tag; ADR-0044 governs what may change under it. The SDK is pinned.
 | Library | Purpose | License | ADR |
 |---|---|---|---|
 | .NET and ASP.NET Core | Runtime and web host | MIT | 0030 |
-| OpenIddict (`AspNetCore`, `EntityFrameworkCore`, `Quartz`) | Protocol engine | Apache-2.0 | 0021, 0014 |
+| OpenIddict, the **eight** packages design [04](04-core-protocol.md) section 6 enumerates and `Directory.Packages.props` pins; **not** the `OpenIddict.AspNetCore` umbrella | Protocol engine | Apache-2.0 | 0021, 0014 |
 | EF Core | ORM | MIT | 0037 |
 | Npgsql and its EF provider | PostgreSQL driver | PostgreSQL, a BSD-class licence | 0037 |
 | ASP.NET Core Identity | User store | MIT | 0028 |
@@ -579,6 +579,29 @@ mechanics themselves are [02](02-data.md).
   [23](23-configuration-and-client-declaration.md), [15](15-admin-api.md).
 * **Records:** spike A-4 test T7 (the pooled-context tenant leak, verification records V17
   and V24).
+* **Corrected 2026-08-08: section 6's OpenIddict row named a package Nami does not pin and omitted
+  six that it does** (seed S-007). The row read `OpenIddict (AspNetCore, EntityFrameworkCore,
+  Quartz)`, which expands to three package identifiers. Design [04](04-core-protocol.md) section 6's
+  three rows expand to **eight**, and those eight are set-identical to the `PackageVersion` rows in
+  `Directory.Packages.props`, checked by script on 2026-08-08. The row here named
+  `OpenIddict.AspNetCore`, which is pinned nowhere, and omitted `OpenIddict.Core`,
+  `.Server`, `.Server.AspNetCore`, `.Validation`, `.Validation.AspNetCore`, and
+  `.Validation.ServerIntegration`.
+  * **Design 04 is the owner and this document is the bug**, which is the ordinary direction: design
+    04 section 6 is the implementer source of record for what the protocol host takes, and this
+    table is a product-wide library summary that compressed the family name and lost the members.
+    The two tables carry the same four columns under near-identical headings, so they were answering
+    the same question rather than two different ones. That is what made the disagreement a defect and
+    not a difference of altitude.
+  * **The cost was measured, not argued.** Read at the nuget.org flat container on 2026-08-08 at
+    7.6.0, `OpenIddict.AspNetCore` declares seven `net10.0` dependencies and reaches
+    `OpenIddict.Client.WebIntegration` through the `OpenIddict` meta-package, a 2 891 507-byte nupkg,
+    for an authorization server that is not an OAuth client. `OpenIddict.Server.AspNetCore` declares
+    one. Every node is a licence read owed under ADR-0026, so the count is the argument.
+  * **Which assembly references which of the eight is not settled here.** This table says what the
+    product uses. `Core`'s own reference list is seed S-008, and where the `AddOpenIddict` block
+    splits at the persistence boundary is seed S-009, because section 3.1 forbids `Core` from
+    referencing a database provider while `OpenIddict.EntityFrameworkCore` is one of the eight.
 * Reconciled against the design corpus's architecture-and-seams and productization documents
   on 2026-07-27, through the corpus's five-part bundle. Divergences are stated where they
   occur: the corpus's extensibility table is expressed as parity with a commercial product's

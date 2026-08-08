@@ -75,7 +75,7 @@ graph LR
 | S-004 | Amend the ADR-0061 stack row to the new pin | done | S-002 done |
 | S-005 | Date or re-point every source-read claim the bump invalidates | open | S-001, S-002 both done |
 | S-006 | Decide what replaces the offline 7.5.0 source tree | open | S-001 done |
-| S-007 | Resolve umbrella versus granular for `Core`'s engine reference | open | none |
+| S-007 | Resolve umbrella versus granular for `Core`'s engine reference | done | none |
 | S-008 | Reference the engine from `Core` and enumerate the restore graph | blocked | S-007 |
 | S-009 | Decide where the `AddOpenIddict` block splits at the persistence boundary | blocked | S-007 |
 | S-010 | Wire the engine inside `AddNamiIdentity` | blocked | S-008, S-009 |
@@ -615,7 +615,7 @@ source and is the precedent for one of the options.
 
 ## S-007. Resolve umbrella versus granular for `Core`'s engine reference
 
-**Status:** open · **Blocked by:** none · **Unblocks:** S-008, S-009
+**Status:** done · **Blocked by:** none · **Unblocks:** S-008, S-009
 
 **The disagreement, quoted from both sides. Both sit in a section 6 titled "Dependencies and
 wiring", which is what makes them the same question asked twice.**
@@ -666,6 +666,52 @@ as what `Core` references, or design 04 is corrected instead and the same check 
 `docs/design/04-core-protocol.md:827-829` and `:1024-1029`.
 
 **Out of scope.** Adding the reference, which is S-008.
+
+### S-007 result, measured 2026-08-08
+
+**Design 01 was the bug, and it was wrong in two ways rather than one.** The seed framed this as
+umbrella versus granular. Read at source, `design/01:455` also **omitted six packages**, which is the
+larger half and the one a script can check.
+
+| | Package identifiers | Set-identical to the manifest's eight `PackageVersion` rows? |
+|---|---|---|
+| `Directory.Packages.props` | 8 | reference |
+| Design 04 section 6, three rows expanded | 8 | **yes**, checked by script |
+| Design 01 section 6, one row expanded | 3 | no |
+
+Design 01 named `OpenIddict.AspNetCore`, **pinned nowhere**, and omitted `OpenIddict.Core`,
+`.Server`, `.Server.AspNetCore`, `.Validation`, `.Validation.AspNetCore`, and
+`.Validation.ServerIntegration`.
+
+**Which question each table was answering, because the seed required that before naming a bug.**
+Both sit in a section 6 titled "Dependencies and wiring", both carry the same four columns
+(`Library | Purpose | License | ADR`), and both use the same parenthesised-suffix notation. So they
+were answering the same question, and the disagreement is a defect rather than a difference of
+altitude. Design 04 section 6 is the implementer source of record for what the protocol host takes;
+design 01's is a product-wide summary that compressed the family name and lost its members. The
+correction points at design 04 as the owner and names the umbrella as excluded, so the same
+compression cannot recur silently.
+
+**The cost, re-measured at 7.6.0 rather than inherited.** `OpenIddict.AspNetCore` declares seven
+`net10.0` dependencies and reaches `OpenIddict.Client.WebIntegration`, a 2 891 507-byte nupkg, through
+the `OpenIddict` meta-package. `OpenIddict.Server.AspNetCore` declares one. Every node is a licence
+read owed under ADR-0026, so the count decides and the size illustrates.
+
+**One thing this seed deliberately did not settle.** Which assembly references which of the eight.
+`Core`'s own list is S-008, and where the `AddOpenIddict` block splits at the persistence boundary is
+S-009, because design 01 section 3.1 forbids `Core` from referencing a database provider while
+`OpenIddict.EntityFrameworkCore` is one of the eight. Answering that here would have pre-empted both.
+
+**One false green I produced and caught.** A first check ran
+`git grep -n "OpenIddict.AspNetCore" -- Directory.Packages.props && echo PINNED` and printed
+`PINNED`. The matches were the words inside the file's own comment, not a `PackageVersion Include=`
+value. The authoritative check extracts the `Include=` attributes and compares sets, and it reports
+the umbrella as absent. **Grep for the string, and the string appears in the prose about the string.**
+
+**Verification.** `git grep -nP "OpenIddict\.AspNetCore" -- docs/design/` returns only lines that name
+it as excluded or as the rejected option. The set comparison above was re-run after the edit.
+`bash scripts/check-adrs.sh`, `python3 scripts/check-decisions-index.py`, and `markdownlint-cli2`, all
+green.
 
 ---
 
