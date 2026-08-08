@@ -67,8 +67,62 @@ sourced.
   describes.
 - **The folder taxonomy inside `Abstractions` is flat**, and no source states one. Ten ports
   flat in one folder will be wrong. Inventing the grouping from one type would be worse. Settle
-  it when the catalogue lands, not before. Counted 2026-08-05, the folder holds six public
-  types: two of the ten ports, three of their DTOs, and `ScopeDefinition`.
+  it when the catalogue lands, not before. Counted 2026-08-08, the folder holds nine public
+  types: five sealed classes, two interfaces, and two enums. That is two of the ten ports,
+  three of their DTOs, and the four-type definition model. The count was six on 2026-08-05,
+  before the definition model landed.
+
+**Five more choices landed 2026-08-08 with `ClientDefinition`, `ClientFlow`, and
+`ClientAuthMethod`.** All three are transcribed from the class diagram in design 23 section 3,
+which fixes every member and its nullability. What the diagram does not fix is listed here.
+
+- **`set` rather than `init` on all seventeen members.** This follows `ScopeDefinition` and
+  not the audit DTOs, for the reason recorded above: a configuration binder writes this type.
+  `23:356` binds `List<ClientDefinition>` from `Nami:Clients` exactly as it binds the scope
+  list. **This is also a departure**: the external design corpus writes `init` on every member
+  at `13-configuration-dx.md:76-95`.
+- **`required` on `ClientId` and `DisplayName`, and `= []` on the four `string[]` members.**
+  All six are non-nullable in the diagram and none has a stated default, so the two answers
+  had to be chosen apart. The real criterion is whether the member has a meaningful empty
+  value. `ClientId` and `DisplayName` do not, so `required` applies, which is the same
+  reasoning as `ScopeDefinition`. The arrays do: empty grants nothing, which is the
+  deny-by-default value. **Half of the array reason is sourced and half is inferred, and an
+  earlier draft of this bullet bundled them behind one pointer.** What `23` section 5.2 gives
+  `ClientCredentials` is the token endpoint only and **no response type**. Its table has no
+  redirect-URI column, so it says nothing about redirect URIs either way. The step from there
+  to `= []` is the inference that a flow which never reaches a browser cannot use one, so
+  `required` would reject a client the design calls legal.
+  **`ScopeDefinition.Resources` answers the same question the other way**, as `required
+  string[]` with no initializer, and both types come from class diagrams in the same
+  document. The divergence is deliberate under the criterion above, since a scope granting
+  access to no resource is arguably not a scope, but it was not noticed when
+  `ScopeDefinition` landed. Read it as an open consistency question rather than a settled
+  split.
+- **`Flow` has no stated default anywhere, and now carries `= ClientFlow.Code` anyway.**
+  Design 23 states a default for six members in the prose under its diagram and states none
+  for this one. The initializer writes down what C# would do regardless, so it changes no
+  behaviour and makes no claim. It is recorded here because the line itself must not be read
+  later as evidence that a default was decided.
+- **Both enums carry explicit ordinals, and the two stated defaults are initializers.**
+  This reverses the shape this increment first landed. `ClientAuthMethod.PrivateKeyJwt` sat
+  at ordinal 0 **because** design 23 section 3 makes it the default, "so the secure choice is
+  the one you get by omission", and nothing else expressed that. A reorder would then have
+  moved every undeclared client onto the weaker credential, and `PublicAPI.Unshipped.txt`
+  would have shown it only as `= 0` becoming `= 1`, which does not read as a security change.
+  Two things fixed it, both free while `PublicAPI.Shipped.txt` holds no entries. The default
+  moved onto the property as `= ClientAuthMethod.PrivateKeyJwt`, which is transcription
+  because design 23 states it. And both enums now write their ordinals, so the source agrees
+  with the contract file. **The binder is the second reason for the ordinals**: the Microsoft
+  configuration binder accepts a numeric string for an enum member, so a settings file can
+  carry `"Flow": 3`, and an unwritten ordinal would let a reorder repoint it silently.
+- **One member design 23 names was deliberately not written.** `23:153` lists
+  `BackchannelLogoutUri` in its "Definition field" column, and its own class diagram at
+  `23:70-88` does not declare it. Three other sources put it on the Application write path
+  instead: `design/15-admin-api.md:133` and `:141` carry it on `ApplicationDto` and
+  `ApplicationPolicyDto`, and `adr/0019-single-logout-strategy.md:49` calls it "a new field on
+  the Application". The corpus agrees, and records the move at `25-design-admin-api.md:305`.
+  So the type has seventeen members and not eighteen, and the contradiction is filed as a
+  BUILD-PLAN row against design 23 rather than resolved here.
 
 ## Where a source exists and this repository does not simply copy it
 
@@ -181,9 +235,10 @@ throwaway project six ways and asserts each break is caught. So a severity delet
 fails on a change that only touched code here, read it as a report about the three config files
 rather than about the code. The failing part names which file.
 
-**`AnalysisMode` is `Recommended`, and CA1819 is not in it.** Measured 2026-08-05 on SDK
-10.0.301: five public `byte[]` and `string[]` members across `AuditEvent`, `SecurityEvent`,
-`AuditChainEntry`, and `ScopeDefinition` produce no CA1819, and the whole build reports zero
-warnings. So "properties should not return arrays" is a review matter here and not a gate. The
-designs state `byte[]` and `string[]`, which is why the members are shaped that way, but do not
-read the green build as the analyzer having approved them.
+**`AnalysisMode` is `Recommended`, and CA1819 is not in it.** Re-measured 2026-08-08 on SDK
+10.0.301: **nine** public `byte[]` and `string[]` members across `AuditEvent`, `SecurityEvent`,
+`AuditChainEntry`, `ScopeDefinition`, and `ClientDefinition` produce no CA1819, and the whole
+build reports zero warnings. The same reading on 2026-08-05 counted five, before
+`ClientDefinition` added four. So "properties should not return arrays" is a review matter here
+and not a gate. The designs state `byte[]` and `string[]`, which is why the members are shaped
+that way, but do not read the green build as the analyzer having approved them.

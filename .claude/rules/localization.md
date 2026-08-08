@@ -114,10 +114,10 @@ read by a tool. The two rows differ in strength, and the second says so.
    The quote begins on `:147` and its fourth item completes on `:148`. A `.resx` is **not** among
    the four. Searched 2026-08-07 with `git grep -niE` over every tracked file except this one.
    `resx` returned **5** hits and the hits are named rather than counted, because a named hit is
-   checkable and a bare total is not: `razor.md:60`, `CLAUDE.md:192`, `docs/BUILD-PLAN.md:123`,
+   checkable and a bare total is not: `razor.md:60`, `CLAUDE.md:192`, `docs/BUILD-PLAN.md:162`,
    `docs/design/11-login-consent-ui.md:437`, and `:515`. Not one is about an analyzer. Three are
    this repository's own bookkeeping about where the rule lives, and the two design hits say which
-   mechanism the pages use. `resource file` returned **1**, `docs/BUILD-PLAN.md:126`, which is the
+   mechanism the pages use. `resource file` returned **1**, `docs/BUILD-PLAN.md:165`, which is the
    owed-work row this increment wrote rather than a convention anybody adopted. `satellite`
    returned **zero**. So this row extends ADR-0092's principle rather than
    quoting its decision, and it is labelled that way on purpose. Do not cite ADR-0092 for a claim

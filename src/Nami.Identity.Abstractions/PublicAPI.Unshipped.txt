@@ -23,6 +23,50 @@ Nami.Identity.Abstractions.AuditEvent.SubjectRef.get -> System.Guid?
 Nami.Identity.Abstractions.AuditEvent.SubjectRef.init -> void
 Nami.Identity.Abstractions.AuditEvent.TargetTenantId.get -> System.Guid
 Nami.Identity.Abstractions.AuditEvent.TargetTenantId.init -> void
+Nami.Identity.Abstractions.ClientAuthMethod
+Nami.Identity.Abstractions.ClientAuthMethod.ClientSecret = 1 -> Nami.Identity.Abstractions.ClientAuthMethod
+Nami.Identity.Abstractions.ClientAuthMethod.PrivateKeyJwt = 0 -> Nami.Identity.Abstractions.ClientAuthMethod
+Nami.Identity.Abstractions.ClientDefinition
+Nami.Identity.Abstractions.ClientDefinition.AbsoluteRefreshLifetime.get -> System.TimeSpan?
+Nami.Identity.Abstractions.ClientDefinition.AbsoluteRefreshLifetime.set -> void
+Nami.Identity.Abstractions.ClientDefinition.AccessTokenType.get -> string!
+Nami.Identity.Abstractions.ClientDefinition.AccessTokenType.set -> void
+Nami.Identity.Abstractions.ClientDefinition.AllowedCorsOrigins.get -> string![]!
+Nami.Identity.Abstractions.ClientDefinition.AllowedCorsOrigins.set -> void
+Nami.Identity.Abstractions.ClientDefinition.AllowedScopes.get -> string![]!
+Nami.Identity.Abstractions.ClientDefinition.AllowedScopes.set -> void
+Nami.Identity.Abstractions.ClientDefinition.AuthMethod.get -> Nami.Identity.Abstractions.ClientAuthMethod
+Nami.Identity.Abstractions.ClientDefinition.AuthMethod.set -> void
+Nami.Identity.Abstractions.ClientDefinition.ClientDefinition() -> void
+Nami.Identity.Abstractions.ClientDefinition.ClientId.get -> string!
+Nami.Identity.Abstractions.ClientDefinition.ClientId.set -> void
+Nami.Identity.Abstractions.ClientDefinition.ClientSecret.get -> string?
+Nami.Identity.Abstractions.ClientDefinition.ClientSecret.set -> void
+Nami.Identity.Abstractions.ClientDefinition.DisplayName.get -> string!
+Nami.Identity.Abstractions.ClientDefinition.DisplayName.set -> void
+Nami.Identity.Abstractions.ClientDefinition.Flow.get -> Nami.Identity.Abstractions.ClientFlow
+Nami.Identity.Abstractions.ClientDefinition.Flow.set -> void
+Nami.Identity.Abstractions.ClientDefinition.IsNativeApp.get -> bool
+Nami.Identity.Abstractions.ClientDefinition.IsNativeApp.set -> void
+Nami.Identity.Abstractions.ClientDefinition.IssueRefreshToken.get -> bool
+Nami.Identity.Abstractions.ClientDefinition.IssueRefreshToken.set -> void
+Nami.Identity.Abstractions.ClientDefinition.JwksJson.get -> string?
+Nami.Identity.Abstractions.ClientDefinition.JwksJson.set -> void
+Nami.Identity.Abstractions.ClientDefinition.PostLogoutRedirectUris.get -> string![]!
+Nami.Identity.Abstractions.ClientDefinition.PostLogoutRedirectUris.set -> void
+Nami.Identity.Abstractions.ClientDefinition.RedirectUris.get -> string![]!
+Nami.Identity.Abstractions.ClientDefinition.RedirectUris.set -> void
+Nami.Identity.Abstractions.ClientDefinition.RequireConsent.get -> bool
+Nami.Identity.Abstractions.ClientDefinition.RequireConsent.set -> void
+Nami.Identity.Abstractions.ClientDefinition.RequirePkce.get -> bool
+Nami.Identity.Abstractions.ClientDefinition.RequirePkce.set -> void
+Nami.Identity.Abstractions.ClientDefinition.TenantId.get -> string?
+Nami.Identity.Abstractions.ClientDefinition.TenantId.set -> void
+Nami.Identity.Abstractions.ClientFlow
+Nami.Identity.Abstractions.ClientFlow.ClientCredentials = 1 -> Nami.Identity.Abstractions.ClientFlow
+Nami.Identity.Abstractions.ClientFlow.Code = 0 -> Nami.Identity.Abstractions.ClientFlow
+Nami.Identity.Abstractions.ClientFlow.CodeAndClientCredentials = 2 -> Nami.Identity.Abstractions.ClientFlow
+Nami.Identity.Abstractions.ClientFlow.DeviceCode = 3 -> Nami.Identity.Abstractions.ClientFlow
 Nami.Identity.Abstractions.IAuditSink
 Nami.Identity.Abstractions.IAuditSink.AppendAsync(Nami.Identity.Abstractions.AuditEvent! auditEvent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Nami.Identity.Abstractions.AuditChainEntry!>
 Nami.Identity.Abstractions.ISecurityEventSink

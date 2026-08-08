@@ -26,8 +26,25 @@ In order. Each increment is one branch, small enough to review in one sitting.
 
 | # | Scope | Blocked by |
 |---|---|---|
-| PR-5 | `IAuditSink` and `ISecurityEventSink`, plus `AuditEvent`, `SecurityEvent`, and `AuditChainEntry` | No |
-| PR-6 | `Nami.Identity.Core`: engine wiring, the builder, the first slice | PR-5 |
+| PR-7 | `Nami.Identity.Core`: engine wiring, the builder, the first slice | **Yes**, on two things named in section 2: the builder's two types have no member stated anywhere, and the engine has no version pin and no licence row |
+
+**What happened to PR-5 and PR-6 on 2026-08-08, stated plainly because an earlier draft of
+this paragraph got it wrong.** The two rows went for two different reasons and only one of
+them is the section 4 rule.
+
+- **PR-5 was the audit pair and their three DTOs. It landed on 2026-08-05 as `1511e8e`, and
+  its row should have gone with that commit.** [`../src/CLAUDE.md`](../src/CLAUDE.md) recorded
+  the outcome at the time, so section 4's rule applied three days before the row was actually
+  deleted. The row outlived its increment through five further edits to this file. That is
+  the miss this file's maintenance rule exists to prevent, and naming it is the point.
+- **PR-6 was `Nami.Identity.Core`, and it has never meant anything else.** It was created with
+  that scope on 2026-08-02 in `6dd786c`. It has no outcome, so section 4's rule does not reach
+  it. It was **renumbered to PR-7**, carrying the same scope text, once the two blockers in
+  section 2 were established. An earlier draft said PR-6 had been the definition model and
+  that both rows fell to the section 4 rule. Both halves were false, and the definition model
+  was unplanned work that no row ever asked for.
+
+Numbers are not reused. PR-6 is retired rather than reassigned.
 
 ## 2. Owed, with an owner and a trigger
 
@@ -48,6 +65,28 @@ Not scheduled. Each has a decision or a document that already names it.
 | No tool is decided for driving a browser to author an end-to-end test, and adopting one is an inventory row rather than a configuration file | [`adr/0025-local-development-and-first-run.md`](adr/0025-local-development-and-first-run.md) parameter E scopes Playwright and names no authoring tool; [`adr/0026-dependency-license-policy.md:55`](adr/0026-dependency-license-policy.md) sets what the adoption owes | Before the first admin end-to-end test, M1 |
 | Playwright still has no row in the licence record, and it is the first dependency here read to bundle a second licence behind a correctly declared one. The three prose sources were corrected on 2026-08-07; the record itself was not written | [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) section 3, where section 3.2 is the precedent: a package not yet adopted, recorded because documents here stated its licence wrongly | Before the Playwright pin is added |
 | Two citation defects that `.claude/rules/localization.md` inherited rather than introduced, read at source 2026-08-07. **(a)** `razor.md:94` and `html-css.md:114` both cite `ADR-0092:147` for the four-item quote "Razor markup, SQL held outside C#, Dockerfiles, or GitHub Actions workflow definitions", whose fourth item completes at `ADR-0092:148`. **(b)** `razor.md:99` and `html-css.md:121` both say "The local hook stages `-- '*.md'`", but `scripts/hooks/pre-commit:25` reads a list that is **already** staged rather than staging anything. Four instances across two files. `localization.md` carries the corrected form of both, so three rules files now spell the same two facts two ways | [`../.claude/rules/razor.md`](../.claude/rules/razor.md) and [`../.claude/rules/html-css.md`](../.claude/rules/html-css.md), each for its own two lines | The next edit to either file. Out of scope on 2026-08-07 for two reasons: the approved spec for that increment covered `localization.md` only, and a parallel session had both files staged |
+| `NamiIdentityOptions` and `INamiIdentityBuilder` are named and never defined, so `Nami.Identity.Core` cannot be written. This is an absence claim and carries its search below | [`design/01-foundations.md`](design/01-foundations.md) section 3.4, and an ADR if the members turn out to be decisions rather than a transcription | Before `Nami.Identity.Core` |
+| The engine has no version pin and no licence row, which blocks `Core` a second and independent time. `Directory.Packages.props` carries no OpenIddict `PackageVersion` row, and [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) returned zero hits for `openiddict` on 2026-08-08 | [`adr/0021-openiddict-version-adaptation.md`](adr/0021-openiddict-version-adaptation.md) parameter A for the bracket pin, and [`adr/0026-dependency-license-policy.md`](adr/0026-dependency-license-policy.md) for the licence read at the distributed artifact | Before `Nami.Identity.Core` |
+| [`design/23-configuration-and-client-declaration.md:153`](design/23-configuration-and-client-declaration.md) lists `BackchannelLogoutUri` in its "Definition field" column, and its own class diagram at `23:70-88` does not declare it. Three sources put the field on the Application write path instead: [`design/15-admin-api.md:133`](design/15-admin-api.md) and `:141` carry it on `ApplicationDto` and `ApplicationPolicyDto`, and [`adr/0019-single-logout-strategy.md:49`](adr/0019-single-logout-strategy.md) calls it "a new field on the Application". So `ClientDefinition` was landed with seventeen members and not eighteen | [`design/23-configuration-and-client-declaration.md`](design/23-configuration-and-client-declaration.md) section 4, which is the table that carries the row | The next edit to design 23, or the admin API increment, whichever comes first. Out of scope on 2026-08-08 because correcting a design is its own decision, and the approved plan for that increment was to flag it |
+| [`design/23-configuration-and-client-declaration.md`](design/23-configuration-and-client-declaration.md) section 9 lists seven test bullets and **none covers the definition model's own defaults**, which section 8 of the same document calls the entire security argument for the layer. Every one of the seven needs the mapper, the seeder, or the configuration binder, so none is runnable today. Nothing mechanical sees a flipped default either: `PublicAPI.Unshipped.txt` records `RequirePkce.get -> bool` and no initializer value, so changing `= true` to `= false` produces no API diff and no gate failure | [`design/23-configuration-and-client-declaration.md`](design/23-configuration-and-client-declaration.md) section 9 owns the test list. The suite is the unit one in [`design/20-testing.md`](design/20-testing.md), which has no project yet | The first unit-test project, or the mapper, whichever comes first |
+| `AccessTokenType` is a closed two-value domain (`jwt` or `reference`) typed as `string`, while two other closed sets in the same class diagram are enums. No invariant in section 5.1 checks it, and an unrecognized value most plausibly reads as `jwt`, which silently returns a client the operator opted into reference tokens to a self-contained JWT. Case sensitivity is undecided as well | [`design/23-configuration-and-client-declaration.md`](design/23-configuration-and-client-declaration.md) section 3 for the type, and section 5.1 for the missing invariant | Before the ADR-0039 token-type handler, and before any promotion to `PublicAPI.Shipped.txt`, because ADR-0044 makes the type change MAJOR after that |
+| Five invariants that no section 5.1 rule covers: the `AccessTokenType` domain, `AuthMethod` agreeing with the credential actually present, `AbsoluteRefreshLifetime` being positive and inside the ADR-0004 ceiling, `AllowedCorsOrigins` being scheme, host, and port with no path, and a code-flow client having at least one redirect URI. Each is constructible today and passes all seven stated invariants | [`design/23-configuration-and-client-declaration.md`](design/23-configuration-and-client-declaration.md) section 5.1, which is the fail-closed list | The mapper |
+| **Not verified**: whether `.ValidateDataAnnotations()` on `AddOptions<List<ClientDefinition>>()` validates the list's elements at all. `design/23:356-357` wires it and `23:454` requires a missing value to fail at start-up, but `ClientDefinition` carries no data-annotation attribute, so the call may read as enforcement while checking nothing. That is this repository's inert-gate pattern arriving through a design rather than through a script | [`design/23-configuration-and-client-declaration.md`](design/23-configuration-and-client-declaration.md) section 6 | When the configuration packages land, which is also what unblocks the `required`-binder question in section 3 |
+
+**The builder row is an absence claim, so it carries its search.** Counted 2026-08-08 with
+`git grep -c` over every tracked file **except this one**, which is a plain substring that
+over-counts and never under-counts: `NamiIdentityOptions` returned 2 and `INamiIdentityBuilder`
+returned 2, all four hits in [`design/01-foundations.md`](design/01-foundations.md). **The
+exclusion is load-bearing and was added after a review.** Writing this row put both terms into
+this file twice each, so a re-run over every tracked file now returns 4 apiece and the claim
+would falsify itself. [`../.claude/rules/localization.md`](../.claude/rules/localization.md)
+already carried the same exclusion for the same reason. The method was proved
+on a term known present in the same run, `ClientDefinition` returning 11 across 3 files. The
+two lines are `01:110`, a package table cell naming the type, and `01:305`, prose naming it
+inside a signature. Neither gives a member, a type, or a nullability. Section 3.4 is a table
+of option names, defaults, and owning ADRs, and not a class diagram, so it fixes what the
+options mean and not what the type is. This is the same shape as the `ISecretResolver` finding
+in [`../src/CLAUDE.md`](../src/CLAUDE.md): the type is named everywhere and writable nowhere.
 
 The DocFX row is an absence claim, so the search is recorded with it. Seven spellings were
 searched across `docs/adr/` on 2026-08-03 and all seven returned nothing: `DocFX`, `docfx`,
