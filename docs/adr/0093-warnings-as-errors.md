@@ -138,7 +138,7 @@ a broad list in `Directory.Build.props`**, because a repo-wide suppression is a 
 retraction of this decision for every project that inherits it.
 
 This is the root `CLAUDE.md` rule applied to a build rather than to a document: "Never edit a
-document to silence a checker" (`CLAUDE.md:105`). ADR-0065 predicts the pressure that produces
+document to silence a checker" (`CLAUDE.md:91`). ADR-0065 predicts the pressure that produces
 that edit and names it as the risk arriving with real code (`0065:109`). A narrow, commented,
 per-project exemption is the legitimate version of that pressure's outlet, and its existence
 is what makes the broad version indefensible rather than merely discouraged.

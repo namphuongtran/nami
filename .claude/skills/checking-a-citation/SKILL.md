@@ -151,7 +151,7 @@ into it. Both were run on 2026-08-07 with `git grep -in` over every tracked file
   undecided, and building one would have to answer why the last one bent the evidence it existed
   to protect.
 - **No cadence exists for a repository-wide sweep.** `sweep` returned 11 hits, all of them records
-  of a sweep already run: the citation sweep of 2026-07-29 at `docs/CLAUDE.md:54`, a glossary sweep
+  of a sweep already run: the citation sweep of 2026-07-29 at `docs/CLAUDE.md:53`, a glossary sweep
   of 2026-08-01 at `docs/architecture/24-glossary.md:244`, and a design-layer sweep of the same
   date at `docs/adr/0027-packaging-and-distribution.md:82`. None schedules a future one. `periodic`
   and `quarterly` returned 23 and 18 hits, and every one read is a disaster-recovery drill, a key

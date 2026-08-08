@@ -24,11 +24,10 @@ between them is always a bug in a known one of them.
    decision. The routing rule: a decision goes to an ADR, and durable knowledge to reference
    goes to the KB (`kb/README.md`).
 
-`architecture/24-glossary.md` is arc42 section 12, and it defines vocabulary for **all three**
-upper layers, not only for the architecture. It lives in that folder because arc42 puts the
-glossary in the architecture document. An entry names the document of record rather than
-owning the term, so defining `stack of record` there leaves ADR-0061 the authority. Do not
-narrow its scope to architecture terms.
+`architecture/24-glossary.md` is arc42 section 12 and defines vocabulary for **all three** upper
+layers, not only the architecture; it sits in that folder because arc42 puts the glossary in the
+architecture document. An entry names the document of record rather than owning the term, so
+defining `stack of record` there leaves ADR-0061 the authority. Do not narrow its scope.
 
 ## A document number is layer-scoped, so the same digits name different documents
 
@@ -55,25 +54,23 @@ does not contain the claim. A sweep on 2026-07-29 (`cc982f3`) read every `ADR-NN
 `architecture/`, **2606 of them at that point**. It found this class three times, and one of
 them was invented outright.
 
-The concrete Content-Security-Policy was cited to ADR-0062, which never mentions it. At that
-point **no ADR fixed the directive values**. ADR-0091 does, from 2026-08-01. The tense here is
-deliberate, because a finding dated to a sweep should not silently become a claim about today.
+The concrete Content-Security-Policy was cited to ADR-0062, which never mentions it. At that point
+**no ADR fixed the directive values**; ADR-0091 does, from 2026-08-01. The tense is deliberate,
+because a finding dated to a sweep should not silently become a claim about today. The other two
+were true facts with the wrong owner, the same defect at lower cost: the audit chain key cited to
+ADR-0009 when ADR-0008 requires it, and a closure-maintenance choice cited to ADR-0024 when no ADR
+rules on it.
 
-The other two were true facts with the wrong owner, which is the same defect at lower cost.
-The audit chain key was cited to ADR-0009 when ADR-0008 is what requires it. And a
-closure-maintenance choice was cited to ADR-0024 when no ADR rules on it.
-
-Screen by keyword overlap between the citing sentence and the cited ADR to *rank* candidates,
-then read every hit. Overlap cannot tell a wrong claim written in its ADR's own vocabulary
-from a right one.
+Screen by keyword overlap between the citing sentence and the cited ADR to *rank* candidates, then
+read every hit. Overlap cannot tell a wrong claim written in its ADR's own vocabulary from a right
+one.
 
 **That 2606 is the size of one sweep on one day, not a live total**, and it is dated for that
-reason. Re-counted on 2026-08-01, the same two layers carry **2840** citations (1247 in
-`design/`, 1593 in `architecture/`). Any figure in these instruction files that was produced by
-running something is a measurement with a date. Re-run it rather than citing it forward.
-A stale count reported as current is the same defect as an unsourced claim, arriving by a
-different route. This file shipped one: it carried 2606 as though it were the total until the
-split on 2026-08-01 re-counted it.
+reason. Re-counted 2026-08-01, the same two layers carry **2840** citations (1247 in `design/`,
+1593 in `architecture/`). Any figure produced by running something is a measurement with a date, so
+re-run it rather than citing it forward. A stale count reported as current is the same defect as an
+unsourced claim by another route, and this file shipped one: it carried 2606 as the total until
+2026-08-01 re-counted it.
 
 **A checker's anchor is part of its coverage claim.** A pattern that requires the target to
 start where the link opens matches same-directory links, and silently passes every
@@ -146,18 +143,17 @@ Three habits, in the order they pay:
   drift instead of as a different claim.
 
 **A pointer at a file you are deleting from is a different problem, and it needs prose, not a
-number.** Five of that increment's twenty were of this kind. ADR-0093 quoted, in the present
-tense, a block of `Directory.Build.props` that the same increment deleted. It also cited a
-`BUILD-PLAN.md` row that the same increment removed. That file's own rule says a row goes when
-its owner records the outcome. A sentence asserting what another file *currently* contains
-is a measurement, so it is dated, written in the past tense, and names the commit it was true
-at. Done that way it stays true after the target changes again, which is the whole point.
+number.** Five of that increment's twenty were of this kind: ADR-0093 quoted, in the present
+tense, a block of `Directory.Build.props` that the same increment deleted. A sentence asserting
+what another file *currently* contains is a measurement, so it is dated, written in the past
+tense, and names the commit it was true at. Done that way it stays true after the target changes
+again, which is the whole point.
 
 ## Reading the external design corpus
 
 The corpus is a separate tree, not part of this repository, and its path comes from the
-maintainer's environment. It is the source these layers were reconciled from, and it
-contradicts itself in places, so how it is read matters.
+maintainer's environment. It is the source these layers were reconciled from and it contradicts
+itself in places, so how it is read matters.
 
 **Read the root document, not its digest.** The corpus has two layers: the numbered root
 documents `00` to `34`, and the `DD/` folder that summarizes them. The implementable detail

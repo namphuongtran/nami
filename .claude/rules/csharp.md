@@ -30,7 +30,7 @@ to survive a line shift, so a drifted pointer reads as drift rather than as a di
 | Application Insights, or any named backend | "emits OTLP and mandates no production backend" | ADR-0063:38 |
 | An unprefixed custom instrument name | "Every custom instrument is namespaced `nami.identity.`" | ADR-0085:110 |
 | `<LangVersion>latest</LangVersion>` | "LangVersion is deliberately ABSENT"; the default derives from the target framework | `Directory.Build.props:79-88` |
-| A literal `<TargetFramework>net10.0</TargetFramework>` | `$(NamiLibraryTargetFrameworks)`, or `$(NamiApplicationTargetFramework)` for an application | `src/CLAUDE.md:210`, ADR-0030:39 |
+| A literal `<TargetFramework>net10.0</TargetFramework>` | `$(NamiLibraryTargetFrameworks)`, or `$(NamiApplicationTargetFramework)` for an application | `src/CLAUDE.md:172`, ADR-0030:39 |
 | `Services/`, `DTOs/`, `Validators/` | "Organize the Application layer by feature slice", `Features/<Area>/<UseCase>/` | ADR-0024:44, ADR-0065:77 |
 | A repository or unit-of-work wrapper | "introduced to solve a demonstrated problem, never preemptively" | ADR-0066:42 |
 | An interface with one implementation, for layering | "a port must have at least two real reasons to exist" | ADR-0024:39 |
@@ -63,7 +63,7 @@ time, and say which page you read.
 ### What is genuinely not decided
 
 Do not fill these from judgement. Each absence is a claim about a search, so the searches are
-written into it (`docs/CLAUDE.md:51-96`).
+written into it (`docs/CLAUDE.md:50-108`).
 
 - **No validation library is chosen.** Searched 2026-08-05, case-insensitive over the whole
   repository: `fluentvalidation` returned nothing at all; `validation library` returned two hits,
@@ -90,7 +90,7 @@ Both are recorded already. Both are the kind of coverage a generic answer assume
    async Task Poll()` is caught and `public Task Poll()` is not. A naming symbol has no
    return-type filter, so the uncovered half is a review matter. ADR-0065:86.
 2. **`AnalysisMode` is `Recommended`, and `CA1819` is not in it.** Public array-returning members
-   produce no warning today. Do not read a green build as approval of one. `src/CLAUDE.md:238`,
+   produce no warning today. Do not read a green build as approval of one. `src/CLAUDE.md:197`,
    ADR-0094.
 
 ## Who owns which question
@@ -102,7 +102,7 @@ Both are recorded already. Both are the kind of coverage a generic answer assume
 | Target framework and language version | ADR-0030; the knob is `Directory.Build.props` |
 | Analyzer breadth | ADR-0094: `Recommended`, not `All` |
 | Warnings as errors | ADR-0093, with the restore-time `NU190x` carve-out |
-| Public API surface | ADR-0044; a public type is two files (`src/CLAUDE.md:147-177`) |
+| Public API surface | ADR-0044; a public type is two files (`src/CLAUDE.md:113-143`) |
 | Dependency rule, ports, and slices | ADR-0024, enforced by the ArchUnitNET suite |
 | Whether a pattern is warranted at all | ADR-0066 |
 | Test taxonomy and naming | ADR-0060, and `docs/design/20-testing.md` |
@@ -121,7 +121,7 @@ not fill the gap from judgement (`CLAUDE.md:26`).
 | A Microsoft or .NET claim | `microsoft-docs`: `microsoft_docs_search`, then `microsoft_docs_fetch` for depth | The evidence rule forbids inferring a Microsoft default from a document that is merely near it. The underscore row above is what happens when someone does. |
 | A library or SDK claim (OpenIddict, Npgsql, EF Core, xunit.v3) | `context7`: `resolve-library-id`, then `query-docs` | Training data can predate the pinned version |
 | Why a gate passed or failed | The `dotnet-msbuild` binlog tools, via `binlog-generation` then `binlog-failure-analysis` | Nine gates exist and four are self-tests, so a green build is not a green gate |
-| A package licence | The distributed artifact itself | Never a badge, and never another document in this repository (`CLAUDE.md:131-133`) |
+| A package licence | The distributed artifact itself | Never a badge, and never another document in this repository (`CLAUDE.md:114-116`) |
 
 The heavier .NET skills earn their place as `src/` fills, and it holds **nine** public types
 (five sealed classes, two interfaces, and two enums, counted 2026-08-08; the count was six on

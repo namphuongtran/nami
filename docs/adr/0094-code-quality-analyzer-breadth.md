@@ -116,7 +116,7 @@ repository's invention. The design declares the class at
 `90-92`, the third of which is `+string[] Resources` at `92`. That block sits inside the
 design's section 3, "Interfaces and contract"
 (`docs/design/23-configuration-and-client-declaration.md:66`). The member is transcribed from
-the implementer source of record, and `src/CLAUDE.md:28-31` is where this repository records
+the implementer source of record, and `src/CLAUDE.md:21-24` is where this repository records
 that transcription as the reason the type could be landed at all.
 
 **The line range above was read at source rather than inherited, and that mattered.** Read on
@@ -131,7 +131,7 @@ checked.
 So `All` offers exactly two ways forward on the first type in the repository, and both are
 worse than not taking it. Changing `Resources` to a read-only collection would deviate from the
 design that fixes its members, in the one place where `src/CLAUDE.md` says deviation is how "an
-invented decision enters the codebase wearing the design's authority" (`src/CLAUDE.md:16-17`).
+invented decision enters the codebase wearing the design's authority" (`src/CLAUDE.md:11-12`).
 Suppressing `CA1819` instead would mean the repository's first `NoWarn` is written in the same
 change that adopts the ruleset it exempts.
 

@@ -112,16 +112,14 @@ read by a tool. The two rows differ in strength, and the second says so.
    ADR-0092:147-148 says "The SDK analyzers see C#", then names four things they do not see:
    "Razor markup, SQL held outside C#, Dockerfiles, or GitHub Actions workflow definitions".
    The quote begins on `:147` and its fourth item completes on `:148`. A `.resx` is **not** among
-   the four. Searched 2026-08-07 with `git grep -niE` over every tracked file except this one.
-   `resx` returned **5** hits and the hits are named rather than counted, because a named hit is
-   checkable and a bare total is not: `razor.md:60`, `CLAUDE.md:192`, `docs/BUILD-PLAN.md:162`,
-   `docs/design/11-login-consent-ui.md:437`, and `:515`. Not one is about an analyzer. Three are
+   the four. Re-run 2026-08-08 with `git grep -niE` over every tracked file except this one and
+   the work queue. `resx` returned **4**, named rather than counted because a named hit is
+   checkable and a bare total is not: `razor.md:60`, `CLAUDE.md:170`,
+   `docs/design/11-login-consent-ui.md:437`, and `:515`. Not one is about an analyzer. Two are
    this repository's own bookkeeping about where the rule lives, and the two design hits say which
-   mechanism the pages use. `resource file` returned **1**, `docs/BUILD-PLAN.md:165`, which is the
-   owed-work row this increment wrote rather than a convention anybody adopted. `satellite`
-   returned **zero**. So this row extends ADR-0092's principle rather than
-   quoting its decision, and it is labelled that way on purpose. Do not cite ADR-0092 for a claim
-   about a `.resx`.
+   mechanism the pages use. `resource file` and `satellite` each returned **zero**. So this row
+   extends ADR-0092's principle rather than quoting its decision, and it is labelled that way on
+   purpose. Do not cite ADR-0092 for a claim about a `.resx`.
 
 One question this raises is **open**, so do not fill it from judgement. The root `CLAUDE.md`
 forbids an em dash in "prose you write for this project". No source says whether that reaches a
@@ -146,17 +144,17 @@ like a real absence. Run the same way on 2026-08-07 and excluding this file: `lo
 returned **19**, `IStringLocalizer` returned **4**, and `culture` returned **11**. So the tool was
 matching.
 
-**Expect a different number, and read it as expected.** `localization` moved three times inside
-this one increment, and every move was this increment writing about itself: **14** at `f098259`,
-**15** once `303f6ef` added the routing row to the root `CLAUDE.md`, and **19** once `95259e3`
-added four mentions to `docs/BUILD-PLAN.md`. A control is a measurement, not a constant. Re-run
-the controls before the list, and treat a fourth number as bookkeeping until you have read the
-new hits.
+**Expect a different number, and read it as expected.** `localization` moved twice inside one
+increment, and each move was that increment writing about itself: **14** at `f098259`, then
+**15** once `303f6ef` added the routing row to the root `CLAUDE.md`. A control is a measurement,
+not a constant. Re-run the controls before the list, and treat a new number as bookkeeping until
+you have read the new hits.
 
-**Only this file is excluded, and that is deliberate.** An exclusion list naming three files
-would be a second thing that has to stay true, and the next increment touching a fourth file
-would silently break it. One self-exclusion is what makes writing here unable to move the
-counts. Everything else is counted and named.
+**Two things are excluded: this file, and the work queue.** Excluding this file is what makes
+writing here unable to move the counts. The queue is excluded because it is deleted rather than
+maintained, so any count including it expires on someone else's schedule. Do not grow the list
+further: a third entry is another thing that has to stay true, and the next increment touching a
+fourth file would break it silently. Everything else is counted and named.
 
 Nineteen spellings returned **zero** hits each: `ui_locales`, `claims_locales`, `CultureInfo`,
 `CurrentUICulture`, `RequestCulture`, `SupportedCultures`, `DefaultRequestCulture`, `plural`,
