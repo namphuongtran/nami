@@ -19,6 +19,35 @@ What this file is **not**:
   [`README.md`](../README.md).
 - Not a record of what is enforced. Each ADR's Confirmation says whether its own mechanism
   is live, and that is the authority.
+- **Not a status board.** What happened is in the commits. What is scheduled is in
+  [`SEEDS.md`](SEEDS.md), with each seed carrying its own result. This file holds one
+  pointer at the front of the work and nothing else about it, because a second place
+  recording progress is a second place to be wrong.
+
+## 0. Where the work stands
+
+**One pointer, deliberately thin.** Read the commit for what happened and the seed for what is
+next. Neither is restated here.
+
+| | |
+|---|---|
+| Last code increment landed | `8e19123`, `Nami.Identity.Core`, 2026-08-08. Its commit message is the record |
+| Front of the work | **[`SEEDS.md`](SEEDS.md) S-007**, resolve umbrella versus granular for `Core`'s engine reference |
+| Why that one | Section 1 below records that S-007 through S-011 and S-016 are what PR-7 did not deliver. S-007 has no blocker and unblocks S-008 and S-009, so it is the only door into that chain |
+| Everything since | Eleven seeds closed 2026-08-08, all documentation, no code moved. `git log --oneline` from `8e19123` is the list |
+
+**The boundary this file keeps with the tracker**, stated because it leaked once on 2026-08-08
+and three rows lived in both places at once:
+
+| Where | Holds | May be cited |
+|---|---|---|
+| [`SEEDS.md`](SEEDS.md) | scheduled work, and each seed's own dated result | yes, by anything |
+| this file | items owed with an owner and a trigger, claims not verified, and the pointer above | **no**, by nothing |
+| git | what actually happened, per commit | not a document |
+
+So a row here that becomes actionable moves to a seed **and is deleted here in the same change**.
+Three rows failed that on 2026-08-08 and were deleted late: the stack-of-record reconciliation, now
+S-023, and the Bootstrap and Playwright licence rows, now folded into S-027.
 
 ## 1. Next, retired 2026-08-08
 
@@ -55,15 +84,12 @@ Not scheduled. Each has a decision or a document that already names it.
 | Whether `required` may stay on a public member | [`adr/0044-public-api-stability-and-semver.md:113`](adr/0044-public-api-stability-and-semver.md) | The first promotion of `Unshipped` to `Shipped` |
 | Architecture rules (b) through (e): Application layering, slice decoupling, adapter placement, BFF isolation | [`adr/0024-architecture-style.md:55`](adr/0024-architecture-style.md) | When the projects they constrain exist |
 | The licence-scan CI gate | [`adr/0026-dependency-license-policy.md`](adr/0026-dependency-license-policy.md) section C | M1 |
-| Reconciling the stack-of-record table against `Directory.Packages.props` | [`adr/0061-technology-stack-of-record.md:84`](adr/0061-technology-stack-of-record.md) | M1, and it is no longer blocked: the manifest exists |
 | The provenance and licence of `MSBuild.Caching.dll`, bundled in MinVer and declared in no `deps.json` | [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) section 3.2 | Before MinVer is adopted |
 | Whether the `NU1901`-`NU1904` carve-out should be reversed once a blocking dependency-vulnerability gate exists | [`adr/0093-warnings-as-errors.md`](adr/0093-warnings-as-errors.md) parameter C | When ADR-0092 stage 2's Trivy scan lands, M1 |
 | DocFX and `CS1591` at error on the public surface are stated by a design and owned by no ADR | [`design/21-cicd-and-deployment.md:232`](design/21-cicd-and-deployment.md) | M1 |
 | `KeyRecord`'s members, and the C# form of `KeyScope`, which are what still block `ISigningKeyStore` | [`design/12-key-management.md`](design/12-key-management.md) section 3.2 | The rotation subsystem, which is the first thing that needs the key store |
-| Bootstrap 5 is a stack-of-record entry with no licence row and no version pin | [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md), and [`adr/0026-dependency-license-policy.md`](adr/0026-dependency-license-policy.md) section C | Before Bootstrap is taken, and no later than the first `.cshtml` |
 | No colour palette, contrast target, or accessibility standard is decided for the end-user surface | [`adr/0072-ui-rendering-stack.md`](adr/0072-ui-rendering-stack.md) owns the surface; [`design/11-login-consent-ui.md`](design/11-login-consent-ui.md) section 5.5 bounds the tokens | Before the login pages ship |
 | No tool is decided for driving a browser to author an end-to-end test, and adopting one is an inventory row rather than a configuration file | [`adr/0025-local-development-and-first-run.md`](adr/0025-local-development-and-first-run.md) parameter E scopes Playwright and names no authoring tool; [`adr/0026-dependency-license-policy.md:55`](adr/0026-dependency-license-policy.md) sets what the adoption owes | Before the first admin end-to-end test, M1 |
-| Playwright still has no row in the licence record, and it is the first dependency here read to bundle a second licence behind a correctly declared one. The three prose sources were corrected on 2026-08-07; the record itself was not written | [`DEPENDENCY-LICENSES.md`](DEPENDENCY-LICENSES.md) section 3, where section 3.2 is the precedent: a package not yet adopted, recorded because documents here stated its licence wrongly | Before the Playwright pin is added |
 | Two citation defects that `.claude/rules/localization.md` inherited rather than introduced, read at source 2026-08-07. **(a)** `razor.md:94` and `html-css.md:114` both cite `ADR-0092:147` for the four-item quote "Razor markup, SQL held outside C#, Dockerfiles, or GitHub Actions workflow definitions", whose fourth item completes at `ADR-0092:148`. **(b)** `razor.md:99` and `html-css.md:121` both say "The local hook stages `-- '*.md'`", but `scripts/hooks/pre-commit:25` reads a list that is **already** staged rather than staging anything. Four instances across two files. `localization.md` carries the corrected form of both, so three rules files now spell the same two facts two ways | [`../.claude/rules/razor.md`](../.claude/rules/razor.md) and [`../.claude/rules/html-css.md`](../.claude/rules/html-css.md), each for its own two lines | The next edit to either file. Out of scope on 2026-08-07 for two reasons: the approved spec for that increment covered `localization.md` only, and a parallel session had both files staged |
 | [`design/23-configuration-and-client-declaration.md:153`](design/23-configuration-and-client-declaration.md) lists `BackchannelLogoutUri` in its "Definition field" column, and its own class diagram at `23:70-88` does not declare it. Three sources put the field on the Application write path instead: [`design/15-admin-api.md:133`](design/15-admin-api.md) and `:141` carry it on `ApplicationDto` and `ApplicationPolicyDto`, and [`adr/0019-single-logout-strategy.md:49`](adr/0019-single-logout-strategy.md) calls it "a new field on the Application". So `ClientDefinition` was landed with seventeen members and not eighteen | [`design/23-configuration-and-client-declaration.md`](design/23-configuration-and-client-declaration.md) section 4, which is the table that carries the row | The next edit to design 23, or the admin API increment, whichever comes first. Out of scope on 2026-08-08 because correcting a design is its own decision, and the approved plan for that increment was to flag it |
 | [`design/23-configuration-and-client-declaration.md`](design/23-configuration-and-client-declaration.md) section 9 lists seven test bullets and **none covers the definition model's own defaults**, which section 8 of the same document calls the entire security argument for the layer. The tests now exist and the design still does not ask for them, so what is left is the document owing an eighth bullet. The other six bullets stay blocked on the mapper, the seeder, or the configuration binder | [`design/23-configuration-and-client-declaration.md`](design/23-configuration-and-client-declaration.md) section 9 owns the test list | The next edit to design 23, or the mapper, whichever comes first |
@@ -73,10 +99,17 @@ Not scheduled. Each has a decision or a document that already names it.
 | Five invariants that no section 5.1 rule covers: the `AccessTokenType` domain, `AuthMethod` agreeing with the credential actually present, `AbsoluteRefreshLifetime` being positive and inside the ADR-0004 ceiling, `AllowedCorsOrigins` being scheme, host, and port with no path, and a code-flow client having at least one redirect URI. Each is constructible today and passes all seven stated invariants | [`design/23-configuration-and-client-declaration.md`](design/23-configuration-and-client-declaration.md) section 5.1, which is the fail-closed list | The mapper |
 | **Not verified**: whether `.ValidateDataAnnotations()` on `AddOptions<List<ClientDefinition>>()` validates the list's elements at all. `design/23:356-357` wires it and `23:454` requires a missing value to fail at start-up, but `ClientDefinition` carries no data-annotation attribute, so the call may read as enforcement while checking nothing. That is this repository's inert-gate pattern arriving through a design rather than through a script | [`design/23-configuration-and-client-declaration.md`](design/23-configuration-and-client-declaration.md) section 6 | When the configuration packages land, which is also what unblocks the `required`-binder question in section 3 |
 
-**Seven rows moved to [`SEEDS.md`](SEEDS.md) on 2026-08-08**, as seeds S-007 and S-012 through
-S-017. Three of them were absence claims and their searches moved with them, which is the point
-of the move rather than a side effect: a seed may be cited and a row here may not, so a search
-recorded here could never be pointed at by the work that depended on it.
+**Ten rows moved to [`SEEDS.md`](SEEDS.md) on 2026-08-08.** Seven went first, as seeds S-007 and
+S-012 through S-017. Three of them were absence claims and their searches moved with them, which
+is the point of the move rather than a side effect: a seed may be cited and a row here may not, so
+a search recorded here could never be pointed at by the work that depended on it.
+
+**Three more went later the same day and went late**, which is a defect in how they moved rather
+than in where they landed. The stack-of-record reconciliation became **S-023**, and the Bootstrap
+and Playwright licence rows were folded into **S-027**. All three sat in both files at once until
+the rows were deleted, against the rule in section 0 that a row leaves here in the same change that
+creates its seed. **Their evidence moved with them**, so the Bootstrap and Playwright searches that
+used to be written out below now live in S-027 and are not repeated here.
 
 The DocFX row is an absence claim, so the search is recorded with it. Seven spellings were
 searched across `docs/adr/` on 2026-08-03 and all seven returned nothing: `DocFX`, `docfx`,
@@ -84,35 +117,34 @@ searched across `docs/adr/` on 2026-08-03 and all seven returned nothing: `DocFX
 `documentation file`. `design/21-cicd-and-deployment.md:232-233` states the requirement; the
 design layer realizes decisions and does not make them, so the entry has no owner.
 
-**The accessibility row and the Bootstrap row arrived on 2026-08-07 with
-[`../.claude/rules/html-css.md`](../.claude/rules/html-css.md), and both are absence claims, so both
-carry their searches.** They are named here rather than placed, because two further rows landed
-below them the same day and "the last two rows" stopped resolving to them. The accessibility row:
-twenty-one spellings returned zero hits each over
+**The accessibility row arrived on 2026-08-07 with
+[`../.claude/rules/html-css.md`](../.claude/rules/html-css.md), and it is an absence claim, so it
+carries its search.** Twenty-one spellings returned zero hits each over
 every tracked file at `10df955`, listed in that file's "What is genuinely not decided" section, and
 `WCAG` is one of them. Three places do resolve, and naming them here stops a later reader
 re-finding them as coverage. `adr/0042-abuse-and-bot-defense.md:70` is a consequence of rejecting a
 CAPTCHA, and `design/16-admin-app.md:27` and `:126` are the **admin console**, which "uses its own
 theme" and is not the end-user surface. So design `16`:126 is the only accessibility posture decided
-anywhere, and it does not reach the login pages. The Bootstrap row: `adr/0072-ui-rendering-stack.md`
-line 103 credits ADR-0026 with requiring a permissive licence for Bootstrap, and searching
-`adr/0026-dependency-license-policy.md` for `bootstrap`, `css`, `frontend`, `front-end`, `npm`, and
-`javascript` returned zero hits the same day, so the rule is the general policy applied rather than
-a specific one to quote. `DEPENDENCY-LICENSES.md` has no Bootstrap row: its only `bootstrap` hit is
-line 114, inside the JMeter bundle enumeration.
+anywhere, and it does not reach the login pages.
 
-**The browser-driving row and the Playwright licence row arrived on 2026-08-07 with
+**The Bootstrap licence row arrived beside it and left on 2026-08-08 into S-027**, which carries
+its search. It is named here only so a reader arriving from an older commit is not left looking for
+it.
+
+**The browser-driving row arrived on 2026-08-07 with
 [`../.claude/skills/generating-a-playwright-test/SKILL.md`](../.claude/skills/generating-a-playwright-test/SKILL.md),
-and the first is an absence claim, so it carries its search.** Ten spellings returned zero hits
+and it is an absence claim, so it carries its search.** Ten spellings returned zero hits
 each over every tracked file at `10df955`, outside `.claude/skills/`: `playwright mcp`,
 `.mcp.json`, `code generation`, `record the browser`, `browser automation`, `test generation`,
 `generate a test`, `scaffold a test`, `trace viewer`, and `inspector`. Two searches did return
 hits and neither is a tool this repository runs, so naming them stops a later reader re-finding
 them as coverage. `codegen` returned `.gitignore:271`, which is `orleans.codegen.cs` in the
 standard ignore template. `mcp server` returned five files, and all five are the
-authorization-server role ADR-0064 proposes rather than a development tool. The Playwright
-licence row is not an absence claim: `DEPENDENCY-LICENSES.md` still has **no** `playwright` hit,
-and that missing row is the item.
+authorization-server role ADR-0064 proposes rather than a development tool.
+
+**The Playwright licence row arrived beside it and left on 2026-08-08 into S-027.** It was never
+an absence claim about a search; the missing row was the item itself, and S-027 now owns it
+together with the Bootstrap and OpenTofu instances of the same shape.
 
 ## 3. Not verified
 

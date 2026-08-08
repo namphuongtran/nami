@@ -12,6 +12,32 @@ deleted in the same change.
 **This file decides nothing.** Every seed points at the ADR, design, or source file that owns its
 subject. Where a seed and its owner disagree, the seed is the bug.
 
+## Where the work stands
+
+**Front of the work: S-007.** It is the only door into the chain that reaches running code, and it has
+no blocker. Nothing else in this file is a prerequisite for it.
+
+The handoff it continues, stated once and not restated: the last code increment is commit `8e19123`,
+`Nami.Identity.Core`, and `BUILD-PLAN.md` section 1 records that **S-007 through S-011 plus S-016 are
+what PR-7 did not deliver**, that being the engine wiring and the first slice. What happened in that
+increment is in its commit message, and the traps it produced are in
+[`../src/CLAUDE.md`](../src/CLAUDE.md) and [`../tests/CLAUDE.md`](../tests/CLAUDE.md). None of it is
+copied here.
+
+**Eleven seeds closed on 2026-08-08 and every one was documentation.** No code moved between `8e19123`
+and S-007. That is worth knowing before reading the closed seeds as progress toward a milestone: they
+paid down citation and transcription debt that the OpenIddict pin bump exposed, and the bump was the
+probe rather than the cause.
+
+**What the two trackers each hold**, because the boundary leaked on 2026-08-08 and three items lived in
+both files at once:
+
+| Where | Holds | May be cited |
+|---|---|---|
+| this file | scheduled work, and each seed's own dated result | yes, by anything |
+| [`BUILD-PLAN.md`](BUILD-PLAN.md) | items owed with an owner and a trigger, claims not verified, and one thin pointer at the front of the work | **no**, by nothing |
+| git | what actually happened, per commit | not a document |
+
 ## How to read the chain
 
 A seed with `Blocked by: none` is actionable today. Start there. When a seed is done, read its
@@ -69,7 +95,7 @@ graph LR
 | S-024 | Correct view 03's inverted `DbContext` pooling row, and read the other eight | done | none |
 | S-025 | Un-pin ADR-0030's seam range, as ADR-0021 already did to its own | done | none |
 | S-026 | Correct the two ADRs that label ADR-0018 by the option it declined | done | none |
-| S-027 | Give OpenTofu a licence-record row, its MPL-2.0 exception being unrecorded | open | none |
+| S-027 | Give the three stack entries with no licence row one: OpenTofu, Bootstrap 5, Playwright | open | none |
 
 ---
 
@@ -632,16 +658,35 @@ as what `Core` references, or design 04 is corrected instead and the same check 
 - `DEPENDENCY-LICENSES.md` gains a restore-graph enumeration in the style of its section 3.1, read
   from `src/Nami.Identity.Core/obj/project.assets.json` after restore, with every node's licence
   read at its own nuspec and the date recorded.
-- **The two inert architecture facts become live**, and the seed proves it rather than asserting it.
+- **The reflection facts gain something to catch**, and the seed proves it rather than asserting it.
   Measured 2026-08-08, `Nami.Identity.Core.dll`'s reference table held only `System.*` and
-  `Microsoft.Extensions.*`, so `CoreReferencesNoAdapterOrDatabaseProviderOrCloudSdk` and
-  `CoreReferencesNoSiblingNamiPackageExceptAbstractions` were both asserting an empty set that was
-  empty for a reason other than the rule. After this seed, at least one engine assembly appears in
-  that table, and the class remarks recording the inert state are updated to say so.
+  `Microsoft.Extensions.*`. After this seed at least one engine assembly appears in that table, and the
+  class remarks recording the current state are updated to say so.
+
+  **This bullet said "the two inert architecture facts" until 2026-08-08 and that overstated the
+  problem.** Read at
+  `tests/Nami.Identity.ArchitectureTests/CoreDependencyRuleTests.cs:18-37`, the accurate position is
+  three claims, not two, and they are not all the same:
+  - `CoreTypesDependOnNothingOutsideTheFramework` reads the **type graph**, not the reference table, so
+    the elision limit does not reach it.
+  - `CoreReferencesNoAdapterOrDatabaseProviderOrCloudSdk` reads the reference table, and its forbidden
+    prefixes match nothing there today. The table is not empty; it holds nothing forbidden.
+  - `CoreReferencesNoSiblingNamiPackageExceptAbstractions` is the one that "currently asserts an empty
+    set that is empty for a reason other than the rule it states", in the file's own words:
+    `Nami.Identity.Abstractions` is referenced by the project yet absent from the assembly's reference
+    table, because no `Core` type touches it and an unused reference is elided from metadata.
+
+  **"Cannot be failed on purpose" is the wrong summary, and the file says so.** Both reflection facts
+  **were** failed on purpose on 2026-08-08, by pointing them at a reference that is present:
+  `Microsoft.Extensions.Options` in the forbidden list failed the second, and aiming the third's prefix
+  filter at `Microsoft.Extensions.` failed it too. So the mechanism is proven to read the real table.
+  What is unproven is that the lists have anything to catch today, and the file states plainly that
+  "the two claims are different". Carry that distinction into this seed's result rather than collapsing
+  it.
 
 **Verification.** All nine gates. Then plant a forbidden reference and watch
-`CoreReferencesNoAdapterOrDatabaseProviderOrCloudSdk` fail, which is the check that could not be run
-before this seed.
+`CoreReferencesNoAdapterOrDatabaseProviderOrCloudSdk` fail **on a real engine assembly** rather than on
+a planted framework prefix, which is the check that could not be run before this seed.
 
 **Sources.** `src/CLAUDE.md`, the section on versions living in `Directory.Packages.props`;
 `tests/Nami.Identity.ArchitectureTests/CoreDependencyRuleTests.cs`, the class remarks recording the
@@ -1496,6 +1541,14 @@ this ADR's own 2026-07-25 entry already says the remaining rows deserve before G
 
 **Status:** blocked · **Blocked by:** S-022 · **Unblocks:** nothing yet
 
+**This seed arrived from the work queue, and its queue row was deleted late.** The row read
+"Reconciling the stack-of-record table against `Directory.Packages.props`", owned by `0061:84`, with
+the trigger "M1, and it is no longer blocked: the manifest exists". `.claude/rules/seeds.md` requires
+that row to be deleted in the same change that creates the seed. It was not: this seed landed
+2026-08-08 with S-004 and the row survived until the same day's cleanup, so the item lived in both
+files at once. **That is the boundary leaking, and it is the defect the rule exists to prevent**, so it
+is recorded here rather than fixed silently. Two other rows leaked the same way and went into S-027.
+
 **The trigger, quoted, and the measurement that fired it.**
 `docs/adr/0061-technology-stack-of-record.md:86` says to "Wire the check when the manifest carries
 runtime packages, and until then the human step above is still the whole of it". It also explains why
@@ -1581,56 +1634,81 @@ it. By S-001's bucket test that is bucket B, a closed record with a date, so it 
 
 ---
 
-## S-027. Give OpenTofu a licence-record row, its MPL-2.0 exception being unrecorded
+## S-027. Give the three stack entries with no licence row one: OpenTofu, Bootstrap 5, Playwright
 
 **Status:** open · **Blocked by:** none · **Unblocks:** nothing yet
 
-**The gap, with the searches that establish it.** `docs/adr/0026-dependency-license-policy.md:36`
-reads "Case-by-case, needing Architect and Legal approval recorded as an exception: MPL-2.0 and LGPL
-(file/dynamic-link scope)". OpenTofu is MPL-2.0: `docs/adr/0023-iac-tool-opentofu.md:6` and `:26` both write
-"OpenTofu (MPL-2.0, Linux Foundation)", and `docs/adr/0061-technology-stack-of-record.md:65` carries it
-as the "Infrastructure as code" stack row. Searched 2026-08-08 over
-`docs/DEPENDENCY-LICENSES.md` for both `OpenTofu` and `tofu`, case-insensitively, **zero hits**. So the
-exception ADR-0026 requires be recorded is not recorded anywhere.
+**Three instances of one shape, and the first draft of this seed had only one.** S-024 found OpenTofu
+by reading a constraint row, and this seed was opened for it alone. The work queue already held the
+other two, so the seed presented a pattern as a single case. Both queue rows were deleted into this
+seed on 2026-08-08, and **their evidence came with them**, which is the half a bare deletion loses.
 
-**Why this is not merely a missing row.** Five comparable external tools do have rows: Apache JMeter
-and cosign in section 2, and Trivy, gitleaks, and OWASP ZAP in section 6, read 2026-08-08. So the
-absence is not a policy that external tools are out of scope. It is one tool missed, and it happens to
-be the one whose licence is the only non-permissive one in the stack table.
+| Stack entry | Owning ADR, and the stack row | Licence-record hits, searched 2026-08-08 |
+|---|---|---|
+| **OpenTofu**, MPL-2.0 | `0023:6` and `:26`, both writing "OpenTofu (MPL-2.0, Linux Foundation)"; row at `0061:65` | **zero**, for both `OpenTofu` and `tofu`, case-insensitively |
+| **Bootstrap 5** | ADR-0072 owns the rendering surface; row at `0061:59`, which cites `0020, 0072` | **no row.** The only `bootstrap` hit is `DEPENDENCY-LICENSES.md:114`, inside the JMeter bundle enumeration, so a plain count reads as one and is not a row |
+| **Playwright** | ADR-0025 parameter E scopes it; row at `0061:66`, which cites `0025, 0060, 0070` | **zero** for `playwright` |
 
-**How it was found, which is the argument for the wider pass.** Not by auditing the licence record.
-S-024 read view 03's nine constraint rows against their owning ADRs, and the Infrastructure-as-code row
-named the licence in passing. `0061:84` already records why this class survives: the guardrail
-"compares two lists that are both derived from this repository's own markup ... It therefore catches a
-disagreement between them and is blind to a shared omission."
+**The evidence that arrived with the two queue rows, so that deleting them lost nothing.**
+
+- **Bootstrap.** `adr/0072-ui-rendering-stack.md:103` credits ADR-0026 with requiring a permissive
+  licence for Bootstrap. Searching `adr/0026-dependency-license-policy.md` for `bootstrap`, `css`,
+  `frontend`, `front-end`, `npm`, and `javascript` returned **zero hits** on 2026-08-07, so what
+  ADR-0072 cites is the general policy applied rather than a specific clause to quote. Bootstrap also
+  **has no version pin**, which is the second half of that queue row and is not a licence question.
+- **Playwright.** It was never an absence claim about a search: the missing row **is** the item. It is
+  also "the first dependency here read to bundle a second licence behind a correctly declared one", and
+  three prose sources were corrected on 2026-08-07 while the record itself was not written.
+  `DEPENDENCY-LICENSES.md` section 3.2 is the precedent, a package not yet adopted recorded because
+  documents here stated its licence wrongly.
+
+**Why one seed and not three.** One reasoning covers all three: a stack-of-record entry whose licence
+nothing in the record carries. Splitting them would put the same paragraph in three places, which is
+the duplication this repository keeps paying for. None of the three is an ADR change, so the
+one-ADR-per-commit rule does not force a split either.
+
+**Why the class survives at all.** None of the three was found by auditing the licence record. OpenTofu
+came out of S-024 reading a constraint row; the other two came out of writing a rules file and a skill.
+`0061:84` records the mechanism: the guardrail "compares two lists that are both derived from this
+repository's own markup ... It therefore catches a disagreement between them and is blind to a shared
+omission." A stack entry with no licence row is exactly that shared omission.
 
 **End state.**
 
-- OpenTofu has a row in `docs/DEPENDENCY-LICENSES.md`, in the section its nature fits, with the licence
-  read at the distributed artifact rather than from ADR-0023 or from a badge, and with the read date.
-  Section 7's rule is explicit that a licence is "never recorded from ... another document in this
-  repository", so ADR-0023 is the pointer to what to read, not the evidence.
-- The row states whether the ADR-0026 MPL-2.0 exception has actually been approved by Architect and
-  Legal, or records plainly that it has not. **The second is an acceptable outcome and the more likely
-  one**, because ADR-0023 was decided 2026-07 and no approval appears in the record. Writing "not yet
-  approved" is the deliverable; inventing an approval is the failure.
-- Section 7's composition rule is considered: OpenTofu is distributed as a release archive, so what it
-  bundles is read before its licence is trusted, in the shape section 2.1 already worked for JMeter.
+- Each of the three has a row in `docs/DEPENDENCY-LICENSES.md`, in the section its nature fits, with
+  the licence **read at the distributed artifact** and the read date recorded. Section 7 is explicit
+  that a licence is "never recorded from ... another document in this repository", so ADR-0023,
+  ADR-0072, and ADR-0025 are pointers to what to read, never the evidence.
+- **OpenTofu's row says whether the ADR-0026 MPL-2.0 exception is actually approved.** `0026:36` reads
+  "Case-by-case, needing Architect and Legal approval recorded as an exception: MPL-2.0 and LGPL
+  (file/dynamic-link scope)". Recording plainly that no approval exists is an acceptable and the more
+  likely outcome; inventing one is the failure.
+- Section 7's composition rule is applied where it bites. OpenTofu ships as a release archive, and
+  Playwright is the case that already caught this repository once by bundling a second licence, so what
+  each bundles is read before its root licence is trusted, in the shape section 2.1 worked for JMeter.
+  Bootstrap is a CSS and JavaScript distribution, so the same question reaches it.
+- **Bootstrap's missing version pin is named as still open rather than silently closed**, because a pin
+  belongs to ADR-0072 and ADR-0026 section C rather than to a licence read.
 
-**Verification.** `git grep -nic "opentofu" -- docs/DEPENDENCY-LICENSES.md` returns a non-zero count.
-`bash scripts/check-adrs.sh` and `markdownlint-cli2`. The licence is quoted from the artifact with its
-read location and date, and a reader can tell from the row whether the exception is approved or open.
+**Verification.** `git grep -nic "opentofu" -- docs/DEPENDENCY-LICENSES.md` returns non-zero, and the
+same for `playwright`. For Bootstrap the count is already non-zero, so the check is a **read**: the file
+holds a Bootstrap row of its own rather than only the JMeter bundle line at `:114`. Then
+`bash scripts/check-adrs.sh`, `python3 scripts/check-decisions-index.py`, and `markdownlint-cli2`. Each
+licence is quoted from its artifact with the read location and date, and a reader can tell from
+OpenTofu's row whether its exception is approved or open.
 
-**Sources.** `docs/adr/0026-dependency-license-policy.md:36` for the MPL-2.0 route;
-`docs/adr/0023-iac-tool-opentofu.md:6` and `:26` for the licence claim;
-`docs/adr/0061-technology-stack-of-record.md:65` for the stack row; `docs/DEPENDENCY-LICENSES.md`
-section 2 for the external-tool shape, section 2.1 for a worked composition read, and section 7 for the
-read-at-source and composition rules; `0061:84` for the shared-omission blind spot. Every one read
-2026-08-08.
+**Sources.** `docs/adr/0026-dependency-license-policy.md:36`;
+`docs/adr/0023-iac-tool-opentofu.md:6` and `:26`; `docs/adr/0072-ui-rendering-stack.md:103`;
+`docs/adr/0061-technology-stack-of-record.md:59`, `:65`, and `:66`, all three read rather than assumed;
+`docs/DEPENDENCY-LICENSES.md` section 2 for the external-tool shape, `:114` for the JMeter bundle line
+that is not a Bootstrap row, section 3.2 for the not-yet-adopted precedent, and section 7 for the
+read-at-source and composition rules; `0061:84` for the shared-omission blind spot. Read 2026-08-08,
+except the two searches dated 2026-08-07, which arrived with their queue rows.
 
-**Out of scope.** Re-deciding OpenTofu, which ADR-0023 owns. Auditing every other stack row for a
-missing licence row, which is the wider pass this finding argues for and which deserves its own seed
-with its own enumeration.
+**Out of scope.** Re-deciding any of the three, which ADR-0023, ADR-0072, and ADR-0025 own. Pinning a
+Bootstrap version. Auditing **every** stack-of-record row for a missing licence row: that wider pass is
+what these three argue for, and it needs its own enumeration rather than an assumption that three is
+the total.
 
 ---
 
