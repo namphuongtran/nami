@@ -17,6 +17,8 @@ Nami.Identity.Core.NamiIdentityOptions.MigrateOnStartup.set -> void
 Nami.Identity.Core.NamiIdentityOptions.NamiIdentityOptions() -> void
 Nami.Identity.Core.NamiIdentityOptions.RefreshTokenLifetime.get -> System.TimeSpan
 Nami.Identity.Core.NamiIdentityOptions.RefreshTokenLifetime.set -> void
+Nami.Identity.Core.NamiIdentityOptions.RefreshTokenReuseLeeway.get -> System.TimeSpan
+Nami.Identity.Core.NamiIdentityOptions.RefreshTokenReuseLeeway.set -> void
 Nami.Identity.Core.NamiIdentityOptions.RegistrationKey.get -> string?
 Nami.Identity.Core.NamiIdentityOptions.RegistrationKey.set -> void
 Nami.Identity.Core.NamiIdentityOptions.RequireHttps.get -> bool

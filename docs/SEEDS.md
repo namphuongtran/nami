@@ -97,6 +97,9 @@ graph LR
 | S-026 | Correct the two ADRs that label ADR-0018 by the option it declined | done | none |
 | S-027 | Give the three stack entries with no licence row one: OpenTofu, Bootstrap 5, Playwright | open | none |
 | S-028 | Re-read design 04 section 3's API names at 7.6.0, split out of S-010 | done | S-009 done |
+| S-029 | Give `RefreshTokenReuseLeeway` a member and rename its key to match | done | S-028 done |
+| S-030 | Resolve `ClockSkewToleranceSeconds`, a key for something design 04 calls a constant | open | none |
+| S-031 | Resolve `EndpointPaths:*`, ten keys with no member and no options type | open | none |
 
 ---
 
@@ -1913,6 +1916,142 @@ except the two searches dated 2026-08-07, which arrived with their queue rows.
 Bootstrap version. Auditing **every** stack-of-record row for a missing licence row: that wider pass is
 what these three argue for, and it needs its own enumeration rather than an assumption that three is
 the total.
+
+---
+
+## S-029. Give `RefreshTokenReuseLeeway` a member and rename its key to match
+
+**Status:** done · **Blocked by:** S-028, which is done · **Unblocks:** S-010
+
+**The gap S-028 found.** Design 04 section 6 named `Nami:Protocol:RefreshReuseLeewaySeconds` and
+`NamiIdentityOptions` carried no member for it, so section 3's
+`SetRefreshTokenReuseLeeway(TimeSpan.FromSeconds(30))` had nothing configured to read. One of three
+such keys, and the only one the wiring block actually calls, so the only one blocking S-010.
+
+**Who owns what, read before deciding, because three documents could have.** ADR-0096 parameter A
+fixes each member's type, nullability, and accessor, and **does not own the roster**: `0096:36` defers
+to "members `design/01` section 3.4 lists", and `0096:49` records that `RegistrationKey` arrives from
+ADR-0032 instead. Parameter F assigns each key to "the design that owns that member's subject". So
+adding a member is a `design/01` change and assigning its key is a `design/04` change, and neither is
+an ADR amendment.
+
+### S-029 result, measured 2026-08-08
+
+`NamiIdentityOptions.RefreshTokenReuseLeeway` exists as a `TimeSpan` defaulting to 30 seconds, design
+01 section 3.4 carries its row, and design 04's key is renamed to `Nami:Protocol:RefreshTokenReuseLeeway`.
+
+**Renaming was free today and would not be later.** ADR-0044 parameter I makes a configuration key
+part of the versioned surface: adding one with a default is MINOR and **renaming one is MAJOR**.
+Searched 2026-08-08, all three memberless keys occur in `docs/design/04-core-protocol.md` and nowhere
+else in `docs/`, and nothing ships, so the rename costs nothing now and would cost a major later.
+
+**The `Seconds` suffix decided the direction.** The two sibling lifetimes are `TimeSpan`, and the .NET
+configuration binder reads `"00:00:30"` into a `TimeSpan` and not `"30"`. Keeping the suffix would have
+forced an `int` member inconsistent with its neighbours, so the key moved to match the type rather than
+the type to match the key.
+
+**The value equals the engine's own default, and that was verified rather than assumed.** `ADR-0004:34`
+states both halves: "Reuse leeway: 30 seconds, set through `SetRefreshTokenReuseLeeway` (the OpenIddict
+default …)". Read at 7.6.0, `OpenIddictServerOptions.RefreshTokenReuseLeeway` initialises to
+`TimeSpan.FromSeconds(30)` and its own summary says "The default value is 30 seconds". So the
+repository's "a stated value is not a known default" rule was already satisfied by ADR-0004, and this
+seed confirmed the second half still holds at the new pin. `ADR-0004:74` also records that the value was
+corrected from 15s to 30s on 2026-07-01 after 15s was found to sit below typical network timeouts.
+
+**Nami's member is non-nullable and the engine's is `TimeSpan?`.** On the engine, null means "use the
+engine default". Nami has a default of its own, so there is no state for null to express, and the two
+sibling lifetimes are non-nullable for the same reason. Recorded on the member.
+
+**The public-API gate bit, and it was allowed to.** The build failed with two `RS0016` diagnostics
+naming the new getter and setter before `PublicAPI.Unshipped.txt` was updated. That is ADR-0044
+parameter A's forcing function doing its job, and the two lines were added from the analyzer's own
+message rather than hand-guessed.
+
+**A unit fact pins the default**, and it is worth having precisely because the value equals the
+engine's: the two are independent declarations, so nothing mechanical would notice Nami's copy
+drifting.
+
+**Verification.** All nine gates, and the fact was watched to fail: deleting the initializer left the
+build, format, and API file untouched and failed exactly one unit fact.
+
+**Out of scope.** The other two memberless keys, which are S-030 and S-031. Writing the wiring, which
+is S-010.
+
+---
+
+## S-030. Resolve `ClockSkewToleranceSeconds`, a key for something design 04 calls a constant
+
+**Status:** open · **Blocked by:** none · **Unblocks:** nothing yet
+
+**The contradiction, quoted from one document.** `docs/design/04-core-protocol.md:872` lists
+`Nami:Protocol:ClockSkewToleranceSeconds` as a configuration key, "60; the one constant for every
+cross-node timestamp comparison". `:468` names the value as `ProtocolConstants.ClockSkewTolerance`. A
+key implies an operator may change it; a constant implies nobody may. Both are in the same section 6
+neighbourhood of the same file.
+
+**It is not an engine setting, which is what makes it different from S-029's key.** Searched
+2026-08-08 over `OpenIddictServerBuilder.cs` at the 7.6.0 commit, `ClockSkew` returns **zero** hits.
+There is no OpenIddict clock-skew server option, so this value is consumed only by Nami's own
+refresh-anchor logic at `04:455`, `:521`, `:964`, and `:991`.
+
+**`ProtocolConstants` does not exist in code.** `git grep -rn "ProtocolConstants" -- src/ tests/`
+returned nothing on 2026-08-08, so neither the constant nor the key is realised anywhere.
+
+**End state.** One of three, and the seed says which it chose and why: the value becomes an option
+member with the key, following S-029's shape; or `ProtocolConstants.ClockSkewTolerance` is declared as
+a real constant and the key is **removed** from section 6, with the removal noted as free because
+nothing ships; or the key stays and the word "constant" goes, which requires saying what an operator
+changing it would break across nodes.
+
+**Verification.** `bash scripts/check-adrs.sh` and `markdownlint-cli2`. Then read section 6 and
+`:468` together and confirm they no longer describe the same value two ways.
+
+**Sources.** `docs/design/04-core-protocol.md:872`, `:468`, `:455`, `:521`, `:964`, `:991`;
+`docs/adr/0044-public-api-stability-and-semver.md:42` for what a key costs;
+`docs/adr/0096-fluent-builder-api-surface.md:121` parameter F for who assigns one. Every one read
+2026-08-08.
+
+**Out of scope.** The refresh-anchor logic itself, which design 04 section 4 owns. `EndpointPaths`,
+which is S-031.
+
+---
+
+## S-031. Resolve `EndpointPaths:*`, ten keys with no member and no options type
+
+**Status:** open · **Blocked by:** none · **Unblocks:** nothing yet
+
+**The gap.** `docs/design/04-core-protocol.md:874` lists `Nami:Protocol:EndpointPaths:*` as "The
+configurable path strings; the method names are the fixed seam". Section 3 sets all ten with string
+literals, and `NamiIdentityOptions` has no member for any of them. So the paths are documented as
+configurable and are not.
+
+**Why it is the largest of the three.** It is not one key but a sub-section of ten, which needs a
+nested options type rather than a property, and each path is a public contract under ADR-0044
+parameter I once it exists. The ten are the authorization, token, userinfo, introspection, revocation,
+end-session, device-authorization, end-user-verification, pushed-authorization, and JWKS endpoints,
+read from section 3 on 2026-08-08.
+
+**One thing already settled that bounds it.** Section 6 says "the method names are the fixed seam",
+and `ADR-0048:34` records that OpenIddict "auto-paths only discovery and JWKS", so an endpoint with no
+`Set*EndpointUris` call does not exist. So configurability is about the path strings only, never about
+which endpoints exist.
+
+**End state.** Either a nested options type carries the ten with the section 3 literals as defaults
+and the key becomes real, or the key is removed and section 3's literals are stated as fixed, with the
+reason. The seed says which and why, and if it adds the type it says what each default is and where it
+was read.
+
+**Verification.** `bash scripts/check-adrs.sh`, `python3 scripts/check-decisions-index.py`, and
+`markdownlint-cli2`. If a type is added, all nine gates plus a unit fact per default path, each
+watched to fail, on the same reasoning as S-029's.
+
+**Sources.** `docs/design/04-core-protocol.md:874` for the key, section 3 for the ten literals,
+`docs/adr/0048-introspection-revocation-endpoint-isolation.md:34` for the auto-pathing limit;
+`docs/adr/0044-public-api-stability-and-semver.md:42` for what a path key costs. Every one read
+2026-08-08.
+
+**Out of scope.** Which endpoints exist, which ADR-0014 and ADR-0048 own. The two other memberless
+keys, which are S-029 and S-030.
 
 ---
 

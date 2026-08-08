@@ -318,6 +318,7 @@ below is that ADR's, not this document's.
 | `SigningAlgorithm` | `SigningAlgorithm` | `RS256`, with `ES256` selectable | ADR-0005 |
 | `AccessTokenLifetime` | `TimeSpan` | 15 minutes | ADR-0004 |
 | `RefreshTokenLifetime` | `TimeSpan` | 8 hours absolute | ADR-0004 |
+| `RefreshTokenReuseLeeway` | `TimeSpan` | 30 seconds, which is also the engine's own default | ADR-0004 |
 | `SessionInactivity` / `SessionAbsolute` | `TimeSpan` | 1 hour / 8 hours | ADR-0003 |
 | `AccessTokenEncryption` | `bool` | disabled, so the access token is a plain signed JWT | ADR-0005 |
 | `RequireHttps` | `bool` | `true`, relaxed only in development | ADR-0076 |

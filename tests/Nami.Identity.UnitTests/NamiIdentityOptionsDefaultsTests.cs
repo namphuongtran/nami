@@ -78,6 +78,24 @@ public sealed class NamiIdentityOptionsDefaultsTests
     public void GivenUnconfiguredOptions_WhenTheRefreshTokenLifetimeIsRead_ThenItIsEightHours() =>
         Assert.Equal(TimeSpan.FromHours(8), UnconfiguredOptions().RefreshTokenLifetime);
 
+    /// <summary>
+    /// ADR-0004:34: "Reuse leeway: 30 seconds, set through
+    /// <c>SetRefreshTokenReuseLeeway</c> (the OpenIddict default …)".
+    /// </summary>
+    /// <remarks>
+    /// <b>This fact pins a value that equals the engine's own default, and it is
+    /// worth having for exactly that reason.</b> Read at OpenIddict 7.6.0,
+    /// <c>OpenIddictServerOptions.RefreshTokenReuseLeeway</c> initialises to
+    /// <c>TimeSpan.FromSeconds(30)</c>. Nothing mechanical would notice Nami's
+    /// copy drifting away from it, because the two are independent declarations;
+    /// ADR-0004 also records that this value was itself corrected from 15s to 30s
+    /// on 2026-07-01 after 15s was found to sit below typical network timeouts, so
+    /// it is a value with a history rather than an arbitrary one.
+    /// </remarks>
+    [Fact]
+    public void GivenUnconfiguredOptions_WhenTheRefreshReuseLeewayIsRead_ThenItIsThirtySeconds() =>
+        Assert.Equal(TimeSpan.FromSeconds(30), UnconfiguredOptions().RefreshTokenReuseLeeway);
+
     /// <summary>ADR-0003: "inactivity (sliding) 1 hour".</summary>
     [Fact]
     public void GivenUnconfiguredOptions_WhenTheSessionInactivityWindowIsRead_ThenItIsOneHour() =>

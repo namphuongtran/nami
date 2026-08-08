@@ -140,7 +140,8 @@ services.AddOpenIddict()
 
     o.SetAccessTokenLifetime(TimeSpan.FromMinutes(15));
     o.SetRefreshTokenLifetime(TimeSpan.FromHours(8));                 // matches the session, ADR-0003
-    o.SetRefreshTokenReuseLeeway(TimeSpan.FromSeconds(30));           // network-retry race
+    o.SetRefreshTokenReuseLeeway(options.RefreshTokenReuseLeeway);    // network-retry race,
+                                                                     // 30s default, ADR-0004:34
     // Rolling refresh and reuse detection are on by default.
     // Do NOT call DisableRollingRefreshTokens.
 
@@ -868,7 +869,7 @@ section is their origin:
 |---|---|
 | `Nami:Protocol:AccessTokenLifetime` | Default access-token lifetime; 15 minutes |
 | `Nami:Protocol:RefreshTokenLifetime` | Refresh lifetime and the absolute ceiling; 8 hours |
-| `Nami:Protocol:RefreshReuseLeewaySeconds` | 30; must stay above the network-timeout band |
+| `Nami:Protocol:RefreshTokenReuseLeeway` | 30 seconds; must stay above the network-timeout band. **Renamed from `RefreshReuseLeewaySeconds` on 2026-08-08**, see section 11 |
 | `Nami:Protocol:ClockSkewToleranceSeconds` | 60; the one constant for every cross-node timestamp comparison |
 | `Nami:Protocol:SigningAlgorithm` | `RS256` baseline or `ES256` |
 | `Nami:Protocol:EndpointPaths:*` | The configurable path strings; the method names are the fixed seam |
@@ -1122,6 +1123,33 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
     that **cannot fail**, which is a different class of guarantee. The engine-behaviour
     dependency underneath is still registered as a seam,
     [22](22-openiddict-seam-catalogue.md) S35, because that part is genuinely version-pinned.
+* **Corrected 2026-08-08: one of section 6's keys had no member to bind to, and it is renamed**
+  (seed S-029). The key read `Nami:Protocol:RefreshReuseLeewaySeconds` and
+  `NamiIdentityOptions` carried nothing for it, so section 3's
+  `SetRefreshTokenReuseLeeway(TimeSpan.FromSeconds(30))` had no configured value to read. The member
+  now exists as `TimeSpan RefreshTokenReuseLeeway`, assigned by
+  [`01-foundations.md`](01-foundations.md) section 3.4 which owns the roster, and the key is renamed
+  to match it.
+  * **Renaming was free today and would not be later.** ADR-0044 parameter I makes a configuration
+    key part of the versioned surface: adding one with a default is MINOR and **renaming one is
+    MAJOR**. Searched 2026-08-08, all three of this section's memberless keys occur in this file and
+    nowhere else in `docs/`, and nothing ships, so the rename costs nothing now.
+  * **The `Seconds` suffix was the reason to rename rather than to keep.** The two sibling lifetimes
+    are `TimeSpan`, and the .NET configuration binder reads `"00:00:30"` into a `TimeSpan` and not
+    `"30"`. Keeping the suffix would have forced an `int` member inconsistent with its two
+    neighbours, so the key moved to match the type rather than the type to match the key.
+  * **The value equals the engine's own default, and ADR-0004 already said so.** `ADR-0004:34` states
+    both halves, "Reuse leeway: 30 seconds, set through `SetRefreshTokenReuseLeeway` (the OpenIddict
+    default …)". Verified at 7.6.0: `OpenIddictServerOptions.RefreshTokenReuseLeeway` initialises to
+    `TimeSpan.FromSeconds(30)` and its summary says "The default value is 30 seconds". Setting it
+    explicitly is what that ADR asks for, and it means an upstream default change cannot move Nami's
+    behaviour without the diff showing it.
+  * **The other two memberless keys are untouched and each has a seed.**
+    `Nami:Protocol:ClockSkewToleranceSeconds` is **seed S-030**: it configures
+    `ProtocolConstants.ClockSkewTolerance`, which this document calls a constant, and OpenIddict has
+    no clock-skew server option at all (searched `OpenIddictServerBuilder.cs` at 7.6.0, zero hits).
+    `Nami:Protocol:EndpointPaths:*` is **seed S-031**: ten path strings with no member and no nested
+    options type, while section 3 sets them as literals.
 * **Re-read 2026-08-08 at 7.6.0, and one call in section 3 did not compile** (seed S-028). The pin
   moved from 7.5.0, at which every name in that block had been read, so every name was read again at
   the upstream commit `5ce649a5bbbf1340c9be9c4f264197af563ab473` that 7.6.0 declares. **Thirty-three

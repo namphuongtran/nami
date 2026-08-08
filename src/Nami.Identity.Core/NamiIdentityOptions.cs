@@ -51,6 +51,31 @@ public sealed class NamiIdentityOptions
     /// </summary>
     public TimeSpan RefreshTokenLifetime { get; set; } = TimeSpan.FromHours(8);
 
+    /// <summary>
+    /// How long a redeemed rolling refresh token still works, so a client that
+    /// retries through a network timeout is not logged out. Defaults to 30
+    /// seconds (ADR-0004).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>This default equals the engine's own, and that is deliberate rather
+    /// than redundant.</b> Read at OpenIddict 7.6.0,
+    /// <c>OpenIddictServerOptions.RefreshTokenReuseLeeway</c> is initialised to
+    /// <c>TimeSpan.FromSeconds(30)</c> and its own summary says "The default
+    /// value is 30 seconds". ADR-0004 line 34 states both halves: the value is 30
+    /// seconds, and it is "the OpenIddict default". Setting it explicitly is what
+    /// that ADR asks for, and it means an upstream default change cannot move
+    /// Nami's behaviour without the diff showing it.
+    /// </para>
+    /// <para>
+    /// <b>Non-nullable here and nullable on the engine.</b> OpenIddict declares
+    /// <c>TimeSpan?</c>, where null means "use the engine default". Nami has a
+    /// default of its own, so there is no state to express with null, and the two
+    /// sibling lifetimes above are non-nullable for the same reason.
+    /// </para>
+    /// </remarks>
+    public TimeSpan RefreshTokenReuseLeeway { get; set; } = TimeSpan.FromSeconds(30);
+
     /// <summary>The sliding session window. Defaults to 1 hour (ADR-0003).</summary>
     public TimeSpan SessionInactivity { get; set; } = TimeSpan.FromHours(1);
 
