@@ -72,7 +72,28 @@ Chosen option: "Option B, tier-aligned with one keyset per deployment", because 
 
 ## More Information
 
+* **Corrected 2026-08-08: the Related-decisions bullet no longer calls ADR-0018 "pooled DbContext".**
+  [ADR-0018](0018-dbcontext-pooling-for-pool-mode.md) is titled "Register the Pool-mode OpenIddict
+  DbContext **non-pooled** in v1, with pooled-plus-mutable deferred", and `0018:35` chooses the
+  non-pooled scoped `AddDbContext` for v1. So this ADR labelled its sibling by the option that sibling
+  declined. The rest of the bullet is unchanged and was correct: a Silo's own connection does give one
+  keyset per instance, which is what this ADR relies on.
+  * **How it was found matters more than the wording.** It was not found by reading. Seed S-026 was
+    scoped to two other ADRs and its verification asked for a `docs/adr/` sweep to come back clean.
+    The sweep returned this line, so the seed grew from two ADRs to three. A verification that only
+    confirms what the author already believed would have missed it.
+  * **This is the sixth known instance of one defect and the fifth to be repaired.** `0061:145` and
+    `architecture/07-container-view.md:288-290` record the first two, both 2026-07-25. ADR-0066's
+    `Factory` entry was the third and [ADR-0036](0036-database-key-strategy-uuidv7.md)'s
+    Related-decisions bullet the fourth, both 2026-08-08. **One remains**, and seed S-024 owns it:
+    `architecture/03-drivers-and-constraints.md:116`, in the architecture layer rather than in an ADR.
+    `0061:118` predicted this, saying the remaining rows deserved the same pass.
+  * **"Non-pooled" is not the correction, and the enumeration of what is already right lives in
+    ADR-0036's amendment** rather than being copied here, because a second copy of that list is a
+    second place to be wrong. In short: pooling is used per context, three global contexts are pooled
+    (`docs/design/02-data.md:55-59`), and about thirty other lines naming ADR-0018 near the word pool
+    are accurate.
 * Original decision 2026-07-05 (Option B); Option A is a spike-gated upgrade path taken only if co-hosting becomes mandatory.
 * Open follow-ups: Security ratifies the accepted-risk Pool-shared keyset (the pool-group blast radius) before GA and it is documented for adopters; and build-time work refactors `ISigningKeyStore.LoadAsync(scope, ct)`, adds the data-layer backstop (a centralized scope predicate with tests, or RLS), and formalizes the "one keyset per deployment" invariant with a startup assertion.
-* Related decisions: ADR-0001 (the Pool/Silo tier this scopes keys by), ADR-0005 (the encryption-credential lifecycle, the same model for JWE keys), ADR-0011 (the no-restart rotation monitor kept version-only; this is the ADR that amends `LoadAsync(ct)` to `LoadAsync(scope, ct)`), ADR-0018 (pooled DbContext, where a Silo's own connection gives one keyset per instance), ADR-0021 (re-verifying the #1434 seam on each OpenIddict bump), and ADR-0049 (the resource-server issuer/tenant binding that mitigates the shared-key risk at token validation).
+* Related decisions: ADR-0001 (the Pool/Silo tier this scopes keys by), ADR-0005 (the encryption-credential lifecycle, the same model for JWE keys), ADR-0011 (the no-restart rotation monitor kept version-only; this is the ADR that amends `LoadAsync(ct)` to `LoadAsync(scope, ct)`), ADR-0018 (per-context `DbContext` pooling, where a Silo's own connection gives one keyset per instance), ADR-0021 (re-verifying the #1434 seam on each OpenIddict bump), and ADR-0049 (the resource-server issuer/tenant binding that mitigates the shared-key risk at token validation).
 * Imported into this repository and translated in 2026-07, then reconciled against the design corpus on 2026-07-25 to restore the F1, F2, and F49 finding labels in the body, the spike A-5 hypothesis H3 fold-in, and the real name of the multi-tenant dependency. A commercial identity server's community discussion cited as prior art stays generalized; the OpenIddict issue #1434 is kept, being the public issue tracker of a dependency Nami uses, and OSS packages Nami actually depends on are named, per ADR-0026.

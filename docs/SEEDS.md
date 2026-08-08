@@ -1177,19 +1177,41 @@ ADR-0018 among "the pattern-applying ADRs", which over-includes it after the rem
 was consulted on 2026-07-18, so the record of that reading stays. The amendment says so out loud, so the
 looseness is a recorded decision rather than a silent inconsistency for a later agent to "fix".
 
-**The count, stated because this seed kept mis-stating it.** Five instances of the inversion are known.
-`0061:145` and `architecture/07-container-view.md:288-290` are the first two, both repaired 2026-07-25.
-ADR-0066 is the third and ADR-0036 the fourth, both repaired here. **One remains**,
-`architecture/03-drivers-and-constraints.md:116`, and S-024 owns it. A draft of the ADR-0036 amendment
-called that bullet the fifth instance and was corrected before committing.
+**The seed's own verification found a third ADR, so it landed as three commits rather than two.** The
+verification asked for the `docs/adr/` sweep to come back clean.
+`docs/adr/0033-key-scope-isolation-model.md:77` wrote "ADR-0018 (pooled DbContext, where a Silo's own
+connection gives one keyset per instance)", the same defect in the same shape. It was not found by
+reading. **A verification that only confirms what the author already believed would have missed it**,
+and that is the reusable lesson from this seed rather than any of the three wordings.
 
-**Verification.** For each commit: `bash scripts/check-adrs.sh` after `git add`,
+**The count, stated because this seed kept mis-stating it.** **Six** instances are known:
+
+| # | Where | Repaired |
+|---|---|---|
+| 1 | ADR-0061's stack table, recorded at `0061:145` | 2026-07-25 |
+| 2 | `architecture/07-container-view.md`, recorded at `:288-290` | 2026-07-25 |
+| 3 | `ADR-0066:51`, the `Factory` entry | 2026-08-08, this seed |
+| 4 | `ADR-0036:76`, a Related-decisions bullet | 2026-08-08, this seed |
+| 5 | `ADR-0033:77`, a Related-decisions bullet | 2026-08-08, this seed |
+| 6 | `architecture/03-drivers-and-constraints.md:116` | **open, S-024 owns it** |
+
+A draft of the ADR-0036 amendment said five instances and was corrected before committing.
+`0061:118` predicted the whole set, saying the remaining rows deserved the same pass.
+
+**What is not a defect is enumerated once, in ADR-0036's amendment, and not copied.** Searched
+2026-08-08, about thirty lines across `docs/` name ADR-0018 near the word pool and only rows 5 and 6
+above are wrong. The rest are right in three distinct ways: "pooling" used as the name of the ADR's
+subject, an explicit "non-pooled" or "pooled-plus-mutable ... post-v1", or the PgBouncer connection
+pooler, which is a different subject. A second copy of that list would be a second place to be wrong,
+so ADR-0033's amendment points at it rather than repeating it.
+
+**Verification.** For each of the three commits: `bash scripts/check-adrs.sh` after `git add`,
 `bash scripts/test-check-adrs.sh`, `python3 scripts/check-decisions-index.py`, and `markdownlint-cli2`,
-all green. Both ADRs carry `stack-record: true` and neither frontmatter moved, so Checks 3 and 4 see the
-unchanged "Architecture" and "Primary keys" rows in ADR-0061. ADR-0066's in-use list was read back and
-holds seven entries. After both commits,
-`git grep -niE "pooled[^.]{0,30}dbcontext|dbcontext[^.]{0,30}pooled" -- docs/adr/` returns only
-ADR-0018's own text, its index row, and the past-tensed correction records.
+all green. All three ADRs carry `stack-record: true` and no frontmatter moved, so Checks 3 and 4 see the
+unchanged "Architecture", "Primary keys", and "Key management" rows in ADR-0061. ADR-0066's in-use list
+was read back and holds seven entries. After all three commits,
+`git grep -niP "(ADR-)?0018" -- docs/ | grep -iP "pool"` returns no line labelling ADR-0018 by the
+pooled option except `architecture/03-drivers-and-constraints.md:116`, which is S-024's.
 
 ## S-019. Amend ADR-0030's stack sentence to the new pin
 
