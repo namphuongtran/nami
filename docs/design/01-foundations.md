@@ -306,22 +306,47 @@ to a class is not. Ports whose subsystem arrives later, such as the mail dispatc
 opt-in modules. Two options are required and the rest have defaults, so the minimum is a
 connection string and an issuer.
 
-| Option | Default | Fixed by |
-|---|---|---|
-| `ConnectionString` | **required** | ADR-0001 |
-| `Issuer` | **required**, the base; per-tenant issuers derive from it | ADR-0049 |
-| `SigningAlgorithm` | `RS256`, with `ES256` selectable | ADR-0005 |
-| `AccessTokenLifetime` | 15 minutes | ADR-0004 |
-| `RefreshTokenLifetime` | 8 hours absolute | ADR-0004 |
-| `SessionInactivity` / `SessionAbsolute` | 1 hour / 8 hours | ADR-0003 |
-| `AccessTokenEncryption` | disabled, so the access token is a plain signed JWT | ADR-0005 |
-| `RequireHttps` | `true`, relaxed only in development | ADR-0076 |
-| `AutoSeedFirstKey` | `true` | ADR-0012 |
-| `MigrateOnStartup` | **`false`**, development only | ADR-0017, ADR-0025 |
+**The C# shape of both types is fixed by ADR-0096**, which this section realizes. Until
+2026-08-08 this table gave option names and defaults and no type, no nullability, and no
+accessor, which is why `Nami.Identity.Core` could not be written from it. The `Type` column
+below is that ADR's, not this document's.
+
+| Option | Type | Default | Fixed by |
+|---|---|---|---|
+| `ConnectionString` | `string?` | **required**, enforced at start-up rather than by the `required` modifier | ADR-0001, ADR-0096 |
+| `Issuer` | `string?` | **required**, the base; per-tenant issuers derive from it | ADR-0049, ADR-0096 |
+| `SigningAlgorithm` | `SigningAlgorithm` | `RS256`, with `ES256` selectable | ADR-0005 |
+| `AccessTokenLifetime` | `TimeSpan` | 15 minutes | ADR-0004 |
+| `RefreshTokenLifetime` | `TimeSpan` | 8 hours absolute | ADR-0004 |
+| `SessionInactivity` / `SessionAbsolute` | `TimeSpan` | 1 hour / 8 hours | ADR-0003 |
+| `AccessTokenEncryption` | `bool` | disabled, so the access token is a plain signed JWT | ADR-0005 |
+| `RequireHttps` | `bool` | `true`, relaxed only in development | ADR-0076 |
+| `AutoSeedFirstKey` | `bool` | `true` | ADR-0012 |
+| `MigrateOnStartup` | `bool` | **`false`**, development only | ADR-0017, ADR-0025 |
+| `RegistrationKey` | `string?` | absent, and a missing key logs once at INFO | ADR-0032 |
 
 Every default is the safe value, and the two that would be dangerous if defaulted the other
-way are the last two: a host that migrated on start-up would race its own replicas, and a
-host that did not auto-seed would come up unable to sign.
+way are `MigrateOnStartup` and `AutoSeedFirstKey`: a host that migrated on start-up would
+race its own replicas, and a host that did not auto-seed would come up unable to sign.
+
+`SigningAlgorithm` is an enum rather than a string, because a closed domain typed as a
+string lets an unrecognized value fall back silently (ADR-0096).
+
+**The last row is not new surface, and it was missing from this table rather than from the
+product.** `RegistrationKey` has been on this type since ADR-0032, which configures it as
+`.AddNamiIdentity(o => o.RegistrationKey = ...)`. It is added here on 2026-08-08.
+
+**Configuration binds first, then the delegate runs and wins** (ADR-0096). A member and a
+configuration key naming the same setting are one setting with two spellings, so a value
+written in the delegate cannot be overridden by an environment variable. That is a way to
+defeat the externalization posture of section 5.3, and nothing detects it. Which members
+carry a configuration key is decided by the design owning each member's subject, and
+[04](04-core-protocol.md) section 6 has assigned three of them.
+
+`INamiIdentityBuilder` exposes the service collection and nothing else (ADR-0096). Every
+`.Add…` and `.Use…` call in section 3.2 ships in a package that depends on `Core`, so none of
+them can be a member of an interface `Core` declares; they are extension methods on this
+interface, declared in their own packages.
 
 ```csharp
 builder.Services.AddNamiIdentity(o =>

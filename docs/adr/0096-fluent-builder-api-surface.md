@@ -37,11 +37,10 @@ members `design/01` section 3.4 lists on `NamiIdentityOptions`. ADR-0044 paramet
 configuration key a stable public contract, and ADR-0065:78 fixes its form, so both surfaces are
 versioned and neither can be treated as informal. No source says how they relate.
 
-**No decision says how a missing required value fails.** `design/01-foundations.md:413-414` states
+**No decision says how a missing required value fails.** `design/01-foundations.md:438-439` states
 the requirement: "Required values bind with validation on start, so a missing value crashes the
 host at boot rather than surfacing lazily on the first request that needs it." It names no
-mechanism.
-`design/04-core-protocol.md:811` attributes boot validation of the protocol keys to ADR-0052, and
+mechanism. `design/04-core-protocol.md:811` attributes boot validation of the protocol keys to ADR-0052, and
 ADR-0052 does not carry that claim: its five parameters A through E are entirely about client and
 scope declaration, and its subject is `ClientDefinition` and `ScopeDefinition`. ADR-0043 is the
 nearest live mechanism and is a different thing: it asserts a fixed list of named **security
@@ -98,7 +97,7 @@ MAJOR-locked by ADR-0044 parameter I, for members whose subjects belong to other
 
 * **C. A missing required value fails at start-up, through `IValidateOptions<NamiIdentityOptions>`
   registered by `AddNamiIdentity` and enforced by `ValidateOnStart()`.** This is what makes
-  parameter B safe: the guarantee `design/01:413-414` asks for moves from a compile-time modifier
+  parameter B safe: the guarantee `design/01:438-439` asks for moves from a compile-time modifier
   to a start-up check, which is where that document already puts it. Microsoft Learn documents
   `ValidateOnStart` as running options validation when the application starts rather than on first
   access (read 2026-08-08 at the ASP.NET Core 10 view). The validator rejects a null or
@@ -114,7 +113,7 @@ MAJOR-locked by ADR-0044 parameter I, for members whose subjects belong to other
   **The consequence is stated rather than left to be discovered: a value hard-coded in the delegate
   cannot be overridden by an environment variable.** That is a way to defeat ADR-0031's
   externalization posture, and Nami cannot detect it. It is accepted because the alternative is
-  worse: if configuration won, the sample at `design/01:327-331`, which passes
+  worse: if configuration won, the sample at `design/01:352-356`, which passes
   `cfg.GetConnectionString("Identity")` into the delegate, would be writing a value that something
   later overwrites. That sample is the documented way to start, so the order has to make it
   correct.
@@ -139,17 +138,17 @@ MAJOR-locked by ADR-0044 parameter I, for members whose subjects belong to other
 
   | Member | Type | Default | Default read at |
   |---|---|---|---|
-  | `ConnectionString` | `string?` | none | `design/01:311`, required |
-  | `Issuer` | `string?` | none | `design/01:312`, required |
+  | `ConnectionString` | `string?` | none | `design/01:316`, required |
+  | `Issuer` | `string?` | none | `design/01:317`, required |
   | `SigningAlgorithm` | `SigningAlgorithm` | `RS256` | `ADR-0005:39` |
   | `AccessTokenLifetime` | `TimeSpan` | 15 minutes | `ADR-0004:76` |
   | `RefreshTokenLifetime` | `TimeSpan` | 8 hours | `ADR-0004:76` |
   | `SessionInactivity` | `TimeSpan` | 1 hour | `ADR-0003:40` |
   | `SessionAbsolute` | `TimeSpan` | 8 hours | `ADR-0003:40` |
   | `AccessTokenEncryption` | `bool` | `false` | `ADR-0005:36` |
-  | `RequireHttps` | `bool` | `true` | `design/01:318` only |
-  | `AutoSeedFirstKey` | `bool` | `true` | `design/01:319` |
-  | `MigrateOnStartup` | `bool` | `false` | `design/01:320` |
+  | `RequireHttps` | `bool` | `true` | `design/01:323` only |
+  | `AutoSeedFirstKey` | `bool` | `true` | `design/01:324` |
+  | `MigrateOnStartup` | `bool` | `false` | `design/01:325` |
   | `RegistrationKey` | `string?` | `null` | `ADR-0032:37` |
 
   **`TimeSpan` is read rather than chosen.** `design/04-core-protocol.md:88-89` writes
@@ -171,7 +170,7 @@ MAJOR-locked by ADR-0044 parameter I, for members whose subjects belong to other
 
 * Good, because `Nami.Identity.Core` becomes writable, which is what blocked it.
 * Good, because a missing connection string or issuer stops the host at boot, which is what
-  `design/01:413-414` requires, through a mechanism that is now named.
+  `design/01:438-439` requires, through a mechanism that is now named.
 * Good, because the two public surfaces are reconciled without minting eleven contracts, and each
   future key lands beside the decision it serves.
 * Bad, because a consumer who hard-codes a per-deploy value in the delegate defeats ADR-0031, and
@@ -194,7 +193,7 @@ MAJOR-locked by ADR-0044 parameter I, for members whose subjects belong to other
   `AutoSeedFirstKey` do carry `= true`.
 * **Not verified**: whether an `IApplicationBuilder` counterpart exists. `ADR-0076:50` and
   `ADR-0091:115` both say middleware "is registered by the fluent builder", and
-  `design/01-foundations.md:365` describes an ordered middleware pipeline. `AddNamiIdentity`
+  `design/01-foundations.md:390` describes an ordered middleware pipeline. `AddNamiIdentity`
   registers services and cannot register middleware. This is an absence claim, so it carries its
   search: counted 2026-08-08 over `docs/` excluding the work queue, `UseNamiIdentity` returned
   zero files, and no source names any method that would place this pipeline. Resolve it with the
