@@ -14,20 +14,32 @@ subject. Where a seed and its owner disagree, the seed is the bug.
 
 ## Where the work stands
 
-**Front of the work: S-007.** It is the only door into the chain that reaches running code, and it has
-no blocker. Nothing else in this file is a prerequisite for it.
+**Front of the work: S-011 and S-033.** Both reach running code and neither has a blocker. S-011
+closes the chain S-010 opened. S-033 opens the foundation chain that S-016 found waiting.
 
-The handoff it continues, stated once and not restated: the last code increment is commit `8e19123`,
-`Nami.Identity.Core`, and `BUILD-PLAN.md` section 1 records that **S-007 through S-011 plus S-016 are
-what PR-7 did not deliver**, that being the engine wiring and the first slice. What happened in that
-increment is in its commit message, and the traps it produced are in
+The handoff they continue, stated once and not restated: the last code increment is commit `3ad32e0`,
+the engine wiring inside `AddNamiIdentity`, and `BUILD-PLAN.md` section 1 records that **S-007 through
+S-011 plus S-016 are what PR-7 did not deliver**, that being the engine wiring and the first slice.
+What happened in each increment is in its commit message, and the traps they produced are in
 [`../src/CLAUDE.md`](../src/CLAUDE.md) and [`../tests/CLAUDE.md`](../tests/CLAUDE.md). None of it is
 copied here.
 
-**Eleven seeds closed on 2026-08-08 and every one was documentation.** No code moved between `8e19123`
-and S-007. That is worth knowing before reading the closed seeds as progress toward a milestone: they
-paid down citation and transcription debt that the OpenIddict pin bump exposed, and the bump was the
-probe rather than the cause.
+**Half of that handoff sentence names nothing, and S-016 is where that is recorded.** "The first
+slice" is this repository's own phrase, absent from the corpus the designs were reconciled from, and
+the work after the wiring is the rest of the foundation rather than a slice. Read S-016's result
+before planning from those three words.
+
+**Counted 2026-08-08, with S-016 closed and its three seeds added: 34 seeds, 18 done, 14 open, and 2
+blocked.** Measured at `3ad32e0`, the commit this increment started from, **22** commits had landed
+after `8e19123` and **four of them moved build or code**, being three `feat(core)` commits and the pin
+bump. The rest paid down citation and transcription debt that the OpenIddict pin bump exposed, and the
+bump was the probe rather than the cause.
+
+**Two earlier versions of this paragraph went stale, and both did so the same way.** It once said
+eleven seeds had closed and every one was documentation, which was true when written and false later
+the same day. Its replacement carried a board count taken **before** the seeds this increment adds,
+which the same increment then invalidated. So the counts here name what they were counted over, and a
+reader who doubts one should re-run it rather than quote it forward.
 
 **What the two trackers each hold**, because the boundary leaked on 2026-08-08 and three items lived in
 both files at once:
@@ -62,7 +74,10 @@ graph LR
   S008 --> S010[S-010 wire the engine]
   S009 --> S010
   S010 --> S011[S-011 contract suite]
-  S010 --> S016[S-016 first slice]
+  S010 --> S016[S-016 there is no first slice]
+  S016 --> S032[S-032 which sense of slice]
+  S016 --> S033[S-033 the EF Core project]
+  S033 --> S034[S-034 the five contexts]
 ```
 
 ## Status board
@@ -79,12 +94,12 @@ graph LR
 | S-008 | Reference the engine from `Core` and enumerate the restore graph | done | S-007 done |
 | S-009 | Decide where the `AddOpenIddict` block splits at the persistence boundary | done | S-007 done |
 | S-010 | Wire the engine inside `AddNamiIdentity` | done | S-008, S-009, S-028 all done |
-| S-011 | Stand up the contract-regression suite ADR-0021 part C requires | blocked | S-010 |
+| S-011 | Stand up the contract-regression suite ADR-0021 part C requires | open | S-010 done |
 | S-012 | Reconcile design 01's context count against its own table | open | none |
 | S-013 | Give the provider-selector key the decided form and an owner | open | none |
 | S-014 | Place the three builder calls that exist in no document here | open | none |
 | S-015 | Re-own design 04's boot-validation citation | open | none |
-| S-016 | Define what the first slice is | blocked | S-010 |
+| S-016 | Define what the first slice is | done | S-010 done |
 | S-017 | Assign a configuration key to the nine options that have none | open | none |
 | S-018 | Move the architecture layer's four engine-version statements to the new pin | done | S-002 done |
 | S-019 | Amend ADR-0030's stack sentence to the new pin | done | S-002 done |
@@ -100,6 +115,9 @@ graph LR
 | S-029 | Give `RefreshTokenReuseLeeway` a member and rename its key to match | done | S-028 done |
 | S-030 | Resolve `ClockSkewToleranceSeconds`, a key for something design 04 calls a constant | open | none |
 | S-031 | Resolve `EndpointPaths:*`, ten keys with no member and no options type | open | none |
+| S-032 | Say which sense of "slice" design 01 means when it labels `Core` | open | S-016 done |
+| S-033 | Land `Nami.Identity.EntityFrameworkCore` as a project carrying no context | open | S-016 done |
+| S-034 | Give the five contexts their classes and their pooling posture | blocked | S-033 |
 
 ---
 
@@ -1170,7 +1188,7 @@ may need an ADR.
 
 ## S-016. Define what the first slice is
 
-**Status:** blocked · **Blocked by:** S-010 · **Unblocks:** nothing yet
+**Status:** done · **Blocked by:** S-010, which is done · **Unblocks:** S-032, S-033
 
 **The absence, with its search.** Counted 2026-08-08 with `git grep -i` over every tracked file
 except `BUILD-PLAN.md`, `first slice` returned **zero**. `docs/adr/0024-architecture-style.md:47`
@@ -1185,12 +1203,119 @@ five; `0024:51` names all five endpoints and no assembly.
 **End state.** One slice is named, with its owning design, and it is small enough to be a seed of its
 own. The naming says whether it was decided or transcribed.
 
-**Verification.** The named slice resolves to a design that describes its request, handler, and
-response, per `docs/adr/0024-architecture-style.md:44`.
+**Verification, replaced by this seed's own work, and the old clause is quoted rather than deleted.**
+Until 2026-08-08 this line read: "The named slice resolves to a design that describes its request,
+handler, and response, per `docs/adr/0024-architecture-style.md:44`." No slice reachable at M1 can
+satisfy it, and finding 2 below carries both readings with the lines that establish it. **The clause
+was wrong when it was written, not made wrong by the answer**, which is the only ground on which
+editing it is not the forbidden move of bending a check to fit. What replaces it: the absence is
+established by naming every spelling searched and every tree searched, and each finding resolves at a
+file and a line.
 
-**Sources.** As quoted above.
+**Sources.** `docs/adr/0024-architecture-style.md:44`, `:47`, `:49`, and `:100`;
+`README.md:48` and `:51`; and the external design corpus, read as `docs/CLAUDE.md` requires, at the
+root documents rather than at `DD/`. The corpus is not part of this repository and its identifiers do
+not resolve here, so they are named as external provenance only, on the precedent
+`docs/adr/0018-dbcontext-pooling-for-pool-mode.md:62` already sets.
 
 **Out of scope.** Writing the slice. That is the seed this one creates.
+
+### S-016 result, measured 2026-08-08 at commit `3ad32e0`
+
+**No slice is named, and that is the finding rather than a failure to finish.** "First slice" is this
+repository's own phrase. It is absent from the design corpus these layers were reconciled from, and
+that corpus plans work in a unit which is not a slice at all.
+
+**1. The absence, with every spelling and the tree it was searched over.** Run with
+`grep -rli --include='*.md'` across all **275** markdown files of the corpus tree, which includes its
+`DD/`, `SAD/`, `adr/`, `decisions/`, and `knowledge-based/` folders:
+
+| Spelling | Files |
+|---|---|
+| `first slice` | 0 |
+| `slice đầu tiên` | 0 |
+| `slice đầu` | 0 |
+| `vertical slice đầu` | 0 |
+| `slice thứ nhất` | 0 |
+
+**The method was proved on a term known to be present before any zero was believed**: `vertical-slice`
+returns **18** files from the same tree with the same command. `docs/CLAUDE.md` records why that step
+is not optional, a search returning zero because the tool ignored its syntax reporting it in exactly
+the shape a real absence takes.
+
+**What that corpus uses instead of a slice.** Its implementation roadmap draws a critical path of
+numbered phases, Foundations then Database then Core protocol, and its foundations phase document
+carries a list of **23 numbered tasks**. The unit of work there is a task inside a phase. Asking which
+slice is first asks in a vocabulary that document does not use, which is why the question read as
+ambiguous rather than as unanswered.
+
+**2. The clause this seed carried required a shape only M4 can produce.** `docs/adr/0024-architecture-style.md:44`
+defines a feature slice as request, handler, validator, and response in the Application layer. `:49`
+puts those slices in `Admin.Api`. `README.md:51` puts the Admin API at **M4**. The work in front of the
+repository is M1 (`README.md:48`, "Core protocol server issues tokens"). Meanwhile `:47` says the
+IdP-core has no such tower at all, its "slice" being "the handler pipeline plus a few domain services
+(claims, consent, keys)". Two senses, and the clause cited the one out of reach.
+
+Corroborating that reach rather than resting on the milestone table alone: `:100` still carries the
+slice template and the `Features/<Area>/<UseCase>/` convention as a build-time follow-up, "settled
+when the admin code is written". Counted 2026-08-08 over tracked files excluding `BUILD-PLAN.md`,
+`Features/` appears on four `docs/adr/` lines and one `docs/architecture/` line, and on **zero**
+`docs/design/` lines.
+
+**3. Three readings that looked like defects here are inherited, and each resolves in the corpus.**
+Every one of them was going to become a seed. One does.
+
+| Read here as a defect | Where it resolves |
+|---|---|
+| `docs/design/01-foundations.md:68` and `:110` label `Core` "vertical slices", which `0024:47` denies the IdP-core | Faithful transcription. That corpus's foundations phase document describes `.Core` as "server wiring + vertical-slice + builder", and its architecture document fixes the sense: "IdP-core giữ host phẳng (như OpenIddict samples), \"slice\" = handler pipeline" |
+| ADR-0024 holding two senses of "slice" read as a drafting fault introduced here | Inherited. That corpus's own architecture-style ADR states the same pair, the IdP-core "slice" being the handler pipeline plus a few domain services, with no separate Domain, Application, and Infrastructure tower for the protocol flow |
+| `docs/design/01-foundations.md:251-256` records `IClaimsProfileService` eliding the task type on an `Async` member | Inherited, and **not** answered anywhere. `BuildIdentityAsync` appears exactly **once** in that whole tree, in its federation detailed design, as `BuildIdentityAsync(subject, scopes, tenant) ClaimsIdentity`, with no task type. Four spellings of the task-typed form, `Task<ClaimsIdentity>`, `ValueTask<ClaimsIdentity>`, and both mermaid tilde forms, return **zero** files |
+
+The third row is worth stating precisely, because it is the opposite of a lookup. The corpus layer
+that exists to carry field and interface level contracts is the layer that omits this one, so the port
+stays unwritable and `src/CLAUDE.md`'s record of a port that could not be written stands unchanged.
+Only the first row earns a seed, and a small one: **S-032** makes design 01 say which of the two senses
+its label names. The label is right and it is silent.
+
+**4. The corpus reading produced no seed at all for the multi-tenancy and persistence facts, because
+this repository is ahead of it there.** Recorded so the next agent to open that tree does not
+re-derive it.
+
+| Fact | That corpus | Here |
+|---|---|---|
+| `ITenantInfo`'s field surface | probed at Finbuckle 10.1.1, 2026-07-28 | `docs/adr/0001-multi-tenant-isolation-model.md:48`, probed at **10.1.2**, 2026-08-01 |
+| Pooled reuse leaking the tenant across requests | its spike A-4, test T7 | `docs/adr/0018-dbcontext-pooling-for-pool-mode.md:62`, carrying that spike, its date, and its verification records |
+| Finbuckle's pin | 10.1.1 | 10.1.1, resting on that ADR's spike record alone, which `docs/design/22-openiddict-seam-catalogue.md:584` already says out loud |
+
+`Directory.Packages.props` carries **11** `PackageVersion` rows and no Finbuckle row. That is correct
+while nothing references the package, on the manifest's own rule that a row for a package nothing
+references is itself the defect.
+
+**5. Where the foundation stands, counted rather than estimated.** Measured against `src/` at commit
+`3ad32e0`:
+
+| | Count |
+|---|---|
+| Projects under `src/` | **2**, `Nami.Identity.Abstractions` and `Nami.Identity.Core` |
+| Packages named by `docs/design/01-foundations.md` section 3.1 | **10** table rows, four of which bundle siblings, so **15** packages, plus **3** applications |
+| Projects that corpus's foundations task list names under `src/` | **13**, of which 2 exist |
+| Port files in `Abstractions` | **2**, `IAuditSink` and `ISecurityEventSink`, against the **10** in design 01's port catalogue |
+| `DbContext` classes anywhere in `src/` | **0** |
+| `Program.cs` anywhere in `src/` | **0**, so there is no host and no `/health` |
+
+That is the answer the seed was reaching for. The next unit is not a slice, and it is not the token
+path either. It is the rest of the foundation, and **S-033** is its door.
+
+**What this seed got wrong first, recorded because the wrong answer was plausible.** Before the corpus
+was read, this seed was about to name the client-credentials path at `connect/token` as the first
+slice, on `docs/design/04-core-protocol.md:184` and `:219-220`. That path sits in the corpus's **third**
+phase while its first is unfinished, so the naming would have pointed the work two phases past the
+projects it needs. The reading that caught it was the roadmap's critical path, not any line in this
+repository.
+
+**One thing this seed did not do.** It did not amend ADR-0024 to separate its two senses. The corpus
+shows this repository transcribed that wording faithfully, so there is no defect here to repair, and
+narrowing an accepted ADR is a decision rather than a correction.
 
 ---
 
@@ -2184,6 +2309,126 @@ S-011. Re-verifying the values design 04 fixes, which S-005 owns for the dated s
 `CodeChallengeMethods` on the builder, and once by reading `AddServer`'s parameter type at
 `OpenIddictServerExtensions.cs:115`. `bash scripts/check-adrs.sh`,
 `python3 scripts/check-decisions-index.py`, and `markdownlint-cli2`, all green.
+
+---
+
+## S-032. Say which sense of "slice" design 01 means when it labels `Core`
+
+**Status:** open · **Blocked by:** S-016, which is done · **Unblocks:** nothing yet
+
+**The label is right and it is silent, which is the whole defect.**
+`docs/design/01-foundations.md:68` writes `Nami.Identity.Core` as "engine wiring, vertical slices, the
+builder", and `:110` repeats it as "engine wiring, slices, the builder".
+`docs/adr/0024-architecture-style.md` carries **two** senses of the word: `:44` is request, handler,
+validator, and response in the Application layer, and `:47` says the IdP-core has no such tower, its
+"slice" being "the handler pipeline plus a few domain services (claims, consent, keys)". `Core` is the
+IdP-core assembly, so `:47` is the sense meant. Nothing in design 01 says so, and S-016's result
+records that the silence cost one increment a wrong turn: the label was read as a contradiction, and it
+is a faithful transcription of the corpus wording instead.
+
+**End state.** A reader can tell from design 01 alone which sense the label carries, without opening
+ADR-0024 and choosing between its two. Both lines keep the word and gain the sense. No line in design
+01 attaches the `Features/<Area>/<UseCase>/` convention to `Core`, because that convention is
+`Admin.Api`'s (`0024:49`).
+
+**Verification.** `git grep -n -i "slice" -- docs/design/01-foundations.md` returns every hit with the
+sense stated or with a pointer to `docs/adr/0024-architecture-style.md:47` beside it, and no hit points
+at `:44`. Plus `bash scripts/check-adrs.sh`, `python3 scripts/check-decisions-index.py`, and
+`markdownlint-cli2`.
+
+**Sources.** `docs/design/01-foundations.md:68` and `:110`;
+`docs/adr/0024-architecture-style.md:44`, `:47`, and `:49`; this file's S-016 result, finding 3.
+
+**Out of scope.** Amending ADR-0024 to separate its senses, which S-016 declined for a stated reason.
+The package graph itself. Any code. The other four documents that quote the `Features/` convention
+(`0024:44`, `0024:100`, `docs/adr/0058-guiding-architectural-principles.md:41`,
+`docs/adr/0065-coding-and-naming-conventions.md:77`, and
+`docs/architecture/03-drivers-and-constraints.md:182`), none of which attaches it to `Core`.
+
+---
+
+## S-033. Land `Nami.Identity.EntityFrameworkCore` as a project carrying no context
+
+**Status:** open · **Blocked by:** S-016, which is done · **Unblocks:** S-034
+
+**Why the project lands before any context.** Every project this repository has landed found something
+the documents did not hold, and each landing was its own increment for that reason. This one has two
+specific things to find, and neither needs a `DbContext` to exist.
+
+- **The first adapter changes what the architecture facts are looking at.** Until now every project has
+  been `Abstractions` or `Core`. `CoreReferencesNoAdapterOrDatabaseProviderOrCloudSdk` asserts what
+  `Core` may not reference, and `tests/Nami.Identity.ArchitectureTests/CoreDependencyRuleTests.cs:111`
+  records that `OpenIddict.EntityFrameworkCore`, `OpenIddict.Quartz`, and `OpenIddict.Core` are all
+  forbidden **inside `Core`**. An adapter that references the first of those legitimately is the first
+  case the suite has never seen, so whether any existing fact needs a sibling for the adapter is a
+  question to answer by running it, not by reading it.
+- **The restore graph and the licence record move.** `Directory.Packages.props:212` already carries
+  `OpenIddict.EntityFrameworkCore` at `[7.6.0]`, and nothing references it today. Referencing it pulls
+  transitive packages that ADR-0026 requires be read at the distributed artifact.
+
+**End state.** `src/Nami.Identity.EntityFrameworkCore/` exists, is in `Nami.Identity.slnx`, and
+references `Nami.Identity.Core` per the adapter arrow at `docs/design/01-foundations.md:60-110`, plus
+`OpenIddict.EntityFrameworkCore` from its existing manifest row. It carries **no** `DbContext`, so the
+public API surface it adds is empty or near it. `DEPENDENCY-LICENSES.md` gains the restore-graph delta,
+with the node count before and after read from `project.assets.json` rather than predicted, and one
+licence row per new package read at its artifact.
+
+**Verification.** All nine gates, listed in [`../.claude/rules/commands.md`](../.claude/rules/commands.md).
+The restore graph read out of `project.assets.json` on both sides of the change. Every architecture
+fact the new project could touch watched to fail against a planted break before it is believed, per
+[`../tests/CLAUDE.md`](../tests/CLAUDE.md). If no fact changes state, the seed says so rather than
+implying coverage, which is the shape S-008's result already had to correct once.
+
+**Sources.** `docs/design/01-foundations.md:60-110` for the package graph and the dependency rule;
+`Directory.Packages.props:212`; `tests/Nami.Identity.ArchitectureTests/CoreDependencyRuleTests.cs:111`;
+`docs/adr/0026-dependency-license-policy.md` for reading a licence at the artifact.
+
+**Out of scope.** Any `DbContext`, which is S-034. The `.PostgreSQL` sibling, migrations, and the
+provider. Any store implementation. Wiring the adapter into `AddNamiIdentity`, which is the half S-009
+assigned away from `Core`.
+
+---
+
+## S-034. Give the five contexts their classes and their pooling posture
+
+**Status:** blocked · **Blocked by:** S-033 · **Unblocks:** nothing yet
+
+**The posture is already fixed per context, and it has been inverted once.** `docs/design/02-data.md:55-59`
+carries the matrix in full:
+
+| Context | Scope | Pooling per design 02 |
+|---|---|---|
+| `OpenIddictDbContext` | Tenant-scoped | **Non-pooled** `AddDbContext` in v1; Silo never pooled |
+| `IdentityDbContext` | Global | Pooled |
+| `DataProtectionDbContext` | Global | Pooled |
+| `ControlPlaneDbContext` | Global | Pooled |
+| `ControlPlaneTenantDbContext` | Tenant-scoped | **Non-pooled** `AddDbContext` |
+
+**Read the matrix at design 02 and not from memory.** This exact subject carried an inverted row until
+S-024 corrected it, and two ADRs labelled ADR-0018 by the option it declined until S-026 corrected
+them. So the trap here is a row that reads plausibly and says the opposite of the decision.
+`docs/adr/0018-dbcontext-pooling-for-pool-mode.md:62` is the record of why the tenant-scoped context is
+not pooled: naive pooled reuse leaked the tenant across requests, including through OpenIddict's
+internal `SaveChanges`.
+
+**End state.** Five context classes exist in the adapter, each with the scope and the pooling
+registration design 02 fixes, and each carrying the reason at the call site as
+`docs/design/02-data.md:992` already asks for. A unit fact per context pins its pooling registration,
+because a registration changed from pooled to non-pooled or back is invisible in a green build, on the
+same reasoning that made the options defaults worth pinning.
+
+**Verification.** All nine gates. Each unit fact watched to fail against a planted inversion before it
+is believed, that plant being the exact defect S-024 found in prose.
+
+**Sources.** `docs/design/02-data.md:55-59` for the matrix, `:67-80` for why the control plane is two
+contexts and why `ServerSideSessions` and `AuditLog` keep the pool, and `:992` for the call-site
+reason; `docs/adr/0018-dbcontext-pooling-for-pool-mode.md:62` for the spike record;
+`docs/adr/0001-multi-tenant-isolation-model.md:48` for the discriminator's type;
+`docs/adr/0003-server-side-sessions-are-core.md` for the session decision itself.
+
+**Out of scope.** Migrations, RLS policies, seeding, and the tenant registry. Finbuckle resolution and
+middleware order. The `.PostgreSQL` provider. Any entity configuration beyond what a context needs to
+compile.
 
 ---
 

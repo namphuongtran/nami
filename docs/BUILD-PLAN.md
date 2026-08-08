@@ -31,10 +31,10 @@ next. Neither is restated here.
 
 | | |
 |---|---|
-| Last code increment landed | `8e19123`, `Nami.Identity.Core`, 2026-08-08. Its commit message is the record |
-| Front of the work | **[`SEEDS.md`](SEEDS.md) S-007**, resolve umbrella versus granular for `Core`'s engine reference |
-| Why that one | Section 1 below records that S-007 through S-011 and S-016 are what PR-7 did not deliver. S-007 has no blocker and unblocks S-008 and S-009, so it is the only door into that chain |
-| Everything since | Eleven seeds closed 2026-08-08, all documentation, no code moved. `git log --oneline` from `8e19123` is the list |
+| Last code increment landed | `3ad32e0`, the engine wiring inside `AddNamiIdentity`, 2026-08-08. Its commit message is the record |
+| Front of the work | **[`SEEDS.md`](SEEDS.md) S-011** and **S-033**. S-011 closes the chain S-010 opened; S-033 opens the foundation chain |
+| Why those two | S-007 through S-010 are done, so the chain named below is finished except for S-011. S-016 closed by finding that "the first slice" names nothing, and its result points the next work at the foundation, which is S-033 |
+| Everything since | Counted 2026-08-08 at `3ad32e0`: 22 commits after `8e19123`, four of which moved build or code. `git log --oneline 8e19123..HEAD` is the list |
 
 **If you arrived with the words "increment 3", it is S-007 through S-011 plus S-016.** That label was
 used in the conversation that planned the work and **exists nowhere in this repository**: searched
