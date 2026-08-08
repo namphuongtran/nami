@@ -50,9 +50,35 @@ reason and its open verification, and never presented as sourced.
   fail-closed critical path to supply one, the path design 03 section 5.3 describes.
 - **The folder taxonomy is flat**, and no source states one. Ten ports flat in one folder will be
   wrong; inventing the grouping from one type would be worse. Settle it when the catalogue lands.
-  Counted 2026-08-08: nine public types, being five sealed classes, two interfaces, and two enums.
-  That is two of the ten ports, three of their DTOs, and the four-type definition model. It was
-  six on 2026-08-05.
+  Re-counted 2026-08-08 after `Nami.Identity.Core` landed: **thirteen** public types across the two
+  projects, being nine in `Abstractions` (five sealed classes, two interfaces, two enums) and four
+  in `Core` (one sealed class, one static class, one interface, one enum). The `Abstractions` count
+  was six on 2026-08-05.
+
+**Four choices landed 2026-08-08 with `Nami.Identity.Core`**, and unlike the definition model these
+are not transcriptions: ADR-0096 decided the shape, and what follows is what building it still
+forced.
+
+- **`FrameworkReference` to `Microsoft.AspNetCore.App` rather than four `PackageReference` items.**
+  `AddNamiIdentity` needs `IServiceCollection`, `IValidateOptions<T>`, `ValidateOnStart()` and
+  `BindConfiguration()`, and in a plain `Microsoft.NET.Sdk` library every one of those is a separate
+  package. Taking them from the shared framework costs zero `PackageVersion` rows and zero licence
+  reads, and design 01's library table already carries ".NET and ASP.NET Core, MIT, ADR-0030". The
+  engine does the same: `OpenIddict.Server.AspNetCore` 7.5.0's nuspec declares a frameworkReferences
+  group for net8.0, net9.0 and net10.0, read 2026-08-08. **No source states either choice.**
+- **The namespace is `Nami.Identity.Core` and not `Microsoft.Extensions.DependencyInjection`.** The
+  usual .NET answer puts an `IServiceCollection` extension in the latter so it needs no `using`.
+  ADR-0065 requires that "a namespace matches its folder and assembly", so this is a **departure
+  from the framework convention that a decision here overrides**, not a gap.
+- **The validator reports both missing values rather than the first.** No source asks for either
+  behaviour. An operator missing two values should learn both at the first boot.
+- **The configuration section bound is `Nami:Protocol`, and the constant is private.** Design 04
+  section 6 owns those key names and says so. A public constant here would be a second public
+  spelling of a contract that design already owns, and ADR-0044 parameter I versions both.
+
+**What is NOT recorded as a choice, because it is measured:** the twelve property types, their
+nullability, their accessors, the absent `required`, the enum ordinals, and the two initializers
+that must stay absent. ADR-0096 fixes all of them, and each default has a unit fact.
 
 **Five more choices landed 2026-08-08 with `ClientDefinition`, `ClientFlow`, and
 `ClientAuthMethod`**, all transcribed from the class diagram in design 23 section 3, which fixes

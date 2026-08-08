@@ -57,6 +57,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Nami.Identity.Abstractions/Nami.Identity.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Nami.Identity.Core/Nami.Identity.Core.csproj" />
   </ItemGroup>
 
 </Project>

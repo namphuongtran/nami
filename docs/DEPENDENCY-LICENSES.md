@@ -180,9 +180,61 @@ diff against this table is what the M1 read has to produce.
 | `xunit.v3` **3.2.2** | Apache-2.0 | Not an exception. The test framework ADR-0060 binds the suite to. Read at its own `.nuspec` from the nuget.org flat container (`<license type="expression">Apache-2.0</license>`). | Architect | 2026-08-02 |
 | `TngTech.ArchUnitNET.xUnitV3` **0.13.3** | Apache-2.0 | Not an exception. The architecture-test library ADR-0024 names, in its xUnit v3 integration variant. Read at its own `.nuspec` (`<license type="expression">Apache-2.0</license>`, `<repository … url="https://github.com/TNG/ArchUnitNET" commit="b25c4f940b1d067e97092783d0ef16e4fe12d8c3" />`). **The variant matters and no document in this repository chose it**: the plainly named `TngTech.ArchUnitNET.xUnit` at the same version declares `xunit.assert 2.4.1`, which is xUnit v2, while this one declares `xunit.v3.assert`. Both nuspecs read in the same step. | Architect | 2026-08-02 |
 
+| **OpenIddict**, nine packages at **7.5.0** | Apache-2.0 | Not an exception. The protocol engine, pinned by [ADR-0021](adr/0021-openiddict-version-adaptation.md) parameter A. Enumerated and read in section 3.3 below rather than in this cell, because nine packages do not fit one. | Architect | 2026-08-08 |
+
 Licences for the first three rows were verified at nuget.org on 2026-07-25 at versions 4.2.0 and
 8.1.0. See ADR-0026 section E for the exact scope of that naming exception and what it does not
 cover.
+
+### 3.3 The engine, read at 7.5.0 on 2026-08-08
+
+**Recorded before adoption, not after.** `Directory.Packages.props` gained eight bracket pins on
+2026-08-08 and **no project references any of them yet**, so this section is the section 3.2
+shape rather than the section 3.1 shape: a licence read against a pinned version, ahead of the
+code that will restore it. Section 7's maintenance rule asks for the read in the change that
+introduces the dependency, and a pin is where a dependency is introduced under Central Package
+Management.
+
+Every row was read at that package's own `.nuspec` on the nuget.org flat container, one request
+per package, on **2026-08-08**. Every one carries `<license type="expression">Apache-2.0</license>`
+rather than a licence file or a bare URL, which is the declaration form section 5 records as the
+one the ADR-0026 section C scanner can act on.
+
+| Package | Pinned | Declared licence |
+|---|---|---|
+| `OpenIddict.Core` | `[7.5.0]` | Apache-2.0 |
+| `OpenIddict.Server` | `[7.5.0]` | Apache-2.0 |
+| `OpenIddict.Server.AspNetCore` | `[7.5.0]` | Apache-2.0 |
+| `OpenIddict.Validation` | `[7.5.0]` | Apache-2.0 |
+| `OpenIddict.Validation.AspNetCore` | `[7.5.0]` | Apache-2.0 |
+| `OpenIddict.Validation.ServerIntegration` | `[7.5.0]` | Apache-2.0 |
+| `OpenIddict.EntityFrameworkCore` | `[7.5.0]` | Apache-2.0 |
+| `OpenIddict.Quartz` | `[7.5.0]` | Apache-2.0 |
+| `OpenIddict.Abstractions` | not pinned, arrives transitively | Apache-2.0 |
+
+**All nine declare the same upstream repository commit**,
+`aa7fac0996cb1c86c4310a005bdc66077eb53ba8` at `github.com/openiddict/openiddict-core`. That is
+worth more than the version string, and it is not a coincidence worth passing over: it is the
+same commit [`CLAUDE.md`](../docs/CLAUDE.md) records for the checked-in OpenIddict source in the
+external design corpus. So a behaviour read out of that tree is tied to exactly what these pins
+restore, rather than to a number that two artifacts could both claim.
+
+**Three things this section does not establish, stated so its silence is not read as coverage.**
+
+* **The bundle is not enumerated.** Section 7's composition rule says to read what a distribution
+  bundles before reading its licence, and a `.nuspec` dependency list is a dependency list rather
+  than a composition. What is enumerated here is nine declared licences, not the contents of nine
+  packages.
+* **The restore graph is not enumerated either**, because there is no restore: nothing references
+  these. The section 3.1 style of enumeration is owed when the first `PackageReference` lands, and
+  it will be larger than nine. Measured 2026-08-08 at the flat container,
+  `OpenIddict.Server.AspNetCore` declares one net10.0 dependency while `OpenIddict.AspNetCore`
+  declares seven and reaches the whole client stack, so **which** identifier the wiring takes
+  changes how much that enumeration has to cover.
+* **`ADR-0026` section D already listed OpenIddict as confirmed permissive**, and that is not what
+  this section is. Section D is a list written at a point in time and is not a gate; this is a
+  read at a pinned artifact on a stated date, which is what the section 7 rule asks for and what
+  section D explicitly defers to with "re-verify each at adopt time".
 
 **The analyzer row is the first entry in this file for a package this repository actually
 compiles against**, added 2026-08-02 in the change that created `Directory.Packages.props`. Every

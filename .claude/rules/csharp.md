@@ -30,7 +30,7 @@ to survive a line shift, so a drifted pointer reads as drift rather than as a di
 | Application Insights, or any named backend | "emits OTLP and mandates no production backend" | ADR-0063:38 |
 | An unprefixed custom instrument name | "Every custom instrument is namespaced `nami.identity.`" | ADR-0085:110 |
 | `<LangVersion>latest</LangVersion>` | "LangVersion is deliberately ABSENT"; the default derives from the target framework | `Directory.Build.props:79-88` |
-| A literal `<TargetFramework>net10.0</TargetFramework>` | `$(NamiLibraryTargetFrameworks)`, or `$(NamiApplicationTargetFramework)` for an application | `src/CLAUDE.md:172`, ADR-0030:39 |
+| A literal `<TargetFramework>net10.0</TargetFramework>` | `$(NamiLibraryTargetFrameworks)`, or `$(NamiApplicationTargetFramework)` for an application | `src/CLAUDE.md:198`, ADR-0030:39 |
 | `Services/`, `DTOs/`, `Validators/` | "Organize the Application layer by feature slice", `Features/<Area>/<UseCase>/` | ADR-0024:44, ADR-0065:77 |
 | A repository or unit-of-work wrapper | "introduced to solve a demonstrated problem, never preemptively" | ADR-0066:42 |
 | An interface with one implementation, for layering | "a port must have at least two real reasons to exist" | ADR-0024:39 |
@@ -90,7 +90,7 @@ All three are recorded already. All three are the kind of coverage a generic ans
    async Task Poll()` is caught and `public Task Poll()` is not. A naming symbol has no
    return-type filter, so the uncovered half is a review matter. ADR-0065:86.
 2. **`AnalysisMode` is `Recommended`, and `CA1819` is not in it.** Public array-returning members
-   produce no warning today. Do not read a green build as approval of one. `src/CLAUDE.md:197`,
+   produce no warning today. Do not read a green build as approval of one. `src/CLAUDE.md:222`,
    ADR-0094.
 3. **`.editorconfig` is the rules-of-record for naming, and it is not the whole naming story.**
    A name has two possible judges here, and reading only the first gives a clean answer the
@@ -111,7 +111,7 @@ All three are recorded already. All three are the kind of coverage a generic ans
 | Target framework and language version | ADR-0030; the knob is `Directory.Build.props` |
 | Analyzer breadth | ADR-0094: `Recommended`, not `All` |
 | Warnings as errors | ADR-0093, with the restore-time `NU190x` carve-out |
-| Public API surface | ADR-0044; a public type is two files (`src/CLAUDE.md:113-143`) |
+| Public API surface | ADR-0044; a public type is two files (`src/CLAUDE.md:139-169`) |
 | Dependency rule, ports, and slices | ADR-0024, enforced by the ArchUnitNET suite |
 | Whether a pattern is warranted at all | ADR-0066 |
 | Test taxonomy and naming | ADR-0060, and `docs/design/20-testing.md` |
@@ -132,9 +132,11 @@ not fill the gap from judgement (`CLAUDE.md:26`).
 | Why a gate passed or failed | The `dotnet-msbuild` binlog tools, via `binlog-generation` then `binlog-failure-analysis` | Nine gates exist and four are self-tests, so a green build is not a green gate |
 | A package licence | The distributed artifact itself | Never a badge, and never another document in this repository (`CLAUDE.md:114-116`) |
 
-The heavier .NET skills earn their place as `src/` fills, and it holds **nine** public types
-(five sealed classes, two interfaces, and two enums, counted 2026-08-08; the count was six on
-2026-08-05). Reach for
+The heavier .NET skills earn their place as `src/` fills, and it holds **thirteen** public types
+across two projects, re-counted 2026-08-08 when `Nami.Identity.Core` landed: nine in
+`Abstractions` (five sealed classes, two interfaces, two enums) and four in `Core` (one sealed
+class, one static class, one interface, one enum). The `Abstractions` figure was six on
+2026-08-05. Reach for
 `dotnet-data:optimizing-ef-core-queries` when the persistence adapter lands,
 `dotnet-test:test-gap-analysis` and its siblings once there is a suite worth auditing, and
 `dotnet-diag` once there is a measured hot path. Invoking one before its subject exists produces

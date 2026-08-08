@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Engine wiring, the vertical slices, and the fluent builder (design 01
+    section 3.1, ADR-0065's ratified name).
+
+    THIS PROJECT TAKES ITS FRAMEWORK TYPES FROM A FrameworkReference AND NOT
+    FROM PACKAGES, and that is a choice with a measured reason rather than a
+    habit. `AddNamiIdentity` needs `IServiceCollection`, `IValidateOptions<T>`,
+    `ValidateOnStart()` and `BindConfiguration()`. In a plain `Microsoft.NET.Sdk`
+    library on net10.0 every one of those arrives as a separate NuGet package,
+    which would mean four PackageVersion rows and four licence reads owed under
+    ADR-0026 before a single line of Nami's own logic exists. Referencing the
+    ASP.NET Core shared framework instead brings them with the runtime, which
+    design 01's library table already records as ".NET and ASP.NET Core, Runtime
+    and web host, MIT, ADR-0030". The engine does the same thing: read at the
+    nuget.org flat container on 2026-08-08, `OpenIddict.Server.AspNetCore`
+    7.5.0's nuspec declares a frameworkReferences group for net8.0, net9.0 and
+    net10.0 and carries one package dependency, `OpenIddict.Server`.
+
+    THE DEPENDENCY RULE STILL HOLDS AND IS NARROWER THAN IT LOOKS. Design 01
+    section 3.1 says `Core` depends on "`Abstractions` plus the protocol
+    engine" and "must not reference any adapter, database provider, or cloud
+    SDK". A shared framework is none of those three. The architecture suite
+    asserts the real rule against the compiled assembly, not against this file,
+    for the reason `tests/CLAUDE.md` records: a test that reads a project file
+    fails on a correct project.
+
+    NO OpenIddict PackageReference YET, deliberately. `Directory.Packages.props`
+    carries the bracket pins and `docs/DEPENDENCY-LICENSES.md` carries the
+    licences, both landed with this project, but nothing here compiles against
+    the engine so far. An unused reference is invisible to BOTH architecture
+    facts, measured 2026-08-02 and recorded in `tests/CLAUDE.md`: with a package
+    referenced and no code touching it, the type graph and the assembly
+    reference table both pass. Adding the reference with the wiring that uses it
+    is what makes the rule able to see it.
+
+    TargetFrameworks reads the knob rather than naming a framework, because
+    ADR-0030 parameter B multi-targets libraries and single-targets the host.
+  -->
+
+  <PropertyGroup>
+    <TargetFrameworks>$(NamiLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Nami.Identity.Abstractions/Nami.Identity.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

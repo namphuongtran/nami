@@ -115,4 +115,60 @@
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
   </ItemGroup>
 
+  <!--
+    The engine, pinned 2026-08-08 (ADR-0021 parameter A).
+
+    THE BRACKET IS THE POINT AND IT IS THE ONLY GROUP HERE THAT CARRIES ONE.
+    `[7.5.0]` is an exact pin; `7.5.0` above is a floor that restores as
+    `>= 7.5.0`. ADR-0021 parameter A requires the bracket "of OpenIddict and its
+    sub-packages" and deliberately does NOT impose it on every row, because a
+    package with a deep graph can pay a restore conflict no decision asked for.
+    So this file mixes both forms on purpose, and the difference between the two
+    groups is a decision rather than an inconsistency.
+
+    NOTHING REFERENCES THESE YET, and the rows are here anyway. Central Package
+    Management fixes a version at the moment a reference is added, so pinning
+    ahead is what stops the first reference restoring whatever the graph offers
+    that day. The eight identifiers are `docs/design/04-core-protocol.md`
+    section 6's own list, taken whole rather than guessed at, because WHICH of
+    them `Nami.Identity.Core` references is not settled: design 01's library
+    table writes the umbrella `OpenIddict.AspNetCore` while design 04 names the
+    granular set and never mentions the umbrella. That disagreement is resolved
+    with the wiring, not here. Measured 2026-08-08 at the nuget.org flat
+    container, it is not cosmetic: `OpenIddict.AspNetCore` declares seven
+    net10.0 dependencies including the whole client stack, and reaches
+    `OpenIddict.Client.WebIntegration`, a 2 864 477-byte package for an
+    authorization server that is not an OAuth client, while
+    `OpenIddict.Server.AspNetCore` declares exactly one, `OpenIddict.Server`.
+
+    A BRACKET BOUNDS THE DIRECT EDGE AND NOTHING BENEATH IT, so these rows do
+    not make a restore reproducible; ADR-0095 owns that and declines the lock
+    file. `OpenIddict.Abstractions` deliberately gets no row: it arrives
+    transitively, and a PackageVersion row for a package nothing references
+    directly is inert.
+
+    Licences, read before adoption rather than after (ADR-0026 section A, and
+    section 7 of the licence record). All nine, being the eight below plus the
+    transitive `OpenIddict.Abstractions`, were read on 2026-08-08 at their own
+    `.nuspec` on the nuget.org flat container, one request each. Every one
+    carries `<license type="expression">Apache-2.0</license>`, which is on
+    ADR-0026 section A's permissive list, and every one declares the same
+    upstream repository commit, `aa7fac0996cb1c86c4310a005bdc66077eb53ba8`.
+    That commit is the one `docs/CLAUDE.md` records for the checked-in
+    OpenIddict source in the external corpus, so a claim read out of that tree
+    ties to exactly this pin rather than to a version string. Recorded with
+    their sources in `docs/DEPENDENCY-LICENSES.md` section 3.
+  -->
+
+  <ItemGroup>
+    <PackageVersion Include="OpenIddict.Core" Version="[7.5.0]" />
+    <PackageVersion Include="OpenIddict.Server" Version="[7.5.0]" />
+    <PackageVersion Include="OpenIddict.Server.AspNetCore" Version="[7.5.0]" />
+    <PackageVersion Include="OpenIddict.Validation" Version="[7.5.0]" />
+    <PackageVersion Include="OpenIddict.Validation.AspNetCore" Version="[7.5.0]" />
+    <PackageVersion Include="OpenIddict.Validation.ServerIntegration" Version="[7.5.0]" />
+    <PackageVersion Include="OpenIddict.EntityFrameworkCore" Version="[7.5.0]" />
+    <PackageVersion Include="OpenIddict.Quartz" Version="[7.5.0]" />
+  </ItemGroup>
+
 </Project>

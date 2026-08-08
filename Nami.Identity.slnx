@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Nami.Identity.Abstractions/Nami.Identity.Abstractions.csproj" />
+    <Project Path="src/Nami.Identity.Core/Nami.Identity.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Nami.Identity.ArchitectureTests/Nami.Identity.ArchitectureTests.csproj" />
