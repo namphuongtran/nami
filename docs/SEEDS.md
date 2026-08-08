@@ -29,6 +29,7 @@ graph LR
   S002 --> S019[S-019 amend 0030]
   S002 --> S020[S-020 amend 0036]
   S003 --> S021[S-021 re-derive 0093 quote]
+  S022[S-022 extend the 0061 rule] --> S023[S-023 wire the manifest check]
   S007[S-007 which identifier] --> S008[S-008 reference engine]
   S002 --> S008
   S007 --> S009[S-009 where the block splits]
@@ -45,7 +46,7 @@ graph LR
 | S-001 | Classify every `7.5.0` reference before changing any | done | none |
 | S-002 | Bump the manifest to `[7.6.0]` and re-read the nine licences | done | S-001 done |
 | S-003 | Amend ADR-0021 for the new pin and the half-run playbook | done | S-002 done |
-| S-004 | Amend the ADR-0061 stack row to the new pin | open | S-002 done |
+| S-004 | Amend the ADR-0061 stack row to the new pin | done | S-002 done |
 | S-005 | Date or re-point every source-read claim the bump invalidates | open | S-001, S-002 both done |
 | S-006 | Decide what replaces the offline 7.5.0 source tree | open | S-001 done |
 | S-007 | Resolve umbrella versus granular for `Core`'s engine reference | open | none |
@@ -63,6 +64,8 @@ graph LR
 | S-019 | Amend ADR-0030's stack sentence to the new pin | open | S-002 done |
 | S-020 | Amend ADR-0036's live-pin clause to the new pin | open | S-002 done |
 | S-021 | Re-derive ADR-0093's verbatim quotation of ADR-0021 | done | S-003 done |
+| S-022 | Extend ADR-0061's maintenance rule to cover a version moving inside a row | open | none |
+| S-023 | Wire the ADR-0061-against-manifest check now its own trigger has fired | blocked | S-022 |
 
 ---
 
@@ -451,7 +454,9 @@ sources did not move.
 
 ## S-004. Amend the ADR-0061 stack row to the new pin
 
-**Status:** open · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet
+**Status:** done · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet. S-022 and S-023
+are seeds this one **established** rather than unblocked: the gap each names existed before this seed
+ran, and neither was waiting on it
 
 **End state.** `docs/adr/0061-technology-stack-of-record.md:49` reads 7.6 rather than 7.5 in its
 `Protocol engine` row, with the change recorded in that ADR's own maintenance style.
@@ -467,6 +472,44 @@ agree and proves nothing about a shared omission; read the row rather than the e
 **Sources.** `docs/adr/0061-technology-stack-of-record.md:49`, and `:84` for the limit of Check 4.
 
 **Out of scope.** Every other row in that table.
+
+### S-004 result, measured 2026-08-08
+
+One cell changed, and the seed's own warning turned out to name the wrong blind spot.
+
+**The edit.** `:49` reads "OpenIddict 7.6 (pinned, seam-isolated)". The patch number is deliberately
+absent: every version in that table is written to major or minor only, and four other rows were read
+to confirm it (".NET 10", "PostgreSQL 18", "EF Core 10", "Bootstrap 5"). ADR-0021 parameter A owns the
+exact pin with its bracket, and an index repeating it would be a second place to be wrong.
+
+**1. The maintenance rule does not authorize this edit, which is why S-022 now exists.** Read at
+source, `0061:80` has two clauses: add a row when an ADR is accepted, and re-point a row when a choice
+is superseded. A version moving **inside** an existing row is neither. The edit was made instead under
+the sentence beside them, that the table "is an index, never the authority", so a stale version cell is
+the table being the bug. Extending the rule to say so is a change to a binding rule, so it is its own
+seed rather than a line smuggled into a transcription.
+
+**2. The seed pointed at the wrong limit of Check 4, and the real one is narrower.** This seed's
+Sources cite `0061:84` for what Check 4 cannot see, and that paragraph describes a **shared omission**:
+a technology with no row and no marker, two empty entries agreeing perfectly. That is not this case.
+This was a row that existed and was wrong. Read at `scripts/check-adrs.sh` on 2026-08-08, Check 4
+extracts only the **last** cell of each row with `sed -E 's/.*\| ([0-9, ]+) \|$/\1/'` and set-compares
+those ADR numbers against the `stack-record: true` markers. It never reads the "Committed choice" cell
+at all. So the version could have stayed at 7.5 indefinitely with every gate green, and it did stay
+wrong from the moment S-002 landed the pin until this commit.
+
+**3. The trigger `0061:86` names has fired, which is why S-023 now exists.** That paragraph says to
+wire the table-against-manifest check "when the manifest carries runtime packages", and that until then
+the human step is the whole of it. When it was written the manifest held one build-time analyzer. It now
+holds **eight** bracket-pinned OpenIddict rows, landed 2026-08-08 by S-002, and those are runtime
+packages indexed by the very row this seed corrected. So the manifest side of the check can find
+something rather than nothing, and the first thing it would find is the defect this seed fixed by hand.
+
+**Verification.** `bash scripts/check-adrs.sh` and `bash scripts/test-check-adrs.sh`, both green, and
+`python3 scripts/check-decisions-index.py` green at 97 ADRs. Per this seed's own instruction the row
+was read rather than the exit code: `:49` names 7.6 and still cites `0021, 0014, 0048`, so Check 4's
+last-cell extraction sees an unchanged set. The frontmatter was untouched, so `stack-record: true` and
+`status: "accepted"` still satisfy Checks 3 and 4. `markdownlint-cli2` green at 195 files.
 
 ---
 
@@ -977,6 +1020,89 @@ owns what the pointer must satisfy.
 `.claude/rules/writing-style.md`, the "Nami only" section, rule 2, as the precedent it is.
 
 **Out of scope.** Every other citation in ADR-0093, and ADR-0021 itself, which S-003 owns.
+
+---
+
+## S-022. Extend ADR-0061's maintenance rule to cover a version moving inside a row
+
+**Status:** open · **Blocked by:** none · **Unblocks:** S-023
+
+**The gap, quoted from the rule itself.** `docs/adr/0061-technology-stack-of-record.md:80` binds two
+things and only two: "When a new technology decision is accepted, add a row here in the same change
+that adds the ADR; when a choice is superseded, update the row to point at the superseding ADR." S-004
+had to move `OpenIddict 7.5` to `7.6` inside an existing row whose owning ADR did not change. That is
+neither clause, and S-004 made the edit under the next sentence instead, that the table "is an index,
+never the authority".
+
+**Why it is a decision and not a wording fix.** The rule is marked binding, and a third clause tells
+every future bump that it owes an edit here. That is a new obligation on a class of change, which is
+what an ADR amendment is for. It also has to say who notices: the pin lives in ADR-0021 parameter A
+and in `Directory.Packages.props`, and nothing today connects either to this table.
+
+**End state.** `0061:80`'s rule carries a clause covering a version or a descriptive detail changing
+inside a row while its owning ADR stays the same, in this ADR's own amendment style. The clause names
+where the authoritative value lives, which is the owning ADR rather than this table. The amendment says
+whether the obligation is on the seed that moves the pin or on a periodic pass, because a rule with no
+named moment is a rule nobody runs.
+
+**Verification.** `bash scripts/check-adrs.sh` after `git add`, `bash scripts/test-check-adrs.sh`, and
+`python3 scripts/check-decisions-index.py`. Then read `:80` and confirm a reader who has just bumped a
+pin can tell from the rule alone that this table owes an edit. Check 3 compares the index row status
+against the frontmatter status, so confirm neither moved.
+
+**Sources.** `docs/adr/0061-technology-stack-of-record.md:80` for the two clauses, `:84` for the
+shared-omission blind spot this is **not**, and `:86` for the deferred manifest check;
+`scripts/check-adrs.sh` Check 4, read 2026-08-08, which extracts only each row's last cell with
+`sed -E 's/.*\| ([0-9, ]+) \|$/\1/'` and never reads the choice cell.
+
+**Out of scope.** Building any check, which is S-023. Auditing the other rows for stale details, which
+this ADR's own 2026-07-25 entry already says the remaining rows deserve before GA.
+
+---
+
+## S-023. Wire the ADR-0061-against-manifest check now its own trigger has fired
+
+**Status:** blocked · **Blocked by:** S-022 · **Unblocks:** nothing yet
+
+**The trigger, quoted, and the measurement that fired it.**
+`docs/adr/0061-technology-stack-of-record.md:86` says to "Wire the check when the manifest carries
+runtime packages, and until then the human step above is still the whole of it". It also explains why
+it was not worth doing then: "a manifest of build-time analyzers is not a stack". Measured 2026-08-08,
+`Directory.Packages.props` carries eleven `PackageVersion` rows, of which **eight** are the
+bracket-pinned OpenIddict packages landed by S-002. Those are runtime packages, and they are indexed by
+the "Protocol engine" row. So the condition in that sentence is met.
+
+**What the check has to catch, and it is not the one already recorded.** `0061:84` describes a shared
+omission, a technology with no row and no marker, and states plainly that the guardrail is blind to it.
+S-004 found a second and narrower shape: a row that exists with a stale value. Read at source
+2026-08-08, Check 4 extracts only each row's last cell and set-compares ADR numbers, so it reads no
+version anywhere. The first defect this check should find is therefore the one S-004 fixed by hand.
+
+**End state.** A check exists that compares the version in ADR-0061's stack table against
+`Directory.Packages.props` for every technology present in both, and it fails the build on a
+disagreement. It runs where the other eight gates run. **The direction is stated rather than assumed**,
+because `0061:86` warns that reconciling the table *to* the manifest finds nothing useful while the
+manifest is small: this check runs manifest to table for versions, and the completeness direction stays
+the human step until a later seed changes that.
+
+**The check must be failed on purpose before it is believed.** `.claude/rules/build-and-ci.md` and this
+repository's four self-tests exist because a control read as enforced while enforcing nothing. So the
+end state includes a planted break, at minimum a table cell moved one minor version away from the
+manifest, with the run log line showing the check red. The table writes versions to major or minor while
+the manifest pins to patch inside brackets, so the comparison is not string equality and the seed says
+what it is instead.
+
+**Verification.** The new check fails on a planted mismatch and passes on the real tree, both logged.
+All nine existing gates stay green. If the check is added to `scripts/check-adrs.sh`, then
+`bash scripts/test-check-adrs.sh` covers it and gains a planted case; if it is a new script, it arrives
+with its own self-test, and `.claude/rules/commands.md` gains its command.
+
+**Sources.** `docs/adr/0061-technology-stack-of-record.md:84` and `:86`; `scripts/check-adrs.sh`
+Check 4, read 2026-08-08; `Directory.Packages.props`, eleven `PackageVersion` rows of which eight are
+OpenIddict, counted 2026-08-08; the `adding-a-ci-gate` skill for the procedure.
+
+**Out of scope.** Checking licences, which ADR-0026 section C owns. Checking completeness, meaning a
+technology present in the manifest with no table row, which `0061:86` says finds nothing useful yet.
 
 ### S-021 result, measured 2026-08-08
 

@@ -46,7 +46,7 @@ Every technology in the table below was chosen under these rules, and a future c
 | Layer / concern | Committed choice | Owning ADR |
 | --- | --- | --- |
 | Runtime and language | .NET 10 (LTS-to-LTS cadence, multi-target) | 0030 |
-| Protocol engine | OpenIddict 7.5 (pinned, seam-isolated) | 0021, 0014, 0048 |
+| Protocol engine | OpenIddict 7.6 (pinned, seam-isolated) | 0021, 0014, 0048 |
 | Database engine | PostgreSQL 18 (sole engine, forced RLS) | 0037 |
 | ORM and driver | EF Core 10 and Npgsql; DbContext pooling is **per context**, and the tenant-scoped hot path is deliberately **not** pooled in v1 | 0037, 0018 |
 | Primary keys | UUIDv7 (one deliberate bigint exception) | 0036 |
@@ -114,5 +114,32 @@ This rule is machine-enforced. An ADR that belongs in this table carries `stack-
 * This is a consolidating ADR, a sibling to ADR-0058 (principles) and ADR-0060 (testing strategy); together they make the "why", the "how tested", and the "built on what" findable in three records.
 * `README.md` already lists a planned feature set and a why-Nami summary; it may render a derived, friendly view of this table, but this ADR is the authority for the stack.
 * Authored fresh for this repository; it introduces no technology and pins no version beyond what the cited ADRs already fixed.
+* **Updated 2026-08-08: the "Protocol engine" row reads 7.6 rather than 7.5**, transcribed from
+  [ADR-0021](0021-openiddict-version-adaptation.md) after seed S-002 moved the pin to `[7.6.0]` and
+  seed S-003 amended that ADR. This is an index following its owner, which is what the maintenance
+  rule above asks for, and the patch number is deliberately absent because every version in this
+  table is written to major or minor only (".NET 10", "PostgreSQL 18", "EF Core 10", "Bootstrap 5").
+  ADR-0021 parameter A owns the exact pin including its bracket.
+  * **The maintenance rule does not actually cover this edit, and that gap is the finding.** Read at
+    source, the rule has two clauses: add a row when an ADR is accepted, and re-point a row when a
+    choice is superseded. A **version moving inside an existing row** is neither. This change was
+    made under the sentence beside them, that the table "is an index, never the authority", so a
+    stale version cell is the table being the bug. Extending the rule to say so is a change to a
+    binding rule rather than a transcription, so it is **seed S-022** and not this edit.
+  * **Check 4 cannot see a stale version cell, and this is a different blind spot from the one
+    already recorded above.** That paragraph describes a *shared omission*, a technology with no row
+    and no marker. This is a row that exists and is wrong. Read at
+    `scripts/check-adrs.sh` on 2026-08-08, Check 4 extracts only the **last** cell of each row, with
+    `sed -E 's/.*\| ([0-9, ]+) \|$/\1/'`, and set-compares those ADR numbers against the
+    `stack-record: true` markers. It never reads the "Committed choice" cell. So the version in this
+    table could have stayed at 7.5 forever with the guardrail green, which is exactly what happened
+    between the pin landing and this edit.
+  * **The trigger the paragraph above names has fired.** It says to wire the table-against-manifest
+    check "when the manifest carries runtime packages", and that until then the human step is the
+    whole of it. `Directory.Packages.props` carried only build-time and test packages when that was
+    written. Since 2026-08-08 it carries **eight** bracket-pinned OpenIddict rows, which are runtime
+    packages and are indexed by the row this entry corrects. So the manifest side of the check can
+    now find something rather than nothing. **Seed S-023** owns wiring it, and this ADR does not
+    pre-empt what shape it takes.
 * Corrected 2026-07-25 while writing the architecture layer. The "Admin and login UI" row read "Server-rendered MVC Razor" against ADR-0020, which conflated two different ASP.NET Core technologies and attributed a choice to an ADR that does not make it: ADR-0020 splits **admin** into a REST API plus an MVC Razor BFF and never mentions the login surface, while the login, consent, and logout pages are **Razor Pages** per their detailed design. One **known gap** follows and is deliberately left visible in the row rather than papered over: the Razor Pages (and Bootstrap 5) choice for the human-facing surface is recorded only in a detailed design, so it is a stack entry with no owning ADR, which is exactly what this table's maintenance rule is meant to prevent. That gap was closed the same day by ADR-0072, which owns the end-user rendering surface and records why Blazor is not used for it; the row now cites both ADRs and the table's every-entry-has-an-owning-ADR rule holds again.
 * Corrected 2026-07-25, second instance of the same class. The "ORM and driver" row read "pooled DbContext" while the ADR it cites, ADR-0018, is titled "Register the Pool-mode OpenIddict DbContext **non-pooled** in v1". The row was not merely imprecise but inverted on the load-bearing case: pooling is decided **per context**, and the tenant-scoped operational context, the hot path, is non-pooled precisely because spike A-4's test T7 showed a pooled instance carrying a stale `TenantId` into the next tenant's request. Both corrections were found the same way, by writing the architecture layer and requiring every row to survive a read of its owning ADR, which suggests the remaining rows deserve the same pass before GA.
