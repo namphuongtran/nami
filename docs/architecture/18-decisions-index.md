@@ -169,6 +169,7 @@ look for a wrong claim**, and the wiring change is exactly the kind that leaves 
 | [0093](../adr/0093-warnings-as-errors.md) | Every warning fails the build, with the restore-time vulnerability codes carved out | NONE |
 | [0094](../adr/0094-code-quality-analyzer-breadth.md) | Run the SDK code-quality analyzers at Recommended, and reject All on the evidence of the one rule it adds today | NONE |
 | [0095](../adr/0095-package-restore-determinism.md) | Commit no package lock file, and hold the restore graph deterministic by forbidding floating versions and a second package source | NONE |
+| [0096](../adr/0096-fluent-builder-api-surface.md) | Fix the fluent-builder API surface, binding `NamiIdentityOptions` from configuration before the delegate runs, keeping `INamiIdentityBuilder` to a service-collection carrier, and failing at start-up rather than marking the two required options `required` | NONE |
 
 ## 3. What the shape of that table says
 

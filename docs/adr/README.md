@@ -132,3 +132,4 @@ Check 6 screens the whole `NN.T` / `NN.K` shape rather than a single family.
 | [0093](0093-warnings-as-errors.md) | Every warning fails the build, with the restore-time vulnerability codes carved out | accepted |
 | [0094](0094-code-quality-analyzer-breadth.md) | Run the SDK code-quality analyzers at Recommended, and reject All on the evidence of the one rule it adds today | accepted |
 | [0095](0095-package-restore-determinism.md) | Commit no package lock file, and hold the restore graph deterministic by forbidding floating versions and a second package source | accepted |
+| [0096](0096-fluent-builder-api-surface.md) | Fix the fluent-builder API surface, binding `NamiIdentityOptions` from configuration before the delegate runs, keeping `INamiIdentityBuilder` to a service-collection carrier, and failing at start-up rather than marking the two required options `required` | accepted |
