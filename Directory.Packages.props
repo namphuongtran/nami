@@ -135,12 +135,20 @@
     them `Nami.Identity.Core` references is not settled: design 01's library
     table writes the umbrella `OpenIddict.AspNetCore` while design 04 names the
     granular set and never mentions the umbrella. That disagreement is resolved
-    with the wiring, not here. Measured 2026-08-08 at the nuget.org flat
-    container, it is not cosmetic: `OpenIddict.AspNetCore` declares seven
-    net10.0 dependencies including the whole client stack, and reaches
-    `OpenIddict.Client.WebIntegration`, a 2 864 477-byte package for an
-    authorization server that is not an OAuth client, while
+    with the wiring, not here, and seed S-007 owns it. Measured 2026-08-08 at
+    the nuget.org flat container, **at 7.6.0 and not at the version this
+    comment first carried**: `OpenIddict.AspNetCore` declares seven net10.0
+    dependencies, six of them the Client, Server and Validation triples plus
+    their DataProtection siblings, and the seventh the `OpenIddict`
+    meta-package, which itself declares ten including
+    `OpenIddict.Client.WebIntegration`, a 2 891 507-byte nupkg for an
+    authorization server that is not an OAuth client.
     `OpenIddict.Server.AspNetCore` declares exactly one, `OpenIddict.Server`.
+    THE BYTE FIGURE READ 2 864 477 UNTIL 2026-08-08, which was the 7.5.0
+    package. It was carried into this comment by the same change that moved the
+    pin to 7.6.0, so the number described a version the block no longer pinned.
+    Re-measured rather than adjusted. Every node here is a licence read owed
+    under ADR-0026, which is why the count is the argument and not the size.
 
     A BRACKET BOUNDS THE DIRECT EDGE AND NOTHING BENEATH IT, so these rows do
     not make a restore reproducible; ADR-0095 owns that and declines the lock

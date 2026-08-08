@@ -617,18 +617,41 @@ source and is the precedent for one of the options.
 
 **Status:** open · **Blocked by:** none · **Unblocks:** S-008, S-009
 
-**The disagreement, quoted from both sides.**
-`docs/design/01-foundations.md:430` lists the engine as `OpenIddict (AspNetCore,
-EntityFrameworkCore, Quartz)` in its key-libraries table. `docs/design/04-core-protocol.md:827`
-lists `OpenIddict.Server (.AspNetCore)` and `:828` lists `OpenIddict.Validation (.AspNetCore,
-.ServerIntegration)`, and that document never names the umbrella package at all.
+**The disagreement, quoted from both sides. Both sit in a section 6 titled "Dependencies and
+wiring", which is what makes them the same question asked twice.**
+`docs/design/01-foundations.md:455`, under section 6's "Key libraries and licenses" heading, lists
+the engine as `OpenIddict (AspNetCore, EntityFrameworkCore, Quartz)`.
+`docs/design/04-core-protocol.md:827`, in its own section 6, lists
+`OpenIddict.Server (.AspNetCore)`, `:828` lists `OpenIddict.Validation (.AspNetCore,
+.ServerIntegration)`, and `:829` lists `OpenIddict.Core / .EntityFrameworkCore / .Quartz`. That
+document never names the umbrella package at all.
+
+**This seed cited `:430` until 2026-08-08, and the correction is worth more than the two digits.**
+Line 430 was the umbrella row at commit `213fddc`. Commit `65ccddc` added rows to design 01 and
+moved it to `:455`. This seed was written at `c122190`, **two commits after the shift**, and carried
+the old number anyway. So the pointer was right when someone first read it and was transcribed
+forward without being re-derived, landing in a brand-new document already stale. Read at `:430`
+today, and at `8e19123` and `65ccddc`, the line is about a secret resolver in section 5 and has
+nothing to do with packages. `docs/CLAUDE.md` names this exact shape: "A line number ages, and the
+edit that ages it is usually your own." Here it aged inside the increment that created the seed.
+The other pointer, `:98-99`, was re-read the same day and is correct.
 
 **Why it matters, measured 2026-08-08 at the nuget.org flat container.**
 `OpenIddict.AspNetCore` declares **seven** net10.0 dependencies, being the whole client stack plus
 the `OpenIddict` meta-package, and the meta-package reaches
-`OpenIddict.Client.WebIntegration`, whose nupkg is **2 864 477 bytes**, for a server that is not an
+`OpenIddict.Client.WebIntegration`, whose nupkg is **2 891 507 bytes**, for a server that is not an
 OAuth client. `OpenIddict.Server.AspNetCore` declares **one**, `OpenIddict.Server`. Every extra node
-is a licence read owed under ADR-0026.
+is a licence read owed under ADR-0026, which is why the count is the argument and the size is only
+the illustration.
+
+**Re-measured 2026-08-08 at 7.6.0, and the chain is stated as edges rather than asserted.**
+`OpenIddict.AspNetCore` declares seven net10.0 dependencies: `Client.AspNetCore`,
+`Client.DataProtection`, `Server.AspNetCore`, `Server.DataProtection`, `Validation.AspNetCore`,
+`Validation.DataProtection`, and the `OpenIddict` meta-package. That meta-package declares ten,
+including `OpenIddict.Client.WebIntegration`. So the path is
+`OpenIddict.AspNetCore` to `OpenIddict` to `Client.WebIntegration`, each edge read at its own nuspec.
+**The byte figure read 2 864 477 until 2026-08-08**, which was the 7.5.0 package; the seven and the one
+did not move with the pin, and the size did.
 
 **End state.** One of the two documents is corrected, and the correction says which was the bug and
 why. Design 01 is the implementer source of record for the package graph, and design 04 for
@@ -639,7 +662,7 @@ answering before deciding which one is wrong.
 as what `Core` references, or design 04 is corrected instead and the same check passes in reverse.
 `bash scripts/check-adrs.sh` and `markdownlint-cli2`.
 
-**Sources.** `docs/design/01-foundations.md:98-99` and `:430`;
+**Sources.** `docs/design/01-foundations.md:98-99` and `:455`, both re-read 2026-08-08;
 `docs/design/04-core-protocol.md:827-829` and `:1024-1029`.
 
 **Out of scope.** Adding the reference, which is S-008.

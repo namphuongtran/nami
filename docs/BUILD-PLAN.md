@@ -36,6 +36,18 @@ next. Neither is restated here.
 | Why that one | Section 1 below records that S-007 through S-011 and S-016 are what PR-7 did not deliver. S-007 has no blocker and unblocks S-008 and S-009, so it is the only door into that chain |
 | Everything since | Eleven seeds closed 2026-08-08, all documentation, no code moved. `git log --oneline` from `8e19123` is the list |
 
+**If you arrived with the words "increment 3", it is S-007 through S-011 plus S-016.** That label was
+used in the conversation that planned the work and **exists nowhere in this repository**: searched
+2026-08-08, `increment [0-9]` and `PR-?[0-9]` over `git log --all` and over this file return no such
+marker. Its first problem is exactly S-007's subject, choosing between the umbrella and the granular
+engine identifier, and the seed carries the measurement that decides it.
+
+The equivalence is recorded **here and not in the tracker**, on purpose. This repository already has
+two names for a unit of work, the retired `PR-N` and the live `S-NNN`, and a third would be a third
+place to be wrong. This file is temporary and may not be cited, so it is the right place for a
+translation a reader needs once. **It is also the evidence for why section 1 was retired**: a plan
+that lives in a chat window does not survive the chat.
+
 **The boundary this file keeps with the tracker**, stated because it leaked once on 2026-08-08
 and three rows lived in both places at once:
 
