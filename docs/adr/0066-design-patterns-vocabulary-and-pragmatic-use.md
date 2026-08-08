@@ -48,7 +48,6 @@ Among the patterns already in deliberate use (not an exhaustive list):
 * **Adapter** for the cloud-agnostic ports: key, secret, and data-protection stores (ADR-0006/0009), email delivery (ADR-0038), the tenant store (ADR-0001), EF persistence, and the `ICheckAccess` adapter (ADR-0047), all under the ports doctrine of ADR-0024.
 * **Strategy** for swappable behavior: the `ICheckAccess` engine (DB-first now, ReBAC later, ADR-0047), the per-client CORS policy provider (ADR-0050), and the dynamic external-IdP scheme provider (ADR-0034).
 * **Chain of Responsibility** for the OpenIddict event-handler pipeline that owns the protocol flow; custom logic is an inserted handler at a named order-anchor, never a fork (ADR-0021 parameter F, which owns the anchoring rule; the citation here read ADR-0024/0021 until 2026-08-02, and ADR-0024 rules on nothing in this pipeline: the only handler it defines is the feature-slice handler of a vertical slice, and its one mention of the "pipeline/handler model" is a consequence bullet arguing for the architecture style, not a rule about insertion).
-* **Factory** for the pooled `DbContext` in Pool mode (ADR-0018).
 * **Outbox** for the audit and email delivery paths, the sanctioned edge-eventing path (ADR-0008/0038/0020).
 * **State** for the `Proposal` aggregate's state machine (ADR-0020) and the key-rotation lifecycle (ADR-0011).
 * **Mediator / CQRS-lite** as an optional per-slice handler shape in the Application layer (ADR-0020/0024).
@@ -93,6 +92,41 @@ Each pattern-in-use is owned by the ADR that applies it; this ADR indexes them a
 
 ## More Information
 
+* **Corrected 2026-08-08: the `Factory` entry was removed from the patterns-in-use list, because the
+  pattern is in use nowhere and the entry named a deferred option as current.** It read "**Factory**
+  for the pooled `DbContext` in Pool mode (ADR-0018)". [ADR-0018](0018-dbcontext-pooling-for-pool-mode.md)
+  is titled "Register the Pool-mode OpenIddict DbContext **non-pooled** in v1, with pooled-plus-mutable
+  deferred". Its Option A is the pooled one and uses `AddPooledDbContextFactory<T>` plus a scoped
+  `IDbContextFactory<T>`; `0018:35` chooses Option B, and `0018:41` records the factory shape as "the
+  A-4b pattern held for later". So the only source of a Factory here is an option that was not taken.
+  * **This ADR's own core rule decides the repair.** The pragmatic-use rule above states that "a
+    pattern applied without a problem to solve is a defect, not good design", and the heading claims
+    the listed patterns are "already in deliberate use". An entry with no use contradicts both, so the
+    fix is removal rather than a re-label. The fact itself is not lost: ADR-0018 owns A-4b and states
+    the shape, and the "Where the guidance lives" section already assigns each pattern to the ADR that
+    applies it, this one being an index that "does not override them".
+  * **The searches are written down, because the whole claim is an absence.** Using `git grep -P`, the
+    pattern `\bFactor(y|ies)\b` returned **exactly one** line across `docs/` excluding the work queue
+    and the seed tracker, which was this entry itself, and **zero** across `src/` and `tests/`.
+    `AddPooledDbContextFactory` occurs only at `0018:17`, which defines the term, and `0018:29`, which
+    is Option A. The three genuinely pooled contexts are registered with `AddDbContextPool`
+    (`docs/design/02-data.md:1164-1166`), which takes no factory. **The `-P` matters:** the same
+    search written `git grep -cE "\bFactory\b"` returns 0 against a file that contains the word, which
+    `docs/CLAUDE.md` records as this clone's word-boundary trap, and an absence written that way
+    reports zero for every term.
+  * **"Non-pooled" would have been the wrong correction too.** Pooling is used, per context. Read
+    2026-08-08, `docs/design/02-data.md:55-59` pools `IdentityDbContext`,
+    `DataProtectionDbContext`, and `ControlPlaneDbContext`, and leaves the two tenant-scoped contexts
+    unpooled. [ADR-0061](0061-technology-stack-of-record.md) carries the accurate framing.
+  * **The frontmatter is deliberately unchanged.** Its `consulted:` line groups ADR-0018 among "the
+    pattern-applying ADRs". ADR-0018 genuinely was consulted on 2026-07-18, so the record of that
+    reading stays; only the grouping label over-includes it, and editing a dated record to match a
+    later finding is what this repository forbids.
+  * **This is the fourth instance of one defect, and the previous three are on record.**
+    `0061:145` corrected the same inversion in the stack table and
+    `architecture/07-container-view.md:288-290` in that view, both 2026-07-25; `0061:118` predicted the
+    rest. Seed S-024 owns the fifth, `architecture/03-drivers-and-constraints.md:116`, and the same
+    seed as this change owns `0036:76`.
 * Related decisions: ADR-0058 (SOLID and the pragmatism guardrail this ADR applies to patterns), ADR-0024 (the architecture and the "start simple, no single-implementation interface" rule), ADR-0059 (the DDD tactical building blocks), ADR-0065 (naming, including calling a pattern by its catalog name), ADR-0061 (the index-versus-authority split), and the pattern-owning ADRs cited in the map (0006/0009, 0047, 0050, 0034, 0018, 0008, 0038, 0020, 0011, 0052).
 * Reference (named factually, adopted by reference): the Gang of Four design-pattern catalog, with refactoring.guru as the recommended readable reference.
 * Authored fresh for this repository; the generic textbook examples common to pattern material are replaced with Nami's own usages.
