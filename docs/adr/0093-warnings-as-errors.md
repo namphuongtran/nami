@@ -147,8 +147,8 @@ is what makes the broad version indefensible rather than merely discouraged.
 
 An OpenIddict or .NET bump that deprecates an API stops being a warning and becomes a build
 break. That is intended, and it is the point rather than a side effect: ADR-0021's per-release
-playbook already instructs the project to "clear obsolete warnings on 7.5 now" ahead of the
-8.0 bump, which removes all obsolete members (`0021:44`), and ADR-0030's parameter F reads the
+playbook already instructs the project to "clear obsolete warnings" at the current pin, ahead of
+the 8.0 bump, where "all obsolete members are removed" (`0021:44`), and ADR-0030's parameter F reads the
 .NET, ASP.NET Core, and EF Core breaking changes at each LTS bump (`0030:42`). Under this ADR
 those obsolete warnings cannot be carried quietly to the bump that deletes them. The escape
 hatch during an upgrade in progress is parameter D, per project, with a comment naming the
@@ -368,6 +368,18 @@ existing, unchanged code red on the day it lands.
 
 ## More Information
 
+* **Amended 2026-08-08: parameter E's quotation of ADR-0021 was made version-free, because the old
+  one falsified itself on a bump.** It read "clear obsolete warnings on 7.5 now", which was `0021:44`
+  word for word when this ADR was written on 2026-08-03. Seed S-002 moved the OpenIddict pin to 7.6.0
+  and seed S-003 moved that clause to read 7.6, so the quotation here stopped matching the source it
+  pointed at while the pointer still resolved. That is the shape `docs/CLAUDE.md` warns about: a
+  citation resolving to a real file passes every mechanical check, and nothing here reads a claim
+  against its source. **The repair is not new digits.** Parameter E now quotes two fragments,
+  "clear obsolete warnings" and "all obsolete members are removed", both verbatim substrings of
+  `0021:44` and neither carrying a version, so the next bump cannot break them. The pin belongs to
+  ADR-0021 parameter A to state and not to this ADR to repeat, and dropping it costs this paragraph
+  nothing: the timing was always carried by "ahead of the 8.0 bump" rather than by the pin. Verified
+  2026-08-08 that both fragments occur in `0021:44` and that `0021:44` is still parameter D.
 * **No `stack-record: true` marker, and no row in ADR-0061, deliberately.** This ADR
   introduces no technology: it sets an MSBuild property on an SDK ADR-0030 already chose, and
   `0061:68` already carries the "Code style and conventions" row naming `.editorconfig` plus

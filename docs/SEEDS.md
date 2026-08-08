@@ -62,7 +62,7 @@ graph LR
 | S-018 | Move the architecture layer's four engine-version statements to the new pin | open | S-002 done |
 | S-019 | Amend ADR-0030's stack sentence to the new pin | open | S-002 done |
 | S-020 | Amend ADR-0036's live-pin clause to the new pin | open | S-002 done |
-| S-021 | Re-derive ADR-0093's verbatim quotation of ADR-0021 | open | S-003 done |
+| S-021 | Re-derive ADR-0093's verbatim quotation of ADR-0021 | done | S-003 done |
 
 ---
 
@@ -117,11 +117,12 @@ file it changes is this one.
 
 ### S-001 result, measured 2026-08-08 at commit `5c3e5ad`
 
-**Read every line number below as that tree's, not as today's.** S-002 landed the bump immediately
-after this seed and rewrote both `Directory.Packages.props` and
-`docs/DEPENDENCY-LICENSES.md`, so the bucket-A pointers into those two files describe lines that no
-longer say 7.5.0 and no longer sit at those numbers. Re-deriving them would be wrong rather than
-tidy, because the classification is a snapshot of the tree the bump was planned against.
+**Read every line number below as that tree's, not as today's.** S-002, S-003, and S-021 landed
+immediately after this seed and rewrote `Directory.Packages.props`,
+`docs/DEPENDENCY-LICENSES.md`, `docs/adr/0021-openiddict-version-adaptation.md`, and
+`docs/adr/0093-warnings-as-errors.md`, so the bucket-A pointers into those four files describe lines
+that no longer say 7.5.0 and may no longer sit at those numbers. Re-deriving them would be wrong
+rather than tidy, because the classification is a snapshot of the tree the bump was planned against.
 `docs/CLAUDE.md` states the rule this follows: a sentence asserting what another file currently
 contains is a measurement, so it is dated, written in the past tense, and names the commit it was
 true at.
@@ -378,10 +379,10 @@ because they name a rejected option. A new More Information entry records the 20
 the release contained, which half of parameter D ran, and that S-011 owes the other half.
 
 **Three lines here, not two, and the third is quoted elsewhere.** S-001 classified `:14`, `:39`, and
-`:44` as bucket A, and `:32`, `:43`, and `:71` as bucket B. Line `:44` reads "clear obsolete warnings
-on 7.5 now", and `docs/adr/0093-warnings-as-errors.md:150` quotes that string word for word while
-citing `0021:44`. So editing `:44` falsifies a quotation in another ADR. S-021 re-derives it, and the
-two commits land together.
+`:44` as bucket A, and `:32`, `:43`, and `:71` as bucket B. When this seed was written, line `:44`
+read "clear obsolete warnings on 7.5 now" and `docs/adr/0093-warnings-as-errors.md:150` quoted that
+string word for word while citing `0021:44`. So editing `:44` falsified a quotation in another ADR.
+S-021 repaired it, and the two commits landed together.
 
 **Verification.** `bash scripts/check-adrs.sh` after `git add`, and
 `python3 scripts/check-decisions-index.py`. Check 3 requires the index row status to equal the
@@ -941,7 +942,7 @@ line already names, and it needs a restored package rather than a document edit.
 
 ## S-021. Re-derive ADR-0093's verbatim quotation of ADR-0021
 
-**Status:** open · **Blocked by:** S-003, which is done · **Unblocks:** nothing yet
+**Status:** done · **Blocked by:** S-003, which is done · **Unblocks:** nothing yet
 
 **Blocked by S-003 and not by S-002, and the distinction is the whole seed.** The quotation only
 breaks if S-003 actually edits the line it quotes. So this seed cannot be written until S-003 has
@@ -976,6 +977,49 @@ owns what the pointer must satisfy.
 `.claude/rules/writing-style.md`, the "Nami only" section, rule 2, as the precedent it is.
 
 **Out of scope.** Every other citation in ADR-0093, and ADR-0021 itself, which S-003 owns.
+
+### S-021 result, measured 2026-08-08
+
+**The repair is not the one this seed asked for, and the difference is the point.** The seed's end
+state said the quotation should match `0021:44` word for word. Doing only that means writing 7.6 where
+7.5 stood, which leaves the citation coupled to the pin and guarantees this seed recurs at every bump.
+`docs/CLAUDE.md` already rules on that shape: "Prefer an anchor that survives an edit."
+
+**What landed instead satisfies the end state and removes the recurrence.** Parameter E now quotes two
+fragments, "clear obsolete warnings" and "all obsolete members are removed". Both were verified
+2026-08-08 to be verbatim substrings of `0021:44`, so the quotation does match word for word, and
+neither carries a version, so the next bump cannot falsify it. The pin was dropped from the sentence
+because ADR-0021 parameter A owns it and repeating it here bought nothing: the timing in that
+paragraph was always carried by "ahead of the 8.0 bump" rather than by the version.
+
+**Dropping the version cost the paragraph no meaning**, which is why this was a judgement call rather
+than a decision needing its own seed. Parameter E's argument is that a deprecation becomes a build
+break, and that this is intended because ADR-0021 already tells the project to clear obsolete warnings
+before the bump that deletes the members. The version was never load-bearing in that argument.
+
+**The old wording is kept, in an amendment, not deleted.** ADR-0093's More Information now records
+what the quotation used to say, which seeds moved it, and why new digits were the wrong repair. That
+matters more than the fix: a citation that resolves while no longer holding the claim is the defect
+class this repository keeps paying for, and this is one instance caught with its cause written down.
+
+**One phrase was chosen to avoid polluting another seed's search.** The replacement says "at the
+current pin" rather than "at the pinned version", because S-005 verifies its own work by grepping
+`at the pinned version` and the wider `the pinned`. Measured after the edit, ADR-0093 returns zero
+hits for both, so this change adds no false positive to that seed.
+
+**Verification.** `bash scripts/check-adrs.sh` and `python3 scripts/check-decisions-index.py`, both
+green; `markdownlint-cli2` 195 files 0 issues. The frontmatter was untouched, so Check 3 sees the same
+`accepted` status in both index rows. Both quoted fragments were confirmed present in `0021:44` by
+substring test, and `0021:44` was confirmed still to be parameter D. Parameter E's edit replaced two
+lines with two lines and the amendment was appended inside More Information, so **every other pointer
+into ADR-0093 was re-read rather than reasoned about**: `0093:88-89`, `:94-98`, `:133-138`,
+`:255-256`, and `:258-260` each still hold what their citing documents claim, across
+`.claude/rules/build-and-ci.md`, `tests/CLAUDE.md`,
+`tests/Nami.Identity.UnitTests/Nami.Identity.UnitTests.csproj`, and ADR-0094. `0093:150` still holds
+the quotation line.
+
+**The one remaining `7.5` in ADR-0093 is deliberate.** The amendment quotes the old wording to record
+it. By S-001's bucket test that is bucket B, a closed record with a date, so it stays.
 
 ---
 
