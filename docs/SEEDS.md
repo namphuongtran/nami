@@ -77,7 +77,7 @@ graph LR
 | S-006 | Decide what replaces the offline 7.5.0 source tree | open | S-001 done |
 | S-007 | Resolve umbrella versus granular for `Core`'s engine reference | done | none |
 | S-008 | Reference the engine from `Core` and enumerate the restore graph | done | S-007 done |
-| S-009 | Decide where the `AddOpenIddict` block splits at the persistence boundary | blocked | S-007 |
+| S-009 | Decide where the `AddOpenIddict` block splits at the persistence boundary | done | S-007 done |
 | S-010 | Wire the engine inside `AddNamiIdentity` | blocked | S-008, S-009 |
 | S-011 | Stand up the contract-regression suite ADR-0021 part C requires | blocked | S-010 |
 | S-012 | Reconcile design 01's context count against its own table | open | none |
@@ -816,7 +816,7 @@ elision measurement; `docs/DEPENDENCY-LICENSES.md` section 3.1 for the enumerati
 
 ## S-009. Decide where the `AddOpenIddict` block splits at the persistence boundary
 
-**Status:** blocked · **Blocked by:** S-007 · **Unblocks:** S-010
+**Status:** done · **Blocked by:** S-007, which is done · **Unblocks:** S-010
 
 **The contradiction, quoted from both sides.**
 `docs/design/01-foundations.md:98-99` says `Core` "depends only on `Abstractions` plus the protocol
@@ -826,10 +826,19 @@ engine" and "must not reference any adapter, database provider, or cloud SDK".
 `UseEntityFrameworkCore` is persistence and `UseQuartz` is scheduling, so the block cannot live
 whole inside `Core`.
 
-**What is already settled and must not be re-litigated.** ADR-0096 decision 4 of the 2026-08-08
-session established that `Core` ships `AddNamiIdentity()`, which calls `AddOpenIddict()` inside
-itself, and that the host calls only `AddNamiIdentity()`. So the question is not whether `Core`
-calls the engine. It is which fluent segments belong to `Core` and which to the persistence adapter.
+**What is already settled, and the citation this seed had for it was wrong.** The settled part is
+that `Core` ships `AddNamiIdentity()`, which wires the engine, and that the host calls only that. So
+the question is not whether `Core` calls the engine. It is which fluent segments belong to `Core` and
+which to the persistence adapter.
+
+**This seed attributed that to "ADR-0096 decision 4" and no such thing exists.** Searched
+2026-08-08, `AddOpenIddict` returns **zero** hits in
+`docs/adr/0096-fluent-builder-api-surface.md`, and that ADR's parameters are lettered A through G
+with no numbered decisions. The real owner is `docs/design/01-foundations.md:385`, "`AddNamiIdentity(cfg)`
+wires the engine", with `:110` assigning "engine wiring, slices, the builder" to
+`Nami.Identity.Core`. Both are **designs**, so the wrapping is a realization and not an ADR-level
+commitment. The phrase "decision 4" came from the conversation that wrote the seed, which is the same
+chat-window-plan failure the tracker exists to end.
 
 **End state.** A statement exists, in the layer entitled to make it, of which segments of the block
 belong to which assembly. If the answer turns out to be a decision rather than a realization, it is
@@ -843,6 +852,58 @@ asks `Core` to call a persistence-configuring method.
 `docs/adr/0024-architecture-style.md:47`; `docs/adr/0027-packaging-and-distribution.md:35`.
 
 **Out of scope.** Writing the wiring, which is S-010.
+
+### S-009 result, measured 2026-08-08
+
+**It is a realization, not a decision, so no ADR was raised.** Design 04 section 3 now carries an
+ownership table and presents the persistence segment as its own call. Four reads settled it, and the
+fourth is the one that makes this a correction rather than an invention.
+
+**1. The rule already existed.** `design/01:97-102` states the ADR-0024 dependency rule and that
+`Core` "must not reference any adapter, database provider, or cloud SDK". Nothing new was decided.
+Design 04 had written a chain that rule forbids.
+
+**2. The split is determined by the C# type system.** Read at the upstream commit
+`5ce649a5bbbf1340c9be9c4f264197af563ab473` that 7.6.0 declares, each segment extends one builder type
+that arrives in one package:
+
+| Segment | Extends | Package | Owner |
+|---|---|---|---|
+| `AddOpenIddict()` | `IServiceCollection` | `OpenIddict.Abstractions` | anyone |
+| `.AddCore(...)` | `OpenIddictBuilder` | `OpenIddict.Core` | persistence adapter |
+| `UseEntityFrameworkCore()` | `OpenIddictCoreBuilder` | `.EntityFrameworkCore` | persistence adapter |
+| `UseDbContext<T>()` | `OpenIddictEntityFrameworkCoreBuilder` | `.EntityFrameworkCore` | persistence adapter |
+| `UseQuartz()` | `OpenIddictCoreBuilder` | `.Quartz` | the scheduling registration |
+| `.AddServer(...)` | `OpenIddictBuilder` | `.Server`, `.Server.AspNetCore` | **`Core`** |
+| `.AddValidation(...)` | `OpenIddictBuilder` | `.Validation`, `.ServerIntegration`, `.AspNetCore` | **`Core`** |
+
+`UseQuartz` extending `OpenIddictCoreBuilder` is the part that could have been guessed wrong: it is
+scheduling, not persistence, yet it rides the same segment because of the type it extends.
+
+**3. Splitting composes safely, and this is the load-bearing mechanism.**
+`src/OpenIddict.Abstractions/OpenIddictExtensions.cs:20` declares `AddOpenIddict()` with the entire
+body `return new OpenIddictBuilder(services)`. It is a stateless factory, not a registration. `AddCore`
+registers only through `TryAddScoped` and `TryAddEnumerable`, whose own comment says the initializer is
+"registered only once". So two assemblies may each call `AddOpenIddict()` and nothing double-registers.
+**Had this read come back the other way the answer would have been a decision, and probably an ADR.**
+
+**4. Two sibling designs already write it split.** `design/02:995-997` carries the persistence segment
+as its own `AddOpenIddict().AddCore(...)` call, and `design/06:437-444` carries the server and
+validation segments as separate statements. Design 04 was the only document presenting the block whole,
+which is what makes this a correction to one document rather than a new convention for three.
+
+**One thing checked and found not to be a defect.** `design/02:996` writes
+`UseDbContext<PoolDbContext>` where design 04 writes `UseDbContext<OpenIddictDbContext>`. Searched
+2026-08-08, `PoolDbContext` occurs in that one file only, on four lines, all inside a quotation from
+the spike-A-4 harness (`PoolDbContext.cs`, `SpikeHost.cs`, `PoolIsolationTests.cs`). `OpenIddictDbContext`
+is the production name and occurs across eight files. So the two names are a quotation and a type, not
+a disagreement, and naming that here stops a later reader filing it as one.
+
+**Verification.** The claim is checkable by reading, as the seed asked: no document now asks `Core` to
+call a persistence-configuring method. `bash scripts/check-adrs.sh`,
+`python3 scripts/check-decisions-index.py`, and `markdownlint-cli2`, all green. The corrected code block
+was re-read as valid C#: two `services.AddOpenIddict()` statements, the first ending at `.UseQuartz());`
+and the second closing at `.AddValidation(...);`.
 
 ---
 

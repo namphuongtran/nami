@@ -54,12 +54,56 @@ and consent UI (11), and the configuration layer (01).
 
 Every API name in this block was read at OpenIddict release tag 7.5.0; see section 11.
 
-```csharp
-services.AddOpenIddict()
+**This block is written as one chain no single assembly can call, and the segments are owned
+separately** (seed S-009, 2026-08-08). The dependency rule at
+[`01-foundations.md`](01-foundations.md) section 3.1 says `Core` "must not reference any adapter,
+database provider, or cloud SDK", so the three calls inside `.AddCore(...)` cannot live there. The
+split is not a judgement: each segment extends a specific builder type that arrives in a specific
+package, read at the upstream commit `5ce649a5bbbf1340c9be9c4f264197af563ab473` that OpenIddict
+7.6.0 declares.
 
+| Segment | Extends | Arrives in | Owned by |
+|---|---|---|---|
+| `services.AddOpenIddict()` | `IServiceCollection` | `OpenIddict.Abstractions` | anyone; it registers nothing |
+| `.AddCore(o => ...)` | `OpenIddictBuilder` | `OpenIddict.Core` | the persistence adapter |
+| `o.UseEntityFrameworkCore()` | `OpenIddictCoreBuilder` | `OpenIddict.EntityFrameworkCore` | the persistence adapter |
+| `.UseDbContext<T>()` | `OpenIddictEntityFrameworkCoreBuilder` | `OpenIddict.EntityFrameworkCore` | the persistence adapter |
+| `o.UseQuartz()` | `OpenIddictCoreBuilder` | `OpenIddict.Quartz` | the scheduling registration (ADR-0031) |
+| `.AddServer(o => ...)` and its `o.UseAspNetCore()` | `OpenIddictBuilder` | `OpenIddict.Server`, `.Server.AspNetCore` | **`Nami.Identity.Core`** |
+| `.AddValidation(o => ...)` and its `UseLocalServer()` and `o.UseAspNetCore()` | `OpenIddictBuilder` | `OpenIddict.Validation`, `.ServerIntegration`, `.AspNetCore` | **`Nami.Identity.Core`** |
+
+**Splitting it costs nothing, and that was read rather than assumed.** `AddOpenIddict()` is declared
+in `src/OpenIddict.Abstractions/OpenIddictExtensions.cs:20` and its whole body is
+`return new OpenIddictBuilder(services)`: it is a stateless factory over the service collection, not
+a registration, so calling it from two assemblies creates two builders over one collection and
+double-registers nothing. `AddCore` registers exclusively through `TryAddScoped` and
+`TryAddEnumerable`, whose own comment says the initializer is "registered only once". So the chain
+below is one readable presentation of segments that compose as separate statements.
+
+**Two sibling designs already write it split, which is why this is a correction here and not a new
+pattern.** [`02-data.md`](02-data.md) section 8 writes the persistence segment as its own
+`services.AddOpenIddict().AddCore(o => o.UseEntityFrameworkCore().UseDbContext<...>()...)` call, and
+[`06-sender-constrained-tokens.md`](06-sender-constrained-tokens.md) section 6 writes
+`services.AddOpenIddict().AddServer(...)` and `services.AddOpenIddict().AddValidation(...)` as
+separate statements. This document was the only one presenting the block whole.
+
+**What `Core` can call today is the last two rows.** It carries `OpenIddict.Server` and
+`.Server.AspNetCore` (seed S-008), and `OpenIddict.Abstractions` arrives transitively, so
+`services.AddOpenIddict().AddServer(...)` compiles there now. The three `.Validation` packages arrive
+with the wiring, which is seed S-010.
+
+```csharp
+// Segment owned by the persistence adapter, NOT by Nami.Identity.Core.
+// Shown here for completeness; design 02 section 8 is the source of record for it.
+services.AddOpenIddict()
   .AddCore(o => o.UseEntityFrameworkCore()
                  .UseDbContext<OpenIddictDbContext>()
-                 .UseQuartz())               // prune job, ADR-0031 sanctioned pattern
+                 .UseQuartz());              // prune job, ADR-0031 sanctioned pattern
+                                             // UseQuartz extends OpenIddictCoreBuilder too, so it
+                                             // rides this segment rather than Core's
+
+// Segments owned by Nami.Identity.Core, inside AddNamiIdentity (design 01 section 5.1).
+services.AddOpenIddict()
 
   .AddServer(o =>
   {
@@ -1069,6 +1113,36 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
     that **cannot fail**, which is a different class of guarantee. The engine-behaviour
     dependency underneath is still registered as a seam,
     [22](22-openiddict-seam-catalogue.md) S35, because that part is genuinely version-pinned.
+* **Corrected 2026-08-08: section 3's `AddOpenIddict()` block was written as one chain no single
+  assembly can call** (seed S-009). Section 3 now carries an ownership table and presents the
+  persistence segment separately. Four things were read at source to settle it, and the conclusion
+  was that this is a **realization and not a decision**, so no ADR was raised.
+  * **The rule already existed.** [`01-foundations.md`](01-foundations.md) section 3.1 states the
+    ADR-0024 dependency rule and that `Core` "must not reference any adapter, database provider, or
+    cloud SDK". Nothing new was decided; this document simply wrote a chain that rule forbids.
+  * **The split is determined by the C# type system, not by preference.** Each segment extends one
+    builder type that arrives in one package. Read at the upstream commit
+    `5ce649a5bbbf1340c9be9c4f264197af563ab473` that OpenIddict 7.6.0 declares:
+    `UseEntityFrameworkCore` and `UseQuartz` both extend `OpenIddictCoreBuilder`, and `UseDbContext`
+    extends `OpenIddictEntityFrameworkCoreBuilder`.
+  * **Splitting composes safely, which is the load-bearing mechanism.**
+    `src/OpenIddict.Abstractions/OpenIddictExtensions.cs:20` declares `AddOpenIddict()` with the
+    whole body `return new OpenIddictBuilder(services)`. It is a stateless factory, not a
+    registration. `AddCore` registers only through `TryAddScoped` and `TryAddEnumerable`. So two
+    assemblies may each call `AddOpenIddict()` and nothing is registered twice.
+  * **Two sibling designs already wrote it split**, which is what makes this document the outlier
+    rather than the pattern. [`02-data.md`](02-data.md) section 8 carries the persistence segment as
+    its own call and [`06-sender-constrained-tokens.md`](06-sender-constrained-tokens.md) section 6
+    carries the server and validation segments as separate statements.
+  * **One citation this correction did not inherit, because it does not hold.** The seed that
+    scheduled this work stated that "ADR-0096 decision 4" had established that `Core` ships
+    `AddNamiIdentity()` which calls `AddOpenIddict()` inside itself. Searched 2026-08-08,
+    `AddOpenIddict` returns **zero** hits in
+    [`../adr/0096-fluent-builder-api-surface.md`](../adr/0096-fluent-builder-api-surface.md), and
+    that ADR's parameters are lettered A through G with no numbered decisions at all. The claim is
+    true and its owner is [`01-foundations.md`](01-foundations.md) section 5.1, which says
+    "`AddNamiIdentity(cfg)` wires the engine". So the wrapping is a design realization as well, and
+    the seed's own record is corrected rather than repeated.
 
 ---
 
