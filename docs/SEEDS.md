@@ -66,9 +66,10 @@ graph LR
 | S-021 | Re-derive ADR-0093's verbatim quotation of ADR-0021 | done | S-003 done |
 | S-022 | Extend ADR-0061's maintenance rule to cover a version moving inside a row | open | none |
 | S-023 | Wire the ADR-0061-against-manifest check now its own trigger has fired | blocked | S-022 |
-| S-024 | Correct view 03's inverted `DbContext` pooling row, and read the other eight | open | none |
+| S-024 | Correct view 03's inverted `DbContext` pooling row, and read the other eight | done | none |
 | S-025 | Un-pin ADR-0030's seam range, as ADR-0021 already did to its own | open | none |
 | S-026 | Correct the two ADRs that label ADR-0018 by the option it declined | done | none |
+| S-027 | Give OpenTofu a licence-record row, its MPL-2.0 exception being unrecorded | open | none |
 
 ---
 
@@ -963,7 +964,7 @@ inside fences.
 
 ## S-024. Correct view 03's inverted `DbContext` pooling row, and read the other eight
 
-**Status:** open · **Blocked by:** none · **Unblocks:** nothing yet
+**Status:** done · **Blocked by:** none · **Unblocks:** nothing yet
 
 **The contradiction, quoted from four sides.**
 
@@ -1025,6 +1026,46 @@ are ADRs and this repository authors one ADR change per commit.
 `docs/design/02-data.md:55-59` on 2026-08-08, three global contexts are pooled,
 `IdentityDbContext`, `DataProtectionDbContext`, and `ControlPlaneDbContext`, and the two tenant-scoped
 ones are not. ADR-0061's row carries the accurate framing to follow.
+
+### S-024 result, measured 2026-08-08
+
+Row 116 now matches ADR-0061's own row, which section 4.1 already names as its authority. The
+nine-row pass is done: **eight confirmed, one corrected**, and this was the sixth and last known
+instance of the inversion.
+
+**The eight confirmations carry their evidence, because a read row and an unread row look identical
+otherwise.** The view's own section 6 records each one by `file:line`, so the pass is checkable rather
+than claimed.
+
+| Row | Owning ADR | Read at |
+|---|---|---|
+| Runtime | ADR-0030 | `0030:14` |
+| Protocol engine | ADR-0021 | `0061:49`, `0021:14` |
+| Database engine | ADR-0037 | its title, `:39` for `FORCE ROW LEVEL SECURITY`, `:41` for PostgreSQL 18 |
+| ORM and driver | ADR-0037, ADR-0018 | **corrected** |
+| Primary keys | ADR-0036 | `0036:42` for the one `bigint` exception, `0036:34` for the `seq bigint` column |
+| Signing baseline | ADR-0005 | `0005:39`, which states the row almost word for word |
+| Audit integrity | ADR-0008 | `0008:35` for the keyed canonicalized chain, `0008:86` for `HMAC_k`, the application-held key, and prev-first operands |
+| Logging and telemetry | ADR-0022 | its title |
+| Infrastructure as code | ADR-0023 | `0023:6` and `:26`, both writing "OpenTofu (MPL-2.0, Linux Foundation)" |
+
+**The pass found one thing the row-read could not fix, now S-027.** OpenTofu is MPL-2.0, and
+`0026:36` routes MPL-2.0 through "Architect and Legal approval recorded as an exception". Searched
+2026-08-08, OpenTofu has **no row anywhere** in `docs/DEPENDENCY-LICENSES.md`, while five comparable
+external tools do: Apache JMeter, cosign, Trivy, gitleaks, and OWASP ZAP. Row 121 itself is correct,
+ADR-0023 supporting it as written, so this is a completeness gap in the licence record rather than a
+defect in this table.
+
+**The inversion count is closed at six.** `0061:145` and `architecture/07-container-view.md:288-290`
+are the first two, repaired 2026-07-25. ADR-0066, ADR-0036, and ADR-0033 are the third, fourth, and
+fifth, repaired 2026-08-08 by S-026. This row is the sixth. `0061:118` predicted the set when it said
+the remaining rows deserved the same pass.
+
+**Verification.** `bash scripts/check-adrs.sh` after `git add`,
+`python3 scripts/check-decisions-index.py`, and `markdownlint-cli2`, all green. The substantive check
+was the nine reads above, which no gate performs. `git grep -niP "(ADR-)?0018" -- docs/ | grep -iP "pool"`
+returns no line labelling ADR-0018 by the pooled option, only the correct usages and the correction
+records.
 
 ---
 
@@ -1489,6 +1530,59 @@ the quotation line.
 
 **The one remaining `7.5` in ADR-0093 is deliberate.** The amendment quotes the old wording to record
 it. By S-001's bucket test that is bucket B, a closed record with a date, so it stays.
+
+---
+
+## S-027. Give OpenTofu a licence-record row, its MPL-2.0 exception being unrecorded
+
+**Status:** open · **Blocked by:** none · **Unblocks:** nothing yet
+
+**The gap, with the searches that establish it.** `docs/adr/0026-dependency-license-policy.md:36`
+reads "Case-by-case, needing Architect and Legal approval recorded as an exception: MPL-2.0 and LGPL
+(file/dynamic-link scope)". OpenTofu is MPL-2.0: `docs/adr/0023-iac-tool-opentofu.md:6` and `:26` both write
+"OpenTofu (MPL-2.0, Linux Foundation)", and `docs/adr/0061-technology-stack-of-record.md:65` carries it
+as the "Infrastructure as code" stack row. Searched 2026-08-08 over
+`docs/DEPENDENCY-LICENSES.md` for both `OpenTofu` and `tofu`, case-insensitively, **zero hits**. So the
+exception ADR-0026 requires be recorded is not recorded anywhere.
+
+**Why this is not merely a missing row.** Five comparable external tools do have rows: Apache JMeter
+and cosign in section 2, and Trivy, gitleaks, and OWASP ZAP in section 6, read 2026-08-08. So the
+absence is not a policy that external tools are out of scope. It is one tool missed, and it happens to
+be the one whose licence is the only non-permissive one in the stack table.
+
+**How it was found, which is the argument for the wider pass.** Not by auditing the licence record.
+S-024 read view 03's nine constraint rows against their owning ADRs, and the Infrastructure-as-code row
+named the licence in passing. `0061:84` already records why this class survives: the guardrail
+"compares two lists that are both derived from this repository's own markup ... It therefore catches a
+disagreement between them and is blind to a shared omission."
+
+**End state.**
+
+- OpenTofu has a row in `docs/DEPENDENCY-LICENSES.md`, in the section its nature fits, with the licence
+  read at the distributed artifact rather than from ADR-0023 or from a badge, and with the read date.
+  Section 7's rule is explicit that a licence is "never recorded from ... another document in this
+  repository", so ADR-0023 is the pointer to what to read, not the evidence.
+- The row states whether the ADR-0026 MPL-2.0 exception has actually been approved by Architect and
+  Legal, or records plainly that it has not. **The second is an acceptable outcome and the more likely
+  one**, because ADR-0023 was decided 2026-07 and no approval appears in the record. Writing "not yet
+  approved" is the deliverable; inventing an approval is the failure.
+- Section 7's composition rule is considered: OpenTofu is distributed as a release archive, so what it
+  bundles is read before its licence is trusted, in the shape section 2.1 already worked for JMeter.
+
+**Verification.** `git grep -nic "opentofu" -- docs/DEPENDENCY-LICENSES.md` returns a non-zero count.
+`bash scripts/check-adrs.sh` and `markdownlint-cli2`. The licence is quoted from the artifact with its
+read location and date, and a reader can tell from the row whether the exception is approved or open.
+
+**Sources.** `docs/adr/0026-dependency-license-policy.md:36` for the MPL-2.0 route;
+`docs/adr/0023-iac-tool-opentofu.md:6` and `:26` for the licence claim;
+`docs/adr/0061-technology-stack-of-record.md:65` for the stack row; `docs/DEPENDENCY-LICENSES.md`
+section 2 for the external-tool shape, section 2.1 for a worked composition read, and section 7 for the
+read-at-source and composition rules; `0061:84` for the shared-omission blind spot. Every one read
+2026-08-08.
+
+**Out of scope.** Re-deciding OpenTofu, which ADR-0023 owns. Auditing every other stack row for a
+missing licence row, which is the wider pass this finding argues for and which deserves its own seed
+with its own enumeration.
 
 ---
 

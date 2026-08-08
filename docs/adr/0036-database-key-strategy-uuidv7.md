@@ -118,8 +118,12 @@ Fixed parameters of the decision:
     architecture layer rather than in an ADR. **The count is stated because it kept being wrong**: a
     draft of this bullet said five.
   * **What is not a defect, enumerated so nobody sweeps the word.** Searched 2026-08-08, about thirty
-    lines across `docs/` name ADR-0018 near the word pool and only the two above are wrong. The rest
-    are accurate in three distinct ways: they use "pooling" as the **name of the ADR's subject**
+    lines across `docs/` named ADR-0018 near the word pool, and at the moment of that search only the
+    two named above were still wrong. **Both were repaired later the same day**, ADR-0033 in the
+    commit after this one and `architecture/03-drivers-and-constraints.md:116` by seed S-024, so the
+    count of live instances is now zero. The tense here is deliberate: the sentence is a measurement
+    and the repair that falsified its present tense was part of the same increment. The rest were
+    accurate in three distinct ways: they use "pooling" as the **name of the ADR's subject**
     (`architecture/07-container-view.md:252`, `08-component-view.md:393`,
     `24-glossary.md:93`, `docs/design/01-foundations.md:572`, `docs/design/02-data.md:1371`); they say
     **non-pooled** or "pooled-plus-mutable ... post-v1" (`architecture/21-performance-scalability.md:152`,

@@ -113,7 +113,7 @@ wins and this one is the bug.
 | Runtime | .NET 10 | ADR-0030 |
 | Protocol engine | OpenIddict 7.6, version-pinned and seam-isolated | ADR-0021 |
 | Database engine | PostgreSQL 18, the sole engine, with `FORCE ROW LEVEL SECURITY` | ADR-0037 |
-| ORM and driver | EF Core 10 with Npgsql, pooled `DbContext` | ADR-0037, ADR-0018 |
+| ORM and driver | EF Core 10 with Npgsql; `DbContext` pooling is **per context**, and the tenant-scoped hot path is deliberately **not** pooled in v1 | ADR-0037, ADR-0018 |
 | Primary keys | UUIDv7 everywhere, with **one** deliberate `bigint` identity exception, the server-side session surrogate. Separately, anything needing a strict order carries its own `seq` column, because UUIDv7 is not monotonic within a millisecond | ADR-0036 |
 | Signing baseline | RS256, with ES256 selectable by configuration | ADR-0005 |
 | Audit integrity | A **keyed** hash-chain, `HMAC_k(PrevHash \|\| canonical(fields))`, application-held key, prev-first operands, canonicalized to text | ADR-0008 |
@@ -266,6 +266,39 @@ ADR-0066).
   keyed HMAC form; and the corpus's documentation-convention section recorded a
   name-placeholder rule and an organization-specific compliance label that do not
   apply to this repository.
+* **Section 4.1's nine rows were each read against their owning ADR on 2026-08-08, and one was
+  inverted.** The "ORM and driver" row read "EF Core 10 with Npgsql, pooled `DbContext`" while
+  ADR-0018 is titled "Register the Pool-mode OpenIddict DbContext **non-pooled** in v1, with
+  pooled-plus-mutable deferred". It now matches ADR-0061's own row, which this section already names
+  as the authority. **The word mattered more than a wrong version would**: ADR-0018 exists because
+  spike A-4 test T7, run 2026-07-06, found that "naive pooled reuse leaked the tenant across
+  requests, including through OpenIddict's internal `SaveChanges`" (`0018:62`), so a constraint table
+  asserting a pooled `DbContext` pointed an implementer at the registration that leaked tenants.
+  **A blanket "non-pooled" would have been wrong in the other direction**, three global contexts
+  being pooled (`docs/design/02-data.md:55-59`).
+  * **This was the sixth and last known instance of one defect.** `0061:145` and
+    [`07-container-view.md`](07-container-view.md) record the first two, both 2026-07-25, and that
+    view's own note says "both this view and the ADR-0061 stack table had been describing the stack
+    as `pooled DbContext` when the ADR that owns the decision is titled for the opposite". ADR-0066,
+    ADR-0036, and ADR-0033 were the third, fourth, and fifth, all 2026-08-08. `0061:118` predicted
+    the set when it said the remaining rows deserved the same pass; this bullet is that pass for this
+    table.
+  * **The other eight rows are confirmed, and the evidence is named so a reader can tell a read row
+    from an unread one.** Runtime against `0030:14`; Protocol engine against `0061:49` and `0021:14`;
+    Database engine against ADR-0037's title, its `FORCE ROW LEVEL SECURITY` at `:39`, and
+    PostgreSQL 18 at `:41`; Primary keys against `0036:42` for the one `bigint` exception and `0036:34`
+    for the `seq bigint GENERATED ALWAYS AS IDENTITY` column and the within-millisecond
+    non-monotonicity; Signing baseline against `0005:39`, which states the row almost word for word;
+    Audit integrity against `0008:35` for the keyed, canonicalized chain and `0008:86` for the
+    `HMAC_k` form with its application-held key and prev-first operands; Logging and telemetry against
+    ADR-0022's title; Infrastructure as code against `0023:6` and `0023:26`, both of which write
+    "OpenTofu (MPL-2.0, Linux Foundation)".
+  * **One finding fell outside this pass and is recorded rather than fixed here.** OpenTofu is
+    MPL-2.0, which `0026:36` routes through "Architect and Legal approval recorded as an exception",
+    and searched 2026-08-08 it has **no row anywhere in
+    [`DEPENDENCY-LICENSES.md`](../DEPENDENCY-LICENSES.md)**, while five comparable external tools do.
+    That is a completeness gap in the licence record rather than a defect in this row, which ADR-0023
+    supports as written.
 * The section 4.2 edge assumption came from the design corpus's
   non-functional-requirements document (section 7.11bis, pre-implementation review dated
   2026-07-13). When this file was first written it was the one claim here with no ADR of
