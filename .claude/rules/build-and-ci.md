@@ -51,6 +51,46 @@ reading as enforced, and `scripts/test-editorconfig.sh` exists to catch it.
 property. Measured with `-p:EnforceCodeStyleInBuild=false` against an undeclared public member,
 `dotnet build` still exited 1 on `RS0016`. Do not assume either shape for the other.
 
+## A suppression scoped to `tests/` in `.editorconfig` is forbidden, and it works
+
+So the build will not tell you. Written on 2026-08-08 and reverted the same day, a
+`[tests/**/*.cs]` section carrying `dotnet_diagnostic.CA1707.severity = none` compiled the new
+unit suite cleanly and left every gate green. ADR-0093 parameter B rules against it in words:
+"No carve-out for `tests/` ... a warning suppressed by directory is a suppression nobody
+re-reads. Where a specific test genuinely needs a warning, parameter D is the route"
+(`0093:94-98`). ADR-0094:90-91 imports the same reasoning onto the analyzer axis.
+
+**Parameter D is the mechanism: a per-project `<NoWarn>` with a comment naming the diagnostic,
+the reason, and what would let it be removed** (`0093:133-136`). The difference is not style. A
+glob pre-authorises the suppression for every project that will ever match it, and a
+`<NoWarn>` makes each one opt in where a reader of that project sees it. Parameter D also
+forbids the broad list in `Directory.Build.props` for the same reason, calling it "a silent
+retraction of this decision for every project that inherits it".
+
+`scripts/test-warnings-as-errors.sh` Part 7 is the standing check, and its first version was a
+false green on four of the five ways CA1707 can be widened. **That is the part worth carrying:
+a property read is not a check on a diagnostic.** Reading the evaluated `NoWarn` missed an
+`.editorconfig` severity line, a `WarningsNotAsErrors` entry, and a `NoWarn` written with one
+space after the semicolon, because none of the three changes `NoWarn` in the way a single
+pattern matches. MSBuild keeps the spaces and newlines an author writes inside the element; the
+compiler ignores them.
+
+So Part 7 now has two halves. **7a is behavioural**: it builds a probe **inside** `src/`, where
+a `[src/**]` editorconfig glob and a `src/Directory.Build.props` both reach it, and asserts the
+compiler still reports `CA1707` there. **7b reads the property** for the one case a probe cannot
+see, a per-project `<NoWarn>` in some other project, and pins the number of exempt projects to
+**exactly one** rather than to a floor. A floor passed a planted `tests/Directory.Build.props`,
+which is the directory carve-out parameter B forbids by name: both test projects inherited it,
+the count rose to two, and nothing asserted the number.
+
+Part 6 gained the matching half. It asserted that `WarningsNotAsErrors` **contains** the four
+carve-out codes and never that it contains nothing else, so adding `CA1707` there demoted a
+build error to a warning that `dotnet build` exits 0 on, with every part green. It now asserts
+the exact set.
+
+All five breaks, and deleting the exemption, were replanted against the fixed script and each
+one fails.
+
 ## `global.json` is a pin that can be inert, and the inert shape is the one the corpus writes
 
 Measured 2026-08-02 on SDK 10.0.301:

@@ -196,14 +196,25 @@ jobs:
         with:
           dotnet-version: "10.0.x"
       - name: Run the test suite
-        # One suite so far, the architecture tests of ADR-0024. It is a real gate
-        # rather than a placeholder, measured on 2026-08-02: a planted
+        # Two suites, and both are real gates rather than placeholders, each
+        # proven by breaking it rather than by its green.
+        #
+        # The architecture tests of ADR-0024, measured 2026-08-02: a planted
         # Newtonsoft.Json dependency inside `Nami.Identity.Abstractions` fails both
         # of its facts, and the analyzer reference that project legitimately
         # carries fails neither.
         #
+        # The unit tests, which ADR-0025 owns and ADR-0060's taxonomy lists
+        # (`0060:37` credits the row to ADR-0025). Measured 2026-08-08: each of
+        # each of the suite's
+        # facts fails on the one change it exists to catch. It is the only gate
+        # on the `ClientDefinition` defaults, which design 23 section 8 calls the
+        # security argument for that layer. With `RequirePkce` silently flipped,
+        # the build stays green with zero warnings, `dotnet format` exits 0, and
+        # `PublicAPI.Unshipped.txt` is byte-identical. Only this job fails.
+        #
         # There is no Microsoft.NET.Test.Sdk anywhere in the tree. xunit.v3 drives
-        # Microsoft Testing Platform directly and the test project sets
+        # Microsoft Testing Platform directly and both test projects set
         # TestingPlatformDotnetTestSupport, so this command is the whole runner
         # story. If a future test project omits that property, `dotnet test` will
         # skip it silently rather than fail, which is the failure mode to watch.

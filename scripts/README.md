@@ -260,6 +260,35 @@ nothing. Measured 2026-08-03 on SDK 10.0.301 and reverted: with that override pl
 `src/Nami.Identity.Abstractions`, Part 6 reported it and `Solution build`, `dotnet test` and
 `dotnet format --verify-no-changes` were all still green at exit 0.
 
+**Part 6 also asserts two things added on 2026-08-08.** `WarningsNotAsErrors` must carry
+*nothing beyond* the four ADR-0093 parameter C codes, because the containment check alone let
+`CA1707` be added there, which demotes a build error to a warning that `dotnet build` exits 0 on.
+And every project under `tests/` must evaluate `TestingPlatformDotnetTestSupport` to `true`.
+Measured that day by deleting the property: `dotnet test` ran the other suite, printed no line at
+all for this one, and exited 0. A grep would not catch it, because the word survives several
+times in the comment above the property.
+
+**Part 7 is the CA1707 exemption, and it is two halves because a property read is not a check on
+a diagnostic.** ADR-0093 parameter B forbids a suppression scoped to a directory and parameter D
+requires a per-project `<NoWarn>` with a comment; both are prose, and nothing read them until
+this part existed. Its first version read the evaluated `NoWarn` alone and was a false green on
+four of the five ways CA1707 can be widened into `src/`: an `.editorconfig` severity line, a
+`WarningsNotAsErrors` entry, a `NoWarn` written with one space after the semicolon, and a
+`tests/Directory.Build.props`. Three of the four never touch `NoWarn`.
+
+- **7a is behavioural.** It writes a probe to `src/.ca1707-probe/`, so a `[src/**]` editorconfig
+  glob and a `src/Directory.Build.props` both reach it, which the root probe cannot be. It
+  asserts the compiler still reports `error CA1707` on a public member named with an underscore.
+  The probe is created **after** the project discovery above, so it never joins the list Part 6
+  asserts over, and it is removed by the same trap.
+- **7b reads the property**, for the one case a probe cannot see: a per-project `<NoWarn>` in a
+  different project. It normalises whitespace and case before matching, and it pins the number of
+  exempt projects to **exactly one** rather than to a floor, because a floor passed a planted
+  `tests/Directory.Build.props` while both test projects inherited the exemption.
+
+All five breaks, and deleting the exemption itself, were replanted against the finished part on
+2026-08-08 and each one fails.
+
 Like the two scripts above it writes a throwaway project inside the repository, here to
 `.warnaserror-probe/`, because MSBuild walks **up** from a project directory and that is the
 only way the probe inherits the real `Directory.Build.props` rather than a copy that could

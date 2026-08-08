@@ -29,7 +29,7 @@ Measured on 2026-08-07 at `10df955`. **No Playwright test, package pin, or CI st
 
 - `Directory.Packages.props:112-116` pins three packages, and none of them is Playwright.
 - `Nami.Identity.slnx` lists one test project, `Nami.Identity.ArchitectureTests`.
-- `.github/workflows/ci.yml:210` is the only test invocation in the workflow, and it installs no
+- `.github/workflows/ci.yml:221` is the only test invocation in the workflow, and it installs no
   browser. Playwright downloads its browsers through a separate step that is not written yet.
 
 So every row below is derived from an accepted decision or read at a distributed artifact, and
@@ -57,7 +57,7 @@ the middle.
 | Playwright for the login, consent, or logout pages | Scoped to "UI end-to-end tests for the **admin app**". No document names a browser tool for the end-user surface | ADR-0025:62, design `16`:241, design `20`:259 |
 | A large inline `ToMatchAriaSnapshotAsync` tree as the main assertion | A test "asserts **observable behavior**, never implementation detail ... does not assert private internals, call counts, or structure" | ADR-0060:60 |
 | Taking Playwright as Apache-2.0, or as MIT, on one document's word | Both are present. All four 1.61.0 `.nuspec` files declare `<license type="expression">MIT</license>`, and the `Microsoft.Playwright` nupkg bundles `playwright-core` at Apache-2.0. One licence is not the answer. See the flag below | ADR-0025:73, ADR-0026:61, design `20`:335, and the artifact |
-| Assuming a browser is available in CI | One test step, no install step, no browser cache | `.github/workflows/ci.yml:210` |
+| Assuming a browser is available in CI | One test step, no install step, no browser cache | `.github/workflows/ci.yml:221` |
 | A test that needs JavaScript to reach the login form | "The login and consent flow completes with client scripting unavailable", except the passkey path | ADR-0072:73 |
 | Asserting a security header from the browser test | The header assertions are their own obligation per profile. The browser test exists for the case a header assertion **cannot** see | ADR-0091:420-425, design `11` section 9 |
 | A fresh scenario invented for the admin suite | The scenario is already written, and it is the same one in three places | ADR-0025:62, ADR-0060:62, design `16`:241-244 |
@@ -68,7 +68,7 @@ adding a package. [`../writing-tests/SKILL.md`](../writing-tests/SKILL.md) holds
 ## Two of those rows need more than a row
 
 **1. The package twin is the same trap this repository already took, with the naming reversed.**
-`tests/CLAUDE.md:69-75` records it for ArchUnitNET under the heading "The xUnit integration
+`tests/CLAUDE.md:73-79` records it for ArchUnitNET under the heading "The xUnit integration
 package has a v2 twin with an almost identical name", and notes that ADR-0024, design `01`, and
 design `20` "all write the base name `TngTech.ArchUnitNET`, and none of them picks between the
 variants". Playwright is in exactly that state: ADR-0025:62, ADR-0060:39, ADR-0061:66, and design

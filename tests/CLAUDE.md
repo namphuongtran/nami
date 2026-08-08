@@ -6,8 +6,12 @@ naming and style rules under ADR-0065. All of it applies here.
 and ADR-0060 on the strategy. Neither is restated here. There is no `README.md` in this folder
 yet.
 
-This folder held nothing but `.gitkeep` until 2026-08-02. It now holds one project, and
-everything below was found while landing it.
+This folder held nothing but `.gitkeep` until 2026-08-02. It now holds two projects:
+`Nami.Identity.ArchitectureTests` from 2026-08-02, and `Nami.Identity.UnitTests` from
+2026-08-08. Everything below was found while landing one of them, and a section carrying a date
+says which. A section with no date predates the unit suite. Two of the seven suites the taxonomy
+names existed at that second date, so ADR-0060's build-time confirmation of the taxonomy is
+started rather than closed.
 
 ## A rule you have not failed on purpose is not enforcing anything
 
@@ -74,15 +78,99 @@ version declares `xunit.assert 2.4.1`, which is xUnit v2, against ADR-0060's bin
 `TngTech.ArchUnitNET`, and none of them picks between the variants. So the choice lives in
 `Directory.Packages.props` with both nuspec readings beside it.
 
-## What this project does not have, on purpose
+## What both projects do not have, on purpose
 
 - **No `PublicAPI.*.txt`.** ADR-0044 parameter A locks the surface of every public *package*, and
   nothing here is packed (`IsPackable` is false). The analyzer is referenced per-project in
   `src/`, not inherited, so nothing asks for the files.
 - **No assertion library.** ADR-0060 settled this on 2026-08-02: assertions come from
   `xunit.v3.assert`. Adding one is a decision to reverse there, not a convenience to take here.
-- **No source for the target-framework knob.** The project reads
-  `$(NamiApplicationTargetFramework)`, the single-target one, and that is a choice recorded in its
-  own `.csproj` rather than a rule being followed. ADR-0030 parameter B splits the two knobs into
+- **No source for the target-framework knob.** Both projects read
+  `$(NamiApplicationTargetFramework)`, the single-target one, and that is a choice recorded in
+  each `.csproj` rather than a rule being followed. ADR-0030 parameter B splits the two knobs into
   library and host, and a test project is neither. The choice becomes visible, and can first be
   shown wrong, when .NET 12 ships and the two knobs stop reading the same string.
+- **No source for either project name, and they are unsourced differently.**
+  `Nami.Identity.ArchitectureTests` is named by ADR-0024's enforcement clause, so only its
+  *placement* here was a choice. `Nami.Identity.UnitTests` is named by nothing: searched
+  2026-08-08 with `git grep -c "UnitTests"` over all tracked files, zero hits, and design 20
+  section 3.1's Unit row gives a tool and an owning ADR and no project. Do not cite the taxonomy
+  for it.
+
+## A Given/When/Then name fails the build, and the rule that stops it is not the naming ruleset
+
+Learned 2026-08-08, landing the unit suite. Two accepted decisions collide, and the one that
+looks responsible is not.
+
+ADR-0060 requires tests "named and structured as scenarios, in Given / When / Then form", and
+ADR-0065:88 restates it. Written out, `GivenX_WhenY_ThenZ` carries underscores. **The check that
+rejects them is `CA1707`, not `IDE1006`.** `.editorconfig` declares naming symbols for `field`
+and for `async` methods and none for a plain method, so the naming ruleset never reaches a test
+name. `CA1707` arrives from `AnalysisMode` being `Recommended` (ADR-0094), and
+`TreatWarningsAsErrors` makes it an error. Measured 2026-08-08 over a suite of fifteen test
+methods: fifteen distinct `CA1707` errors, against none from the same build with
+`-p:AnalysisMode=Default`. That matches the rule's own page, which lists it as not enabled by
+default in .NET 10.
+
+**The resolution is a per-project `<NoWarn>`, and an `.editorconfig` section is the wrong
+answer even though it works.** This was written the wrong way first and reverted on evidence.
+ADR-0093 parameter B rules on it directly: "No carve-out for `tests/` ... a warning suppressed
+by directory is a suppression nobody re-reads. Where a specific test genuinely needs a warning,
+parameter D is the route" (`0093:94-98`). ADR-0094:90-91 imports the same reasoning onto the
+analyzer axis. Parameter D is "a per-project `<NoWarn>` with a comment ... that says which
+diagnostic, why, and what would let it be removed" (`0093:133-136`). CA1707's own page sanctions
+the exemption in its own words, "it's safe to suppress this warning for test code", and says
+nothing about where to write it. So the ADRs decide the mechanism and the rule's page decides
+only that an exemption is legitimate at all.
+
+**Every future test project opts in for itself.** That is the property a directory glob would
+have removed, and it is the whole content of parameter B.
+
+**The collision is narrower than it looks, and no source requires the underscore.** ADR-0060:61
+asks for names "structured as scenarios, in Given / When / Then form", and ADR-0065:88 restates
+that without adding a spelling. `GivenXWhenYThenZ` in PascalCase satisfies both and needs no
+exemption. The exemption buys legibility, not compliance, and that is what makes it removable.
+
+**Three general shapes, worth more than the rule itself.** A naming question here has two
+possible owners, the `.editorconfig` ruleset and the analyzer set, and reading only the first
+gives a clean answer the build then contradicts. A suppression has an owning ADR even when the
+diagnostic does not. And the mechanism a suppression is written in is itself a decision, so
+reaching for the one that is easiest to write is how a config file comes to hold a rule.
+
+## The unit suite is the only gate on a default, and this was measured
+
+Design 23 section 8 calls the defaults of `ClientDefinition` the entire security argument for
+that layer, and section 7 makes changing one a behaviour break under ADR-0044. Nothing
+mechanical sees it. Measured 2026-08-08 on SDK 10.0.301 with `RequirePkce` silently losing its
+`= true`: `dotnet build` reported `0 Warning(s)` and `0 Error(s)`, `dotnet format
+--verify-no-changes` exited 0, and `PublicAPI.Unshipped.txt` was byte-identical by SHA-256. One
+unit fact failed. That is the whole reason the suite exists.
+
+**Each of its fifteen facts was watched to fail before being believed**, per the rule above about
+a rule you have not failed on purpose. Eight single-property breaks failed exactly one fact each.
+Swapping the two `ClientAuthMethod` ordinals failed two, and adding a `Password` member to
+`ClientFlow` failed two, both read from the run log rather than inferred.
+
+**Two traps came out of doing that.** `= false` is not the way to break a `true` default: it
+trips `CA1805`, so the break is deleting the initializer. And an enum break cannot be tested
+alone, because `RS0016` and `RS0017` fail the build first; the API text file has to be updated in
+the same step, which is what a real reorder commit would do anyway.
+
+**Four members the suite left out at first, found by review and measured 2026-08-08.** The
+nullable ones. A non-null default on `ClientSecret` or `JwksJson` moves every undeclared client
+onto the confidential branch of design 23 section 5.1 invariant 1, so invariant 2's forced proof
+key never applies to it. That reaches the same control as `RequirePkce` by a second route, and
+with `ClientSecret = "s3cret"` planted the build was green, the API file byte-identical, and all
+fourteen facts then in the solution passed. **Read the whole class, not the members that look
+interesting**: the type has seventeen members, fifteen have a default, and the two without one are
+`required` so there is nothing to pin.
+
+**One hole that stays open, and it is not closable this way.** Deleting the
+`= ClientAuthMethod.PrivateKeyJwt` initializer from `ClientDefinition.AuthMethod` is caught by
+nothing: build green, format green, no API diff, and every fact passes. The property fact
+cannot see it, because the value survives through the enum's ordinal 0. That is correct
+behaviour-first testing rather than a defect in the fact, and it is still a hole, because
+`src/CLAUDE.md` records the initializer and the ordinal as a deliberate pair so that neither
+alone decides the credential. Either half can now be removed with every gate green. **Do not
+close it by asserting on the initializer through reflection**, which is the implementation detail
+ADR-0060:60 forbids. The same holds for `Flow`.

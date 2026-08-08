@@ -4,5 +4,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Nami.Identity.ArchitectureTests/Nami.Identity.ArchitectureTests.csproj" />
+    <Project Path="tests/Nami.Identity.UnitTests/Nami.Identity.UnitTests.csproj" />
   </Folder>
 </Solution>

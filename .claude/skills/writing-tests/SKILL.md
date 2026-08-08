@@ -21,10 +21,11 @@ Neither is restated here.
 
 ## What exists today, measured
 
-Measured on 2026-08-07. `tests/` holds **one** project, `Nami.Identity.ArchitectureTests`, and
-the folder held nothing but a placeholder until 2026-08-02 (`tests/CLAUDE.md:9-10`).
+Measured on 2026-08-08. `tests/` holds **two** projects, `Nami.Identity.ArchitectureTests` from
+2026-08-02 and `Nami.Identity.UnitTests` from 2026-08-08, and the folder held nothing but a
+placeholder before the first of those (`tests/CLAUDE.md:9`).
 
-Six of the seven suites in the taxonomy have no code. So most rows below are derived from an
+Five of the seven suites in the taxonomy have no code. So most rows below are derived from an
 accepted decision rather than learned by getting something wrong, and the difference matters to a
 later reader: a decision-derived rule has never been tested by use. The rows sourced to
 `tests/CLAUDE.md` are the exception, and each of those was learned by a real failure.
@@ -60,22 +61,23 @@ survive a line shift, so a drifted pointer reads as drift rather than as a diffe
 
 | A generic answer reaches for | Nami decided | Read at |
 |---|---|---|
-| `Microsoft.NET.Test.Sdk` and `xunit.runner.visualstudio` | "BOTH absent on purpose"; `xunit.v3` ships Microsoft Testing Platform support | `tests/Nami.Identity.ArchitectureTests/Nami.Identity.ArchitectureTests.csproj:20-27`, `tests/CLAUDE.md:56-67` |
-| Trusting a green `dotnet test` on a new project | A project that omits `TestingPlatformDotnetTestSupport` is "*skipped* by `dotnet test` rather than failing it" | `tests/CLAUDE.md:66-67` |
+| `Microsoft.NET.Test.Sdk` and `xunit.runner.visualstudio` | "BOTH absent on purpose"; `xunit.v3` ships Microsoft Testing Platform support | `tests/Nami.Identity.ArchitectureTests/Nami.Identity.ArchitectureTests.csproj:20-27`, `tests/CLAUDE.md:60-71` |
+| Trusting a green `dotnet test` on a new project | A project that omits `TestingPlatformDotnetTestSupport` is "*skipped* by `dotnet test` rather than failing it" | `tests/CLAUDE.md:69-71` |
 | A fluent assertion package | "Nami takes **no** fluent-assertion package"; assert with what `xunit.v3.assert` ships | ADR-0060:45-47, `docs/design/20-testing.md:64-66` |
 | `MethodName_Scenario_ExpectedBehavior` | "named and structured as **scenarios**, in Given / When / Then form" | ADR-0060:61, `docs/design/20-testing.md:80-84` |
+| Writing `Given_When_Then` and expecting it to compile | The underscores are `CA1707`, which `AnalysisMode = Recommended` turns on and `TreatWarningsAsErrors` turns into an error. **The exemption is a per-project `<NoWarn>$(NoWarn);CA1707</NoWarn>` with a comment**, never an `.editorconfig` section scoped to `tests/`, because ADR-0093 parameter B forbids a directory carve-out and routes exemptions to parameter D. No source requires the underscore, so PascalCase needs no exemption at all | ADR-0093:94-98 and `:133-136`, ADR-0094:90-91, `tests/CLAUDE.md:100-137`, `tests/Nami.Identity.UnitTests/Nami.Identity.UnitTests.csproj:75-90` |
 | Mocking a dependency and asserting the call count | A test "does not assert private internals, call counts, or structure" | ADR-0060:60, `docs/design/20-testing.md:109-111` |
 | SQLite, or the EF In-Memory provider | "**SQLite is never substituted** for the database in any test" | ADR-0060:38, ADR-0025:60, `docs/design/20-testing.md:62-64` |
-| `[ProjectName].Tests` naming | Project names come from the taxonomy, not from the project under test; the one that exists is `Nami.Identity.ArchitectureTests` | ADR-0024:55, `docs/design/20-testing.md:57` |
-| `TngTech.ArchUnitNET.xUnit`, the plainly named twin | "THE xUnit INTEGRATION PACKAGE NAME IS NOT COSMETIC"; the twin declares `xunit.assert 2.4.1`, which is xUnit v2 | `Directory.Packages.props:98-103`, `tests/CLAUDE.md:69-75` |
-| `OnlyDependOnTypesThat(...)` in an ArchUnitNET rule | Prefer the negative form; the positive one **passed** over a planted, called violation | `tests/CLAUDE.md:12-34` |
-| Believing a new rule because the suite is green | "plant a violation and watch the assertion fail before believing a new rule" | `tests/CLAUDE.md:33-34` |
-| Adding a package "only for tests" | Every graph node is a licence read owed under ADR-0026; the measured cost of one convenience pair was 23 restore-graph nodes to 28 | `tests/CLAUDE.md:60-63`, `Directory.Packages.props:62-69` |
+| `[ProjectName].Tests` naming | Not the project under test. The taxonomy names exactly one project, the architecture one, and that name comes from ADR-0024 rather than from the taxonomy. **Every other suite's name is a choice to record**, which `Nami.Identity.UnitTests` was on 2026-08-08 | ADR-0024:55, `docs/design/20-testing.md:54,57`, `tests/CLAUDE.md:93-98` |
+| `TngTech.ArchUnitNET.xUnit`, the plainly named twin | "THE xUnit INTEGRATION PACKAGE NAME IS NOT COSMETIC"; the twin declares `xunit.assert 2.4.1`, which is xUnit v2 | `Directory.Packages.props:98-103`, `tests/CLAUDE.md:73-79` |
+| `OnlyDependOnTypesThat(...)` in an ArchUnitNET rule | Prefer the negative form; the positive one **passed** over a planted, called violation | `tests/CLAUDE.md:16-38` |
+| Believing a new rule because the suite is green | "plant a violation and watch the assertion fail before believing a new rule" | `tests/CLAUDE.md:36-38` |
+| Adding a package "only for tests" | Every graph node is a licence read owed under ADR-0026; the measured cost of one convenience pair was 23 restore-graph nodes to 28 | `tests/CLAUDE.md:62-68`, `Directory.Packages.props:62-69` |
 | An illustrative company name in a fixture | "`tenant-a` and `tenant-b`, never an illustrative company name" | `docs/design/20-testing.md:101` |
 | Real keys, certificates, or personal data in a fixture | Generated for the test, "so a test tree can never become a credential leak" | `docs/design/20-testing.md:102` |
 | A security test with no requirement label | "A security test names the ASVS requirement it verifies" | `docs/design/20-testing.md:87-91`, ADR-0062:43 |
 | Numbering an ASVS chapter `V2` or `V3` | That is the ASVS **4.x** scheme; the 4.x numbers are mapped to 5.0 when the test is written | `docs/design/20-testing.md:173`, ADR-0062 |
-| Reading a `.csproj` to assert a dependency rule | "Never assert on the contents of a `.csproj`"; assert against the compiled artifact | `tests/CLAUDE.md:48-54` |
+| Reading a `.csproj` to assert a dependency rule | "Never assert on the contents of a `.csproj`"; assert against the compiled artifact | `tests/CLAUDE.md:52-58` |
 | Writing the implementation first | Protocol and security code is written test-first, with the failing behavior test before the implementation | ADR-0060:54-56, `docs/design/20-testing.md:110-115` |
 
 Do not re-derive the underscore-field rule, the target-framework knob, the language version, or
@@ -89,7 +91,7 @@ Both are recorded already. Both are the kind of completeness a generic answer as
    reads the type graph, the other the assembly reference table. A package **referenced but not
    used by any type** passes both, because an unused reference is elided from metadata. Closing
    that needs a check on the packed surface, which needs a pack and does not exist yet. Do not
-   "simplify" the two into one. `tests/CLAUDE.md:36-46`, ADR-0024:76.
+   "simplify" the two into one. `tests/CLAUDE.md:48-50`, ADR-0024:76.
 2. **The startup secure-invariant enumeration in the design is a restatement, and it has drifted
    twice.** ADR-0043's table is the one to diff against, not the prose copy.
    `docs/design/20-testing.md:117-155` says so about itself.

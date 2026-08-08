@@ -367,8 +367,23 @@ if [ "$real_n" -lt 2 ]; then
 fi
 
 get_proj_prop() {
-  # $1: project path, $2: property name, through that project's import chain
-  dotnet msbuild "$1" -getProperty:"$2" 2>/dev/null
+  # $1: project path, $2: property name, through that project's import chain.
+  #
+  # A FAILED EVALUATION AND AN UNSET PROPERTY BOTH PRINT NOTHING, so this
+  # distinguishes them rather than letting a caller read one as the other. Every
+  # assertion in Part 6 is positive and fails loudly on an empty string, but Part
+  # 7's src/ ban is negative and an empty string SATISFIES it. Measured
+  # 2026-08-08 against a project with malformed XML: exit 1, empty stdout.
+  # Returning a sentinel makes that path fail closed everywhere.
+  #
+  # The value is returned RAW. Part 6 compares it against exact spellings such
+  # as `Recommended`, so normalising here would quietly change what those
+  # assertions accept. Part 7 normalises at its own call site instead.
+  gpp_out=$(dotnet msbuild "$1" -getProperty:"$2" 2>/dev/null) || {
+    printf '%s' "__EVAL_FAILED__"
+    return
+  }
+  printf '%s' "$gpp_out"
 }
 
 for proj in $real_projects; do
@@ -385,6 +400,32 @@ for proj in $real_projects; do
     esac
   done
 
+  # CONTAINMENT IS NOT THE WHOLE ASSERTION, and the missing half was found by
+  # review on 2026-08-08 rather than by this script. The loop above says the four
+  # carve-out codes are present and says nothing about a fifth. Measured that
+  # day: adding CA1707 to this property in the src/ project demoted it from a
+  # build error to a warning, `dotnet build` exited 0 on `1 Warning(s)`, and
+  # every part of this script stayed green. It is a second door to the same room
+  # as NoWarn, for any diagnostic rather than only CA1707, and CI exits 0 on a
+  # warning.
+  #
+  # ADR-0093 parameter C is the whole permitted set, so anything else is a
+  # decision that has to be written down. The evaluated value carries a leading
+  # empty field from the unset parent, which is why the filter keeps the empty
+  # string.
+  #
+  # THE ORDER OF THE TWO `tr` CALLS IS LOAD-BEARING. Whitespace is stripped
+  # BEFORE the split, because `tr -d '[:space:]'` after `tr ';' '\n'` deletes the
+  # newlines the split just created and collapses the list into one token that
+  # matches nothing. Written that way round first, and caught by running the
+  # clean case: it reported all four permitted codes as extras. It fails closed,
+  # which is why it was loud rather than silent.
+  p_extra=$(printf '%s' "$p_wnae" | tr -d '[:space:]' | tr ';' '\n' \
+    | grep -vE '^(NU1901|NU1902|NU1903|NU1904)?$' | tr '\n' ' ')
+  if [ -n "$p_extra" ]; then
+    fail "WarningsNotAsErrors in $proj carries codes beyond the ADR-0093 parameter C carve-out: $p_extra. Each one demotes a build error to a warning, and CI's \`dotnet build\` exits 0 on warnings."
+  fi
+
   p_als=$(get_proj_prop "$proj" AnalysisLevelSecurity)
   if [ "$p_als" != "latest-all" ]; then
     fail "AnalysisLevelSecurity evaluates to '$p_als' in $proj, expected 'latest-all' (ADR-0092 section 1). The bare 'all' is inert and reads as armed."
@@ -394,12 +435,139 @@ for proj in $real_projects; do
   if [ "$p_am" != "Recommended" ]; then
     fail "AnalysisMode evaluates to '$p_am' in $proj, expected 'Recommended' (ADR-0094)."
   fi
+
+  # A test project that omits TestingPlatformDotnetTestSupport is not run by
+  # `dotnet test` and is not reported as skipped either: it vanishes. Measured
+  # 2026-08-08 by deleting the line from Nami.Identity.UnitTests: the run printed
+  # only the architecture suite's "Passed: 2" and exited 0, with every fact in
+  # that project gone and no line naming them. Three documents warned about this property and
+  # nothing read it, which is this repository's own definition of a control that
+  # reads as enforced while enforcing nothing.
+  #
+  # A grep would not do. Measured the same day, `grep -c
+  # TestingPlatformDotnetTestSupport` on that csproj still returned a match after
+  # the property was deleted, because the word survives five times in the
+  # comment above it. This reads the evaluated property.
+  case "$proj" in
+    tests/*)
+      p_tp=$(get_proj_prop "$proj" TestingPlatformDotnetTestSupport)
+      if [ "$p_tp" != "true" ]; then
+        fail "TestingPlatformDotnetTestSupport evaluates to '$p_tp' in $proj, expected 'true'. Without it \`dotnet test\` runs this project's tests nowhere and reports nothing, so the suite disappears at exit 0."
+      fi
+      ;;
+  esac
 done
+
+# --- Part 7: the CA1707 exemption stays where ADR-0093 parameter D put it ---
+#
+# Added 2026-08-08, with the exemption itself. ADR-0093 parameter B forbids a
+# carve-out by directory and parameter D requires "a per-project <NoWarn> with a
+# comment". Both are prose, and nothing read them. The failure mode this part
+# exists for is a widening: the same suppression moved into
+# Directory.Build.props, or added to a src/ project, disables a naming rule
+# repository-wide while every part above stays green.
+#
+# IT HAS TWO HALVES BECAUSE A PROPERTY READ CANNOT SEE THE FORBIDDEN ARTIFACT.
+# The first version of this part read the evaluated NoWarn and nothing else, and
+# review broke it four ways on 2026-08-08, each time leaving the script green
+# while CA1707 was in fact off for src/: an `.editorconfig` severity line, a
+# `WarningsNotAsErrors` entry, a `NoWarn` written with one space after the
+# semicolon, and a `tests/Directory.Build.props`. Three of the four never touch
+# NoWarn at all. So 7a asks the compiler instead, and 7b keeps the property read
+# for the one case a probe cannot reach.
+
+# --- 7a: behavioural. CA1707 still bites under src/. ---
+#
+# The root probe cannot answer this. It sits at the repository root, so MSBuild
+# and EditorConfig both walk up past anything scoped to src/, which is the reason
+# Part 6 exists at all. This probe sits INSIDE src/, so it inherits a
+# src/Directory.Build.props, matches a `[src/**]` editorconfig glob, and honours
+# a src-scoped WarningsNotAsErrors. One assertion closes all three routes plus
+# the whitespace one.
+#
+# It is created here rather than at the top of the file on purpose: the project
+# discovery above globs src/ and tests/, and a probe present at that moment would
+# join the list Part 6 asserts over.
+srcprobe="src/.ca1707-probe"
+cleanup_srcprobe() { rm -rf "$srcprobe"; }
+trap 'cleanup; cleanup_srcprobe' EXIT
+rm -rf "$srcprobe"
+mkdir -p "$srcprobe" || fail "cannot create $srcprobe"
+
+if [ -d "$srcprobe" ]; then
+  cat > "$srcprobe/Probe.csproj" <<'PROJ'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+</Project>
+PROJ
+  cat > "$srcprobe/Probe.cs" <<'PROBE'
+namespace Ca1707Probe;
+
+/// <summary>Probe.</summary>
+public static class Probe
+{
+    /// <summary>Probe. The underscore is the point.</summary>
+    public static int Get_Value() => 1;
+}
+PROBE
+  srcprobe_out=$(dotnet build "$srcprobe/Probe.csproj" -v q --nologo 2>&1)
+  if ! printf '%s\n' "$srcprobe_out" | grep -q "error CA1707"; then
+    fail "a public member named Get_Value under src/ did not produce 'error CA1707'. The exemption written for tests/ has reached src/, or the rule was turned off another way. A NoWarn is only one of the routes: an .editorconfig severity line and a WarningsNotAsErrors entry both do this without changing NoWarn, and 7b below reads NoWarn only. Build output follows."
+    printf '%s\n' "$srcprobe_out" | sed 's/^/    /'
+  fi
+  cleanup_srcprobe
+fi
+
+# --- 7b: the property read, for the one case 7a cannot reach ---
+#
+# A per-project <NoWarn> in some OTHER src project does not reach the probe, so
+# 7a is blind to exactly the mechanism parameter D sanctions. This half covers
+# it, and it also pins the number of exemptions.
+#
+# THE COUNT IS EXACT, NOT A FLOOR. scripts/CLAUDE.md: "A negative assertion fails
+# open ... Where a property must hold negatively, assert a count." A floor of one
+# passed a planted tests/Directory.Build.props on 2026-08-08, which is the
+# directory carve-out ADR-0093 parameter B forbids by name: both test projects
+# inherited the exemption, the count rose from 1 to 2, and nothing asserted the
+# number. An exact count turns every new exemption into a deliberate edit here.
+#
+# get_proj_prop returns a sentinel rather than an empty string when evaluation
+# fails, so a project that cannot be evaluated cannot satisfy the src/ ban by
+# reading as blank.
+ca1707_exempt=0
+ca1707_expected=1
+for proj in $real_projects; do
+  p_nowarn=$(get_proj_prop "$proj" NoWarn)
+  if [ "$p_nowarn" = "__EVAL_FAILED__" ]; then
+    fail "could not evaluate NoWarn on $proj. The CA1707 ban below is a negative assertion, and an unreadable project would satisfy it silently."
+    continue
+  fi
+  # Normalised, because MSBuild keeps the spaces and newlines an author writes
+  # inside the element and the compiler ignores them. All three variants were
+  # measured to suppress the diagnostic while evading an unnormalised pattern.
+  p_norm=$(printf '%s' "$p_nowarn" | tr -d '[:space:]' | tr 'a-z' 'A-Z')
+  case ";$p_norm;" in
+    *";CA1707;"*)
+      ca1707_exempt=$((ca1707_exempt + 1))
+      case "$proj" in
+        src/*)
+          fail "NoWarn carries CA1707 in $proj, which is under src/. ADR-0093 parameter B allows the exemption only where a test genuinely needs it, and CA1707's own page limits it to test code. Evaluated value: '$p_nowarn'."
+          ;;
+      esac
+      ;;
+  esac
+done
+
+if [ "$ca1707_exempt" -ne "$ca1707_expected" ]; then
+  fail "expected exactly $ca1707_expected project(s) to evaluate NoWarn with CA1707, found $ca1707_exempt. ADR-0093 parameter D makes each exemption a per-project opt-in, so a second one is a deliberate change that updates this number in the same commit. A count above the expected one is also what an inherited Directory.Build.props looks like from here, and that is the directory carve-out parameter B forbids. A count below it means the exemption was removed, in which case delete this part in the same change."
+fi
 
 # --- Report ---
 if [ "$fails" -gt 0 ]; then
   echo "warnings-as-errors self-test FAILED: $fails assertion(s)."
   exit 1
 fi
-echo "warnings-as-errors self-test OK: the compliant fixture builds clean; a plain compiler warning, an unsafe DllImport that only the security axis reports, and a Recommended-tier violation each fail the build alone; the NuGet audit carve-out is present in the evaluated WarningsNotAsErrors; and all four properties evaluate as decided on the $real_n real project(s) under src/ and tests/, not only on the probe."
+echo "warnings-as-errors self-test OK: the compliant fixture builds clean; a plain compiler warning, an unsafe DllImport that only the security axis reports, and a Recommended-tier violation each fail the build alone; the NuGet audit carve-out is present in the evaluated WarningsNotAsErrors; all four properties evaluate as decided on the $real_n real project(s) under src/ and tests/, not only on the probe; and CA1707 still fires on a probe inside src/ while exactly $ca1707_exempt project(s) carry the NoWarn exemption, none of them under src/."
 exit 0

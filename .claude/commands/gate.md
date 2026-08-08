@@ -143,10 +143,12 @@ lint belongs in a command you choose to run.
    Two skip traps to read for, because both look like a green suite:
 
    - A test project that omits `TestingPlatformDotnetTestSupport` is **skipped** by `dotnet test`
-     rather than failing it (`tests/CLAUDE.md:65-67`). A suite that quietly runs nothing looks like
+     rather than failing it (`tests/CLAUDE.md:69-71`). A suite that quietly runs nothing looks like
      a suite that passes, so check the reported test count against the suites you expect.
-   - Report the test count. `Nami.Identity.ArchitectureTests` was the only test project on
-     2026-08-07, so a run reporting zero projects is a finding, not a pass.
+   - Report the test count. Two test projects existed on 2026-08-08,
+     `Nami.Identity.ArchitectureTests` and `Nami.Identity.UnitTests`, and the run prints one line
+     per assembly with no combined total. A run reporting fewer assemblies than that is a
+     finding, not a pass.
 
 9. **Report, and be specific about coverage rather than only about pass or fail.**
 

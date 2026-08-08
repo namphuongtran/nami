@@ -25,7 +25,7 @@ self-test, Warnings-as-errors gate self-test, Solution build, and Tests.
 
 **One of the five scan stages runs today, and it is not a job.** Stage 1 is a set of MSBuild
 properties in `Directory.Build.props`, so it runs inside Solution build. The other four are owed
-at M1. `ci.yml:212-213` carries the note that the ADR-0026 licence-scan gate arrives then too.
+at M1. `ci.yml:223` carries the note that the ADR-0026 licence-scan gate arrives then too.
 
 Zero `${{ }}` expressions exist anywhere under `.github/`, counted the same day, so section 6
 below is a regression guard rather than a finder.

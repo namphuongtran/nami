@@ -32,7 +32,7 @@ nine, which is why `CLAUDE.md` says a green hook is not a green build.
 | 6 | `scripts/test-public-api-gate.sh` | `ci.yml:102` | **yes** | no |
 | 7 | `scripts/test-warnings-as-errors.sh` | `ci.yml:125` | **yes** | no |
 | 8 | `dotnet build` and `dotnet format --verify-no-changes` | `ci.yml:158`, `ci.yml:170` | no | no |
-| 9 | `dotnet test` | `ci.yml:210` | no | no |
+| 9 | `dotnet test` | `ci.yml:221` | no | no |
 
 The hook also runs a local name scrub over **staged** markdown, which is not one of the nine and
 is not a CI gate. It reads a git-ignored `scripts/.local/name-denylist`, so it does nothing at all

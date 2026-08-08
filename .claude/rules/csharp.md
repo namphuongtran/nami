@@ -35,8 +35,8 @@ to survive a line shift, so a drifted pointer reads as drift rather than as a di
 | A repository or unit-of-work wrapper | "introduced to solve a demonstrated problem, never preemptively" | ADR-0066:42 |
 | An interface with one implementation, for layering | "a port must have at least two real reasons to exist" | ADR-0024:39 |
 | A fluent assertion package | "Nami takes no fluent-assertion package"; use what `xunit.v3.assert` ships | ADR-0060:47 |
-| `Microsoft.NET.Test.Sdk` | Absent on purpose; dropping `TestingPlatformDotnetTestSupport` **skips** tests silently | `tests/CLAUDE.md:56-67` |
-| `OnlyDependOnTypesThat(...)` in an ArchUnitNET rule | Prefer the negative form; the positive one passed over a real violation | `tests/CLAUDE.md:12-34` |
+| `Microsoft.NET.Test.Sdk` | Absent on purpose; dropping `TestingPlatformDotnetTestSupport` **skips** tests silently | `tests/CLAUDE.md:60-71` |
+| `OnlyDependOnTypesThat(...)` in an ArchUnitNET rule | Prefer the negative form; the positive one passed over a real violation | `tests/CLAUDE.md:16-38` |
 | `/healthz`, one probe route, or a detail body | "Two endpoints, never one": `/health/live` and `/health/ready`, status code only | ADR-0080:76-93 |
 | RFC 7807 | "Errors are RFC 9457 problem details with a machine-readable code" | ADR-0079:162 |
 | Swashbuckle or NSwag | "the built-in .NET 10 OpenAPI", plus a committed snapshot diffed in CI | ADR-0020:42, ADR-0087:49-51 |
@@ -82,9 +82,9 @@ written into it (`docs/CLAUDE.md:50-108`).
   `applicable_kinds` on 2026-08-05). The C# default happens to be `camelCase`, so nothing is
   broken, but no rule enforces it and none is implied.
 
-## Two enforcement edges that read as total and are not
+## Three enforcement edges that read as total and are not
 
-Both are recorded already. Both are the kind of coverage a generic answer assumes.
+All three are recorded already. All three are the kind of coverage a generic answer assumes.
 
 1. **The `Async` suffix rule matches the `async` modifier, not the return type.** So `public
    async Task Poll()` is caught and `public Task Poll()` is not. A naming symbol has no
@@ -92,6 +92,15 @@ Both are recorded already. Both are the kind of coverage a generic answer assume
 2. **`AnalysisMode` is `Recommended`, and `CA1819` is not in it.** Public array-returning members
    produce no warning today. Do not read a green build as approval of one. `src/CLAUDE.md:197`,
    ADR-0094.
+3. **`.editorconfig` is the rules-of-record for naming, and it is not the whole naming story.**
+   A name has two possible judges here, and reading only the first gives a clean answer the
+   build then contradicts. The `dotnet_naming_rule` set covers `field` and `async` method and
+   nothing else, so in this repository's configuration `IDE1006` reaches no plain method name.
+   The `CA` naming family reaches it anyway, through `AnalysisMode` being `Recommended`. That
+   cost a wrong answer on 2026-08-08: Given/When/Then test names were called safe against the
+   ruleset and then failed the build on one `CA1707` error per test method. `tests/CLAUDE.md` records the
+   case, and the exemption is a per-project `<NoWarn>` because ADR-0093 parameter B forbids a
+   directory carve-out for `tests/`.
 
 ## Who owns which question
 

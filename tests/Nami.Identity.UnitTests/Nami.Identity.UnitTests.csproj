@@ -1,0 +1,138 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The unit suite of ADR-0060's taxonomy, which design 20 section 3.1 row 1
+    describes as "domain logic and handlers in isolation, no container".
+
+    THE PROJECT NAME IS A CHOICE WITH NO SOURCE. Searched 2026-08-08 at commit
+    c66a2da with `git grep -c "UnitTests"` over all tracked files, a plain
+    substring that over-counts and never under-counts: zero hits. THAT SEARCH
+    CANNOT RETURN ZERO AGAIN, because this file is now a hit; the commit is named
+    so the reading stays checkable. The taxonomy names a project
+    for one row only, the architecture one, and that name comes from ADR-0024
+    rather than from the taxonomy. The Unit row names a tool and an owning ADR
+    and no project. So this name follows the assembly convention of ADR-0065
+    (everything under `Nami.Identity.*`) and the shape of the one sibling that
+    exists, and it is recorded here rather than presented as sourced.
+
+    TargetFramework reads $(NamiApplicationTargetFramework), the SINGLE-target
+    knob, for the reason `Nami.Identity.ArchitectureTests` records: ADR-0030
+    parameter B splits the knobs into published library and host, a test project
+    is neither, and under the testing platform this project genuinely is an
+    executable. Both knobs read `net10.0` today, so the choice first becomes
+    visible when .NET 12 ships.
+
+    OutputType is Exe and TestingPlatformDotnetTestSupport is set because
+    xunit.v3 drives Microsoft Testing Platform itself. THE PROPERTY IS NOT
+    OPTIONAL: a test project that omits it is SKIPPED by `dotnet test` rather
+    than failing it, so a suite that runs nothing looks exactly like a suite
+    that passes. Measured on 2026-08-08 by reading the count rather than the
+    word: `dotnet test Nami.Identity.slnx` reports one line per assembly, and
+    the new line reads "Passed: 15" beside the architecture suite's "Passed: 2".
+    There is no combined total to read, which is the second half of why the
+    word Passed is not the thing to check.
+
+    There is one PackageReference and it carries no Version attribute. Central
+    Package Management is on, so a version here is NU1008 and a missing
+    PackageVersion row is NU1010. The xunit.v3 row already exists in
+    Directory.Packages.props, so this project adds no package and owes no new
+    licence read under ADR-0026. Confirmed at the graph rather than assumed:
+    read from this project's own obj/project.assets.json on 2026-08-08, the
+    net10.0 target holds sixteen packages plus the one project reference, and
+    each of the sixteen appears at that exact version in section 3.1 of
+    docs/DEPENDENCY-LICENSES.md, which enumerated twenty-three for the
+    architecture project. All seven this project does not take are reachable
+    from TngTech.ArchUnitNET.xUnitV3, walked in that project's own assets file
+    on the same date rather than concluded by subtraction.
+
+    Microsoft.NET.Test.Sdk and xunit.runner.visualstudio are both absent on
+    purpose, as they are in the sibling project. There is no assertion library
+    either: ADR-0060 settled on 2026-08-02 that assertions come from what
+    xunit.v3.assert ships.
+
+    There are no PublicAPI.*.txt files here and there must not be. ADR-0044
+    parameter A locks the surface of every public package; this is not one, and
+    IsPackable is false.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>$(NamiApplicationTargetFramework)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+  </PropertyGroup>
+
+  <!--
+    CA1707 ("Identifiers should not contain underscores") is exempted here, and
+    the exemption is per-project because a directory-wide one is forbidden.
+
+    WHAT COLLIDES. ADR-0060 requires tests "named and structured as scenarios,
+    in Given / When / Then form" (`0060:61`), and ADR-0065:88 restates it as
+    this repository's test-naming rule. Written with the three parts visible, a
+    name carries underscores. ADR-0094 sets AnalysisMode to Recommended, and
+    CA1707 is inside that set, so under the solution-wide TreatWarningsAsErrors
+    every such name is a build error. Measured 2026-08-08 over fifteen test
+    methods: fifteen distinct CA1707 errors, and the same build with
+    -p:AnalysisMode=Default produced none, which matches the rule's own page
+    listing it as not enabled by default in .NET 10.
+
+    WHY THIS MECHANISM AND NOT AN .editorconfig SECTION. ADR-0093 parameter B is
+    explicit: "No carve-out for `tests/` ... a warning suppressed by directory
+    is a suppression nobody re-reads. Where a specific test genuinely needs a
+    warning, parameter D is the route" (`0093:94-98`). ADR-0094:90-91 imports
+    that same reasoning onto the analyzer-breadth axis. Parameter D is this: "a
+    per-project `<NoWarn>` with a comment ... that says which diagnostic, why,
+    and what would let it be removed" (`0093:133-136`). A `[tests/**/*.cs]`
+    section in .editorconfig was written first and reverted on that evidence,
+    because it would have pre-authorised the suppression for every future test
+    suite without any of them opting in.
+
+    WHY IT IS SAFE HERE. The rule's own page says so: "Do not suppress warnings
+    for production code. However, it's safe to suppress this warning for test
+    code." Read 2026-08-08 on the CA1707 page under
+    learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules
+    (unwrapped, so it can be pasted). Its rule description is about libraries
+    other people consume, and nothing here is packed. The scope is the project
+    rather than the rule's own api_surface option, because that option filters
+    by accessibility and a test method is public, so it cannot express "test
+    code" at all.
+
+    WHAT WOULD LET IT BE REMOVED. A change to ADR-0060's naming clause that
+    stops the three parts being separated. The names satisfy ADR-0060 in
+    PascalCase too, so this exemption buys legibility rather than compliance.
+
+    THE SCOPE IS WIDER THAN METHOD NAMES. CA1707 also reaches namespaces, type
+    names, and parameters. That is accepted rather than intended, because the
+    option that would narrow it does not exist.
+
+    PART 7 OF scripts/test-warnings-as-errors.sh WATCHES THE PropertyGroup
+    BELOW, and it has two halves because a property read alone was not enough.
+    Review broke the first version four ways on 2026-08-08, each leaving the
+    script green while CA1707 was off for src/: an .editorconfig severity line, a
+    WarningsNotAsErrors entry, a NoWarn written with one space after the
+    semicolon, and a tests/Directory.Build.props. Three of the four never touch
+    NoWarn. So 7a builds a probe INSIDE src/ and asserts the compiler still
+    reports CA1707 there, and 7b reads this property and pins the number of
+    exempt projects to exactly one. All five breaks, plus deleting the property
+    below, were replanted against the fixed script and each one fails.
+  -->
+
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <!--
+    The ProjectReference gives the tests the types to exercise. The arrow points
+    from the test into Abstractions and never the other way, so design 01
+    section 3.1's "Abstractions depends on nothing" is untouched by it.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Nami.Identity.Abstractions/Nami.Identity.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
