@@ -62,12 +62,13 @@ graph LR
 | S-017 | Assign a configuration key to the nine options that have none | open | none |
 | S-018 | Move the architecture layer's four engine-version statements to the new pin | done | S-002 done |
 | S-019 | Amend ADR-0030's stack sentence to the new pin | done | S-002 done |
-| S-020 | Amend ADR-0036's live-pin clause to the new pin | open | S-002 done |
+| S-020 | Amend ADR-0036's live-pin clause to the new pin | done | S-002 done |
 | S-021 | Re-derive ADR-0093's verbatim quotation of ADR-0021 | done | S-003 done |
 | S-022 | Extend ADR-0061's maintenance rule to cover a version moving inside a row | open | none |
 | S-023 | Wire the ADR-0061-against-manifest check now its own trigger has fired | blocked | S-022 |
 | S-024 | Correct view 03's inverted `DbContext` pooling row, and read the other eight | open | none |
 | S-025 | Un-pin ADR-0030's seam range, as ADR-0021 already did to its own | open | none |
+| S-026 | Correct the two ADRs that label ADR-0018 by the option it declined | open | none |
 
 ---
 
@@ -1015,7 +1016,15 @@ returns no line asserting a pooled `DbContext` as the stack's posture.
 `docs/architecture/README.md:32-33` for which layer is the bug.
 
 **Out of scope.** ADR-0018 and ADR-0037, which are correct and are the sources here. Every other table
-in view 03. The pooled-plus-mutable deferral, which ADR-0018 owns as A-4b.
+in view 03. The pooled-plus-mutable deferral, which ADR-0018 owns as A-4b. The same defect in
+`docs/adr/0036-database-key-strategy-uuidv7.md:76` and
+`docs/adr/0066-design-patterns-vocabulary-and-pragmatic-use.md:51`, which is **S-026**, because those
+are ADRs and this repository authors one ADR change per commit.
+
+**Do not repair this by writing "non-pooled", which would be wrong in the other direction.** Read at
+`docs/design/02-data.md:55-59` on 2026-08-08, three global contexts are pooled,
+`IdentityDbContext`, `DataProtectionDbContext`, and `ControlPlaneDbContext`, and the two tenant-scoped
+ones are not. ADR-0061's row carries the accurate framing to follow.
 
 ---
 
@@ -1069,6 +1078,69 @@ one read 2026-08-08.
 Every other clause of parameter D, including the suite itself, which is S-011.
 
 ---
+
+## S-026. Correct the two ADRs that label ADR-0018 by the option it declined
+
+**Status:** open · **Blocked by:** none · **Unblocks:** nothing yet
+
+**Two defects, one class, and the class already has a repair on record.** ADR-0018 is titled "Register
+the Pool-mode OpenIddict DbContext **non-pooled** in v1, with pooled-plus-mutable deferred", and its
+Option A, the pooled one, is the deferred A-4b. Two ADRs name it by that declined option.
+
+| Line | What it says | Why it is wrong |
+|---|---|---|
+| `docs/adr/0036-database-key-strategy-uuidv7.md:76` | Related decisions: "ADR-0018 (the pooled DbContext on the same PostgreSQL/EF stack)" | labels the ADR by the option it declined |
+| `docs/adr/0066-design-patterns-vocabulary-and-pragmatic-use.md:51` | "**Factory** for the pooled `DbContext` in Pool mode (ADR-0018)", under the heading "patterns already in deliberate use" | the Factory comes from ADR-0018 Option A, `AddPooledDbContextFactory<T>` plus a scoped `IDbContextFactory<T>`, which is deferred. v1 registers a scoped `AddDbContext`, which needs no factory |
+
+The second is the worse one, because it lists a pattern as in deliberate use when the option that would
+use it was not taken.
+
+**"Non-pooled" is not the correction either, and this is the trap.** Pooling **is** used, per context.
+Read at `docs/design/02-data.md:55-59` on 2026-08-08, three global contexts are pooled,
+`IdentityDbContext`, `DataProtectionDbContext`, and `ControlPlaneDbContext`, while the two
+tenant-scoped ones are not. ADR-0061's row states the accurate framing: "DbContext pooling is **per
+context**, and the tenant-scoped hot path is deliberately **not** pooled in v1". A blanket "non-pooled"
+would be a second wrong claim in the other direction.
+
+**Why this class matters more than a wrong version.** ADR-0018 exists because spike A-4 test T7, run
+2026-07-06, found that "naive pooled reuse leaked the tenant across requests, including through
+OpenIddict's internal `SaveChanges`" (`0018:62`).
+
+**This is the third and fourth instance of one defect, and the first two are already recorded.**
+`docs/adr/0061-technology-stack-of-record.md:145` records the correction of its own table on 2026-07-25,
+and `docs/architecture/07-container-view.md:288-290` records the same for that view: "both this view and
+the ADR-0061 stack table had been describing the stack as `pooled DbContext` when the ADR that owns the
+decision is titled for the opposite". `0061:118` then predicted the remaining rows deserve the same
+pass. **Seed S-024 owns the fifth instance**, `docs/architecture/03-drivers-and-constraints.md:116`,
+which is in the architecture layer rather than in an ADR.
+
+**End state.** Both lines describe ADR-0018 by what it decided. `0036:76` names it without asserting
+pooling as the posture. `0066:51` either drops the Factory entry, or re-attributes it to something that
+genuinely uses a factory today, or states that it is the deferred A-4b shape rather than a pattern in
+use. The seed says which of the three it concluded and why. Each change is recorded in its own ADR's
+maintenance style.
+
+**It lands as two commits, one per ADR**, because this repository authors one ADR change per commit.
+That is not two seeds: it is one repair with one reasoning, and splitting it would put the same
+paragraph in two places.
+
+**Verification.** `bash scripts/check-adrs.sh` after `git add`, `bash scripts/test-check-adrs.sh`, and
+`python3 scripts/check-decisions-index.py`. Both ADRs carry `stack-record: true`, so confirm their
+ADR-0061 rows are untouched for Check 4, and neither frontmatter `status` moved for Check 3. Then
+`git grep -niE "pooled[^.]{0,30}dbcontext|dbcontext[^.]{0,30}pooled" -- docs/adr/` returns only
+ADR-0018's own text, ADR-0018's index row, ADR-0061's past-tensed correction record, and whatever
+wording this seed chose.
+
+**Sources.** The two lines above; `docs/adr/0018-dbcontext-pooling-for-pool-mode.md:10` for the title,
+`:29-30` for the two options, `:35` for which was chosen, and `:62` for the T7 measurement;
+`docs/design/02-data.md:55-59` for the per-context matrix;
+`docs/adr/0061-technology-stack-of-record.md:51` for the accurate framing, `:145` for the first
+correction, and `:118` for the prediction; `docs/architecture/07-container-view.md:288-290` for the
+second. Every one read 2026-08-08.
+
+**Out of scope.** `docs/architecture/03-drivers-and-constraints.md:116`, which is S-024. Every correct
+use of the word pooled, and there are many: ADR-0018 itself, views 21 and 23, design 01, design 02,
+design 10, and seam S24 in design 22 all distinguish the two cases properly and must not be swept.
 
 ## S-019. Amend ADR-0030's stack sentence to the new pin
 
@@ -1130,7 +1202,7 @@ from this pin, and one ADR change per commit, so it is its own seed and its own 
 
 ## S-020. Amend ADR-0036's live-pin clause to the new pin
 
-**Status:** open · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet
+**Status:** done · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet
 
 **One line carrying two claims, and only one of them moves.**
 `docs/adr/0036-database-key-strategy-uuidv7.md:40` says the key-type mapping was "**Read at
@@ -1153,6 +1225,33 @@ stays in the past tense.
 
 **Out of scope.** Re-confirming the key-type mapping against the new pin. That is the M1 item the
 line already names, and it needs a restored package rather than a document edit.
+
+### S-020 result, measured 2026-08-08
+
+Two things changed on that line, not one, and the second was not in the seed.
+
+**1. The version, as asked.** The clause reads "the pin is `[7.6.0]`".
+
+**2. The citation owner, which the seed did not ask for and which was wrong.** The old clause
+attributed a three-part version to ADR-0061. Read 2026-08-08, ADR-0061's stack row says "OpenIddict
+7.6" and has never carried a patch number: every version in that table is major or minor only. So the
+pointer resolved to a real file that did not hold the claim, which is the citation shape this
+repository calls the dangerous one. It now cites ADR-0021 parameter A, which owns the exact pin
+including its bracket form. Fixing the version without fixing the owner would have left a wrong
+citation looking freshly checked.
+
+**3. The 7.4.0 read is confirmed, not edited, and the gap it names has widened.** The sentence says
+the mapping was read at `OpenIddict.EntityFrameworkCore` 7.4.0, "the only version in the local package
+cache". Checked 2026-08-08, `~/.nuget/packages/openiddict.entityframeworkcore/` still holds only
+`7.4.0`, so the measurement stays true and keeps its wording. The distance changed: the read is now
+two minor versions behind the pin rather than one. The "re-confirm at M1" instruction is more owed,
+and the moment it becomes possible is when the first `PackageReference` restores the engine, which is
+S-008. S-006 is the related decision, the offline tree that could have answered it without a restore
+no longer matching the pin.
+
+**The finding left out, now S-026.** This ADR's Related-decisions bullet calls ADR-0018 "the pooled
+DbContext". ADR-0018 is titled for the opposite. It is a different subject from the pin, so it is its
+own seed and its own commit.
 
 ---
 

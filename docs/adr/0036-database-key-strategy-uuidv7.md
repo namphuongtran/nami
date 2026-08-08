@@ -37,7 +37,7 @@ Fixed parameters of the decision:
 
 * **Every entity's clustered primary key is UUIDv7**, represented as a `Guid`.
 * **Generation** is either PostgreSQL 18's native `uuidv7()` at the database or .NET's `Guid.CreateVersion7()` in the application; Npgsql 10 translates `Guid.CreateVersion7()` to the PG18 native function when `SetPostgresVersion(18, 0)` is configured (verified, V15).
-* **The OpenIddict key type is overridden from its default `string` to `Guid`**, so the OpenIddict entity set shares the same key convention; OpenIddict's `Guid` key support was verified. **Use the custom-entity overload, `UseOpenIddict<TenantApplication, TenantAuthorization, TenantScope, TenantToken, Guid>()`, together with `ReplaceDefaultEntities`.** This bullet previously wrote it as `UseOpenIddict<Guid>()`, and that form is dangerous precisely because it **compiles and runs**: the single-type-argument overload exists and its own documentation says it registers the entity sets "using the **default** OpenIddict models and the specified key type". The default models have no `TenantId` column at all, so the entire Pool tenancy model would be absent with no compile error and no exception, just every tenant sharing one client set. The mandatory part is therefore the custom entities plus `ReplaceDefaultEntities`; the *position* is **not** a library constraint, since the five-type-argument overload is published on both `ModelBuilder` and `DbContextOptionsBuilder`. Getting this wrong in the direction the old text invited would be the worst outcome: an implementer "correcting" the position while keeping the `<Guid>` overload still loses tenancy silently. **Read at `OpenIddict.EntityFrameworkCore` 7.4.0**, the only version in the local package cache; the pin is 7.5.0 (ADR-0061), so re-confirm on the pinned package at M1. The data design puts it in `OnModelCreating` because that is where `.IsMultiTenant()`, the composite unique index and the soft-delete filter also live.
+* **The OpenIddict key type is overridden from its default `string` to `Guid`**, so the OpenIddict entity set shares the same key convention; OpenIddict's `Guid` key support was verified. **Use the custom-entity overload, `UseOpenIddict<TenantApplication, TenantAuthorization, TenantScope, TenantToken, Guid>()`, together with `ReplaceDefaultEntities`.** This bullet previously wrote it as `UseOpenIddict<Guid>()`, and that form is dangerous precisely because it **compiles and runs**: the single-type-argument overload exists and its own documentation says it registers the entity sets "using the **default** OpenIddict models and the specified key type". The default models have no `TenantId` column at all, so the entire Pool tenancy model would be absent with no compile error and no exception, just every tenant sharing one client set. The mandatory part is therefore the custom entities plus `ReplaceDefaultEntities`; the *position* is **not** a library constraint, since the five-type-argument overload is published on both `ModelBuilder` and `DbContextOptionsBuilder`. Getting this wrong in the direction the old text invited would be the worst outcome: an implementer "correcting" the position while keeping the `<Guid>` overload still loses tenancy silently. **Read at `OpenIddict.EntityFrameworkCore` 7.4.0**, the only version in the local package cache; the pin is `[7.6.0]` (ADR-0021 parameter A), so re-confirm on the pinned package at M1. The data design puts it in `OnModelCreating` because that is where `.IsMultiTenant()`, the composite unique index and the soft-delete filter also live.
 * **The optimistic-concurrency token is `xmin`** (the PostgreSQL system column), not a separate rowversion (rowversion is SQL-Server-only and the engine is PostgreSQL).
 * **One deliberate exception: `ServerSideSessions.Id` is a `bigint` identity**: it is an internal surrogate that is never exposed (clients reference the random `sid`/`Key` string), is not tenant-scoped, and is never merged or moved across Silo, so UUIDv7's two benefits (being non-enumerable externally and globally unique for merge) do not apply; on this high-churn table (login/logout/expire/cleanup) an 8-byte `bigint` is cheaper than a 16-byte UUID. This is consistent with how identity servers commonly key the server-side session (an int/bigint identity). Every other entity uses UUIDv7.
 
@@ -72,6 +72,29 @@ Fixed parameters of the decision:
 
 ## More Information
 
+* **Updated 2026-08-08: the key-type bullet names the current pin, and it now cites the ADR that owns
+  the pin.** Seed S-002 moved the engine to `[7.6.0]`, so the clause reading "the pin is 7.5.0" was
+  stale. Two things changed rather than one, and the second was not in the seed that asked for the
+  first.
+  * **The citation moved from ADR-0061 to ADR-0021 parameter A.** The old clause attributed a
+    three-part version to ADR-0061, and that ADR's stack table writes versions to major or minor only:
+    read 2026-08-08, its row says "OpenIddict 7.6" and has never carried a patch number. So the
+    pointer resolved to a real file that did not hold the claim, which is the citation shape this
+    repository treats as the dangerous one. ADR-0021 parameter A owns the exact pin including its
+    bracket form.
+  * **The 7.4.0 read is confirmed rather than edited, and the gap it names has widened.** The sentence
+    says the mapping was read at `OpenIddict.EntityFrameworkCore` 7.4.0, "the only version in the local
+    package cache". Checked 2026-08-08, `~/.nuget/packages/openiddict.entityframeworkcore/` still holds
+    only `7.4.0`, so that measurement is still true and keeps its wording. What changed is the distance:
+    the read is now two minor versions behind the pin rather than one. The "re-confirm on the pinned
+    package at M1" instruction is therefore more owed, not less, and the moment it becomes possible is
+    when the first `PackageReference` restores the engine, which is seed S-008. Seed S-006 is the
+    related decision, because the offline source tree that could have answered this without a restore
+    no longer matches the pin.
+  * **One defect in this ADR is deliberately not fixed here.** The Related-decisions bullet below
+    calls ADR-0018 "the pooled DbContext", and ADR-0018 is titled for the opposite and decides
+    non-pooled for the tenant-scoped context. That is **seed S-026**, a separate commit, because it is
+    a different subject from the engine pin.
 * Decided 2026-07-03 (evidence V15). This ADR records a decision that until now lived only in the database-design documents, which other ADRs already assume: ADR-0025 references PostgreSQL 18's `uuidv7()` in dev/test to match production, and ADR-0030 lists `Guid.CreateVersion7()` as a forward-only .NET feature.
 * Related decisions: ADR-0001 (Pool/Silo, where global uniqueness enables Silo and merge safety), ADR-0017 (the tenant Pool↔Silo move that relies on non-colliding keys), ADR-0018 (the pooled DbContext on the same PostgreSQL/EF stack), ADR-0025 (PostgreSQL 18 in dev/test matching production for `uuidv7()`), and ADR-0030 (UUIDv7 generation as a forward-only .NET-version feature). This is distinct from ADR-0033, which is about signing/encryption key-scope, not database primary keys. See ADR-0059 for the entity-versus-value-object distinction that builds on this identity model.
 * Authored in this repository in 2026-07 to record the settled database-design decision as an ADR; a competitor reference for the session-surrogate exception and a named fragmentation-analysis author were generalized, and PostgreSQL, Npgsql, EF Core, and OpenIddict are retained as the project's stack.
