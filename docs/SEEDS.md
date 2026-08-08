@@ -2366,12 +2366,37 @@ specific things to find, and neither needs a `DbContext` to exist.
   `OpenIddict.EntityFrameworkCore` at `[7.6.0]`, and nothing references it today. Referencing it pulls
   transitive packages that ADR-0026 requires be read at the distributed artifact.
 
+**The corpus was read for this seed on 2026-08-08, and here is what it did and did not add.** Stated
+so the next agent does not repeat the read. It is named as external provenance only, because its
+identifiers do not resolve here.
+
+- **It adds nothing about landing the project empty, and it argues the opposite shape.** Its
+  foundations phase creates every project in **one** task, all thirteen at once. This repository has
+  landed one project per increment instead, and each landing found something the documents did not
+  hold. That practice wins here, and the disagreement is recorded rather than silently resolved.
+- **It adds a placement fact worth knowing before the folders exist.** Its own mapping note puts the
+  auditing and session-store code as **folders inside** `.EntityFrameworkCore.PostgreSQL`, not inside
+  this project. So this project stays thin on purpose, and the provider sibling is where those land.
+- **It does not settle which project this one references, and neither does design 01's prose.**
+  `docs/design/01-foundations.md:98-99` says "an adapter depends on `Core` or `Abstractions` plus its
+  own SDK", while its own mermaid at `:79` draws `ef --> core`. The corpus is looser still, writing
+  the adapter's dependency as `Abstractions` plus optionally `Core` and an SDK. **The mermaid is the
+  most specific of the three, so it decides, and the seed states the choice at the csproj rather than
+  leaving it to inference.**
+- **One dated API note it carries belongs to S-034, not here.** Read at
+  `OpenIddict.EntityFrameworkCore` **7.5.0**, the five-type-argument overload exists on both
+  `ModelBuilder` and `DbContextOptionsBuilder`, so the placement is not a library constraint, and what
+  is mandatory is the custom-entity overload plus `ReplaceDefaultEntities`. **The pin is now 7.6.0, so
+  that reading is behind the pin and must be re-verified rather than carried forward**, which is the
+  same class of work S-005 owns for this repository's own dated reads.
+
 **End state.** `src/Nami.Identity.EntityFrameworkCore/` exists, is in `Nami.Identity.slnx`, and
-references `Nami.Identity.Core` per the adapter arrow at `docs/design/01-foundations.md:60-110`, plus
-`OpenIddict.EntityFrameworkCore` from its existing manifest row. It carries **no** `DbContext`, so the
-public API surface it adds is empty or near it. `DEPENDENCY-LICENSES.md` gains the restore-graph delta,
-with the node count before and after read from `project.assets.json` rather than predicted, and one
-licence row per new package read at its artifact.
+references `Nami.Identity.Core` per the mermaid arrow at `docs/design/01-foundations.md:79`, with the
+choice against the looser prose at `:98-99` stated at the csproj, plus `OpenIddict.EntityFrameworkCore`
+from its existing manifest row. It carries **no** `DbContext`, so the public API surface it adds is
+empty or near it. `DEPENDENCY-LICENSES.md` gains the restore-graph delta, with the node count before
+and after read from `project.assets.json` rather than predicted, and one licence row per new package
+read at its artifact.
 
 **Verification.** All nine gates, listed in [`../.claude/rules/commands.md`](../.claude/rules/commands.md).
 The restore graph read out of `project.assets.json` on both sides of the change. Every architecture
@@ -2379,9 +2404,11 @@ fact the new project could touch watched to fail against a planted break before 
 [`../tests/CLAUDE.md`](../tests/CLAUDE.md). If no fact changes state, the seed says so rather than
 implying coverage, which is the shape S-008's result already had to correct once.
 
-**Sources.** `docs/design/01-foundations.md:60-110` for the package graph and the dependency rule;
+**Sources.** `docs/design/01-foundations.md:60-110` for the package graph, `:79` for the adapter arrow
+this seed follows, and `:98-99` for the looser prose it is chosen over;
 `Directory.Packages.props:212`; `tests/Nami.Identity.ArchitectureTests/CoreDependencyRuleTests.cs:111`;
-`docs/adr/0026-dependency-license-policy.md` for reading a licence at the artifact.
+`docs/adr/0026-dependency-license-policy.md` for reading a licence at the artifact. The corpus reading
+is recorded above and is provenance rather than authority, per `docs/CLAUDE.md`.
 
 **Out of scope.** Any `DbContext`, which is S-034. The `.PostgreSQL` sibling, migrations, and the
 provider. Any store implementation. Wiring the adapter into `AddNamiIdentity`, which is the half S-009
@@ -2410,6 +2437,14 @@ them. So the trap here is a row that reads plausibly and says the opposite of th
 `docs/adr/0018-dbcontext-pooling-for-pool-mode.md:62` is the record of why the tenant-scoped context is
 not pooled: naive pooled reuse leaked the tenant across requests, including through OpenIddict's
 internal `SaveChanges`.
+
+**One corpus reading already sits in S-033 and belongs to this seed.** It records, at
+`OpenIddict.EntityFrameworkCore` **7.5.0**, that the five-type-argument overload exists on both
+`ModelBuilder` and `DbContextOptionsBuilder`, so where it is called is not a library constraint, and
+that the custom-entity overload plus `ReplaceDefaultEntities` is what is mandatory. **The pin is
+7.6.0, so re-verify it at the pinned version rather than carrying it forward.** This repository's own
+source for the same call is `docs/design/02-data.md:191` for the registration statement, with the calls
+themselves at `:941-942` and `:997`.
 
 **End state.** Five context classes exist in the adapter, each with the scope and the pooling
 registration design 02 fixes, and each carrying the reason at the call site as
