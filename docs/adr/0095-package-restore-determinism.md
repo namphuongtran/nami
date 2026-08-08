@@ -41,9 +41,16 @@ is why they are quoted in the past tense against a named commit rather than poin
 its search's blind spots.** Searched `docs/`, every tracked `*.props` and `*.targets`,
 `.github/` and `scripts/` for nine spellings (`packages.lock.json`, `lock file`, `lockfile`,
 `RestorePackagesWithLockFile`, `RestoreLockedMode`, `NU1608`, `NU1004`, `--locked-mode`,
-`floating version`), case-insensitively: **two hits**, the `docs/BUILD-PLAN.md` row that owes
-this decision and ADR-0021 parameter A itself. Nothing in the tree implements the mechanism
-and nothing decides against it.
+`floating version`), case-insensitively: **two hits**, ADR-0021 parameter A itself and the
+maintainer's work queue, whose row then owed this decision. Nothing in the tree implemented the
+mechanism and nothing decided against it.
+
+**That count is pinned to 2026-08-03 and cannot be reproduced, which is a property of the
+measurement rather than a defect in it.** This ADR then decided the question, and guardrail Check 9
+arrived the same day to enforce the two premises it rests on (`scripts/README.md`). So several of
+the nine spellings now match this decision and its enforcement, and a re-run returns more files
+than two. Read the two as the state of the tree *before* the decision, which is what an absence
+claim is for.
 
 **That search has a demonstrated blind spot, and demonstrating it is worth more than the
 count.** `Directory.Packages.props` carried the same open item in the same words and is **not**
@@ -200,7 +207,9 @@ this ADR.
 Residual risk 2 is not solved here, and this ADR must not read as though it is. ADR-0026
 section C owns it: a CI licence-scan gate that "reads the license of every package (direct
 and transitive) from the restore graph and fails the build if any license falls outside the
-allow-list", still owed at M1 per `docs/BUILD-PLAN.md`. That gate reads the graph at the
+allow-list", and still owed: no workflow job scans a licence today. **ADR-0026 section C fixes the
+gate and not its timing.** `.github/workflows/ci.yml` is where the M1 intent is written down, in
+the comment reserving the job. That gate reads the graph at the
 moment it runs, which is the same graph this ADR declines to freeze, so the two decisions are
 adjacent and not overlapping: this one bounds how the graph can move, and that one inspects
 where it has moved to.

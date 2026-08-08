@@ -108,8 +108,7 @@ is not the common case that `ValueTask` exists to serve.
    the two vocabularies section 8 below reconciles, since `Tenants.KeyScope` reads `own` where
    `SigningKeys.KeyScope` reads `tenant`.
 
-Both are per-port work owned here. Closing them is what unblocks the port, and
-[`../BUILD-PLAN.md`](../BUILD-PLAN.md) carries the queue entry.
+Both are per-port work owned here, and closing them is what unblocks the port.
 
 ### 3.3 Three keyrings (kept separate)
 
