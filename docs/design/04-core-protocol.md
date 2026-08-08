@@ -52,7 +52,10 @@ and consent UI (11), and the configuration layer (01).
 
 ### `AddOpenIddict()` configuration
 
-Every API name in this block was read at OpenIddict release tag 7.5.0; see section 11.
+Every API name in this block was read at OpenIddict release tag 7.5.0, and **all of them were
+re-read at 7.6.0 on 2026-08-08** when the pin moved (seed S-028); see section 11. Thirty-three
+names survived unchanged and **one call was found not to compile at all**, which is recorded there
+rather than here.
 
 **This block is written as one chain no single assembly can call, and the segments are owned
 separately** (seed S-009, 2026-08-08). The dependency rule at
@@ -127,7 +130,13 @@ services.AddOpenIddict()
     o.RegisterScopes("openid", "profile", "email", "api");
 
     o.DisableAccessTokenEncryption();                                 // plain signed JWT, ADR-0005
-    o.CodeChallengeMethods.Remove(CodeChallengeMethods.Plain);        // S256 only, RFC 9700
+
+    // S256 only, RFC 9700. There is NO builder method for this, so it goes through
+    // the documented Configure escape hatch. Corrected 2026-08-08: this line read
+    // `o.CodeChallengeMethods.Remove(...)`, and OpenIddictServerBuilder has no such
+    // member, so it did not compile. See section 11.
+    o.Configure(options => options.CodeChallengeMethods.Remove(
+        OpenIddictConstants.CodeChallengeMethods.Plain));
 
     o.SetAccessTokenLifetime(TimeSpan.FromMinutes(15));
     o.SetRefreshTokenLifetime(TimeSpan.FromHours(8));                 // matches the session, ADR-0003
@@ -1113,6 +1122,30 @@ Named per ADR-0066, a vocabulary applied where it clarifies intent:
     that **cannot fail**, which is a different class of guarantee. The engine-behaviour
     dependency underneath is still registered as a seam,
     [22](22-openiddict-seam-catalogue.md) S35, because that part is genuinely version-pinned.
+* **Re-read 2026-08-08 at 7.6.0, and one call in section 3 did not compile** (seed S-028). The pin
+  moved from 7.5.0, at which every name in that block had been read, so every name was read again at
+  the upstream commit `5ce649a5bbbf1340c9be9c4f264197af563ab473` that 7.6.0 declares. **Thirty-three
+  names survived unchanged**, verified by matching each against a `public` declaration in
+  `OpenIddictServerBuilder.cs`, `OpenIddictServerAspNetCoreBuilder.cs`,
+  `OpenIddictValidationBuilder.cs`, and the four extension files beside them. No rename and no
+  removal.
+  * **Name-existence and call-validity are different claims, and the block had been checked only for
+    the first.** `o.CodeChallengeMethods.Remove(CodeChallengeMethods.Plain)` named two real things:
+    `OpenIddictServerOptions.CodeChallengeMethods` is a `HashSet<string>` initialised to
+    `{ plain, S256 }`, and `OpenIddictConstants.CodeChallengeMethods.Plain` is `"plain"`. But `o` in
+    that block is an `OpenIddictServerBuilder`, because `AddServer` takes
+    `Action<OpenIddictServerBuilder>`, and **that type has no `CodeChallengeMethods` member at all**.
+    So the line could not compile. Searched the builder for any `CodeChallenge`-named method and
+    there is none.
+  * **The corrected form is the builder's own documented route**, `Configure(Action<OpenIddictServerOptions>)`,
+    whose remarks say it "can be safely called multiple times". It is how the builder implements its
+    own setters: `RequireProofKeyForCodeExchange()` is literally
+    `Configure(options => options.RequireProofKeyForCodeExchange = true)`.
+  * **The lesson is narrower than "check the API".** The block's header sentence promised that every
+    API *name* was read at source, and that promise was kept. A name can be real, spelled right, and
+    still be called on the wrong receiver, and nothing in this repository checked receivers until
+    something tried to compile the block. Seed S-010, which writes the wiring, is where the compiler
+    becomes the check.
 * **Corrected 2026-08-08: section 3's `AddOpenIddict()` block was written as one chain no single
   assembly can call** (seed S-009). Section 3 now carries an ownership table and presents the
   persistence segment separately. Four things were read at source to settle it, and the conclusion

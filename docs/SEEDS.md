@@ -78,7 +78,7 @@ graph LR
 | S-007 | Resolve umbrella versus granular for `Core`'s engine reference | done | none |
 | S-008 | Reference the engine from `Core` and enumerate the restore graph | done | S-007 done |
 | S-009 | Decide where the `AddOpenIddict` block splits at the persistence boundary | done | S-007 done |
-| S-010 | Wire the engine inside `AddNamiIdentity` | blocked | S-008, S-009 |
+| S-010 | Wire the engine inside `AddNamiIdentity` | open | S-008, S-009, S-028 all done |
 | S-011 | Stand up the contract-regression suite ADR-0021 part C requires | blocked | S-010 |
 | S-012 | Reconcile design 01's context count against its own table | open | none |
 | S-013 | Give the provider-selector key the decided form and an owner | open | none |
@@ -96,6 +96,7 @@ graph LR
 | S-025 | Un-pin ADR-0030's seam range, as ADR-0021 already did to its own | done | none |
 | S-026 | Correct the two ADRs that label ADR-0018 by the option it declined | done | none |
 | S-027 | Give the three stack entries with no licence row one: OpenTofu, Bootstrap 5, Playwright | open | none |
+| S-028 | Re-read design 04 section 3's API names at 7.6.0, split out of S-010 | done | S-009 done |
 
 ---
 
@@ -909,22 +910,46 @@ and the second closing at `.AddValidation(...);`.
 
 ## S-010. Wire the engine inside `AddNamiIdentity`
 
-**Status:** blocked · **Blocked by:** S-008, S-009 · **Unblocks:** S-011, S-016
+**Status:** open · **Blocked by:** S-008, S-009, and S-028, all done · **Unblocks:** S-011, S-016
 
-**End state.** `AddNamiIdentity` calls `AddOpenIddict()` and configures the segments S-009 assigned
-to `Core`. Every API name written is read at 7.6.0 rather than carried from a document that read
-7.5.0, and the seed says where each was read. The options this repository already fixed are applied:
-the endpoint URIs, the flows, and the token formats named in design 04 section 3.
+**This seed was split on 2026-08-08 and its evidence half is S-028, which is done.** The API re-read
+at 7.6.0 was the larger and more uncertain half, and it was not single-agent-sized alongside the
+wiring: thirty-three names had to be matched against `public` declarations in seven upstream files,
+and doing it found a call that does not compile. Splitting is the normal outcome the maintenance rule
+names, and the original stays here naming what it split into.
+
+**End state, narrowed.** `AddNamiIdentity` calls `AddOpenIddict()` and configures the segments S-009
+assigned to `Core`, being `.AddServer(...)` and `.AddValidation(...)`. The values are the ones design
+04 section 3 fixes, read from `NamiIdentityOptions` where a member exists for them. The API names are
+already verified by S-028 and are not re-derived here.
+
+- `Core`'s csproj gains `OpenIddict.Validation`, `.Validation.AspNetCore`, and
+  `.Validation.ServerIntegration`, which S-009's table assigns to it and S-008 deliberately left out.
+  `DEPENDENCY-LICENSES.md` gains the restore-graph delta, read from `project.assets.json`.
+- **The two reflection facts become live here, which is what S-008 could not deliver.** Once code
+  names an engine type, the reference stops being elided. The seed proves it by reading the emitted
+  metadata rather than asserting it, and by planting a forbidden prefix and watching
+  `CoreReferencesNoAdapterOrDatabaseProviderOrCloudSdk` fail on a real engine assembly.
+
+**One gap to resolve or record, found by S-028 and not caused by it.** Design 04 section 6 names the
+configuration key `Nami:Protocol:RefreshReuseLeewaySeconds` and section 3 calls
+`SetRefreshTokenReuseLeeway(TimeSpan.FromSeconds(30))`, but `NamiIdentityOptions` carries **no
+member** for it, so there is nothing to bind or to read. The same holds for
+`Nami:Protocol:ClockSkewToleranceSeconds` and `Nami:Protocol:EndpointPaths:*`. That is the mirror of
+S-017, which is about members with no key. Either the wiring hard-codes the value and says so, or the
+member is added, and the seed states which it chose.
 
 **Verification.** All nine gates. Plus a unit fact per configured value that a later edit could
 change silently, on the same reasoning that made the options defaults worth pinning: measured
 2026-08-08, a changed default produced a green build, a green format run, and a byte-identical
-public API file.
+public API file. Each fact is watched to fail against a planted break before it is believed.
 
 **Sources.** `docs/design/04-core-protocol.md` section 3, the implementer source of record for the
-block; `docs/adr/0021-openiddict-version-adaptation.md:46` for the handler-order rules.
+block, as corrected by S-009 and S-028; `docs/adr/0021-openiddict-version-adaptation.md:46` for the
+handler-order rules; this file's S-028 for the API verification.
 
 **Out of scope.** Any slice, which is S-016. The contract-regression suite, which is S-011.
+Re-verifying the API names, which S-028 did.
 
 ---
 
@@ -1888,6 +1913,65 @@ except the two searches dated 2026-08-07, which arrived with their queue rows.
 Bootstrap version. Auditing **every** stack-of-record row for a missing licence row: that wider pass is
 what these three argue for, and it needs its own enumeration rather than an assumption that three is
 the total.
+
+---
+
+## S-028. Re-read design 04 section 3's API names at 7.6.0, split out of S-010
+
+**Status:** done · **Blocked by:** S-009, which is done · **Unblocks:** S-010
+
+**Why it is its own seed.** S-010 asked for the wiring **and** for every API name in it to be read at
+7.6.0 rather than carried from a document that read 7.5.0. The second half turned out to be the
+larger and more uncertain one: thirty-three names across seven upstream files, and it found a call
+that does not compile. Doing both in one sitting would have buried that finding inside a code commit.
+
+### S-028 result, measured 2026-08-08
+
+**Thirty-three of thirty-three names survived the bump unchanged.** Each was matched against a
+`public` declaration at the upstream commit `5ce649a5bbbf1340c9be9c4f264197af563ab473` that
+OpenIddict 7.6.0 declares, in `OpenIddictServerBuilder.cs` (2480 lines),
+`OpenIddictServerAspNetCoreBuilder.cs`, `OpenIddictValidationBuilder.cs`,
+`OpenIddictValidationAspNetCoreBuilder.cs`, `OpenIddictServerExtensions.cs`,
+`OpenIddictValidationExtensions.cs`, `OpenIddictServerAspNetCoreExtensions.cs`,
+`OpenIddictValidationAspNetCoreExtensions.cs`, and
+`OpenIddictValidationServerIntegrationExtensions.cs`. No rename and no removal. `UseAspNetCore` was
+confirmed on **both** sides, at `OpenIddictServerAspNetCoreExtensions.cs:25` and on the validation
+side.
+
+**One call was found not to compile, and the distinction it exposes is the point.**
+`o.CodeChallengeMethods.Remove(CodeChallengeMethods.Plain)` named two real things.
+`OpenIddictServerOptions.CodeChallengeMethods` is a `HashSet<string>` initialised to
+`{ plain, S256 }`, and `OpenIddictConstants.CodeChallengeMethods` declares `Plain = "plain"` and
+`Sha256 = "S256"`. But `AddServer` takes `Action<OpenIddictServerBuilder>`, so `o` is the **builder**,
+and searching that 2480-line file for `CodeChallengeMethods` returns **nothing**. There is no
+`CodeChallenge`-named builder method at all.
+
+**Name-existence and call-validity are different claims.** The block's header promised every API
+*name* was read at source, and that promise was kept for eight months. A name can be real, correctly
+spelled, and called on a type that does not have it. Nothing in this repository checked receivers,
+because nothing had tried to compile the block.
+
+**The correction is the builder's own route.** `Configure(Action<OpenIddictServerOptions>)` at
+`OpenIddictServerBuilder.cs:107`, whose remarks say it "can be safely called multiple times". The
+builder implements its own setters that way: `RequireProofKeyForCodeExchange()` is literally
+`Configure(options => options.RequireProofKeyForCodeExchange = true)`. So the corrected line follows
+the library's own pattern rather than inventing one.
+
+**One consequence for S-010, recorded here because this seed found it.** Design 04 section 6 names
+`Nami:Protocol:RefreshReuseLeewaySeconds`, `:ClockSkewToleranceSeconds`, and `:EndpointPaths:*` as
+configuration keys, and `NamiIdentityOptions` carries a member for **none** of them. So section 3's
+`SetRefreshTokenReuseLeeway(TimeSpan.FromSeconds(30))` has nothing to read from. That is the mirror of
+S-017, and S-010 must either hard-code and say so or add the member.
+
+**Out of scope, deliberately.** Writing any wiring, which is S-010. Whether each value is still
+*correct* at 7.6.0 as opposed to still *callable*, which needs the contract-regression suite and is
+S-011. Re-verifying the values design 04 fixes, which S-005 owns for the dated source reads.
+
+**Verification.** Every name matched by regex against a `public` declaration, and the script reported
+`NOT FOUND anywhere: none`. The receiver defect was then confirmed twice: once by the absence of
+`CodeChallengeMethods` on the builder, and once by reading `AddServer`'s parameter type at
+`OpenIddictServerExtensions.cs:115`. `bash scripts/check-adrs.sh`,
+`python3 scripts/check-decisions-index.py`, and `markdownlint-cli2`, all green.
 
 ---
 
