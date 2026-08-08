@@ -39,9 +39,9 @@ mostly decision records, governance, and docs. `src/` and `tests/` both began 20
 `docs/BUILD-PLAN.md` is the maintainer's own progress queue. **It is temporary and it will be
 deleted.** Two rules follow, and the second is the one that has been broken twice.
 
-- **Reading it is fine.** With no other instruction, read it first if it is still there. It is a
-  queue pointing at owners, never an authority, so a row disagreeing with the ADR or design it
-  cites is a bug in the row.
+- **Read [`docs/SEEDS.md`](docs/SEEDS.md) first**, which holds scheduled work as seeds and **may**
+  be cited. The queue keeps only what is owed but unscheduled and what is not verified, and a row
+  disagreeing with the ADR or design it cites is a bug in the row.
 - **Never cite it, and never point a line number into it.** Not from an ADR, a design, a
   `CLAUDE.md`, a rules file, or a skill. Those outlive the queue, so a citation into it becomes a
   dangling pointer on a schedule nobody controls. Cite the ADR, the design, or the code that owns
@@ -171,10 +171,10 @@ thing drift and the shorter one wins by being read first. Read both.
 | `.css`, `.html`, `.js`, and `wwwroot/` | [`html-css.md`](.claude/rules/html-css.md) | ADR-0091, ADR-0072, and design `11` |
 | build and CI config | [`.claude/rules/build-and-ci.md`](.claude/rules/build-and-ci.md) | the files themselves |
 | any prose | [`.claude/rules/writing-style.md`](.claude/rules/writing-style.md) | the Microsoft Style Guide |
+| planning any work | [`.claude/rules/seeds.md`](.claude/rules/seeds.md) | [`docs/SEEDS.md`](docs/SEEDS.md), the tracker |
 
-`docs/kb/` has none on purpose: its README already carries the frontmatter shape, the no-H1 rule,
-the `[[slug]]` link form, and the routing rule, and a file whose only content is "read the README"
-is a drift surface buying nothing.
+`docs/kb/` has none on purpose: its README already carries that layer's conventions, and a file
+whose only content is "read the README" is a drift surface buying nothing.
 
 **A nested `CLAUDE.md` is not re-injected after `/compact`; only this root file is.** So anything
 that must always hold belongs here, the folder files are best-effort, and after a compaction you

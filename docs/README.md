@@ -6,7 +6,8 @@
 | [`design/`](design/) | Detailed per-feature designs elaborating how each part is built; governed by the ADRs |
 | [`adr/`](adr/) | Architecture Decision Records: every significant decision, with context and rationale |
 | [`architecture/24-glossary.md`](architecture/24-glossary.md) | Domain, protocol, and project-convention vocabulary used across all three layers; definitions that point at the document of record rather than restating it. It sits inside the architecture layer because arc42 places the glossary there, not because the vocabulary is that layer's alone |
-| [`BUILD-PLAN.md`](BUILD-PLAN.md) | The work queue: what is built next, what is owed with its trigger, and what is not verified. Points at the ADR or design owning each item and decides nothing itself |
+| [`SEEDS.md`](SEEDS.md) | The seed issue tracker: scheduled work, decomposed into forward-chained issues each scoped to one agent in one sitting. **This one may be cited.** [`../.claude/rules/seeds.md`](../.claude/rules/seeds.md) is the rule behind its shape |
+| [`BUILD-PLAN.md`](BUILD-PLAN.md) | The work queue: what is owed with its trigger, and what is not verified. Points at the ADR or design owning each item and decides nothing itself. Temporary, will be deleted, and **may never be cited**. Its "Next" list moved to `SEEDS.md` on 2026-08-08 |
 | [`PRE-GA-RATIFICATION-CHECKLIST.md`](PRE-GA-RATIFICATION-CHECKLIST.md) | The release gate: every DPO/Security/Ops/Legal/Product sign-off the ADRs defer before general availability |
 | `DEPENDENCY-LICENSES.md` | Third-party dependency license inventory (created with the first code drop) |
 
