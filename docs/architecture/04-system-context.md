@@ -18,7 +18,7 @@ graph TB
   admin([Tenant / delegated admin]):::person
   ops([Operator / SRE<br/>including break-glass]):::person
 
-  nami["Nami Identity Provider<br/>multi-tenant OAuth2 / OIDC authorization server<br/>on OpenIddict 7.5 and .NET 10"]:::host
+  nami["Nami Identity Provider<br/>multi-tenant OAuth2 / OIDC authorization server<br/>on OpenIddict 7.6 and .NET 10"]:::host
 
   edge[Edge layer<br/>WAF, CDN, reverse proxy]:::ext
   rp[Relying-party apps<br/>web, SPA, mobile, device, M2M]:::ext

@@ -7,7 +7,7 @@ tags: [architecture, sad, c4, arc42, overview]
 # Nami Software Architecture Document (SAD)
 
 **System:** Nami, an open-source multi-tenant OAuth 2.0 / OpenID Connect identity
-provider for .NET, built on OpenIddict 7.5 and .NET 10, released under Apache-2.0.
+provider for .NET, built on OpenIddict 7.6 and .NET 10, released under Apache-2.0.
 
 **Notation:** the [C4 model](https://c4model.com) at Levels 1 to 3, plus supporting
 sequence, ER, and deployment diagrams, all rendered as Mermaid.

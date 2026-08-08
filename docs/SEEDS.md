@@ -60,12 +60,13 @@ graph LR
 | S-015 | Re-own design 04's boot-validation citation | open | none |
 | S-016 | Define what the first slice is | blocked | S-010 |
 | S-017 | Assign a configuration key to the nine options that have none | open | none |
-| S-018 | Move the architecture layer's four engine-version statements to the new pin | open | S-002 done |
+| S-018 | Move the architecture layer's four engine-version statements to the new pin | done | S-002 done |
 | S-019 | Amend ADR-0030's stack sentence to the new pin | open | S-002 done |
 | S-020 | Amend ADR-0036's live-pin clause to the new pin | open | S-002 done |
 | S-021 | Re-derive ADR-0093's verbatim quotation of ADR-0021 | done | S-003 done |
 | S-022 | Extend ADR-0061's maintenance rule to cover a version moving inside a row | open | none |
 | S-023 | Wire the ADR-0061-against-manifest check now its own trigger has fired | blocked | S-022 |
+| S-024 | Correct view 03's inverted `DbContext` pooling row, and read the other eight | open | none |
 
 ---
 
@@ -893,7 +894,7 @@ or is named in a list of code-only options.
 
 ## S-018. Move the architecture layer's four engine-version statements to the new pin
 
-**Status:** open · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet
+**Status:** done · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet
 
 **Why this seed exists at all.** S-001 found four bucket-A lines that no seed owned. The reason they
 were missed is the finding worth keeping: S-001's own search spelling was `7.5.0`, and all four write
@@ -927,6 +928,93 @@ this layer may not hold a version the ADR does not;
 
 **Out of scope.** `09-runtime-flow-views.md:296`, which is a source-read claim rather than a pin
 statement. Every other version in these four files, including .NET 10.
+
+### S-018 result, measured 2026-08-08
+
+All four lines read 7.6, and the seed's verification passes exactly as written:
+`git grep -nP "OpenIddict 7\.5(?!\.0)" -- docs/architecture/` returns only
+`09-runtime-flow-views.md:296`, which is bucket C and belongs to S-005.
+
+**Two 8.0 forward references were read rather than assumed unaffected.**
+`01-introduction-scope.md:137` waits for "the native OpenIddict 8.0 implementation" of dynamic client
+registration, and `09-runtime-flow-views.md:716` carries a decommission marker for "OpenIddict 8.0's
+native implementation" of back-channel logout. Both name 8.0 and neither names a preview, so the slip
+S-003 found, both features moving from milestone `8.0.0-preview.2` to `8.0.0-preview.3`, does not reach
+either line. This confirms in the architecture layer what S-003's amendment claimed about ADR-0014 and
+ADR-0019.
+
+**The finding is one row below the edit, and it is not a version.**
+`03-drivers-and-constraints.md:116` reads "EF Core 10 with Npgsql, pooled `DbContext`". ADR-0018 is
+titled "Register the Pool-mode OpenIddict DbContext **non-pooled** in v1". The row is inverted on a
+tenant-isolation property, and it sits two lines under the row this seed corrected. It is **not** a
+version statement, so it is outside this seed by its own scope line, and it is now **S-024**. Bundling a
+correctness fix about tenant leakage into a version transcription would have hidden it in this commit's
+diff.
+
+**Verification.** `bash scripts/check-adrs.sh` after `git add`,
+`python3 scripts/check-decisions-index.py`, and `markdownlint-cli2` with its file count cross-checked
+against `git ls-files '*.md'`. The mermaid label at `04:21` sits inside a fenced block where no link
+checker reaches, so it was read directly, which is the trap `docs/design/CLAUDE.md` records for pointers
+inside fences.
+
+---
+
+## S-024. Correct view 03's inverted `DbContext` pooling row, and read the other eight
+
+**Status:** open · **Blocked by:** none · **Unblocks:** nothing yet
+
+**The contradiction, quoted from four sides.**
+
+| Source | What it says |
+|---|---|
+| `docs/architecture/03-drivers-and-constraints.md:116` | "EF Core 10 with Npgsql, pooled `DbContext`" |
+| `docs/adr/0018-dbcontext-pooling-for-pool-mode.md:10` | titled "Register the Pool-mode OpenIddict DbContext **non-pooled** in v1, with pooled-plus-mutable deferred" |
+| `docs/adr/0061-technology-stack-of-record.md:51` | "DbContext pooling is **per context**, and the tenant-scoped hot path is deliberately **not** pooled in v1" |
+| `docs/architecture/21-performance-scalability.md:81` | "For the Pool-mode operational context, **v1 registers the DbContext non-pooled**" |
+
+**The architecture layer therefore disagrees with itself**, view 03 against view 21, which
+`docs/design/CLAUDE.md` names as the cheapest signal that one of them was transcribed rather than read.
+And `docs/architecture/README.md:32-33` settles which is the bug: this layer "points into them as the
+authoritative source, and where it disagrees with one of them, this layer is the bug".
+
+**This is a known defect that a previous pass missed, and both facts are already written down.**
+`docs/architecture/07-container-view.md:288-290` records that "both this view and the ADR-0061 stack
+table had been describing the stack as `pooled DbContext` when the ADR that owns the decision is titled
+for the opposite", and that a DbContext pooling section was added to fix it. That pass, on 2026-07-25,
+corrected view 07 and ADR-0061's table and left view 03's constraint table alone.
+`docs/adr/0061-technology-stack-of-record.md:118` then predicted exactly this: "the remaining rows
+deserve the same pass before GA".
+
+**Why an inverted word matters more here than a wrong version.** ADR-0018 exists because spike A-4 test
+T7, run 2026-07-06, found that "naive pooled reuse leaked the tenant across requests, including through
+OpenIddict's internal `SaveChanges`" (`0018:62`). A constraint table telling an implementer the stack
+uses a pooled `DbContext` is telling them to do the thing that leaked tenants.
+
+**End state.**
+
+- `03:116` agrees with ADR-0018 and with ADR-0061's row, and it distinguishes pooling per context from
+  the tenant-scoped hot path rather than asserting one word for both.
+- **The other eight rows of that table are each read against their owning ADR**, and the seed states
+  which were confirmed and which were corrected. The table has nine data rows at lines 113 to 121,
+  counted 2026-08-08: Runtime, Protocol engine, Database engine, ORM and driver, Primary keys, Signing
+  baseline, Audit integrity, Logging and telemetry, and Infrastructure as code. This is the pass
+  `0061:118` asked for, scoped to one table so it fits one sitting.
+- A row that survives the read is recorded as confirmed rather than left silent, because a reader
+  cannot otherwise tell a read row from an unread one.
+
+**Verification.** `bash scripts/check-adrs.sh`, `python3 scripts/check-decisions-index.py`, and
+`markdownlint-cli2`. Then the substantive check, which no gate performs: for each of the nine rows,
+open the ADR its last cell cites and confirm the row's claim appears there. `git grep -niE "pooled.{0,25}dbcontext|dbcontext.{0,25}pooled" -- docs/architecture/`
+returns no line asserting a pooled `DbContext` as the stack's posture.
+
+**Sources.** The four rows quoted above, each read 2026-08-08;
+`docs/architecture/07-container-view.md:288-290` for the pass that missed this table;
+`docs/adr/0061-technology-stack-of-record.md:118` for the prediction;
+`docs/adr/0018-dbcontext-pooling-for-pool-mode.md:62` for the T7 measurement;
+`docs/architecture/README.md:32-33` for which layer is the bug.
+
+**Out of scope.** ADR-0018 and ADR-0037, which are correct and are the sources here. Every other table
+in view 03. The pooled-plus-mutable deferral, which ADR-0018 owns as A-4b.
 
 ---
 

@@ -11,7 +11,7 @@ tags: [architecture, sad, scope, introduction]
 ## 1. Purpose
 
 This is the architecture layer for **Nami**, an open-source, multi-tenant
-OAuth 2.0 and OpenID Connect identity provider for .NET, built on OpenIddict 7.5
+OAuth 2.0 and OpenID Connect identity provider for .NET, built on OpenIddict 7.6
 and .NET 10 and released under Apache-2.0 (ADR-0061, ADR-0027). It is a permissive
 alternative to the commercial identity servers: the protocol engine is OpenIddict,
 which Nami never hand-rolls, and Nami's value is the opinionated,
