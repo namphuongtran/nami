@@ -37,7 +37,7 @@ Chosen option: "LTS-anchored, with multi-target packages and per-bump contract-r
 * **A. Host/deployable = LTS-to-LTS.** The reference host and Admin (ADR-0025) run LTS to LTS (.NET 10 to 12), skipping the 11 STS, which is only built and tested in the early-warning branch (E) and never shipped to production; a seamless 10-to-12 path with no EOL gap removes any incentive to take STS risk on a security-critical service. If an 11 STS ever carried a mandatory, non-back-portable feature (unlikely), a mini-ADR would evaluate it case by case rather than defaulting to the STS jump.
 * **B. Published NuGet packages = multi-target current-LTS plus next-LTS.** The library packages multi-target (currently `net10.0`, becoming `<TargetFrameworks>net10.0;net12.0</TargetFrameworks>` when .NET 12 ships), so consumers on a newer runtime (including .NET 11 STS users) are not blocked, while keeping the previous LTS for one beat so consumers have time to upgrade. The host is single-target on the current LTS. A target framework is dropped only when its LTS reaches EOL (for example dropping `net10.0` after November 2028), recorded via SemVer.
 * **C. The target framework is one knob (build-time).** `Directory.Build.props` centralizes `<TargetFramework>`/`<TargetFrameworks>` and `<LangVersion>`, so changing the runtime touches one place rather than every csproj; the SDK/runtime image pin in the Dockerfile (ADR-0025) and `global.json` (`rollForward`) stay in sync; and Central Package Management (ADR-0026) keeps every `Microsoft.*`, EF, and Npgsql package aligned with the runtime major, bumped lock-step.
-* **D. Contract-regression plus the full suite on every SDK bump, reusing the ADR-0021 infrastructure.** Each .NET bump runs the same contract-regression suite (seams S1 through S34), the full unit/integration suite (Testcontainers on PostgreSQL 18, ADR-0025), and OIDC conformance; a bump that breaks a contract or conformance fails the build. API discipline: no preview/RC APIs, and runtime-version-dependent APIs are isolated behind an abstraction (ports, ADR-0024) so multi-targeting does not sprawl into `#if` directives (using `#if NET12_0_OR_GREATER` minimally, preferring a polyfill or adapter). Forward-only features: capabilities already used from the current runtime (native passkeys/WebAuthn in .NET 10 per ADR-0028, `Guid.CreateVersion7()` from .NET 9, and native metrics) only advance and never drop below that minimum.
+* **D. Contract-regression plus the full suite on every SDK bump, reusing the ADR-0021 infrastructure.** Each .NET bump runs the same contract-regression suite (the registered seams, numbered `S1` onward, the seam catalogue owning the enumeration), the full unit/integration suite (Testcontainers on PostgreSQL 18, ADR-0025), and OIDC conformance; a bump that breaks a contract or conformance fails the build. API discipline: no preview/RC APIs, and runtime-version-dependent APIs are isolated behind an abstraction (ports, ADR-0024) so multi-targeting does not sprawl into `#if` directives (using `#if NET12_0_OR_GREATER` minimally, preferring a polyfill or adapter). Forward-only features: capabilities already used from the current runtime (native passkeys/WebAuthn in .NET 10 per ADR-0028, `Guid.CreateVersion7()` from .NET 9, and native metrics) only advance and never drop below that minimum.
 * **E. CI early-warning, mirroring the OpenIddict 8.0-preview spike.** A non-gating branch builds and tests on the next preview/RC and on STS (for example when a .NET 11 preview lands), reporting API and behavior breaks early and feeding the playbook in F, so speculation is replaced by a real migration list that de-risks the next LTS bump.
 * **F. Support-window watch, co-upgrade, and a migration playbook.** A quarterly roadmap-watch re-verifies the current LTS EOL date and the next LTS GA date at Microsoft's source ("verifications have a shelf-life"), never letting a runtime reach EOL before the upgrade begins (invariant #1). Each LTS bump reads the .NET, ASP.NET Core, and EF Core breaking changes; bumps the target framework and the Central Package Management versions lock-step (OpenIddict, EF, Npgsql, Identity, Finbuckle) in the same beat as ADR-0021; runs the suite plus conformance; runs on staging first; and swaps to native where the bump unlocks it (coordinated with ADR-0021). Deployment is dual-control.
 
@@ -95,10 +95,38 @@ Chosen option: "LTS-anchored, with multi-target packages and per-bump contract-r
     existing anywhere here. Two are now, read at the nuget.org version index and recorded in
     ADR-0021's own 2026-08-08 amendment, so the OpenIddict half of that mirror is live while the .NET
     half still waits for a .NET 11 preview.
-  * **Parameter D's seam range is stale and is deliberately not fixed here.** It writes "seams S1
-    through S34". ADR-0021 un-pinned exactly that range on 2026-08-01 for a stated reason, and the
-    catalogue registers S36 today. Repairing it is **seed S-025** and a separate commit, because it is
-    a different subject from this pin and this repository authors one ADR change per commit.
+  * **Parameter D's seam range was stale and was deliberately left to the next commit**, which is the
+    entry below.
+* **Corrected 2026-08-08: parameter D no longer pins an upper bound on the seam range** (seed S-025).
+  It read "seams S1 through S34" and now reads "the registered seams, numbered `S1` onward, the seam
+  catalogue owning the enumeration". [ADR-0021](0021-openiddict-version-adaptation.md) un-pinned exactly
+  that range in its own text on 2026-08-01 and gave the reason: "Pinning the upper bound in an accepted
+  ADR quietly discouraged the thing the ADR exists to encourage, since adding a seam meant editing a
+  binding document. The catalogue now owns the enumeration and this ADR owns the rule." That reasoning
+  applies here unchanged, and this ADR is the sibling that shares the suite.
+  * **Why it survived.** ADR-0021's amendment records that the stale text was fixed "in two places
+    here and five in the catalogue". This ADR was neither, so the sibling that shares the suite kept a
+    ceiling the owner had given up. Measured 2026-08-08, the catalogue's highest registered row is
+    **S36**, so the old text was two seams behind and named a ceiling a new seam would have had to edit
+    a binding document to raise.
+  * **Ten other mentions of `S34` were correct and are named so nobody sweeps them.** Searched
+    2026-08-08 with `git grep -P` over `docs/`, excluding the work queue and the seed tracker, `S34`
+    appeared on **eleven** lines immediately before this correction, and only parameter D's was a live
+    range. The count is past-tensed because this amendment itself adds more lines carrying the string:
+    measured again after the edit, the same search returns **fifteen**. Any future check has to read the
+    hits rather than count them. Two of the eleven are past-tensed records of
+    this same repair (`0021:159` and `architecture/24-glossary.md:197`). One is a statement about the
+    **external design corpus**, whose own table registers `S1`-`S34`
+    (`docs/design/22-openiddict-seam-catalogue.md:60`), and it is a fact about another tree. Six are
+    references to **seam S34 as one individual seam**, degraded-mode prohibition, not to a range
+    (`docs/design/01-foundations.md:495`, and `docs/design/22-openiddict-seam-catalogue.md:204`, `:390`,
+    `:393`, `:425`, `:505`). The last is this ADR's own record above.
+  * **The search had to be `-P`.** Written `git grep -cE "S34\b"` it returns nothing at all over
+    `docs/`, while the plain `-P` form returns eleven lines. That is the word-boundary trap
+    `docs/CLAUDE.md` records for this clone, and an absence written that way reports zero whether the
+    term is present or not. **Seed S-025's own verification was written in the broken form and was
+    corrected**, which is worth recording because the verification would have read as passing while
+    checking nothing.
 * **`Directory.Build.props` already exists as of 2026-08-02**, created by ADR-0065 to carry `EnforceCodeStyleInBuild`, without which that ADR's error severities fail nothing. **The target-framework knob is not in it**, so the follow-up below is create-the-knob rather than create-the-file, and a reader acting on the old wording would add a second copy of a file MSBuild resolves by walking up one directory tree. Everything parameter C assigns to this ADR (`TargetFramework`, `TargetFrameworks`, `LangVersion`, and keeping the Dockerfile pin and `global.json` in step) is still unset and still this ADR's to set.
 * **`global.json` landed 2026-08-02**, ahead of the projects it governs, with the solution shell: `"version": "10.0.100"` and `"rollForward": "latestFeature"`. That closes the roll-forward half of the follow-up below. **The form matters more than the value, because the obvious form is inert**, measured on SDK 10.0.301 in three states. A real pin bites: `10.0.999` with `rollForward: disable` fails `dotnet build` with exit 155. A parseable floor plus `latestFeature` resolves to the highest installed 10.0 band, which is what lets one pinned file serve a maintainer on 10.0.301 and a CI runner on 10.0.302 without either being wrong. But `9.0.x` with that same `disable` exits **0** on a machine carrying no 9.0 SDK at all, because a `version` string the SDK cannot parse makes the whole `sdk` block inert rather than an error. The design corpus writes exactly that wildcard form (`"10.0.x"`), so copying it would have produced a `global.json` that pins nothing while reading as a pin, and no gate would have said so. There is no wildcard: `rollForward` is the key that expresses the range.
 * **The target-framework knob landed 2026-08-02** with the first project, as **two** properties rather than one: `NamiLibraryTargetFrameworks` and `NamiApplicationTargetFramework`, both reading `net10.0` today. One property would have been wrong under parameter B, which multi-targets a published library and single-targets the host, and it would have looked correct until .NET 12 shipped. A project writes `<TargetFrameworks>$(NamiLibraryTargetFrameworks)</TargetFrameworks>`, never a literal, and that it genuinely reads the knob was proven by setting the knob to `net99.0` and getting NETSDK1045.

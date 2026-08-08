@@ -67,7 +67,7 @@ graph LR
 | S-022 | Extend ADR-0061's maintenance rule to cover a version moving inside a row | open | none |
 | S-023 | Wire the ADR-0061-against-manifest check now its own trigger has fired | blocked | S-022 |
 | S-024 | Correct view 03's inverted `DbContext` pooling row, and read the other eight | done | none |
-| S-025 | Un-pin ADR-0030's seam range, as ADR-0021 already did to its own | open | none |
+| S-025 | Un-pin ADR-0030's seam range, as ADR-0021 already did to its own | done | none |
 | S-026 | Correct the two ADRs that label ADR-0018 by the option it declined | done | none |
 | S-027 | Give OpenTofu a licence-record row, its MPL-2.0 exception being unrecorded | open | none |
 
@@ -1071,7 +1071,7 @@ records.
 
 ## S-025. Un-pin ADR-0030's seam range, as ADR-0021 already did to its own
 
-**Status:** open · **Blocked by:** none · **Unblocks:** nothing yet
+**Status:** done · **Blocked by:** none · **Unblocks:** nothing yet
 
 **The defect is a copy of one already fixed, in the ADR that shares the suite.**
 `docs/adr/0030-dotnet-version-upgrade.md:40` writes that each .NET bump runs "the same
@@ -1099,15 +1099,24 @@ able to tell from this seed that it is not the defect.
 
 **End state.** `0030:40` no longer names an upper bound. It refers to the seam catalogue as the owner
 of the enumeration, in ADR-0021's own wording or a stated equivalent, and the change is recorded in
-ADR-0030's own More Information style. After the change, `git grep -nE "S1[^0-9].{0,12}S34|S34\b"` over
-`docs/` excluding the work queue returns only three lines: ADR-0021's amendment, the glossary's
-past-tensed record, and design 22's statement about the corpus. All three are correct records rather
-than live claims.
+ADR-0030's own More Information style.
 
 **Verification.** `bash scripts/check-adrs.sh` after `git add`, `bash scripts/test-check-adrs.sh`, and
 `python3 scripts/check-decisions-index.py`. Check 3 compares the index row status against the
 frontmatter status, so confirm neither moved, and ADR-0030 carries `stack-record: true`, so confirm its
-ADR-0061 row is untouched for Check 4. Then run the grep above and read all three survivors.
+ADR-0061 row is untouched for Check 4.
+
+Then the substantive check, and **it is not a count**. Run `git grep -nP "S34" -- docs/
+':!docs/BUILD-PLAN.md' ':!docs/SEEDS.md'` and read every hit, confirming that no line uses `S34` as the
+**upper bound of a range**. Individual references to seam S34 are correct and must survive.
+
+**This seed was first written with a broken verification, and that is recorded rather than quietly
+replaced.** It asked for `git grep -nE "S1[^0-9].{0,12}S34|S34\b"` to return "only three lines". Two
+things were wrong. The `\b` in an `-E` pattern matches nothing in this clone, which `docs/CLAUDE.md`
+records, so half the pattern was inert. And the expected total of three was invented rather than
+measured: the real total is eleven, ten of them correct. A verification asserting a wrong count would
+have failed on a clean tree, and one written with `-E` and `\b` would have read as passing while
+checking nothing.
 
 **Sources.** `docs/adr/0030-dotnet-version-upgrade.md:40`;
 `docs/adr/0021-openiddict-version-adaptation.md:159` for the un-pinning and its reason;
@@ -1117,6 +1126,45 @@ one read 2026-08-08.
 
 **Out of scope.** Counting the seams, which the catalogue owns and which the glossary already dates.
 Every other clause of parameter D, including the suite itself, which is S-011.
+
+### S-025 result, measured 2026-08-08
+
+`0030:40` now reads "the registered seams, numbered `S1` onward, the seam catalogue owning the
+enumeration", which is ADR-0021's own wording plus an explicit pointer at the owner. One line changed
+and one amendment was added.
+
+**Eleven lines mention `S34` and only one was the defect.** The seed expected three survivors, which
+was invented rather than measured. The real classification, read 2026-08-08 over `docs/` excluding the
+work queue and this tracker:
+
+| Kind | Count | Where |
+|---|---|---|
+| The live range, now fixed | 1 | `0030:40` |
+| Past-tensed records of this same repair | 2 | `0021:159`, `architecture/24-glossary.md:197` |
+| A fact about the **external** design corpus, whose own table registers `S1`-`S34` | 1 | `docs/design/22-openiddict-seam-catalogue.md:60` |
+| References to **seam S34 as one individual seam**, degraded-mode prohibition | 6 | `docs/design/01-foundations.md:495`; `22-openiddict-seam-catalogue.md:204`, `:390`, `:393`, `:425`, `:505` |
+| This increment's own records | 1 | `0030:99` |
+
+So the check is not a count and never could be. It is "no line uses `S34` as the upper bound of a
+range", and the seed's Verification now says that.
+
+**The seed's own verification was written in a form that checks nothing, and the correction is the
+finding.** It asked for `git grep -nE "S1[^0-9].{0,12}S34|S34\b"`. Measured 2026-08-08,
+`git grep -cE "S34\b"` over `docs/` returns **nothing at all**, while the plain `-P` form returns eleven
+lines. That is the word-boundary trap `docs/CLAUDE.md` records for this clone. Half the seed's pattern
+was inert, so a future agent running it would have read a green as coverage. The method was proven on a
+term known to be present before the new form was trusted.
+
+**Why the defect survived the 2026-08-01 pass.** ADR-0021's amendment says it fixed the stale text "in
+two places here and five in the catalogue". ADR-0030 was neither, so the sibling that shares the suite
+kept a ceiling the owner had given up. The catalogue's highest registered row is **S36**, so the old
+text was two seams behind.
+
+**Verification.** `bash scripts/check-adrs.sh` after `git add`, `bash scripts/test-check-adrs.sh`, and
+`python3 scripts/check-decisions-index.py`, all green. `markdownlint-cli2` green at 195 files. The
+frontmatter was untouched, so `status: "accepted"` still matches both index rows for Check 3 and
+`stack-record: true` still points Check 4 at the unchanged "Runtime and language" row in ADR-0061. All
+eleven `S34` lines were read, not counted.
 
 ---
 
