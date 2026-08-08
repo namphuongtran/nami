@@ -11,7 +11,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-Nami pins .NET 10 (LTS), the runtime foundation of the entire stack (ASP.NET Core, EF Core 10, OpenIddict 7.5, Npgsql, ASP.NET Core Identity, Finbuckle). The open question is what happens when .NET 11, 12, and later ship, which is the same gap ADR-0021 patched for OpenIddict.
+Nami pins .NET 10 (LTS), the runtime foundation of the entire stack (ASP.NET Core, EF Core 10, OpenIddict 7.6, Npgsql, ASP.NET Core Identity, Finbuckle). The open question is what happens when .NET 11, 12, and later ship, which is the same gap ADR-0021 patched for OpenIddict.
 
 The .NET cadence (verified 2026-07-04) is a major release every November, where an even version is LTS (three years of support) and an odd version is STS (two years, raised from eighteen months since .NET 9). So .NET 10 is LTS (supported to roughly November 2028), .NET 11 is STS (roughly November 2026 to November 2028), and .NET 12 is LTS (roughly November 2027 to November 2030). The key consequence is that 10 to 12, skipping 11, is seamless, because .NET 10 is supported until November 2028 and .NET 12 ships in November 2027, leaving no EOL gap.
 
@@ -74,6 +74,31 @@ Chosen option: "LTS-anchored, with multi-target packages and per-bump contract-r
 ## More Information
 
 * Original decision 2026-07-04: the host is LTS-anchored (10 to 12, skipping 11 STS); published packages multi-target the current and next LTS; enforcement is the target-framework knob plus per-bump contract-regression/conformance plus the early-warning branch plus a quarterly roadmap-watch; and the versioning tool is MinVer.
+* **Updated 2026-08-08: the Context sentence reads OpenIddict 7.6**, transcribed from
+  [ADR-0021](0021-openiddict-version-adaptation.md) after seed S-002 moved the pin to `[7.6.0]`. This
+  ADR names the engine version without owning it: the sentence lists what .NET 10 underpins, so the
+  version is context rather than a decision, and ADR-0021 parameter A stays the authority for the
+  exact pin. **That is also why it went stale unnoticed.** A reader hunting engine-version statements
+  does not open an ADR about the .NET pin, and the search that was supposed to find them all used the
+  spelling `7.5.0` while this line writes `OpenIddict 7.5`. Two further notes, because this was the
+  first bump to run through the two ADRs as a family:
+  * **The bump ran the other way round from parameter F, and nothing there covers that direction.**
+    Parameter F describes an **LTS-led** bump, which "bumps the target framework and the Central
+    Package Management versions lock-step (OpenIddict, EF, Npgsql, Identity, Finbuckle) in the same
+    beat as ADR-0021". This was an **OpenIddict-led** bump with no runtime move, which ADR-0021
+    parameter D owns instead, so the two parameters are complementary rather than one being silent.
+    Parameter C's lock-step was checked rather than assumed: the engine's transitive
+    `Microsoft.Extensions.*` edge moved 10.0.7 to 10.0.10, measured 2026-08-08, which stays inside the
+    10.x band that parameter aligns to, so no runtime-major alignment was disturbed.
+  * **Parameter E's mirror now has something to mirror.** It describes the early-warning branch as
+    "mirroring the OpenIddict 8.0-preview spike". Until 2026-08-08 no 8.0 preview was recorded as
+    existing anywhere here. Two are now, read at the nuget.org version index and recorded in
+    ADR-0021's own 2026-08-08 amendment, so the OpenIddict half of that mirror is live while the .NET
+    half still waits for a .NET 11 preview.
+  * **Parameter D's seam range is stale and is deliberately not fixed here.** It writes "seams S1
+    through S34". ADR-0021 un-pinned exactly that range on 2026-08-01 for a stated reason, and the
+    catalogue registers S36 today. Repairing it is **seed S-025** and a separate commit, because it is
+    a different subject from this pin and this repository authors one ADR change per commit.
 * **`Directory.Build.props` already exists as of 2026-08-02**, created by ADR-0065 to carry `EnforceCodeStyleInBuild`, without which that ADR's error severities fail nothing. **The target-framework knob is not in it**, so the follow-up below is create-the-knob rather than create-the-file, and a reader acting on the old wording would add a second copy of a file MSBuild resolves by walking up one directory tree. Everything parameter C assigns to this ADR (`TargetFramework`, `TargetFrameworks`, `LangVersion`, and keeping the Dockerfile pin and `global.json` in step) is still unset and still this ADR's to set.
 * **`global.json` landed 2026-08-02**, ahead of the projects it governs, with the solution shell: `"version": "10.0.100"` and `"rollForward": "latestFeature"`. That closes the roll-forward half of the follow-up below. **The form matters more than the value, because the obvious form is inert**, measured on SDK 10.0.301 in three states. A real pin bites: `10.0.999` with `rollForward: disable` fails `dotnet build` with exit 155. A parseable floor plus `latestFeature` resolves to the highest installed 10.0 band, which is what lets one pinned file serve a maintainer on 10.0.301 and a CI runner on 10.0.302 without either being wrong. But `9.0.x` with that same `disable` exits **0** on a machine carrying no 9.0 SDK at all, because a `version` string the SDK cannot parse makes the whole `sdk` block inert rather than an error. The design corpus writes exactly that wildcard form (`"10.0.x"`), so copying it would have produced a `global.json` that pins nothing while reading as a pin, and no gate would have said so. There is no wildcard: `rollForward` is the key that expresses the range.
 * **The target-framework knob landed 2026-08-02** with the first project, as **two** properties rather than one: `NamiLibraryTargetFrameworks` and `NamiApplicationTargetFramework`, both reading `net10.0` today. One property would have been wrong under parameter B, which multi-targets a published library and single-targets the host, and it would have looked correct until .NET 12 shipped. A project writes `<TargetFrameworks>$(NamiLibraryTargetFrameworks)</TargetFrameworks>`, never a literal, and that it genuinely reads the knob was proven by setting the knob to `net99.0` and getting NETSDK1045.

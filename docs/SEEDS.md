@@ -61,12 +61,13 @@ graph LR
 | S-016 | Define what the first slice is | blocked | S-010 |
 | S-017 | Assign a configuration key to the nine options that have none | open | none |
 | S-018 | Move the architecture layer's four engine-version statements to the new pin | done | S-002 done |
-| S-019 | Amend ADR-0030's stack sentence to the new pin | open | S-002 done |
+| S-019 | Amend ADR-0030's stack sentence to the new pin | done | S-002 done |
 | S-020 | Amend ADR-0036's live-pin clause to the new pin | open | S-002 done |
 | S-021 | Re-derive ADR-0093's verbatim quotation of ADR-0021 | done | S-003 done |
 | S-022 | Extend ADR-0061's maintenance rule to cover a version moving inside a row | open | none |
 | S-023 | Wire the ADR-0061-against-manifest check now its own trigger has fired | blocked | S-022 |
 | S-024 | Correct view 03's inverted `DbContext` pooling row, and read the other eight | open | none |
+| S-025 | Un-pin ADR-0030's seam range, as ADR-0021 already did to its own | open | none |
 
 ---
 
@@ -1018,9 +1019,60 @@ in view 03. The pooled-plus-mutable deferral, which ADR-0018 owns as A-4b.
 
 ---
 
+## S-025. Un-pin ADR-0030's seam range, as ADR-0021 already did to its own
+
+**Status:** open · **Blocked by:** none · **Unblocks:** nothing yet
+
+**The defect is a copy of one already fixed, in the ADR that shares the suite.**
+`docs/adr/0030-dotnet-version-upgrade.md:40` writes that each .NET bump runs "the same
+contract-regression suite (seams S1 through S34)". `docs/adr/0021-openiddict-version-adaptation.md:159`
+un-pinned exactly that range on 2026-08-01, and states the reason in its own words: "Pinning the upper
+bound in an accepted ADR quietly discouraged the thing the ADR exists to encourage, since adding a seam
+meant editing a binding document. The catalogue now owns the enumeration and this ADR owns the rule."
+
+**Why it survived.** That amendment says the stale text was fixed "in two places here and five in the
+catalogue". ADR-0030 was neither, so it kept the pinned range while the ADR it calls its sibling gave
+it up. Measured 2026-08-08, the catalogue's highest registered row is **S36**, so ADR-0030 is two
+seams behind and cites a ceiling that a new seam would have to edit a binding document to raise.
+
+**What is already correct, named so nobody re-fixes it.**
+`docs/architecture/24-glossary.md:197` records the same repair for itself in the past tense: it "said
+`S1 to S34` until 2026-08-01, one seam behind the registry", and now reads "Thirty-eight rows, numbered
+S1 to S36". That entry also states the trap worth carrying: reading the highest number as the total
+undercounts it, because two rows are sub-lettered.
+
+**What is not stale, and must not be edited.**
+`docs/design/22-openiddict-seam-catalogue.md:60` says the **external design corpus** contains a table
+registering `S1`-`S34`. That is a fact about another tree, not about this repository's registry, so it
+stays exactly as written. A search for `S34` returns it, so a later agent will meet it and should be
+able to tell from this seed that it is not the defect.
+
+**End state.** `0030:40` no longer names an upper bound. It refers to the seam catalogue as the owner
+of the enumeration, in ADR-0021's own wording or a stated equivalent, and the change is recorded in
+ADR-0030's own More Information style. After the change, `git grep -nE "S1[^0-9].{0,12}S34|S34\b"` over
+`docs/` excluding the work queue returns only three lines: ADR-0021's amendment, the glossary's
+past-tensed record, and design 22's statement about the corpus. All three are correct records rather
+than live claims.
+
+**Verification.** `bash scripts/check-adrs.sh` after `git add`, `bash scripts/test-check-adrs.sh`, and
+`python3 scripts/check-decisions-index.py`. Check 3 compares the index row status against the
+frontmatter status, so confirm neither moved, and ADR-0030 carries `stack-record: true`, so confirm its
+ADR-0061 row is untouched for Check 4. Then run the grep above and read all three survivors.
+
+**Sources.** `docs/adr/0030-dotnet-version-upgrade.md:40`;
+`docs/adr/0021-openiddict-version-adaptation.md:159` for the un-pinning and its reason;
+`docs/architecture/24-glossary.md:197` for the count and the sub-lettering trap;
+`docs/design/22-openiddict-seam-catalogue.md:60` for the corpus statement that is not the defect. Every
+one read 2026-08-08.
+
+**Out of scope.** Counting the seams, which the catalogue owns and which the glossary already dates.
+Every other clause of parameter D, including the suite itself, which is S-011.
+
+---
+
 ## S-019. Amend ADR-0030's stack sentence to the new pin
 
-**Status:** open · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet
+**Status:** done · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet
 
 **End state.** `docs/adr/0030-dotnet-version-upgrade.md:14` names the engine version S-002 landed.
 The line reads "Nami pins .NET 10 (LTS), the runtime foundation of the entire stack (ASP.NET Core, EF
@@ -1040,6 +1092,39 @@ gate here reads a version.
 
 **Out of scope.** Every other technology in that sentence. The .NET pin itself, which this ADR
 decides and this seed does not touch.
+
+### S-019 result, measured 2026-08-08
+
+`:14` reads "OpenIddict 7.6". The amendment records three things the bump made checkable, and one
+defect it is deliberately leaving to S-025.
+
+**Why this line went stale unnoticed, which is the reusable part.** This ADR names the engine version
+without owning it: the sentence lists what .NET 10 underpins, so the version is context rather than a
+decision. A reader hunting engine-version statements does not open an ADR about the .NET pin, and
+S-001's search used the spelling `7.5.0` while this line writes `OpenIddict 7.5`. Both filters missed
+it independently.
+
+**1. The bump ran the opposite way from parameter F, and that is complementary rather than a gap.**
+Parameter F describes an LTS-led bump, which moves the target framework and the CPM versions
+lock-step "in the same beat as ADR-0021". This was an OpenIddict-led bump with no runtime move, which
+ADR-0021 parameter D owns. Parameter C's lock-step was checked rather than assumed: the engine's
+transitive `Microsoft.Extensions.*` edge moved 10.0.7 to 10.0.10, which stays inside the 10.x band
+that parameter aligns to, so no runtime-major alignment was disturbed.
+
+**2. Parameter E's mirror now has something to mirror.** It describes the early-warning branch as
+"mirroring the OpenIddict 8.0-preview spike", and until 2026-08-08 no 8.0 preview was recorded as
+existing anywhere here. Two are now. The OpenIddict half of that mirror is live; the .NET half still
+waits for a .NET 11 preview.
+
+**3. `ADR-0030:79`'s two-knob claim was verified, and it holds.** That entry says the target-framework
+knob landed as two properties, `NamiLibraryTargetFrameworks` and `NamiApplicationTargetFramework`,
+"both reading `net10.0` today". Both were read at `Directory.Build.props:114` and `:115` on 2026-08-08
+and both read `net10.0`. This matters because S-018's conclusion that four 8.0 breaking changes do not
+reach Nami rested on the target framework, and it now rests on both knobs rather than one.
+
+**The finding left out, now S-025.** Parameter D writes "seams S1 through S34". ADR-0021 un-pinned
+exactly that range on 2026-08-01, and the catalogue registers S36 today. It is a different subject
+from this pin, and one ADR change per commit, so it is its own seed and its own commit.
 
 ---
 
