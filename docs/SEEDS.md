@@ -76,7 +76,7 @@ graph LR
 | S-005 | Date or re-point every source-read claim the bump invalidates | open | S-001, S-002 both done |
 | S-006 | Decide what replaces the offline 7.5.0 source tree | open | S-001 done |
 | S-007 | Resolve umbrella versus granular for `Core`'s engine reference | done | none |
-| S-008 | Reference the engine from `Core` and enumerate the restore graph | blocked | S-007 |
+| S-008 | Reference the engine from `Core` and enumerate the restore graph | done | S-007 done |
 | S-009 | Decide where the `AddOpenIddict` block splits at the persistence boundary | blocked | S-007 |
 | S-010 | Wire the engine inside `AddNamiIdentity` | blocked | S-008, S-009 |
 | S-011 | Stand up the contract-regression suite ADR-0021 part C requires | blocked | S-010 |
@@ -717,7 +717,7 @@ green.
 
 ## S-008. Reference the engine from `Core` and enumerate the restore graph
 
-**Status:** blocked · **Blocked by:** S-007. S-002 is done · **Unblocks:** S-010
+**Status:** done · **Blocked by:** S-007 and S-002, both done · **Unblocks:** S-010
 
 **End state.**
 
@@ -753,9 +753,58 @@ green.
   "the two claims are different". Carry that distinction into this seed's result rather than collapsing
   it.
 
-**Verification.** All nine gates. Then plant a forbidden reference and watch
-`CoreReferencesNoAdapterOrDatabaseProviderOrCloudSdk` fail **on a real engine assembly** rather than on
-a planted framework prefix, which is the check that could not be run before this seed.
+**Verification.** All nine gates, plus the restore graph read from `project.assets.json` rather than
+predicted. **The planted-break check moved to S-010**, and the reason is the result below: an unused
+reference reaches no metadata, so there is nothing for a planted forbidden prefix to catch until code
+touches an engine type.
+
+### S-008 result, measured 2026-08-08
+
+`Core` carries two `PackageReference` items, `OpenIddict.Server` and `OpenIddict.Server.AspNetCore`,
+with no `Version` attribute. The graph went from two nodes to ten. **The engine restores and builds
+clean at 7.6.0**, which is the first real test the S-002 bump has had: until this seed nothing
+referenced the engine, so "the bump is safe" was untested in the only way that matters.
+
+**Which two of the eight, and why not the other six.** S-007 settled that the engine is design 04's
+eight and not the umbrella; it deliberately left `Core`'s own subset open. The maintainer chose the
+Server pair. `.EntityFrameworkCore` is persistence and `.Quartz` is scheduling, both forbidden to
+`Core` by design 01 section 3.1. `OpenIddict.Core` carries managers **and** stores, so whether it
+belongs is S-009's question rather than one to answer from a csproj. The three `.Validation` packages
+arrive when something validates a token, which is S-010.
+
+**The restore graph, read rather than predicted.** Ten entries: nine packages plus the
+`Nami.Identity.Abstractions` project reference. Three Apache-2.0 OpenIddict nodes, five new MIT nodes
+(`Microsoft.IdentityModel.Abstractions`, `.JsonWebTokens`, `.Logging`, `.Tokens` at 8.19.2, and
+`Microsoft.Bcl.Cryptography` 10.0.2), and the pre-existing MIT analyzer. Each licence read at its own
+nuspec on 2026-08-08. `DEPENDENCY-LICENSES.md` section 3.4 carries the enumeration.
+
+**1. This seed's own end state was wrong, and I carried the error into it earlier the same day.** It
+said the reflection facts would gain something to catch. Measured by adding the reference, building,
+and reading the emitted metadata: `Nami.Identity.Core.dll` carries **no `OpenIddict` string at all**.
+The reference is elided because no type touches it, exactly as `tests/CLAUDE.md` recorded on
+2026-08-02 and as the csproj comment warned in its own last sentence. So the graph grew by eight
+packages while the compiled surface did not move, and both facts are as inert as before. The seed's
+third bullet and its planted-break verification both moved to S-010.
+
+**2. A nuspec-declared diff is not a restore graph, in both directions.** Section 3.3 concluded that
+the 7.5.0-to-7.6.0 bump added no dependency identifier. That is still true of declared first-level
+edges and says nothing about the restore. Three restored nodes appear in no first-level group:
+`Microsoft.IdentityModel.Abstractions`, `.Logging`, and `Microsoft.Bcl.Cryptography`. And one declared
+edge is **absent** from the graph: `Microsoft.Extensions.Logging`.
+
+**3. The absent edge has a named mechanism, and it leaves an open question for the ADR-0026 gate.**
+The restore pruned it. `OpenIddict.Server`'s node lists two dependencies where its nuspec declares
+three, and `project.frameworks.net10.0.packagesToPrune` carries `Microsoft.Extensions.Logging` at
+`(,10.0.32767]`, one of eight `Microsoft.Extensions.Logging.*` identifiers on that list. That is .NET
+10's `PrunePackageReference`, populated from the two framework references this project declares. **So
+whether that package owes a licence read depends on which artifact a scanner reads**, and ADR-0026
+section C does not say which. Recorded, not decided.
+
+**4. The bracket pin is visible in a build artifact for the first time.**
+`projectFileDependencyGroups` reads `OpenIddict.Server >= 7.6.0 <= 7.6.0` beside
+`Microsoft.CodeAnalysis.PublicApiAnalyzers >= 5.6.0`. That is ADR-0021 parameter A's pin-versus-floor
+distinction, and the eight transitive nodes carry no upper bound, which is the same parameter's stated
+limit.
 
 **Sources.** `src/CLAUDE.md`, the section on versions living in `Directory.Packages.props`;
 `tests/Nami.Identity.ArchitectureTests/CoreDependencyRuleTests.cs`, the class remarks recording the

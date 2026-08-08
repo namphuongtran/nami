@@ -45,6 +45,14 @@ rather than theoretical. A package **referenced but not used by any type** passe
 unused reference is elided from metadata. Closing that needs a check on the packed surface, which
 needs a pack and does not exist yet.
 
+**Confirmed a second time on 2026-08-08, with a real engine package rather than a planted one.**
+Seed S-008 added `OpenIddict.Server` and `OpenIddict.Server.AspNetCore` to `Nami.Identity.Core` and
+wrote no code against either. The restore graph went from two nodes to ten, and the built
+`Nami.Identity.Core.dll` carried **no `OpenIddict` string at all**. So the gap is not a corner case
+of the fixture used to find it: eight new packages entered the graph and the compiled surface did
+not move. **The plan for that seed said the facts would gain something to catch, and that was
+wrong**, which is why the claim is now measured in two places rather than asserted in one.
+
 **Do not "simplify" the two into one.** Deleting the reflection fact loses the only check that
 sees a reference no type touches yet. Deleting the ArchUnitNET fact loses the one that scales to
 the slice and layering rules ADR-0024 still owes.

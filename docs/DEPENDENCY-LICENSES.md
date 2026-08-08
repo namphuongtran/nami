@@ -364,6 +364,76 @@ the gate is section A, which classifies **licences**, and MIT is on its permissi
 is stated because section A's "not named above is not permitted" rule reads, at a glance, as
 though it applied to package names.
 
+### 3.4 The engine's restore graph, at 2026-08-08
+
+`src/Nami.Identity.Core/Nami.Identity.Core.csproj` gained **two** `PackageReference` items,
+`OpenIddict.Server` and `OpenIddict.Server.AspNetCore`, which is the subset of section 3.3's eight
+that seed S-008 assigned to that assembly. Read from
+`src/Nami.Identity.Core/obj/project.assets.json` after restore on **2026-08-08**, the `net10.0`
+target holds **ten** entries: nine packages plus the `Nami.Identity.Abstractions` project reference.
+Eight of the nine packages are new. Every licence below was read at that package's own `.nuspec` on
+the nuget.org flat container on 2026-08-08, one request per package, and every one carries an SPDX
+`<license type="expression">` rather than a licence file or a bare URL.
+
+**Apache-2.0**, three, all at 7.6.0 and all already read in section 3.3: `OpenIddict.Server`,
+`OpenIddict.Server.AspNetCore`, `OpenIddict.Abstractions`.
+
+**MIT**, five, all new to this repository's graph: `Microsoft.IdentityModel.Abstractions` 8.19.2,
+`Microsoft.IdentityModel.JsonWebTokens` 8.19.2, `Microsoft.IdentityModel.Logging` 8.19.2,
+`Microsoft.IdentityModel.Tokens` 8.19.2, and `Microsoft.Bcl.Cryptography` 10.0.2. The four
+`IdentityModel` packages declare the same upstream commit,
+`25d90ed3f48854036d444541a049089ccd198707` at
+`github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet`.
+`Microsoft.Bcl.Cryptography` declares `44525024595742ebe09023abe709df51de65009b` at
+`github.com/dotnet/dotnet`.
+
+The ninth package is `Microsoft.CodeAnalysis.PublicApiAnalyzers` 5.6.0, MIT, already recorded in
+section 3.2's table and unchanged. Both licences are on ADR-0026 section A's permissive list, so
+nothing here needs an exception.
+
+**Three of these nodes are invisible to a nuspec-declared dependency diff, and that is the finding.**
+Section 3.3 records a diff of every `net10.0` dependency group, 7.5.0 against 7.6.0, and concluded
+that no dependency identifier was added or removed. That conclusion is still true **about declared
+first-level edges**. It is not a statement about the restore graph.
+`OpenIddict.Server` 7.6.0's nuspec declares three `net10.0` dependencies:
+`OpenIddict.Abstractions`, `Microsoft.Extensions.Logging`, and
+`Microsoft.IdentityModel.JsonWebTokens`. The restore adds
+`Microsoft.IdentityModel.Abstractions`, `Microsoft.IdentityModel.Logging`, and
+`Microsoft.Bcl.Cryptography`, none of which appears in any first-level group.
+`Microsoft.Extensions.Logging` meanwhile does **not** appear as a graph node at all. So a declared
+graph and a restored graph differ in both directions, and section 7's read-at-source rule is
+satisfied only by the second.
+
+**The disappearance has a named mechanism, and it matters to the section C gate.** The restore
+*pruned* that edge rather than resolving it: `OpenIddict.Server`'s node in
+`project.assets.json` lists two dependencies where its nuspec declares three, and
+`project.frameworks.net10.0.packagesToPrune` carries `Microsoft.Extensions.Logging` with the range
+`(,10.0.32767]`. That is .NET 10's `PrunePackageReference`, populated from the
+`Microsoft.AspNetCore.App` and `Microsoft.NETCore.App` framework references this project declares, and
+it drops any version the shared framework already supplies. Eight `Microsoft.Extensions.Logging.*`
+identifiers are on that prune list.
+
+**So the same dependency owes a licence read or does not, depending on which artifact the scanner
+reads.** A scan over `Directory.Packages.props` or over the nuspecs counts
+`Microsoft.Extensions.Logging` as a node. A scan over `project.assets.json` does not, because the
+package is never downloaded. Neither answer is wrong; they answer different questions, and ADR-0026
+section C does not yet say which one its gate reads. That is worth settling before the gate is wired,
+and it is recorded here rather than decided, because this file is not the authority.
+
+**The bracket pin was proven here rather than argued.** `projectFileDependencyGroups` for `net10.0`
+reads `OpenIddict.Server >= 7.6.0 <= 7.6.0` and the same for `.Server.AspNetCore`, against
+`Microsoft.CodeAnalysis.PublicApiAnalyzers >= 5.6.0` for the plain form on the row beside them. That
+is ADR-0021 parameter A's distinction between a pin and a floor, visible in a restore artifact for
+the first time. It also confirms what that parameter says a bracket does **not** do: the eight
+transitive nodes carry no upper bound at all.
+
+**The two architecture facts did not become live, and this was measured.** Adding the reference with
+no code touching it leaves both reflection facts asserting what they asserted before. Read from the
+built `Nami.Identity.Core.dll` on 2026-08-08, its metadata carries **no `OpenIddict` string at
+all**, the reference being elided as `tests/CLAUDE.md` recorded on 2026-08-02. So the graph grew by
+eight packages while the compiled surface did not move. Seed S-010, which calls `AddOpenIddict`, is
+what changes that, and the planted-break check belongs there.
+
 ## 4. Rejected packages and tools, with the evidence
 
 Recorded because a forbidden-package list that will not say which package is forbidden cannot be
