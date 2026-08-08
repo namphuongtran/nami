@@ -68,7 +68,7 @@ graph LR
 | S-023 | Wire the ADR-0061-against-manifest check now its own trigger has fired | blocked | S-022 |
 | S-024 | Correct view 03's inverted `DbContext` pooling row, and read the other eight | open | none |
 | S-025 | Un-pin ADR-0030's seam range, as ADR-0021 already did to its own | open | none |
-| S-026 | Correct the two ADRs that label ADR-0018 by the option it declined | open | none |
+| S-026 | Correct the two ADRs that label ADR-0018 by the option it declined | done | none |
 
 ---
 
@@ -1081,7 +1081,7 @@ Every other clause of parameter D, including the suite itself, which is S-011.
 
 ## S-026. Correct the two ADRs that label ADR-0018 by the option it declined
 
-**Status:** open · **Blocked by:** none · **Unblocks:** nothing yet
+**Status:** done · **Blocked by:** none · **Unblocks:** nothing yet
 
 **Two defects, one class, and the class already has a repair on record.** ADR-0018 is titled "Register
 the Pool-mode OpenIddict DbContext **non-pooled** in v1, with pooled-plus-mutable deferred", and its
@@ -1141,6 +1141,55 @@ second. Every one read 2026-08-08.
 **Out of scope.** `docs/architecture/03-drivers-and-constraints.md:116`, which is S-024. Every correct
 use of the word pooled, and there are many: ADR-0018 itself, views 21 and 23, design 01, design 02,
 design 10, and seam S24 in design 22 all distinguish the two cases properly and must not be swept.
+
+### S-026 result, measured 2026-08-08
+
+Two commits, one per ADR, as planned. The two repairs came out different, and the reason is worth
+carrying.
+
+**`0066:51` was removed, not re-labelled, and this ADR's own rule decided that.** Its pragmatic-use
+rule says "a pattern applied without a problem to solve is a defect, not good design", and the heading
+above the list claims the patterns are "already in deliberate use". An entry with no use contradicts
+both, so a re-label would have left the contradiction in place. Nothing is lost: `0018:41` records the
+factory shape as "the A-4b pattern held for later", and ADR-0066's own "Where the guidance lives"
+section says each pattern is owned by the ADR that applies it and that this one "does not override
+them".
+
+**The absence was searched properly, and the method is in the amendment.** Using `git grep -P`,
+`\bFactor(y|ies)\b` returned **exactly one** line across `docs/` excluding the work queue and this
+tracker, which was the entry itself, and **zero** across `src/` and `tests/`.
+`AddPooledDbContextFactory` occurs only at `0018:17`, defining the term, and `0018:29`, Option A. The
+three genuinely pooled contexts use `AddDbContextPool` (`docs/design/02-data.md:1164-1166`), which
+takes no factory. So there was nothing to re-attribute the entry to.
+
+**A false zero nearly hid it, and it is recorded.** The same search written `git grep -cE
+"\bFactory\b"` returns 0 against a file that contains the word. That is the word-boundary trap
+`docs/CLAUDE.md` records for this clone, and an absence written that way reports zero for every term
+whether present or not. The method was proven on the target file before being trusted: `-E` gave 0 and
+`-P` gave 1.
+
+**`0036:76` was re-worded rather than removed**, because a Related-decisions bullet has to say what the
+relation is. It now names per-context pooling with the tenant-scoped context non-pooled, matching
+ADR-0061's framing.
+
+**Neither frontmatter was edited, and ADR-0066's is now knowingly loose.** Its `consulted:` line groups
+ADR-0018 among "the pattern-applying ADRs", which over-includes it after the removal. ADR-0018 genuinely
+was consulted on 2026-07-18, so the record of that reading stays. The amendment says so out loud, so the
+looseness is a recorded decision rather than a silent inconsistency for a later agent to "fix".
+
+**The count, stated because this seed kept mis-stating it.** Five instances of the inversion are known.
+`0061:145` and `architecture/07-container-view.md:288-290` are the first two, both repaired 2026-07-25.
+ADR-0066 is the third and ADR-0036 the fourth, both repaired here. **One remains**,
+`architecture/03-drivers-and-constraints.md:116`, and S-024 owns it. A draft of the ADR-0036 amendment
+called that bullet the fifth instance and was corrected before committing.
+
+**Verification.** For each commit: `bash scripts/check-adrs.sh` after `git add`,
+`bash scripts/test-check-adrs.sh`, `python3 scripts/check-decisions-index.py`, and `markdownlint-cli2`,
+all green. Both ADRs carry `stack-record: true` and neither frontmatter moved, so Checks 3 and 4 see the
+unchanged "Architecture" and "Primary keys" rows in ADR-0061. ADR-0066's in-use list was read back and
+holds seven entries. After both commits,
+`git grep -niE "pooled[^.]{0,30}dbcontext|dbcontext[^.]{0,30}pooled" -- docs/adr/` returns only
+ADR-0018's own text, its index row, and the past-tensed correction records.
 
 ## S-019. Amend ADR-0030's stack sentence to the new pin
 

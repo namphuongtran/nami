@@ -91,10 +91,42 @@ Fixed parameters of the decision:
     when the first `PackageReference` restores the engine, which is seed S-008. Seed S-006 is the
     related decision, because the offline source tree that could have answered this without a restore
     no longer matches the pin.
-  * **One defect in this ADR is deliberately not fixed here.** The Related-decisions bullet below
-    calls ADR-0018 "the pooled DbContext", and ADR-0018 is titled for the opposite and decides
-    non-pooled for the tenant-scoped context. That is **seed S-026**, a separate commit, because it is
-    a different subject from the engine pin.
+  * **One defect in this ADR was deliberately left to the next commit**, and it is the entry below
+    this one.
+* **Corrected 2026-08-08: the Related-decisions bullet no longer calls ADR-0018 "the pooled
+  DbContext".** [ADR-0018](0018-dbcontext-pooling-for-pool-mode.md) is titled "Register the Pool-mode
+  OpenIddict DbContext **non-pooled** in v1, with pooled-plus-mutable deferred", and `0018:35` chooses
+  the non-pooled scoped `AddDbContext` for v1. So this ADR labelled its sibling by the option that
+  sibling declined. The bullet now names per-context pooling with the tenant-scoped context non-pooled,
+  which is the framing [ADR-0061](0061-technology-stack-of-record.md) uses.
+  * **A blanket "non-pooled" would have been wrong in the other direction.** Pooling is used, per
+    context. Read 2026-08-08, `docs/design/02-data.md:55-59` pools `IdentityDbContext`,
+    `DataProtectionDbContext`, and `ControlPlaneDbContext` and leaves the two tenant-scoped contexts
+    unpooled, and `docs/design/02-data.md:1174` says `AddDbContextPool` "is deliberately not used for
+    `OpenIddictDbContext` or for `ControlPlaneTenantDbContext`".
+  * **Why an inverted word costs more here than a wrong version.** ADR-0018 exists because spike A-4
+    test T7, run 2026-07-06, found that "naive pooled reuse leaked the tenant across requests, including
+    through OpenIddict's internal `SaveChanges`" (`0018:62`). A sibling ADR calling it the pooled
+    context points an implementer at the registration that leaked tenants.
+  * **Six instances of one defect are now known, and this is the fourth to be repaired.** `0061:145`
+    and `architecture/07-container-view.md:288-290` record the first two, both 2026-07-25, and
+    `0061:118` predicted the rest. ADR-0066's `Factory` entry was the third, removed in the commit
+    before this one. This bullet is the fourth. Two remain:
+    [ADR-0033](0033-key-scope-isolation-model.md)'s Related-decisions bullet, found by running seed
+    S-026's own verification rather than by reading, and
+    `architecture/03-drivers-and-constraints.md:116`, which seed S-024 owns because it is in the
+    architecture layer rather than in an ADR. **The count is stated because it kept being wrong**: a
+    draft of this bullet said five.
+  * **What is not a defect, enumerated so nobody sweeps the word.** Searched 2026-08-08, about thirty
+    lines across `docs/` name ADR-0018 near the word pool and only the two above are wrong. The rest
+    are accurate in three distinct ways: they use "pooling" as the **name of the ADR's subject**
+    (`architecture/07-container-view.md:252`, `08-component-view.md:393`,
+    `24-glossary.md:93`, `docs/design/01-foundations.md:572`, `docs/design/02-data.md:1371`); they say
+    **non-pooled** or "pooled-plus-mutable ... post-v1" (`architecture/21-performance-scalability.md:152`,
+    `23-risks-and-technical-debt.md:81`, `docs/design/01-foundations.md:377`,
+    `docs/design/02-data.md:28`); or they mean the **PgBouncer connection pooler**, a different subject
+    entirely (`0074:44`, `architecture/10-deployment-infrastructure.md:91` and `:248`,
+    `22-reliability-backup-dr.md:31`).
 * Decided 2026-07-03 (evidence V15). This ADR records a decision that until now lived only in the database-design documents, which other ADRs already assume: ADR-0025 references PostgreSQL 18's `uuidv7()` in dev/test to match production, and ADR-0030 lists `Guid.CreateVersion7()` as a forward-only .NET feature.
-* Related decisions: ADR-0001 (Pool/Silo, where global uniqueness enables Silo and merge safety), ADR-0017 (the tenant Pool↔Silo move that relies on non-colliding keys), ADR-0018 (the pooled DbContext on the same PostgreSQL/EF stack), ADR-0025 (PostgreSQL 18 in dev/test matching production for `uuidv7()`), and ADR-0030 (UUIDv7 generation as a forward-only .NET-version feature). This is distinct from ADR-0033, which is about signing/encryption key-scope, not database primary keys. See ADR-0059 for the entity-versus-value-object distinction that builds on this identity model.
+* Related decisions: ADR-0001 (Pool/Silo, where global uniqueness enables Silo and merge safety), ADR-0017 (the tenant Pool↔Silo move that relies on non-colliding keys), ADR-0018 (per-context `DbContext` pooling on the same PostgreSQL/EF stack, with the tenant-scoped context non-pooled in v1), ADR-0025 (PostgreSQL 18 in dev/test matching production for `uuidv7()`), and ADR-0030 (UUIDv7 generation as a forward-only .NET-version feature). This is distinct from ADR-0033, which is about signing/encryption key-scope, not database primary keys. See ADR-0059 for the entity-versus-value-object distinction that builds on this identity model.
 * Authored in this repository in 2026-07 to record the settled database-design decision as an ADR; a competitor reference for the session-surrogate exception and a named fragmentation-analysis author were generalized, and PostgreSQL, Npgsql, EF Core, and OpenIddict are retained as the project's stack.
