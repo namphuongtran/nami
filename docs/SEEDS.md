@@ -44,7 +44,7 @@ graph LR
 |---|---|---|---|
 | S-001 | Classify every `7.5.0` reference before changing any | done | none |
 | S-002 | Bump the manifest to `[7.6.0]` and re-read the nine licences | done | S-001 done |
-| S-003 | Amend ADR-0021 for the new pin and the half-run playbook | open | S-002 done |
+| S-003 | Amend ADR-0021 for the new pin and the half-run playbook | done | S-002 done |
 | S-004 | Amend the ADR-0061 stack row to the new pin | open | S-002 done |
 | S-005 | Date or re-point every source-read claim the bump invalidates | open | S-001, S-002 both done |
 | S-006 | Decide what replaces the offline 7.5.0 source tree | open | S-001 done |
@@ -62,7 +62,7 @@ graph LR
 | S-018 | Move the architecture layer's four engine-version statements to the new pin | open | S-002 done |
 | S-019 | Amend ADR-0030's stack sentence to the new pin | open | S-002 done |
 | S-020 | Amend ADR-0036's live-pin clause to the new pin | open | S-002 done |
-| S-021 | Re-derive ADR-0093's verbatim quotation of ADR-0021 | blocked | S-003 |
+| S-021 | Re-derive ADR-0093's verbatim quotation of ADR-0021 | open | S-003 done |
 
 ---
 
@@ -115,7 +115,7 @@ the work as if they were the work.
 **Out of scope.** Editing any of the 99 lines. This seed produces a classification, and the only
 file it changes is this one.
 
-### Result, measured 2026-08-08 at commit `5c3e5ad`
+### S-001 result, measured 2026-08-08 at commit `5c3e5ad`
 
 **Read every line number below as that tree's, not as today's.** S-002 landed the bump immediately
 after this seed and rewrote both `Directory.Packages.props` and
@@ -293,7 +293,7 @@ the playbook; `docs/adr/0026-dependency-license-policy.md` section A for the per
 **Out of scope.** Amending ADR-0021 or ADR-0061, which are S-003 and S-004, because one ADR per
 commit. Adding a `PackageReference`, which is S-008.
 
-### Result, measured 2026-08-08
+### S-002 result, measured 2026-08-08
 
 The pin is `[7.6.0]` on all eight rows. Ten licences were read at their own `.nuspec`, not nine, and
 the tenth is the finding. Four things this seed did not expect are recorded below.
@@ -362,7 +362,7 @@ it was the mistake. Read an exit code directly, never through a pipe.
 
 ## S-003. Amend ADR-0021 for the new pin and the half-run playbook
 
-**Status:** open · **Blocked by:** S-002, which is done · **Unblocks:** S-021
+**Status:** done · **Blocked by:** S-002, which is done · **Unblocks:** S-021
 
 **The honest difficulty.** This ADR's parameter D requires, for each release, that the
 contract-regression suite runs. Searched 2026-08-08, `tests/` holds only
@@ -390,6 +390,61 @@ frontmatter status, so confirm neither moved.
 **Sources.** `docs/adr/0021-openiddict-version-adaptation.md:14`, `:32`, `:39`, `:43`, `:44`, `:71`.
 
 **Out of scope.** ADR-0061's row, which is S-004. Building the suite, which is S-011.
+
+### S-003 result, measured 2026-08-08
+
+Three lines changed, `:14`, `:39`, and `:44`, and one More Information amendment was added. The
+amendment is longer than the edit because the bump turned four of this ADR's own forward-looking
+sentences into checkable ones, and three of them checked out.
+
+**The half-run playbook is recorded, as planned.** The release notes were read. The
+contract-regression suite does not exist, and the amendment names S-011 rather than letting a green
+build imply otherwise.
+
+**1. The 7.6.0 release notes were verified at source rather than inherited from this seed.** Read at
+the GitHub release body for tag `7.6.0` on 2026-08-08: published 2026-07-15T15:50:25Z,
+`prerelease: false`, and exactly the three changes S-002 recorded. This seed's own premise is
+therefore confirmed by a second read rather than quoted forward.
+
+**2. Both 8.0 breaking changes parameter D predicted on 2026-07-04 are confirmed, and one is now
+narrower.** Read at the `8.0.0-preview.1` release body: "All the members obsoleted in previous
+versions of OpenIddict have been removed", and three named types, not one, "no longer inherit from
+ASP.NET Core's `AuthenticationSchemeOptions` class in OpenIddict 8.x". The parameter said "an options
+type" and did not name the base class. Both are now named. The parameter's own text was left alone
+because it was right; the confirmation went in the amendment.
+
+**3. The roadmap reading in the Confirmation has been overtaken, and this is the finding with the
+longest reach.** That line records, verified 2026-07-04, that DCR (issue #2404) and back-channel
+logout (issue #2175) both target `8.0.0-preview.2`. Preview.2 shipped 2026-07-15 without either.
+Searching the release body is not enough to prove absence, so the issues were read the same day:
+**both are open and both now carry milestone `8.0.0-preview.3`**. The target slipped one preview.
+Issue #1345 (telemetry) is still open with no milestone, which confirms parameter E rather than
+changing it. `ADR-0021:60` is the **only** line in the repository naming an 8.0 preview, searched
+2026-08-08 for `8.0.0-preview`, `8.0 preview`, and `preview.[123]` across every tracked file except
+the work queue, so the slip is contained to one line that already carries its date. Parameter E's
+`replace-when-native: OpenIddict 8.0` markers are unaffected, naming 8.0 rather than a preview, so
+ADR-0014 and ADR-0019 need no change.
+
+**4. Four further 8.0 breaking changes do not reach Nami, and one measured line is the reason.**
+Preview.1 drops ASP.NET Core 2.3 and EF Core 2.3, raises the .NET Framework floor to 4.8, removes the
+.NET Standard 2.0/2.1 and UAP target frameworks, and moves to `Microsoft.Extensions.*` 10.x.
+`Directory.Build.props:114` sets `NamiLibraryTargetFrameworks` to `net10.0` and nothing else. So none
+of the first three applies today, and the S-002 dependency diff already showed the graph at 10.x. The
+amendment states the condition under which this stops being true, which is that knob gaining a
+`net48` entry.
+
+**5. Parameter F's source read was left exactly as written, deliberately.** It verifies OpenIddict
+types "in the checked-in 7.5.0 source", which names its own version, so by S-001's bucket-C test it
+needs confirming rather than editing. What the amendment adds is that the checked-in tree no longer
+matches the pin, pointing at S-006 and S-005.
+
+**Verification.** `bash scripts/check-adrs.sh` after `git add`, and
+`python3 scripts/check-decisions-index.py`, both green. Check 3 compares the index row status against
+the frontmatter status: both still read `accepted`, and neither was touched. `stack-record: true` is
+unchanged, so Check 4 sees the same ADR-0061 row it saw before, and moving that row is S-004.
+`markdownlint-cli2` green at 195 files. The two pointers S-021 depends on were re-read after the
+edit: `0021:44` is still parameter D and `0093:150` still holds the stale quotation, so S-021's
+sources did not move.
 
 ---
 
@@ -886,7 +941,7 @@ line already names, and it needs a restored package rather than a document edit.
 
 ## S-021. Re-derive ADR-0093's verbatim quotation of ADR-0021
 
-**Status:** blocked · **Blocked by:** S-003 · **Unblocks:** nothing yet
+**Status:** open · **Blocked by:** S-003, which is done · **Unblocks:** nothing yet
 
 **Blocked by S-003 and not by S-002, and the distinction is the whole seed.** The quotation only
 breaks if S-003 actually edits the line it quotes. So this seed cannot be written until S-003 has

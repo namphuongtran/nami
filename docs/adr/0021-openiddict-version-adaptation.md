@@ -11,7 +11,7 @@ informed: all contributors, via this repository
 
 ## Context and Problem Statement
 
-Nami pins OpenIddict 7.5.0 and relies on three different stability tiers of it:
+Nami pins OpenIddict 7.6.0 and relies on three different stability tiers of it:
 
 1. **Native, documented, versioned API**: low risk on a bump.
 2. **Undocumented but maintainer-endorsed seams**: high risk, and they can break silently on a bump. Examples: the #1434 seam for no-restart rotation, meaning the framework options monitor driven by a custom `IConfigureOptions<OpenIddictServerOptions>` and a custom `IOptionsChangeTokenSource` (issue #1434, ADR-0011, verification record V06); inserting event handlers by `SetOrder` around the built-ins for DPoP (spikes A-1 and A-3); the internal `ValidateProofOfPossession` throwing `ID2196` (spike A-3); and the Finbuckle-times-OpenIddict `OnModelCreating`/`SaveChanges` composition (spike A-4).
@@ -36,12 +36,12 @@ When OpenIddict ships 7.6, 8.0, or a DPoP-native release, the upgrade must not b
 
 Chosen option: "Pin plus a disciplined adaptation mechanism", implemented as six parts (five originally; part F was added 2026-08-02).
 
-* **A. Version pin plus controlled bump.** Pin OpenIddict exactly through Central Package Management (all sub-packages aligned). A bump is a deliberate, tested event, not floating, and follows the playbook in part D. **"Exactly" means the bracket form, `[7.5.0]`, made explicit on 2026-08-02 because the plain form does not express it.** `Version="X"` in `Directory.Packages.props` restores as the constraint `>= X` and resolves to `X` only because NuGet takes the lowest match, read from `obj/project.assets.json`; the resolution is what a reader sees and the constraint is what is written. The bracket is required of OpenIddict and its sub-packages. Whether it becomes the house form for every row is deliberately not settled here, because a package with a deep graph can pay a restore conflict that no decision has asked for.
+* **A. Version pin plus controlled bump.** Pin OpenIddict exactly through Central Package Management (all sub-packages aligned). A bump is a deliberate, tested event, not floating, and follows the playbook in part D. **"Exactly" means the bracket form, made explicit on 2026-08-02 because the plain form does not express it; at the pin this ADR carries that is `[7.6.0]`.** `Version="X"` in `Directory.Packages.props` restores as the constraint `>= X` and resolves to `X` only because NuGet takes the lowest match, read from `obj/project.assets.json`; the resolution is what a reader sees and the constraint is what is written. The bracket is required of OpenIddict and its sub-packages. Whether it becomes the house form for every row is deliberately not settled here, because a package with a deep graph can pay a restore conflict that no decision has asked for.
 
   **A bracket bounds the direct constraint and nothing beneath it**, so it does not make a restore reproducible: the versions OpenIddict's own dependencies resolve to are still whatever the graph allows on the day. Part C's suite can therefore pass over a graph that moved while every pin stayed put, and the same blind spot reaches [ADR-0026](0026-dependency-license-policy.md), whose licence scan reads that graph. **Whole-graph determinism is decided by [ADR-0095](0095-package-restore-determinism.md), which declines the lock file and turns the two premises that decline rests on into binding rules.** When this parameter was written on 2026-08-02 no decision covered it, and the search taken that day is left exactly as it was taken: across `docs/` and every `*.props` for `packages.lock.json`, `lock file`, `lockfile`, `RestorePackagesWithLockFile`, `NU1608`, `floating version` and `version range`, zero hits for all seven. The candidate mechanism this parameter named, a committed lock file with a locked-mode restore in CI, is the one ADR-0095 rejected after measuring it, and the residual risk that decline accepts is recorded there rather than here. What stands unchanged is the sentence above it: a bracket still bounds only the direct edge, which is why the gap was worth naming in a parameter about pinning.
 * **B. Seam catalogue plus isolation.** Maintain an OpenIddict seam catalogue (a deliverable design document) listing every dependency on OpenIddict (numbered `S1` onward), each tagged with a risk tier (native, endorsed-undocumented, internal-behavior, handler-order, build-interim, adjacent-stack) and pointing to a source-verify file, a contract test, an isolation port, and a decommission marker. Each build-interim is isolated behind Nami's own port so swapping to native changes an adapter, not a caller: DPoP behind a handler interface, back-channel logout behind a logout-fanout service (ADR-0019), rotation behind `ISigningKeyStore` plus the #1434 seam (ADR-0011), and interim DCR (if built) behind admin provisioning. This matches ports/adapters (ADR-0006/0009).
 * **C. Contract-regression test suite** (the core safety net for undocumented seams). A dedicated suite asserts each seam's behavior on the pinned version and runs on **every** bump (7.5 to 7.6 to 8.0). It extends what already exists: the rotation contract for the #1434 seam (ADR-0011), the DPoP handler-order and `ID2196`-avoidance checks (spikes A-1 and A-3), the Finbuckle composition test (spike A-4), the "re-run on every bump" test from spike A-2 (T6), and the source-read assumptions captured in verification records V01, V05, V06, and V14 (for example that `AttachSecurityCredentials` uses `First()`, that `AttachSigningKeys` iterates without a `NotBefore` filter, that family-revoke calls `RevokeByAuthorizationIdAsync` inside `ValidateTokenEntry`, the introspection `ValidateAuthorizedParty` behavior, and the pass-through versus fully-handled endpoint set). A bump that breaks a contract fails the build, so it is known before production; the suite is wired into CI.
-* **D. Per-release migration playbook.** For each OpenIddict release: read the release notes; run the contract-regression suite plus conformance; for a feature that has just become native (DCR and back-channel logout are both at 8.0), evaluate swapping interim-to-native behind the port (a small blast radius), keeping the interim until native is proven; update the pin; and decommission the interim. Note the 8.0 breaking changes in advance (an options type will no longer inherit the authentication-scheme options base (a high-risk seam), and all obsolete members are removed) so clear obsolete warnings on 7.5 now and run the rotation contract test against an 8.0 preview early.
+* **D. Per-release migration playbook.** For each OpenIddict release: read the release notes; run the contract-regression suite plus conformance; for a feature that has just become native (DCR and back-channel logout are both at 8.0), evaluate swapping interim-to-native behind the port (a small blast radius), keeping the interim until native is proven; update the pin; and decommission the interim. Note the 8.0 breaking changes in advance (an options type will no longer inherit the authentication-scheme options base (a high-risk seam), and all obsolete members are removed) so clear obsolete warnings on 7.6 now and run the rotation contract test against an 8.0 preview early.
 * **E. Decommission-interim tracking.** Each build-interim carries a `replace-when-native: OpenIddict <version>` marker (back-channel logout to 8.0, DCR to 8.0 re-targeted from 7.6, DPoP with no committed native, and OTel with no milestone) so interims are migrated proactively rather than carried forever.
 * **F. Handler insertion is order-anchored, and it is Nami's own mechanism rather than a consumer extension point** (added 2026-08-02, because the rule was binding, was stated only in the design layer, and was owned by no decision). Custom protocol behaviour is an OpenIddict event handler inserted into the engine pipeline, under three rules that exist to survive a bump, which is why the axis belongs in this ADR rather than beside the ports. It anchors to a **named built-in descriptor plus an offset**, never to a literal order number, so a built-in that moves carries the custom handler with it. Every custom position is declared as a **constant in one file**, so the whole set is reviewable in one place. And a **pipeline-order snapshot test** pins the resolved order and fails on a bump that changes it, which is what lets part D's playbook see a silent reorder rather than discover it in production. Part B already tags `handler-order` as a risk tier, and the positions are catalogued as seam S33 in design [22](../design/22-openiddict-seam-catalogue.md).
 
@@ -84,6 +84,76 @@ Chosen option: "Pin plus a disciplined adaptation mechanism", implemented as six
 * Sibling decision: ADR-0030 (.NET runtime/TFM upgrade) is in the same external-version-adaptation family; a .NET major bump usually drags an OpenIddict and EF bump, so both playbooks share one contract-regression suite.
 * Related decisions: ADR-0006/0009 (ports/adapters), ADR-0011 (the rotation seam, the fragile-seam archetype), ADR-0014 (DPoP build and DCR wait), ADR-0018 (Finbuckle-times-OpenIddict composition), ADR-0019 (back-channel logout interim), ADR-0022 (OpenTelemetry, no native telemetry), ADR-0030 (the sibling .NET upgrade playbook).
 * Imported into this repository and translated in 2026-07; content preserved, internal references generalized. A commercial-component fallback reference was generalized (no vendor named); OpenIddict and its public issue numbers are retained.
+* **Amended 2026-08-08: the pin moved to 7.6.0, and this ADR's own playbook ran in half.** Parameter
+  D requires that every bump read the release notes **and** run the contract-regression suite. The
+  notes were read. The suite does not exist: searched 2026-08-08, `contract-regression` returns zero
+  hits across `tests/` and `src/`, and `tests/` holds only `Nami.Identity.ArchitectureTests` and
+  `Nami.Identity.UnitTests`. **Seed S-011 owes the other half**, and it is written down here rather
+  than left for a green build to imply the playbook ran, which is the failure this repository has
+  paid for elsewhere. Everything below was read at source on 2026-08-08.
+  * **What 7.6.0 contains**, read at the release body for tag `7.6.0`: published
+    2026-07-15T15:50:25Z, not a prerelease, three changes and no breaking change. The Entity
+    Framework 6.x and EF Core stores restore the `EntityState` of token entities after a failed
+    application deletion; `OpenIddict.Client.WebIntegration` gained Vercel and ID Austria; and all
+    dependencies moved to their latest version. Only the first reaches Nami, through the persistence
+    adapter. The second is in a package Nami does not take.
+  * **Parameter A's named gap was instrumented rather than argued.** That parameter says a bracket
+    bounds the direct edge and nothing beneath it. Every net10.0 dependency group was diffed, 7.5.0
+    against 7.6.0, at the nuget.org flat container: no dependency identifier was added or removed,
+    and every differing line is a version. `Microsoft.Extensions.*` moved 10.0.7 to 10.0.10,
+    `Microsoft.IdentityModel.*` 8.16.0 to 8.19.2, `Microsoft.EntityFrameworkCore.Relational` 10.0.7
+    to 10.0.10, and `Quartz.Extensions.DependencyInjection` 3.15.1 to 3.18.2. So the graph beneath
+    the pins moved in version while every pin was rewritten by hand, which is the shape parameter A
+    predicted and [ADR-0095](0095-package-restore-determinism.md) accepts.
+  * **The 8.0 preview this parameter asks for early testing against now exists, twice.** Read at the
+    flat container version index for `OpenIddict.Core`: `8.0.0-preview.1.26302.68` and
+    `8.0.0-preview.2.26365.61`, with 7.6.0 the latest stable of 85 published versions. So the "run
+    the rotation contract test against an 8.0 preview early" instruction has a target for the first
+    time, and it is blocked on the same S-011 suite.
+  * **Both 8.0 breaking changes this parameter predicted in 2026-07-04 are confirmed, and one is
+    narrower than the prediction.** Read at the `8.0.0-preview.1` release body: "All the members
+    obsoleted in previous versions of OpenIddict have been removed", and that
+    `OpenIddictClientAspNetCoreOptions`, `OpenIddictServerAspNetCoreOptions` and
+    `OpenIddictValidationAspNetCoreOptions` "no longer inherit from ASP.NET Core's
+    `AuthenticationSchemeOptions` class in OpenIddict 8.x". The prediction said "an options type";
+    it is these three, and the base class now has a name. The same note carries three OWIN options
+    types alongside them, which do not reach a `net10.0` build. The parameter's text is left as
+    written because it was right, and the confirmation belongs in an amendment rather than inside a
+    binding parameter.
+  * **Four further 8.0 breaking changes do not reach Nami, and the reason is one measured line.**
+    Preview.1 also drops ASP.NET Core 2.3 and EF Core 2.3, raises the .NET Framework floor to 4.8,
+    removes the .NET Standard 2.0/2.1 and UAP target frameworks, and moves to
+    `Microsoft.Extensions.*` 10.x. `Directory.Build.props:114` sets
+    `NamiLibraryTargetFrameworks` to `net10.0` and nothing else, so none of the first three applies,
+    and the diff above shows Nami's graph already at 10.x. **This stops being true if that knob ever
+    gains a `net48` entry**, which [ADR-0030](0030-dotnet-version-upgrade.md) parameter B leaves open
+    for libraries.
+  * **The Confirmation's roadmap reading has been overtaken, and it keeps its date.** That line
+    records, verified 2026-07-04, that DCR (issue #2404) and back-channel logout (issue #2175) both
+    target `8.0.0-preview.2`. Preview.2 shipped 2026-07-15 and its release body lists neither:
+    searched 2026-08-08 over that body for `Dynamic Client Registration`, `client registration`,
+    `back-channel`, `backchannel`, and `logout`, all five returned zero lines. The issues settle it
+    rather than the notes, and both were read the same day: **#2404 and #2175 are both still open and
+    both now carry milestone `8.0.0-preview.3`**. So the target slipped one preview. Issue #1345
+    (telemetry) is still open with no milestone, which is what parameter E already says. Parameter E's
+    `replace-when-native: OpenIddict 8.0` markers are unaffected, because they name 8.0 rather than a
+    preview.
+  * **Parameter F's source read is now behind the pin, and it is not edited for that.** That
+    parameter verifies `AddEventHandler` and the built-in descriptors as public OpenIddict types "in
+    the checked-in 7.5.0 source". The sentence names its own version, so it stays exactly as written.
+    What changed is that the checked-in tree no longer matches the pin: the corpus tree sits at
+    `aa7fac0996cb1c86c4310a005bdc66077eb53ba8` and the 7.6.0 packages declare
+    `5ce649a5bbbf1340c9be9c4f264197af563ab473`. Seed S-006 decides what replaces the offline tree and
+    seed S-005 owns the wider set of reads in this shape.
+  * **Two mentions of 7.5.0 in this ADR were deliberately left alone.** Considered Options and the
+    Pros and Cons heading both name the rejected option "Pin 7.5.0 forever and never upgrade".
+    Rewriting either would delete the record of what was rejected. The bump-sequence illustration in
+    parameter C, "7.5 to 7.6 to 8.0", is also unchanged, an illustration of a sequence staying true
+    after the pin moves along it.
+  * **One outward citation was broken on purpose by this amendment.**
+    [ADR-0093](0093-warnings-as-errors.md) quotes parameter D's "clear obsolete warnings on 7.5 now"
+    word for word and points at it. That parameter now reads 7.6, so the quotation is stale until
+    seed S-021 re-derives it. Recorded here so the two commits are read as one change.
 * **Amended 2026-08-03: parameter A's whole-graph gap is closed by a decision rather than by a mechanism.** The paragraph had said that no decision in this repository covered whole-graph determinism and that the answer was owed before M1. Both stopped being true when [ADR-0095](0095-package-restore-determinism.md) declined the lock file, and a parameter asserting that no decision exists is exactly the kind of sentence that goes stale silently. Two things were deliberate in the repair. The 2026-08-02 search is left as it was taken and the claim around it is past-tensed, because a dated measurement edited to match today stops being evidence. And the decline is pointed at rather than summarized: ADR-0095 carries what it costs, including that nothing verifies the content hash of a restored package, and a second copy of that here would be a second place to be wrong.
 * **Amended 2026-08-02: parameter A now spells "exactly" as the bracket form, and names what a bracket does not cover.** The word had been carried since 2026-07-04 with no form attached, and Central Package Management landed on 2026-08-02 with its first row written in the plain form, which is the form that reads as a pin and restores as a floor. The spelling belongs in the parameter rather than in the manifest's comment, because the next person to add a row reads this ADR for the instruction and would otherwise inherit the ambiguity with it. The second half of the amendment is the more useful one: bracketing was about to be recorded as the answer, and it answers only the direct edge.
 * **Amended 2026-08-01: the seam range was un-pinned from `S1`-`S34` to "numbered `S1` onward".** Registering S35 (the private-claim carriage that the refresh-ceiling anchor and the session-liveness gate both ride on, design [22](../design/22-openiddict-seam-catalogue.md)) made the old text stale in two places here and five in the catalogue, which is the second time a seam count has had to be chased across documents. The decision this ADR makes is that **every** dependency is registered; how many there are is a measurement the catalogue takes, not a parameter this ADR sets. Pinning the upper bound in an accepted ADR quietly discouraged the thing the ADR exists to encourage, since adding a seam meant editing a binding document. The catalogue now owns the enumeration and this ADR owns the rule.
