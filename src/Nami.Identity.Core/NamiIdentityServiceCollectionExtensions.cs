@@ -58,6 +58,12 @@ public static class NamiIdentityServiceCollectionExtensions
             .Configure(configure)
             .ValidateOnStart();
 
+        // The engine, after the options are registered rather than before. Nothing
+        // in the wiring resolves an option at registration time, so the order does
+        // not matter to the compiler; it matters to a reader, who should see what
+        // configures what.
+        OpenIddictWiring.AddNamiOpenIddictSegments(services);
+
         return new NamiIdentityBuilder(services);
     }
 }

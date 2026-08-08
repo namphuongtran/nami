@@ -26,13 +26,15 @@
     for the reason `tests/CLAUDE.md` records: a test that reads a project file
     fails on a correct project.
 
-    THE ENGINE REFERENCE LANDED 2026-08-08 and the item group below carries it,
-    with the reasoning in the comment beside it. Until then this block said there
-    was none, deliberately, and the sentence it ended on is the one that survived
-    contact with a measurement: "an unused reference is invisible to BOTH
-    architecture facts ... adding the reference with the wiring that uses it is
-    what makes the rule able to see it". The reference is now here and the wiring
-    is not, so both facts are still inert. That was measured rather than assumed.
+    THE ENGINE REFERENCE AND ITS WIRING BOTH LANDED 2026-08-08, in seeds S-008
+    and S-010. Until then this block said there was none, deliberately, and the
+    sentence it ended on survived contact with two measurements: "an unused
+    reference is invisible to BOTH architecture facts ... adding the reference
+    with the wiring that uses it is what makes the rule able to see it". Half of
+    that turned out to be true. The reference alone moved nothing, and the wiring
+    put six engine assemblies into the reference table. What it did not do is make
+    the namespace fact able to see a persistence call, and the comment beside the
+    item group below records why.
 
     TargetFrameworks reads the knob rather than naming a framework, because
     ADR-0030 parameter B multi-targets libraries and single-targets the host.
@@ -55,42 +57,50 @@
   </ItemGroup>
 
   <!--
-    THE ENGINE, TWO PACKAGES OF THE EIGHT AND NOT THE OTHER SIX. Seed S-007
+    THE ENGINE, FIVE PACKAGES OF THE EIGHT AND NOT THE OTHER THREE. Seed S-007
     settled that the engine is the eight identifiers design 04 section 6
     enumerates, which are exactly the eight `Directory.Packages.props` pins, and
-    that the umbrella `OpenIddict.AspNetCore` is not one of them. Seed S-008
-    settled which of the eight THIS assembly takes: `OpenIddict.Server` and its
-    ASP.NET Core pass-through integration, and nothing else.
+    that the umbrella `OpenIddict.AspNetCore` is not one of them. Seed S-008 took
+    the Server pair, and seed S-010 added the three `.Validation` packages that
+    S-009's ownership table assigns here.
 
     No `Version` attribute, on purpose. Central Package Management fixes the
     version in `Directory.Packages.props`, and a version here is NU1008.
 
-    WHY NOT THE OTHER SIX, each for its own reason rather than one rule.
+    WHY NOT THE OTHER THREE, each for its own reason rather than one rule.
     `.EntityFrameworkCore` is persistence and `.Quartz` is scheduling, and
     design 01 section 3.1 forbids `Core` from referencing an adapter or a
-    database provider. `OpenIddict.Core` carries the managers AND the stores, so
-    whether it belongs here is the question seed S-009 exists to answer, not one
-    to pre-empt from a csproj. The three `.Validation` packages are listed by
-    design 04 section 6 for the protocol host, and they arrive when something
-    validates a token, which is seed S-010.
+    database provider. `OpenIddict.Core` carries the managers AND the stores, and
+    seed S-009 assigned its whole `.AddCore(…)` segment to the persistence
+    adapter for that reason.
 
-    THE TWO REFLECTION FACTS ARE STILL INERT, and adding this reference did NOT
-    change that. Measured 2026-08-08 by adding the reference, building, and
-    reading the emitted metadata: the assembly carries no `OpenIddict` string at
-    all. An unused reference is elided, exactly as `tests/CLAUDE.md` recorded on
-    2026-08-02. So the earlier plan for this seed, that the facts would gain
-    something to catch here, was wrong and is corrected in `docs/SEEDS.md`. The
-    facts go live when code touches an engine type, which is seed S-010.
+    THE ARCHITECTURE FACTS CHANGED STATE HERE, and not in the way the plan
+    expected. Measured 2026-08-08. With a reference and no code touching it the
+    assembly carried no `OpenIddict` string at all, so S-008 moved no fact. With
+    the wiring, six `OpenIddict.*` entries are in the reference table. But the
+    namespace fact still cannot see the violation that matters: OpenIddict
+    declares every `Add*` and `Use*` extension and every builder in
+    `Microsoft.Extensions.DependencyInjection`, so
+    `AddOpenIddict().AddCore(o => o.UseEntityFrameworkCore())` names no type
+    outside the allowed list. Planting exactly that call left the namespace fact
+    green, and the assembly-reference fact green too, because its forbidden
+    prefixes had `Microsoft.EntityFrameworkCore` and `Quartz` and neither matches
+    an `OpenIddict.` assembly. Three prefixes were added and the plant then
+    failed. `tests/Nami.Identity.ArchitectureTests/CoreDependencyRuleTests.cs`
+    carries the measurement.
 
-    WHAT DID CHANGE IS THE RESTORE GRAPH, and that is this seed's real
-    deliverable. It went from two nodes to ten, and five of the eight new ones
-    are not OpenIddict at all. `docs/DEPENDENCY-LICENSES.md` carries the
-    enumeration with every licence read at its own nuspec.
+    WHAT ALSO CHANGED IS THE RESTORE GRAPH. Two nodes before any engine
+    reference, ten after the Server pair, fourteen after the Validation three.
+    `docs/DEPENDENCY-LICENSES.md` sections 3.4 and 3.5 carry the enumerations
+    with every licence read at its own nuspec.
   -->
 
   <ItemGroup>
     <PackageReference Include="OpenIddict.Server" />
     <PackageReference Include="OpenIddict.Server.AspNetCore" />
+    <PackageReference Include="OpenIddict.Validation" />
+    <PackageReference Include="OpenIddict.Validation.AspNetCore" />
+    <PackageReference Include="OpenIddict.Validation.ServerIntegration" />
   </ItemGroup>
 
 </Project>

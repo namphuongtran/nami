@@ -53,6 +53,36 @@ of the fixture used to find it: eight new packages entered the graph and the com
 not move. **The plan for that seed said the facts would gain something to catch, and that was
 wrong**, which is why the claim is now measured in two places rather than asserted in one.
 
+## A namespace allow-list cannot police a library that puts its builders in yours
+
+Learned 2026-08-08, wiring the engine in seed S-010, and it is the sharper half of the two-facts
+rule above.
+
+Read at the OpenIddict 7.6.0 upstream commit, **every** `Add*` and `Use*` extension and **every**
+builder type is declared in `Microsoft.Extensions.DependencyInjection`, not in an `OpenIddict.*`
+namespace. `OpenIddictBuilder`, `OpenIddictServerBuilder`, `OpenIddictCoreBuilder`, and
+`OpenIddictEntityFrameworkCoreBuilder` are all in that one namespace. Only options and constants
+types sit under `OpenIddict.*`.
+
+So the type-graph fact is **structurally blind** to the violation that matters here.
+`services.AddOpenIddict().AddCore(o => o.UseEntityFrameworkCore())` is exactly what design 01
+section 3.1 forbids `Core` to contain, and it names no type outside the allow-list. **No widening of
+that list could catch it, and no narrowing either.** Measured by planting that call: the fact stayed
+green.
+
+The assembly-reference fact is the only one that can see it, because it reads assembly names rather
+than namespaces. **And its forbidden-prefix list did not catch it either**, because
+`"OpenIddict.EntityFrameworkCore".StartsWith("Microsoft.EntityFrameworkCore")` is false and so is
+`"OpenIddict.Quartz".StartsWith("Quartz")`. Two entries that look like they cover those packages
+cover different ones. Three `OpenIddict.` prefixes were added and the plant then failed.
+
+**Two habits generalise.** When a library declares its extension methods in a framework namespace,
+a namespace rule cannot distinguish its allowed surface from its forbidden one, so the assembly-level
+rule carries the whole weight and must be checked against that library's real assembly names. And a
+forbidden-prefix list is a claim about string prefixes: write the assembly names you mean to reject
+and test `StartsWith` against them, rather than trusting that a familiar-looking entry covers a
+same-named package from a different vendor.
+
 **Do not "simplify" the two into one.** Deleting the reflection fact loses the only check that
 sees a reference no type touches yet. Deleting the ArchUnitNET fact loses the one that scales to
 the slice and layering rules ADR-0024 still owes.

@@ -78,7 +78,7 @@ graph LR
 | S-007 | Resolve umbrella versus granular for `Core`'s engine reference | done | none |
 | S-008 | Reference the engine from `Core` and enumerate the restore graph | done | S-007 done |
 | S-009 | Decide where the `AddOpenIddict` block splits at the persistence boundary | done | S-007 done |
-| S-010 | Wire the engine inside `AddNamiIdentity` | open | S-008, S-009, S-028 all done |
+| S-010 | Wire the engine inside `AddNamiIdentity` | done | S-008, S-009, S-028 all done |
 | S-011 | Stand up the contract-regression suite ADR-0021 part C requires | blocked | S-010 |
 | S-012 | Reconcile design 01's context count against its own table | open | none |
 | S-013 | Give the provider-selector key the decided form and an owner | open | none |
@@ -913,7 +913,7 @@ and the second closing at `.AddValidation(...);`.
 
 ## S-010. Wire the engine inside `AddNamiIdentity`
 
-**Status:** open · **Blocked by:** S-008, S-009, and S-028, all done · **Unblocks:** S-011, S-016
+**Status:** done · **Blocked by:** S-008, S-009, S-028, and S-029, all done · **Unblocks:** S-011, S-016
 
 **This seed was split on 2026-08-08 and its evidence half is S-028, which is done.** The API re-read
 at 7.6.0 was the larger and more uncertain half, and it was not single-agent-sized alongside the
@@ -953,6 +953,79 @@ handler-order rules; this file's S-028 for the API verification.
 
 **Out of scope.** Any slice, which is S-016. The contract-regression suite, which is S-011.
 Re-verifying the API names, which S-028 did.
+
+### S-010 result, measured 2026-08-08
+
+`AddNamiIdentity` wires the engine. Five of the eight pinned packages are referenced, the graph is
+fourteen nodes, and **the finding is that both architecture facts were green over the exact violation
+they exist to catch** until this seed fixed one of them.
+
+**What landed.** `OpenIddictWiring.AddNamiOpenIddictSegments` carries the `.AddServer(...)` and
+`.AddValidation(...)` segments S-009 assigned here, with only what a decision fixes: the ten endpoint
+URIs, the v1 flow set with mandatory PKCE, the registered scopes, S256-only, and the six pass-throughs.
+`ConfigureServerOptionsFromNamiOptions` carries the four values that arrive from
+`NamiIdentityOptions`. Nothing is written in both places, so the registration order of two
+`IConfigureOptions` instances never has to be reasoned about.
+
+**The mechanism was sourced, not invented.** A builder setter takes a literal at registration time and
+the option values resolve later, so the bridge is a custom
+`IConfigureOptions<OpenIddictServerOptions>`. ADR-0011 makes that the archetypal seam and
+`design/12:308` and `:324` show the same shape with a key store as its dependency.
+
+**1. Three of the four bridged values tighten the engine's own default, and one matches it.** Read at
+`OpenIddictServerOptions` at 7.6.0, because a value that is set and a default that is known are two
+claims here:
+
+| Property | Nami | Engine default |
+|---|---|---|
+| `AccessTokenLifetime` | 15 minutes | **1 hour** |
+| `RefreshTokenLifetime` | 8 hours | **14 days** |
+| `RefreshTokenReuseLeeway` | 30 seconds | 30 seconds |
+| `DisableAccessTokenEncryption` | set `true` | `false`, so the engine encrypts unless told not to |
+
+Losing the refresh-token line alone turns an 8-hour ceiling into a 14-day one with every gate green.
+That is recorded on the class rather than left to be rediscovered.
+
+**2. The namespace fact is structurally blind to the violation that matters, and no edit to its list
+can fix that.** Read at the 7.6.0 upstream commit, OpenIddict declares **every** `Add*` and `Use*`
+extension and **every** builder in `Microsoft.Extensions.DependencyInjection`: `OpenIddictBuilder`,
+`OpenIddictServerBuilder`, `OpenIddictCoreBuilder`, and `OpenIddictEntityFrameworkCoreBuilder` are all
+there. Only options and constants sit under `OpenIddict.*`. So
+`services.AddOpenIddict().AddCore(o => o.UseEntityFrameworkCore())`, exactly what design 01 section 3.1
+forbids here, names no type outside the allowed namespaces. Planting that call left the fact green.
+
+**3. The assembly-reference fact was green too, and that was a hole from the day the list was
+written.** Its prefixes carried `Microsoft.EntityFrameworkCore` and `Quartz`, and
+`"OpenIddict.EntityFrameworkCore".StartsWith("Microsoft.EntityFrameworkCore")` is false, as is
+`"OpenIddict.Quartz".StartsWith("Quartz")`. Two entries that look like they cover those packages cover
+different ones. **Three `OpenIddict.` prefixes were added and the plant then failed**, which is the
+only reason either fact covers the persistence boundary. The prefixes are narrow: none of the six
+allowed engine assemblies starts with any of them, and `OpenIddict.EntityFrameworkCore` also covers its
+`.Models` sibling.
+
+**4. The allow-list widened by exactly two entries, and the narrowness is the point.** Only
+`OpenIddict.Abstractions` and `OpenIddict.Server` were added, being the only two `OpenIddict.*`
+namespaces the wiring names. A bare `OpenIddict` entry would have admitted the three forbidden
+packages. The class remarks had predicted this edit and asked that it be reviewable rather than
+silent, and it is one line.
+
+**5. Only one of the two reflection facts changed state.** The second now filters a table holding six
+`OpenIddict.*` entries rather than an empty one. The third is still inert: its whole subject is Nami
+sibling packages and `Nami.Identity.Abstractions` remains absent from the reference table, because no
+`Core` type touches an `Abstractions` type yet. So S-008's corrected wording, that the facts go live
+here, was right about one and wrong about the other.
+
+**Verification.** All nine gates green. The realistic plant was run four times: green on both facts
+before the fix, red on the assembly fact after it, and the tree confirmed green with the plant removed.
+The reference table was read out of the built assembly rather than predicted, before and after. The
+restore graph was read from `project.assets.json`: ten nodes to fourteen. One new licence read,
+`Microsoft.IdentityModel.Protocols` 8.19.2 MIT, recorded in licence-record section 3.5.
+
+**One thing this seed did not do.** No unit fact covers the wiring itself. Every value it sets is
+either fixed in the builder chain, where a change is visible in the diff, or bridged from an option
+whose default a unit fact already pins. Asserting the resolved `OpenIddictServerOptions` needs a built
+service provider, which is an integration concern and belongs with S-011's contract-regression suite
+rather than here.
 
 ---
 

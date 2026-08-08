@@ -434,6 +434,26 @@ all**, the reference being elided as `tests/CLAUDE.md` recorded on 2026-08-02. S
 eight packages while the compiled surface did not move. Seed S-010, which calls `AddOpenIddict`, is
 what changes that, and the planted-break check belongs there.
 
+### 3.5 The validation stack's restore delta, at 2026-08-08
+
+Seed S-010 added the three packages S-009's ownership table assigns to
+`Nami.Identity.Core`: `OpenIddict.Validation`, `.Validation.AspNetCore`, and
+`.Validation.ServerIntegration`. Read from `src/Nami.Identity.Core/obj/project.assets.json` after
+restore on **2026-08-08**, the `net10.0` target went from **ten** entries to **fourteen**, and
+nothing was removed.
+
+Three of the four new nodes are the referenced packages themselves, all Apache-2.0 at 7.6.0 and all
+already read in section 3.3. **The fourth is the only new licence read this seed owed**, and it was
+read at its own `.nuspec` on the nuget.org flat container on 2026-08-08:
+`Microsoft.IdentityModel.Protocols` 8.19.2, MIT, declaring the same upstream commit
+`25d90ed3f48854036d444541a049089ccd198707` as the four `IdentityModel` packages section 3.4 records.
+MIT is on ADR-0026 section A's permissive list, so nothing here needs an exception.
+
+**The graph is now the whole of what `Core` restores**, fourteen nodes for five engine packages plus
+the analyzer and one project reference. `OpenIddict.Core`, `.EntityFrameworkCore` and `.Quartz` are
+absent by design, being the three of the eight pins that S-009 assigned elsewhere, and the
+architecture suite now fails if any of them appears.
+
 ## 4. Rejected packages and tools, with the evidence
 
 Recorded because a forbidden-package list that will not say which package is forbidden cannot be
