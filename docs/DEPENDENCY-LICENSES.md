@@ -180,16 +180,17 @@ diff against this table is what the M1 read has to produce.
 | `xunit.v3` **3.2.2** | Apache-2.0 | Not an exception. The test framework ADR-0060 binds the suite to. Read at its own `.nuspec` from the nuget.org flat container (`<license type="expression">Apache-2.0</license>`). | Architect | 2026-08-02 |
 | `TngTech.ArchUnitNET.xUnitV3` **0.13.3** | Apache-2.0 | Not an exception. The architecture-test library ADR-0024 names, in its xUnit v3 integration variant. Read at its own `.nuspec` (`<license type="expression">Apache-2.0</license>`, `<repository … url="https://github.com/TNG/ArchUnitNET" commit="b25c4f940b1d067e97092783d0ef16e4fe12d8c3" />`). **The variant matters and no document in this repository chose it**: the plainly named `TngTech.ArchUnitNET.xUnit` at the same version declares `xunit.assert 2.4.1`, which is xUnit v2, while this one declares `xunit.v3.assert`. Both nuspecs read in the same step. | Architect | 2026-08-02 |
 
-| **OpenIddict**, nine packages at **7.5.0** | Apache-2.0 | Not an exception. The protocol engine, pinned by [ADR-0021](adr/0021-openiddict-version-adaptation.md) parameter A. Enumerated and read in section 3.3 below rather than in this cell, because nine packages do not fit one. | Architect | 2026-08-08 |
+| **OpenIddict**, ten packages at **7.6.0** | Apache-2.0 | Not an exception. The protocol engine, pinned by [ADR-0021](adr/0021-openiddict-version-adaptation.md) parameter A. Enumerated and read in section 3.3 below rather than in this cell, because ten packages do not fit one. The count read nine at 7.5.0 and that was an undercount; section 3.3 names the tenth. | Architect | 2026-08-08 |
 
 Licences for the first three rows were verified at nuget.org on 2026-07-25 at versions 4.2.0 and
 8.1.0. See ADR-0026 section E for the exact scope of that naming exception and what it does not
 cover.
 
-### 3.3 The engine, read at 7.5.0 on 2026-08-08
+### 3.3 The engine, read at 7.6.0 on 2026-08-08
 
 **Recorded before adoption, not after.** `Directory.Packages.props` gained eight bracket pins on
-2026-08-08 and **no project references any of them yet**, so this section is the section 3.2
+2026-08-08 and they were bumped from `[7.5.0]` to `[7.6.0]` the same day, and **no project
+references any of them yet**, so this section is the section 3.2
 shape rather than the section 3.1 shape: a licence read against a pinned version, ahead of the
 code that will restore it. Section 7's maintenance rule asks for the read in the change that
 introduces the dependency, and a pin is where a dependency is introduced under Central Package
@@ -202,32 +203,64 @@ one the ADR-0026 section C scanner can act on.
 
 | Package | Pinned | Declared licence |
 |---|---|---|
-| `OpenIddict.Core` | `[7.5.0]` | Apache-2.0 |
-| `OpenIddict.Server` | `[7.5.0]` | Apache-2.0 |
-| `OpenIddict.Server.AspNetCore` | `[7.5.0]` | Apache-2.0 |
-| `OpenIddict.Validation` | `[7.5.0]` | Apache-2.0 |
-| `OpenIddict.Validation.AspNetCore` | `[7.5.0]` | Apache-2.0 |
-| `OpenIddict.Validation.ServerIntegration` | `[7.5.0]` | Apache-2.0 |
-| `OpenIddict.EntityFrameworkCore` | `[7.5.0]` | Apache-2.0 |
-| `OpenIddict.Quartz` | `[7.5.0]` | Apache-2.0 |
+| `OpenIddict.Core` | `[7.6.0]` | Apache-2.0 |
+| `OpenIddict.Server` | `[7.6.0]` | Apache-2.0 |
+| `OpenIddict.Server.AspNetCore` | `[7.6.0]` | Apache-2.0 |
+| `OpenIddict.Validation` | `[7.6.0]` | Apache-2.0 |
+| `OpenIddict.Validation.AspNetCore` | `[7.6.0]` | Apache-2.0 |
+| `OpenIddict.Validation.ServerIntegration` | `[7.6.0]` | Apache-2.0 |
+| `OpenIddict.EntityFrameworkCore` | `[7.6.0]` | Apache-2.0 |
+| `OpenIddict.Quartz` | `[7.6.0]` | Apache-2.0 |
 | `OpenIddict.Abstractions` | not pinned, arrives transitively | Apache-2.0 |
+| `OpenIddict.EntityFrameworkCore.Models` | not pinned, arrives transitively | Apache-2.0 |
 
-**All nine declare the same upstream repository commit**,
-`aa7fac0996cb1c86c4310a005bdc66077eb53ba8` at `github.com/openiddict/openiddict-core`. That is
-worth more than the version string, and it is not a coincidence worth passing over: it is the
-same commit [`CLAUDE.md`](../docs/CLAUDE.md) records for the checked-in OpenIddict source in the
-external design corpus. So a behaviour read out of that tree is tied to exactly what these pins
-restore, rather than to a number that two artifacts could both claim.
+**The tenth row is new, and the count it corrects is the finding rather than the row.** The 7.5.0
+reading recorded **nine** OpenIddict packages. `OpenIddict.EntityFrameworkCore.Models` arrives
+transitively through `OpenIddict.EntityFrameworkCore`, on exactly the footing that put
+`OpenIddict.Abstractions` in the nine, so nine was an undercount by this section's own logic.
+Measured 2026-08-08, it was **named in no file in this repository**, and 7.5.0 declared it too, so
+this is an omission in the record and not a change in the graph.
+
+**All ten declare the same upstream repository commit**,
+`5ce649a5bbbf1340c9be9c4f264197af563ab473` at `github.com/openiddict/openiddict-core`. That is
+worth more than the version string, because it ties a behaviour claim to an exact tree rather than
+to a number two artifacts could both claim.
+
+**The commit no longer matches the offline reference tree, and until 2026-08-08 it did.** This
+section previously said the pinned commit was the same one
+[`CLAUDE.md`](CLAUDE.md) records for the checked-in OpenIddict source in the external design
+corpus. That was true of 7.5.0 and is not true of 7.6.0. The corpus tree sits at
+`aa7fac0996cb1c86c4310a005bdc66077eb53ba8`, which `OpenIddict.EntityFrameworkCore.Models` 7.5.0
+independently declares as its own upstream commit, read at its `.nuspec` on 2026-08-08. So a
+behaviour read out of that tree no longer ties to what these pins restore. Seed S-006 decides what
+replaces the offline tree and it is open, so between this bump and that decision an engine claim
+cannot be verified offline at the pinned version.
+
+**The transitive closure moved in version and not in shape.** Every net10.0 dependency group was
+diffed, 7.5.0 against 7.6.0, at the flat container on 2026-08-08. No dependency identifier was
+added, none was removed, and every differing line is a version:
+
+| Dependency | 7.5.0 declared | 7.6.0 declares |
+|---|---|---|
+| `Microsoft.Extensions.Caching.Memory`, `.Logging`, `.Options`, `.DependencyInjection.Abstractions`, `.Primitives` | 10.0.7 | 10.0.10 |
+| `Microsoft.IdentityModel.JsonWebTokens`, `.Protocols`, `.Tokens` | 8.16.0 | 8.19.2 |
+| `Microsoft.EntityFrameworkCore.Relational` | 10.0.7 | 10.0.10 |
+| `Quartz.Extensions.DependencyInjection` | 3.15.1 | 3.18.2 |
+
+So the ADR-0026 section C scan set gains **no new package identifier** from this bump. It gains new
+versions of identifiers already in it, and section 7's "re-verify at adopt time" rule owes each of
+those a read when the first `PackageReference` restores them, which is seed S-008 rather than this
+one.
 
 **Three things this section does not establish, stated so its silence is not read as coverage.**
 
 * **The bundle is not enumerated.** Section 7's composition rule says to read what a distribution
   bundles before reading its licence, and a `.nuspec` dependency list is a dependency list rather
-  than a composition. What is enumerated here is nine declared licences, not the contents of nine
+  than a composition. What is enumerated here is ten declared licences, not the contents of ten
   packages.
 * **The restore graph is not enumerated either**, because there is no restore: nothing references
   these. The section 3.1 style of enumeration is owed when the first `PackageReference` lands, and
-  it will be larger than nine. Measured 2026-08-08 at the flat container,
+  it will be larger than ten. Measured 2026-08-08 at the flat container,
   `OpenIddict.Server.AspNetCore` declares one net10.0 dependency while `OpenIddict.AspNetCore`
   declares seven and reaches the whole client stack, so **which** identifier the wiring takes
   changes how much that enumeration has to cover.
@@ -235,6 +268,15 @@ restore, rather than to a number that two artifacts could both claim.
   this section is. Section D is a list written at a point in time and is not a gate; this is a
   read at a pinned artifact on a stated date, which is what the section 7 rule asks for and what
   section D explicitly defers to with "re-verify each at adopt time".
+
+**The superseded 7.5.0 reading, kept because a pin's history has to stay checkable.** On
+2026-08-08, before this bump, the same ten identifiers were pinned or reachable at **7.5.0**, and
+nine of them were read at their own `.nuspec` on the nuget.org flat container on that date. All
+nine carried `<license type="expression">Apache-2.0</license>` and all nine declared the upstream
+commit `aa7fac0996cb1c86c4310a005bdc66077eb53ba8`. The tenth,
+`OpenIddict.EntityFrameworkCore.Models`, was not read then and was read at 7.5.0 on 2026-08-08 as
+part of this bump, carrying the same licence declaration and the same commit. That reading is not
+carried forward as evidence about 7.6.0; the table above is a separate read.
 
 **The analyzer row is the first entry in this file for a package this repository actually
 compiles against**, added 2026-08-02 in the change that created `Directory.Packages.props`. Every

@@ -116,11 +116,12 @@
   </ItemGroup>
 
   <!--
-    The engine, pinned 2026-08-08 (ADR-0021 parameter A).
+    The engine, pinned 2026-08-08 (ADR-0021 parameter A), and bumped from
+    `[7.5.0]` to `[7.6.0]` the same day (seed S-002).
 
     THE BRACKET IS THE POINT AND IT IS THE ONLY GROUP HERE THAT CARRIES ONE.
-    `[7.5.0]` is an exact pin; `7.5.0` above is a floor that restores as
-    `>= 7.5.0`. ADR-0021 parameter A requires the bracket "of OpenIddict and its
+    `[7.6.0]` is an exact pin; `7.6.0` above is a floor that restores as
+    `>= 7.6.0`. ADR-0021 parameter A requires the bracket "of OpenIddict and its
     sub-packages" and deliberately does NOT impose it on every row, because a
     package with a deep graph can pay a restore conflict no decision asked for.
     So this file mixes both forms on purpose, and the difference between the two
@@ -147,28 +148,61 @@
     transitively, and a PackageVersion row for a package nothing references
     directly is inert.
 
+    THE PLAYBOOK OF ADR-0021 PARAMETER D RAN IN PART, and which part is the
+    whole reason this paragraph exists. The release notes were read: 7.6.0 is a
+    maintenance release published 2026-07-15, three changes and no breaking
+    change. The contract-regression suite that the SAME parameter requires on
+    every bump does not exist. Searched 2026-08-08, `tests/` holds only
+    `Nami.Identity.ArchitectureTests` and `Nami.Identity.UnitTests`, and
+    `contract-regression` returns zero hits across `tests/` and `src/`. Seed
+    S-011 owes that half. So the green build this bump produced is not the
+    playbook having run, and nothing here should be read as saying it did.
+
+    THE TRANSITIVE CLOSURE MOVED IN VERSION AND NOT IN SHAPE, which is what the
+    ADR-0026 licence scan cares about. Every net10.0 dependency group was
+    diffed, 7.5.0 against 7.6.0, at the flat container on 2026-08-08: no
+    dependency id was added, none was removed, and every differing line is a
+    version. `Microsoft.Extensions.*` moved 10.0.7 to 10.0.10,
+    `Microsoft.IdentityModel.*` 8.16.0 to 8.19.2,
+    `Microsoft.EntityFrameworkCore.Relational` 10.0.7 to 10.0.10, and
+    `Quartz.Extensions.DependencyInjection` 3.15.1 to 3.18.2. So the scan set
+    gains no new package identifier from this bump. It gains new versions of
+    identifiers already in it, and those are owed a read at restore, not here.
+
     Licences, read before adoption rather than after (ADR-0026 section A, and
-    section 7 of the licence record). All nine, being the eight below plus the
-    transitive `OpenIddict.Abstractions`, were read on 2026-08-08 at their own
+    section 7 of the licence record). TEN were read on 2026-08-08, not nine.
+    The eight below, plus the transitive `OpenIddict.Abstractions`, plus
+    `OpenIddict.EntityFrameworkCore.Models`, which arrives transitively through
+    `OpenIddict.EntityFrameworkCore` on exactly the same footing as
+    `Abstractions`. The 7.5.0 record counted nine and no document in this
+    repository named the tenth; that was an omission in the record rather than
+    a change in the graph, since 7.5.0 declared it too. Each was read at its own
     `.nuspec` on the nuget.org flat container, one request each. Every one
     carries `<license type="expression">Apache-2.0</license>`, which is on
-    ADR-0026 section A's permissive list, and every one declares the same
-    upstream repository commit, `aa7fac0996cb1c86c4310a005bdc66077eb53ba8`.
-    That commit is the one `docs/CLAUDE.md` records for the checked-in
-    OpenIddict source in the external corpus, so a claim read out of that tree
-    ties to exactly this pin rather than to a version string. Recorded with
-    their sources in `docs/DEPENDENCY-LICENSES.md` section 3.
+    ADR-0026 section A's permissive list, and all ten declare the same upstream
+    repository commit, `5ce649a5bbbf1340c9be9c4f264197af563ab473`.
+
+    THAT COMMIT IS NOT THE ONE THE OFFLINE REFERENCE TREE SITS AT, and the
+    previous version of this comment said the opposite about 7.5.0. It was
+    right then. `docs/CLAUDE.md` records the checked-in OpenIddict source in the
+    external design corpus at `aa7fac0996cb1c86c4310a005bdc66077eb53ba8`, which
+    `OpenIddict.EntityFrameworkCore.Models` 7.5.0 independently declares as its
+    own upstream commit, read 2026-08-08. So until 2026-08-08 a claim read out
+    of that tree tied to exactly this pin, and after this bump it does not.
+    Seed S-006 decides what replaces the offline tree, and it is open. Until it
+    lands, an engine claim cannot be verified offline at the pinned version.
+    Recorded with their sources in `docs/DEPENDENCY-LICENSES.md` section 3.
   -->
 
   <ItemGroup>
-    <PackageVersion Include="OpenIddict.Core" Version="[7.5.0]" />
-    <PackageVersion Include="OpenIddict.Server" Version="[7.5.0]" />
-    <PackageVersion Include="OpenIddict.Server.AspNetCore" Version="[7.5.0]" />
-    <PackageVersion Include="OpenIddict.Validation" Version="[7.5.0]" />
-    <PackageVersion Include="OpenIddict.Validation.AspNetCore" Version="[7.5.0]" />
-    <PackageVersion Include="OpenIddict.Validation.ServerIntegration" Version="[7.5.0]" />
-    <PackageVersion Include="OpenIddict.EntityFrameworkCore" Version="[7.5.0]" />
-    <PackageVersion Include="OpenIddict.Quartz" Version="[7.5.0]" />
+    <PackageVersion Include="OpenIddict.Core" Version="[7.6.0]" />
+    <PackageVersion Include="OpenIddict.Server" Version="[7.6.0]" />
+    <PackageVersion Include="OpenIddict.Server.AspNetCore" Version="[7.6.0]" />
+    <PackageVersion Include="OpenIddict.Validation" Version="[7.6.0]" />
+    <PackageVersion Include="OpenIddict.Validation.AspNetCore" Version="[7.6.0]" />
+    <PackageVersion Include="OpenIddict.Validation.ServerIntegration" Version="[7.6.0]" />
+    <PackageVersion Include="OpenIddict.EntityFrameworkCore" Version="[7.6.0]" />
+    <PackageVersion Include="OpenIddict.Quartz" Version="[7.6.0]" />
   </ItemGroup>
 
 </Project>

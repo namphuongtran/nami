@@ -43,13 +43,13 @@ graph LR
 | ID | Title | Status | Blocked by |
 |---|---|---|---|
 | S-001 | Classify every `7.5.0` reference before changing any | done | none |
-| S-002 | Bump the manifest to `[7.6.0]` and re-read the nine licences | open | S-001 done |
-| S-003 | Amend ADR-0021 for the new pin and the half-run playbook | blocked | S-002 |
-| S-004 | Amend the ADR-0061 stack row to the new pin | blocked | S-002 |
-| S-005 | Date or re-point every source-read claim the bump invalidates | blocked | S-001, S-002 |
+| S-002 | Bump the manifest to `[7.6.0]` and re-read the nine licences | done | S-001 done |
+| S-003 | Amend ADR-0021 for the new pin and the half-run playbook | open | S-002 done |
+| S-004 | Amend the ADR-0061 stack row to the new pin | open | S-002 done |
+| S-005 | Date or re-point every source-read claim the bump invalidates | open | S-001, S-002 both done |
 | S-006 | Decide what replaces the offline 7.5.0 source tree | open | S-001 done |
 | S-007 | Resolve umbrella versus granular for `Core`'s engine reference | open | none |
-| S-008 | Reference the engine from `Core` and enumerate the restore graph | blocked | S-002, S-007 |
+| S-008 | Reference the engine from `Core` and enumerate the restore graph | blocked | S-007 |
 | S-009 | Decide where the `AddOpenIddict` block splits at the persistence boundary | blocked | S-007 |
 | S-010 | Wire the engine inside `AddNamiIdentity` | blocked | S-008, S-009 |
 | S-011 | Stand up the contract-regression suite ADR-0021 part C requires | blocked | S-010 |
@@ -59,9 +59,9 @@ graph LR
 | S-015 | Re-own design 04's boot-validation citation | open | none |
 | S-016 | Define what the first slice is | blocked | S-010 |
 | S-017 | Assign a configuration key to the nine options that have none | open | none |
-| S-018 | Move the architecture layer's four engine-version statements to the new pin | blocked | S-002 |
-| S-019 | Amend ADR-0030's stack sentence to the new pin | blocked | S-002 |
-| S-020 | Amend ADR-0036's live-pin clause to the new pin | blocked | S-002 |
+| S-018 | Move the architecture layer's four engine-version statements to the new pin | open | S-002 done |
+| S-019 | Amend ADR-0030's stack sentence to the new pin | open | S-002 done |
+| S-020 | Amend ADR-0036's live-pin clause to the new pin | open | S-002 done |
 | S-021 | Re-derive ADR-0093's verbatim quotation of ADR-0021 | blocked | S-003 |
 
 ---
@@ -115,7 +115,16 @@ the work as if they were the work.
 **Out of scope.** Editing any of the 99 lines. This seed produces a classification, and the only
 file it changes is this one.
 
-### Result, measured 2026-08-08
+### Result, measured 2026-08-08 at commit `5c3e5ad`
+
+**Read every line number below as that tree's, not as today's.** S-002 landed the bump immediately
+after this seed and rewrote both `Directory.Packages.props` and
+`docs/DEPENDENCY-LICENSES.md`, so the bucket-A pointers into those two files describe lines that no
+longer say 7.5.0 and no longer sit at those numbers. Re-deriving them would be wrong rather than
+tidy, because the classification is a snapshot of the tree the bump was planned against.
+`docs/CLAUDE.md` states the rule this follows: a sentence asserting what another file currently
+contains is a measurement, so it is dated, written in the past tense, and names the commit it was
+true at.
 
 **The test that assigns the bucket.** The seed named three buckets and gave no test, so this is the
 test used: **when the pin becomes 7.6.0, what must happen to this line?** Bucket A means the digits
@@ -240,7 +249,7 @@ searches plus the two lists above produce it by subtraction.
 
 ## S-002. Bump the manifest to `[7.6.0]` and re-read the nine licences
 
-**Status:** open · **Blocked by:** S-001, which is done · **Unblocks:** S-003, S-004, S-005, S-008,
+**Status:** done · **Blocked by:** S-001, which is done · **Unblocks:** S-003, S-004, S-005, S-008,
 S-018, S-019, S-020
 
 **What 7.6.0 actually contains**, read at the release page on 2026-08-08. It is a maintenance
@@ -256,8 +265,10 @@ The third moves the transitive closure, which reaches the ADR-0026 licence scan 
 
 **End state.**
 
-- All eight `PackageVersion` rows in `Directory.Packages.props` read `[7.6.0]`, and
-  `git grep "\[7\.5\.0\]"` returns nothing.
+- All eight `PackageVersion` rows in `Directory.Packages.props` read `[7.6.0]`, and no
+  `PackageVersion` row reads `[7.5.0]`. **The scope on that second half is a correction this seed
+  had to make to itself**, and the result section below says why the unscoped form it was written
+  with cannot be satisfied.
 - `DEPENDENCY-LICENSES.md` section 3.3 records nine licence reads at 7.6.0, each with the read
   location and the date, and carries the new upstream commit,
   `5ce649a5bbbf1340c9be9c4f264197af563ab473`. Read on 2026-08-08 for
@@ -282,11 +293,76 @@ the playbook; `docs/adr/0026-dependency-license-policy.md` section A for the per
 **Out of scope.** Amending ADR-0021 or ADR-0061, which are S-003 and S-004, because one ADR per
 commit. Adding a `PackageReference`, which is S-008.
 
+### Result, measured 2026-08-08
+
+The pin is `[7.6.0]` on all eight rows. Ten licences were read at their own `.nuspec`, not nine, and
+the tenth is the finding. Four things this seed did not expect are recorded below.
+
+**7.6.0 is the latest stable, and two 8.0 previews now exist.** Read at the flat container version
+index for `OpenIddict.Core` on 2026-08-08: 85 published versions, ending `7.5.0`, `7.6.0`,
+`8.0.0-preview.1.26302.68`, and `8.0.0-preview.2.26365.61`. That matters beyond this seed.
+`docs/adr/0021-openiddict-version-adaptation.md:44` asks the project to "run the rotation contract
+test against an 8.0 preview early", and until now no preview was named as existing. Two are. S-003
+records the trigger and S-011 owns the test.
+
+**1. Nine was an undercount, and the tenth package is named in no file here.**
+`OpenIddict.EntityFrameworkCore.Models` arrives transitively through
+`OpenIddict.EntityFrameworkCore`, on exactly the footing that put `OpenIddict.Abstractions` inside
+the nine. Searched 2026-08-08 across every tracked file except `BUILD-PLAN.md`,
+`EntityFrameworkCore.Models` returned zero hits. It was read at 7.6.0 and at 7.5.0, both on
+2026-08-08, and both declare `<license type="expression">Apache-2.0</license>`. So this is an
+omission in the record rather than a change in the graph, and section 3.3 now carries ten rows.
+
+**2. The transitive closure moved in version and not in shape.** Every net10.0 dependency group was
+diffed, 7.5.0 against 7.6.0. No dependency identifier was added and none was removed.
+`Microsoft.Extensions.*` moved 10.0.7 to 10.0.10, `Microsoft.IdentityModel.*` 8.16.0 to 8.19.2,
+`Microsoft.EntityFrameworkCore.Relational` 10.0.7 to 10.0.10, and
+`Quartz.Extensions.DependencyInjection` 3.15.1 to 3.18.2. So the ADR-0026 section C scan set gains
+no new identifier from this bump, which is a stronger statement than the seed's premise that "the
+third moves the transitive closure" and it is the one that was measured.
+
+**3. The offline reference tree no longer matches the pin, and the proof is a tenth nuspec.**
+`docs/CLAUDE.md` records the checked-in corpus source at
+`aa7fac0996cb1c86c4310a005bdc66077eb53ba8`. `OpenIddict.EntityFrameworkCore.Models` **7.5.0**
+declares that same commit at its own `.nuspec`, read 2026-08-08, which is independent confirmation
+that the tree matched the old pin. All ten packages at **7.6.0** declare
+`5ce649a5bbbf1340c9be9c4f264197af563ab473` instead. So S-006 is not a tidy-up: from this commit
+until S-006 lands, an engine claim cannot be verified offline at the pinned version. Both the
+manifest comment and licence-record section 3.3 now say so out loud rather than leaving the old
+sentence standing.
+
+**4. This seed's own verification asked for something its out-of-scope clause forbids.** It required
+that `git grep "\[7\.5\.0\]"` return nothing. Run after the bump, it returns four hits and every one
+is correct: `docs/adr/0021-openiddict-version-adaptation.md:39` is S-003's line and this seed may not
+touch it; `Directory.Packages.props:120` and `docs/DEPENDENCY-LICENSES.md:192` are this bump's own
+history, which `docs/CLAUDE.md` requires be written in the past tense rather than deleted; and
+`.claude/rules/seeds.md:28` uses the string as an illustration of a declarative end state. An
+unscoped absence check cannot pass here, so the End state above is now scoped to `PackageVersion`
+rows. Measured after the bump: 8 rows at `[7.6.0]`, 0 at `[7.5.0]`.
+
+**Bucket C inside the licence record was handled here, not by S-005.** S-001 classified nine
+`docs/DEPENDENCY-LICENSES.md` lines as bucket C, and this seed's own end state required the 7.5.0
+reading be past-tensed and kept. It is, as a "superseded 7.5.0 reading" paragraph at the end of
+section 3.3. S-005 does not need to revisit that file for those nine lines.
+
+**Verification run 2026-08-08, all nine gates.** Guardrail green; decisions index green at 97 ADRs;
+`markdownlint-cli2` 195 files 0 issues with `git ls-files '*.md'` also 195; `dotnet build` 0
+Warning(s) 0 Error(s); `dotnet test` 5 and 33 passed; `dotnet format --verify-no-changes` exit 0;
+and the four self-tests exit 0. The build is unchanged, which the seed predicted, because no
+`PackageReference` exists and so no restore graph moved.
+
+**One false green was produced and caught during this seed, and it is worth the line.** A first
+format run was written as `dotnet format ... --nologo | tail && echo "format OK"`. `dotnet format`
+does not accept `--nologo`, so it exited 1 and printed its help text, while the `&&` chained on
+`tail` and printed the success message anyway. The command list in
+[`../.claude/rules/commands.md`](../.claude/rules/commands.md) does not carry that flag, and adding
+it was the mistake. Read an exit code directly, never through a pipe.
+
 ---
 
 ## S-003. Amend ADR-0021 for the new pin and the half-run playbook
 
-**Status:** blocked · **Blocked by:** S-002 · **Unblocks:** S-021
+**Status:** open · **Blocked by:** S-002, which is done · **Unblocks:** S-021
 
 **The honest difficulty.** This ADR's parameter D requires, for each release, that the
 contract-regression suite runs. Searched 2026-08-08, `tests/` holds only
@@ -319,7 +395,7 @@ frontmatter status, so confirm neither moved.
 
 ## S-004. Amend the ADR-0061 stack row to the new pin
 
-**Status:** blocked · **Blocked by:** S-002 · **Unblocks:** nothing yet
+**Status:** open · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet
 
 **End state.** `docs/adr/0061-technology-stack-of-record.md:49` reads 7.6 rather than 7.5 in its
 `Protocol engine` row, with the change recorded in that ADR's own maintenance style.
@@ -340,7 +416,7 @@ agree and proves nothing about a shared omission; read the row rather than the e
 
 ## S-005. Date or re-point every source-read claim the bump invalidates
 
-**Status:** blocked · **Blocked by:** S-001, S-002 · **Unblocks:** nothing yet
+**Status:** open · **Blocked by:** S-001 and S-002, both done · **Unblocks:** nothing yet
 
 **The problem in one sentence.** At least a dozen documents state a fact about the engine and
 attribute it to "the pinned version", and after S-002 the pinned version is not the one that was
@@ -380,7 +456,7 @@ subject, and S-006 is what makes checking it possible at all.
 
 ## S-006. Decide what replaces the offline 7.5.0 source tree
 
-**Status:** blocked · **Blocked by:** S-001 · **Unblocks:** nothing yet
+**Status:** open · **Blocked by:** S-001, which is done · **Unblocks:** nothing yet
 
 **Why this is a decision and not a chore.** `docs/CLAUDE.md` records that the external design
 corpus carries a checked-in OpenIddict source tree, that it sits at commit
@@ -443,7 +519,7 @@ as what `Core` references, or design 04 is corrected instead and the same check 
 
 ## S-008. Reference the engine from `Core` and enumerate the restore graph
 
-**Status:** blocked · **Blocked by:** S-002, S-007 · **Unblocks:** S-010
+**Status:** blocked · **Blocked by:** S-007. S-002 is done · **Unblocks:** S-010
 
 **End state.**
 
@@ -718,7 +794,7 @@ or is named in a list of code-only options.
 
 ## S-018. Move the architecture layer's four engine-version statements to the new pin
 
-**Status:** blocked · **Blocked by:** S-002 · **Unblocks:** nothing yet
+**Status:** open · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet
 
 **Why this seed exists at all.** S-001 found four bucket-A lines that no seed owned. The reason they
 were missed is the finding worth keeping: S-001's own search spelling was `7.5.0`, and all four write
@@ -757,7 +833,7 @@ statement. Every other version in these four files, including .NET 10.
 
 ## S-019. Amend ADR-0030's stack sentence to the new pin
 
-**Status:** blocked · **Blocked by:** S-002 · **Unblocks:** nothing yet
+**Status:** open · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet
 
 **End state.** `docs/adr/0030-dotnet-version-upgrade.md:14` names the engine version S-002 landed.
 The line reads "Nami pins .NET 10 (LTS), the runtime foundation of the entire stack (ASP.NET Core, EF
@@ -782,7 +858,7 @@ decides and this seed does not touch.
 
 ## S-020. Amend ADR-0036's live-pin clause to the new pin
 
-**Status:** blocked · **Blocked by:** S-002 · **Unblocks:** nothing yet
+**Status:** open · **Blocked by:** S-002, which is done · **Unblocks:** nothing yet
 
 **One line carrying two claims, and only one of them moves.**
 `docs/adr/0036-database-key-strategy-uuidv7.md:40` says the key-type mapping was "**Read at
